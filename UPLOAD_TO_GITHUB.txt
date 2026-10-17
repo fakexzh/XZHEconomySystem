@@ -1,0 +1,16 @@
+XZHEconomySystem — GitHub upload notes
+
+This folder contains the full source project, including src/ and .github/workflows/build.yml.
+Do not upload only individual .kt files or the ZIP itself to GitHub's file upload page.
+
+Recommended easiest method:
+1. Install GitHub Desktop: https://desktop.github.com/
+2. In GitHub Desktop, sign in to your GitHub account.
+3. File > Clone repository > GitHub.com > select fakekzh/XZHEconomySystem.
+4. Choose a local folder and clone it.
+5. Copy ALL contents of this extracted folder into the cloned repository folder, including the hidden .github folder. Merge/replace if prompted.
+6. In GitHub Desktop, enter summary 'Add complete plugin source' and click Commit to main.
+7. Click Push origin.
+8. Open the repo on GitHub > Actions. The Build plugin workflow should run after the push.
+
+This is a source project, not a precompiled plugin JAR. The resulting JAR must still build successfully before installing on Falix.

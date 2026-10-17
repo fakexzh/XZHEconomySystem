@@ -1,0 +1,25 @@
+name: XZHEconomySystem
+version: '1.0.0'
+main: com.xzh.economy.XZHEconomySystem
+api-version: '26.3'
+author: XZH
+description: A standalone starter economy plugin for Paper/Purpur 26.3.
+commands:
+  xzh:
+    description: Show XZHEconomySystem help and status.
+    usage: /xzh
+  balance:
+    description: Show your balance or another online player's balance.
+    aliases: [bal, money]
+    usage: /balance [player]
+  pay:
+    description: Send coins to an online player.
+    usage: /pay <player> <amount>
+  eco:
+    description: Admin economy management.
+    usage: /eco <set|add> <player> <amount>
+    permission: xzh.admin
+permissions:
+  xzh.admin:
+    description: Allows administration of the XZH economy.
+    default: op
