@@ -4,11 +4,12 @@ A Java plugin project targeting Purpur 26.3 (Java 25). This branch combines the 
 
 ## Current features
 
-- Persistent coin balances, `/balance`, `/pay`, admin `/eco`, and an optional Vault economy provider when Vault is installed.
+- Persistent pocket balances, separate bank balances, `/balance`, `/pay`, admin `/eco`, and an optional Vault economy provider when Vault is installed.
 - Shop GUI with confirmation dialogs, quantities, curated products, global stock, daily restock, and cheap sell-hand support for unfeatured items.
 - Enchantment-book GUI with confirmation, 24-hour per-player cooldown per enchantment, and daily global limits for selected useful/rare books.
 - Elytra purchase lock until the player has visited the End.
-- Loan GUI, configured terms/rates, 12-hour grace period, automatic repayment when funds are sufficient, and shop purchase restriction once overdue.
+- `/bank` opens the separate `XZH BANK` GUI with persistent bank balances, 09:00–20:00 Minecraft-time deposit/withdrawal hours, and the Loans menu. Shop purchases and loan repayments spend pocket funds first, then bank funds; bank-funded purchases and repayments remain available after closing time.
+- Loan GUI inside the bank, configured terms/rates, 12-hour grace period, automatic repayment from combined pocket/bank funds when sufficient, and shop purchase restriction once overdue.
 - Quest packs with shared daily stock, active quest boss bar/progress, 30-minute actionbar reminders, and a daily global community ore event.
 - Paid death inventory recovery: 30-minute window, two recoveries per day, configured recovery fee, and death money penalty.
 - HUD sidebar for balance, amount owed, and due/overdue time.
@@ -23,8 +24,8 @@ Player:
 - `/xzh`
 - `/balance`, `/bal`, `/money`
 - `/pay <player> <amount>`
-- `/shop`, `/books`
-- `/loan`, `/loan repay`
+- `/shop`, `/bank`, `/books`
+- `/loan` (opens the bank), `/loan repay`
 - `/quests`
 - `/deathinventory`
 - `/spawn`, `/sethome [name]`, `/home [name]`, `/delhome [name]`
