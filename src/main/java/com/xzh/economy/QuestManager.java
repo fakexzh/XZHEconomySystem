@@ -71,6 +71,16 @@ public final class QuestManager implements Listener {
         }, 20L * 60L * 30L, 20L * 60L * 30L);
     }
 
+    public void adminResetEvent() {
+        data.set("event", null);
+        data.set("event.date", LocalDate.now().toString());
+        data.set("event.progress", 0);
+        data.set("event.goal", 500);
+        data.set("event.reward", 100);
+        data.set("event.claims-remaining", 25);
+        save();
+    }
+
     public void open(Player player) {
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "XZH Quest Packs");
         int slot = 0;
