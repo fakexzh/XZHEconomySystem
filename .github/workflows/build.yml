@@ -2,7 +2,7 @@ name: Build plugin
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, integrated-release ]
 permissions:
   contents: read
   actions: read
