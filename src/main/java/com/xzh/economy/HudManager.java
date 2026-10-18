@@ -126,6 +126,10 @@ public final class HudManager {
      * Calling with progress < 0 or a blank quest name hides the bar.
      */
     public void showActiveQuest(Player player, String questName, String objectiveText, double progress) {
+        if (!plugin.getConfig().getBoolean("hud.quest-bossbar.enabled", true)) {
+            hideActiveQuest(player);
+            return;
+        }
         if (questName == null || questName.isBlank() || progress < 0) {
             hideActiveQuest(player);
             return;
