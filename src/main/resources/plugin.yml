@@ -35,6 +35,69 @@ commands:
     description: Admin economy management.
     usage: /eco <set|add> <player> <amount>
     permission: xzh.admin
+  spawn:
+    description: Teleport to configured spawn.
+    usage: /spawn
+  setspawn:
+    description: Set the server spawn point.
+    usage: /setspawn
+    permission: xzh.admin
+  home:
+    description: Teleport to a saved home.
+    usage: /home [name]
+  sethome:
+    description: Save a home.
+    usage: /sethome [name]
+  delhome:
+    description: Delete a saved home.
+    usage: /delhome [name]
+  warp:
+    description: Teleport to a named warp.
+    usage: /warp <name>
+  setwarp:
+    description: Create or update a named warp.
+    usage: /setwarp <name>
+    permission: xzh.admin
+  delwarp:
+    description: Delete a named warp.
+    usage: /delwarp <name>
+    permission: xzh.admin
+  tpa:
+    description: Request teleportation to another player.
+    usage: /tpa <player>
+  tpaccept:
+    description: Accept a teleport request.
+    usage: /tpaccept
+  tpdeny:
+    description: Deny a teleport request.
+    usage: /tpdeny
+  back:
+    description: Return to your last death location.
+    usage: /back
+  msg:
+    description: Send a private message.
+    usage: /msg <player> <message>
+    aliases: [tell, whisper]
+  reply:
+    description: Reply to a private message.
+    usage: /reply <message>
+    aliases: [r]
+  ignore:
+    description: Toggle ignoring another online player.
+    usage: /ignore <player>
+  afk:
+    description: Toggle your AFK status.
+    usage: /afk
+  near:
+    description: List players within 100 blocks.
+    usage: /near
+  list:
+    description: List online players.
+    usage: /list
+    aliases: [online]
+  top:
+    description: Teleport to the surface at your current coordinates.
+    usage: /top
 permissions:
   xzh.admin:
     description: Allows administration of the XZH economy.
