@@ -15,6 +15,9 @@ commands:
   pay:
     description: Send coins to an online player.
     usage: /pay <player> <amount>
+  shop:
+    description: Open the XZH shop GUI.
+    usage: /shop
   eco:
     description: Admin economy management.
     usage: /eco <set|add> <player> <amount>
