@@ -168,6 +168,24 @@ public final class ShopManager implements Listener {
             products.add(new Product("potions", Material.SPLASH_POTION, base + 15, 0, type));
             products.add(new Product("potions", Material.LINGERING_POTION, base + 35, 0, type));
         }
+        // Dynamically include every block item exposed by the running Minecraft API.
+        // Existing curated products keep their configured prices; newly added farmable
+        // blocks use conservative buy values and earn only 1 coin per full stack at most.
+        for (Material material : Material.values()) {
+            if (material.isBlock() && material != Material.AIR
+                    && products.stream().noneMatch(p -> p.material() == material && p.potionType() == null)) {
+                double buy = blockBuyPrice(material);
+                double sell = isFarmableCommonBlock(material) ? (1.0 / 64.0) : 0.0;
+                products.add(new Product("blocks", material, buy, sell));
+            }
+        }
+        // Keep planting materials in a dedicated Seeds & Farming menu.
+        for (Material material : Material.values()) {
+            if (isSeedOrPlantingMaterial(material)
+                    && products.stream().noneMatch(p -> p.material() == material && p.potionType() == null)) {
+                products.add(new Product("seeds", material, seedBuyPrice(material), seedSellPrice(material)));
+            }
+        }
         this.stockFile = new File(plugin.getDataFolder(), "shop-stock.yml");
         this.stockData = YamlConfiguration.loadConfiguration(stockFile);
         initializeStock();
@@ -179,6 +197,7 @@ public final class ShopManager implements Listener {
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP");
         add(inv, 10, Material.IRON_INGOT, "Ores", "category", "ores");
         add(inv, 12, Material.BRICKS, "Blocks", "category", "blocks");
+        add(inv, 13, Material.WHEAT_SEEDS, "Seeds & Farming", "category", "seeds");
         add(inv, 14, Material.COOKED_BEEF, "Food", "category", "food");
         add(inv, 16, Material.DIAMOND_PICKAXE, "Armor & Tools", "category", "equipment");
         add(inv, 19, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
@@ -650,25 +669,67 @@ public final class ShopManager implements Listener {
 
     private double sellPrice(Product p) {
         if (p.category().equals("misc")) return p.sell();
-        if (p.potionType() != null) {
-            String variantSell = "shop.potion-prices." + p.potionType().name().toLowerCase(Locale.ROOT) + "." + p.material().name().toLowerCase(Locale.ROOT) + ".sell";
-            if (plugin.getConfig().contains(variantSell)) {
-                double configuredVariant = plugin.getConfig().getDouble(variantSell, Math.floor(buyPrice(p) * 0.30));
-                return Math.floor(validPrice(configuredVariant) ? configuredVariant : Math.floor(buyPrice(p) * 0.30));
-            }
-            return Math.floor(buyPrice(p) * 0.30);
-        }
         String materialName = p.material().name().toLowerCase(Locale.ROOT);
-        String pricePath = "shop.prices." + materialName + ".sell";
         boolean spawnEgg = materialName.endsWith("_spawn_egg");
         if (spawnEgg && plugin.getConfig().getBoolean("restrictions.buy-only-spawn-eggs", true)) return 0.0;
+        if (p.potionType() != null) {
+            String variantSell = "shop.potion-prices." + p.potionType().name().toLowerCase(Locale.ROOT) + "." + materialName + ".sell";
+            if (plugin.getConfig().contains(variantSell)) {
+                double configured = plugin.getConfig().getDouble(variantSell, p.sell());
+                return validPrice(configured) ? configured : p.sell();
+            }
+            return p.sell();
+        }
+        String pricePath = "shop.prices." + materialName + ".sell";
         if (plugin.getConfig().contains(pricePath)) {
             double configured = plugin.getConfig().getDouble(pricePath, p.sell());
-            return Math.floor(validPrice(configured) ? configured : p.sell());
+            return validPrice(configured) ? configured : p.sell();
         }
-        if (spawnEgg) return Math.floor(buyPrice(p) * 0.30);
-        double configured = plugin.getConfig().getDouble(pricePath, p.sell());
-        return Math.floor(validPrice(configured) ? configured : p.sell());
+        return p.sell();
+    }
+
+    private double blockBuyPrice(Material m) {
+        String n = m.name();
+        if (n.contains("NETHERRACK") || n.contains("DIRT") || n.contains("GRAVEL") || n.contains("SAND")
+                || n.contains("COBBLESTONE") || n.equals("STONE") || n.equals("NETHERRACK")) return 2.0;
+        if (n.contains("LOG") || n.contains("WOOD") || n.contains("PLANKS") || n.contains("LEAVES")) return 8.0;
+        if (n.contains("ORE") || n.contains("ANCIENT_DEBRIS")) return 100.0;
+        if (n.contains("DEEPSLATE") || n.contains("TUFF") || n.contains("ANDESITE") || n.contains("DIORITE") || n.contains("GRANITE")) return 3.0;
+        if (n.contains("OBSIDIAN") || n.contains("CRYING")) return 30.0;
+        if (n.contains("COPPER") || n.contains("IRON") || n.contains("GOLD") || n.contains("DIAMOND") || n.contains("EMERALD")) return 100.0;
+        return 10.0;
+    }
+
+    private boolean isFarmableCommonBlock(Material m) {
+        String n = m.name();
+        return n.contains("NETHERRACK") || n.equals("STONE") || n.contains("COBBLESTONE")
+                || n.equals("DIRT") || n.equals("GRAVEL") || n.equals("SAND")
+                || n.contains("ANDESITE") || n.contains("DIORITE") || n.contains("GRANITE")
+                || n.contains("DEEPSLATE") || n.contains("TUFF") || n.contains("BASALT") || n.contains("BLACKSTONE");
+    }
+
+    private boolean isSeedOrPlantingMaterial(Material m) {
+        String n = m.name();
+        return n.endsWith("_SEEDS") || n.equals("WHEAT_SEEDS") || n.equals("NETHER_WART")
+                || n.equals("COCOA_BEANS") || n.equals("CARROT") || n.equals("POTATO")
+                || n.equals("BEETROOT") || n.equals("SWEET_BERRIES") || n.equals("GLOW_BERRIES")
+                || n.equals("PITCHER_POD") || n.equals("TORCHFLOWER_SEEDS") || n.equals("SUGAR_CANE")
+                || n.equals("BAMBOO") || n.equals("CACTUS") || n.equals("MUSHROOM") || n.equals("BROWN_MUSHROOM")
+                || n.equals("RED_MUSHROOM") || n.equals("KELP") || n.equals("SEA_PICKLE");
+    }
+
+    private double seedBuyPrice(Material m) {
+        String n = m.name();
+        if (n.contains("TORCHFLOWER") || n.contains("PITCHER")) return 250.0;
+        if (n.equals("NETHER_WART") || n.equals("COCOA_BEANS")) return 20.0;
+        if (n.equals("WHEAT_SEEDS") || n.equals("BEETROOT_SEEDS")) return 2.0;
+        return 5.0;
+    }
+
+    private double seedSellPrice(Material m) {
+        String n = m.name();
+        if (n.contains("TORCHFLOWER") || n.contains("PITCHER")) return 0.0;
+        return 0.1;
     }
 
     /** Items that must never be convertible into shop money, even if a config assigns a sell price. */
