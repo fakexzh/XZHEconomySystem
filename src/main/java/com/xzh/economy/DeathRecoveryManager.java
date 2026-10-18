@@ -55,7 +55,9 @@ public final class DeathRecoveryManager implements Listener {
         UUID id = player.getUniqueId();
         List<ItemStack> items = new ArrayList<>();
         for (ItemStack drop : event.getDrops()) {
-            if (drop != null && !drop.getType().isAir()) items.add(drop.clone());
+            // Physical pocket coins drop normally and must not be duplicated by paid recovery.
+            if (drop != null && !drop.getType().isAir()
+                    && !plugin.getPocketCoinManager().isCoin(drop)) items.add(drop.clone());
         }
         int level = player.getLevel();
         float progress = player.getExp();
@@ -88,6 +90,14 @@ public final class DeathRecoveryManager implements Listener {
         } else {
             plugin.tellPublic(player, "You lost no recoverable items or XP.");
         }
+        // Preserve the post-penalty physical coin stacks as ordinary death drops. They are
+        // excluded from the recoverable snapshot, so paying for recovery cannot duplicate money.
+        for (ItemStack item : player.getInventory().getStorageContents()) {
+            if (plugin.getPocketCoinManager().isCoin(item)) event.getDrops().add(item.clone());
+        }
+        ItemStack offhand = player.getInventory().getItemInOffHand();
+        if (plugin.getPocketCoinManager().isCoin(offhand)) event.getDrops().add(offhand.clone());
+        plugin.setOfflinePocketSnapshot(id.toString(), 0.0);
         save();
     }
 
