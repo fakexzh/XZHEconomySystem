@@ -41,7 +41,7 @@ public final class PocketCoinManager implements Listener {
     }
 
     public void setCoins(Player player, double requestedAmount) {
-        long target = Math.max(0L, Math.round(requestedAmount));
+        long target = Math.min((long) plugin.getPocketBalanceLimit(), Math.max(0L, Math.round(requestedAmount)));
         PlayerInventory inventory = player.getInventory();
         for (int slot = 0; slot < inventory.getStorageContents().length; slot++) {
             ItemStack item = inventory.getItem(slot);
