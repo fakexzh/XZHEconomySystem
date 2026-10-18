@@ -228,6 +228,11 @@ public final class DeathRecoveryManager implements Listener {
             double unit = plugin.getConfig().getDouble(path, defaultValue(item.getType()));
             total += unit * item.getAmount();
             if (item.hasItemMeta() && item.getItemMeta().hasEnchants()) total += item.getAmount() * 10.0 * item.getItemMeta().getEnchants().size();
+            if (item.getItemMeta() instanceof org.bukkit.inventory.meta.EnchantmentStorageMeta stored && stored.hasStoredEnchants()) {
+                for (org.bukkit.enchantments.Enchantment enchant : stored.getStoredEnchants().keySet()) {
+                    total += item.getAmount() * bookValue(enchant.getKey().getKey());
+                }
+            }
         }
         return round(total);
     }
@@ -235,6 +240,10 @@ public final class DeathRecoveryManager implements Listener {
     private double defaultValue(Material m) {
         String n = m.name();
         if (n.contains("ELYTRA")) return 2500;
+        if (n.contains("ARMOR_TRIM_SMITHING_TEMPLATE")) return n.contains("SILENCE") ? 1000 : (n.contains("FLOW") || n.contains("BOLT") ? 600 : 300);
+        if (n.contains("SPAWN_EGG")) return n.contains("SNIFFER") ? 2000 : 1000;
+        if (n.contains("ZOMBIE_HEAD") || n.contains("CREEPER_HEAD") || n.contains("SKELETON_SKULL")) return 200;
+        if (n.contains("ENCHANTED_BOOK")) return 100;
         if (n.contains("NETHERITE")) return 300;
         if (n.contains("DIAMOND")) return 80;
         if (n.contains("TRIDENT") || n.contains("TOTEM") || n.contains("HEAVY_CORE")) return 150;
@@ -246,6 +255,17 @@ public final class DeathRecoveryManager implements Listener {
         if (n.contains("FOOD") || n.contains("BEEF") || n.contains("PORKCHOP") || n.contains("BREAD")) return 2;
         if (m.isBlock()) return 1;
         return 3;
+    }
+
+    private double bookValue(String key) {
+        return switch (key) {
+            case "mending" -> 1200;
+            case "wind_burst" -> 1500;
+            case "swift_sneak", "soul_speed", "frost_walker" -> 700;
+            case "fortune", "silk_touch", "unbreaking", "efficiency", "looting" -> 600;
+            case "sharpness", "protection", "feather_falling", "power", "breach", "density", "lunge" -> 500;
+            default -> 150;
+        };
     }
 
     private void add(Inventory inv, int slot, Material material, String title, String action, List<String> lore) {
