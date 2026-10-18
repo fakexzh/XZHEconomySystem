@@ -14,6 +14,7 @@ hud:
 
 # Death inventory recovery. Recovery is available for 30 minutes, up to twice per day.
 death-recovery:
+  overworld-only: true
   fee-multiplier: 1.5
   xp-value-per-point: 0.25
   material-values:
