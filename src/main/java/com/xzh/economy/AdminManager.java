@@ -6,6 +6,7 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -55,6 +56,9 @@ public final class AdminManager implements Listener {
                 List.of("Configure buy or sell price for a material"));
         add(inv, 16, Material.BOOK, "Recent transactions", "transactions",
                 List.of("Show the last 10 balance changes"));
+        add(inv, 30, Material.WRITABLE_BOOK, "Loans overview", "loans", List.of("View active loan count and total owed"));
+        add(inv, 32, Material.NETHER_STAR, "Quest/event status", "quests", List.of("View global event progress and pack stock"));
+        add(inv, 34, Material.CHEST, "Death recovery status", "recovery", List.of("View active recovery snapshots"));
         add(inv, 29, Material.MAP, "Diagnostics", "diagnostics",
                 List.of("Show online count and persisted data files"));
         add(inv, 49, Material.BARRIER, "Close", "close", List.of());
@@ -80,6 +84,9 @@ public final class AdminManager implements Listener {
                 player.closeInventory();
             }
             case "transactions" -> { showTransactions(player); player.closeInventory(); }
+            case "loans" -> { loansOverview(player); player.closeInventory(); }
+            case "quests" -> { questOverview(player); player.closeInventory(); }
+            case "recovery" -> { recoveryOverview(player); player.closeInventory(); }
             case "diagnostics" -> { diagnostics(player); player.closeInventory(); }
             case "close" -> player.closeInventory();
             default -> { }
@@ -197,6 +204,42 @@ public final class AdminManager implements Listener {
         } catch (IOException ex) {
             player.sendMessage(ChatColor.RED + "Could not read transaction log.");
         }
+    }
+
+
+    private void loansOverview(Player player) {
+        YamlConfiguration loans = YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "loans.yml"));
+        int count = 0;
+        double total = 0;
+        for (String key : loans.getKeys(false)) {
+            double owed = loans.getDouble(key + ".amount", 0);
+            if (owed > 0) { count++; total += owed; }
+        }
+        player.sendMessage(ChatColor.GOLD + "Loan overview: " + count + " active loans; total owed " + String.format(Locale.US, "%.2f", total) + " coins.");
+    }
+
+    private void questOverview(Player player) {
+        YamlConfiguration quests = YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "quests.yml"));
+        player.sendMessage(ChatColor.GOLD + "Global event: " + quests.getInt("event.progress", 0) + "/"
+                + quests.getInt("event.goal", 500) + " ores; reward claims remaining: "
+                + quests.getInt("event.claims-remaining", 25) + ".");
+        player.sendMessage(ChatColor.GRAY + "Pack stock — Beginner: " + quests.getInt("stock.beginner", 0)
+                + ", Miner: " + quests.getInt("stock.miner", 0) + ", Hunter: " + quests.getInt("stock.hunter", 0)
+                + ", Explorer: " + quests.getInt("stock.explorer", 0) + ", Nether: " + quests.getInt("stock.nether", 0)
+                + ", End: " + quests.getInt("stock.end", 0) + ".");
+    }
+
+    private void recoveryOverview(Player player) {
+        YamlConfiguration recovery = YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "death-recovery.yml"));
+        int active = 0;
+        long now = System.currentTimeMillis();
+        for (String key : recovery.getKeys(false)) {
+            if (!key.matches("[0-9a-fA-F-]{36}")) continue;
+            boolean hasItems = recovery.getList(key + ".items") != null && !recovery.getList(key + ".items").isEmpty();
+            boolean hasXp = recovery.getInt(key + ".total-xp", 0) > 0;
+            if (!recovery.getBoolean(key + ".recovered", false) && now < recovery.getLong(key + ".expires-at", 0) && (hasItems || hasXp)) active++;
+        }
+        player.sendMessage(ChatColor.GOLD + "Active death recovery snapshots: " + active + ".");
     }
 
     private void diagnostics(Player player) {
