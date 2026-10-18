@@ -66,7 +66,7 @@ public final class AdminManager implements Listener {
         add(inv, 32, Material.NETHER_STAR, "Quest/event status", "quests", List.of("View global event progress and pack stock"));
         add(inv, 34, Material.CHEST, "Death recovery status", "recovery", List.of("View active recovery snapshots"));
         add(inv, 36, Material.WRITABLE_BOOK, "Reset active quest", "clear-quest", List.of("Cancel a player's active quest without refunding its pack cost"));
-        add(inv, 38, Material.BOOK, "Set quest pack stock", "quest-stock", List.of("Set daily global stock for a quest pack"));
+        add(inv, 38, Material.BOOK, "Set quest pack stock", "quest-stock", List.of("Set current global stock; daily reset returns to default"));
         add(inv, 29, Material.MAP, "Diagnostics", "diagnostics",
                 List.of("Show online count and persisted data files"));
         add(inv, 49, Material.BARRIER, "Close", "close", List.of());
