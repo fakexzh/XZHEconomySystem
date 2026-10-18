@@ -52,7 +52,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
-        for (String name : List.of("xzh", "balance", "pay", "eco", "shop", "loan", "quests", "deathinventory")) {
+        for (String name : List.of("xzh", "balance", "pay", "eco", "shop", "loan", "quests", "deathinventory", "shopadmin")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
@@ -132,6 +132,26 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 loanManager.open(player);
                 return true;
             }
+            case "shopadmin" -> {
+                if (!sender.hasPermission("xzh.admin")) { tell(sender, "No permission."); return true; }
+                if (args.length == 1 && args[0].equalsIgnoreCase("restock")) {
+                    shopManager.restockAll();
+                    tell(sender, "Global shop stock has been restocked to configured limits.");
+                    return true;
+                }
+                if (args.length == 3 && args[0].equalsIgnoreCase("stock")) {
+                    org.bukkit.Material material;
+                    int amount;
+                    try { material = org.bukkit.Material.valueOf(args[1].toUpperCase(Locale.ROOT)); amount = Integer.parseInt(args[2]); }
+                    catch (IllegalArgumentException ex) { tell(sender, "Usage: /shopadmin stock <MATERIAL> <amount>"); return true; }
+                    if (amount < 0 || amount > 1000000) { tell(sender, "Stock must be between 0 and 1000000."); return true; }
+                    shopManager.setStock(material, amount);
+                    tell(sender, "Global stock for " + material.name() + " set to " + amount + ".");
+                    return true;
+                }
+                tell(sender, "Usage: /shopadmin <restock|stock <MATERIAL> <amount>>");
+                return true;
+            }
             case "shop" -> {
                 if (!(sender instanceof Player player)) { tell(sender, "Only players can open the shop."); return true; }
                 if (shopManager != null) shopManager.openMain(player);
@@ -142,6 +162,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 tell(sender, "§f/balance §7- check your coins");
                 tell(sender, "§f/pay <player> <amount> §7- send coins");
                 tell(sender, "§f/shop §7- open the shop");
+                if (sender.hasPermission("xzh.admin")) tell(sender, "§f/shopadmin <restock|stock> §7- manage global shop stock");
                 tell(sender, "§f/loan [repay] §7- borrow or repay coins");
                 tell(sender, "§f/quests §7- buy quest packs and track progress");
                 tell(sender, "§f/deathinventory §7- recover your last death inventory");
