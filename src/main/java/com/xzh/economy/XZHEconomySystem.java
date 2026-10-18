@@ -56,6 +56,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         deathRecoveryManager = new DeathRecoveryManager(this);
         utilityManager = new UtilityManager(this);
         adminManager = new AdminManager(this);
+        new GuiDragGuard(this);
         registerVaultProvider();
         getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
             @org.bukkit.event.EventHandler
