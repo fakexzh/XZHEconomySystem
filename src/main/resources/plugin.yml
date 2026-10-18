@@ -4,6 +4,7 @@ main: com.xzh.economy.XZHEconomySystem
 api-version: '26.3'
 author: XZH
 description: Integrated economy, shop, quests, loans, death recovery and utilities for Purpur 26.3.
+softdepend: [Vault]
 commands:
   xzh:
     description: Show XZHEconomySystem help and status.
