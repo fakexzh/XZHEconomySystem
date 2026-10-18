@@ -57,7 +57,11 @@ public final class DeathRecoveryManager implements Listener {
 
         double lostValue = valueOf(items) + totalXp * plugin.getConfig().getDouble("death-recovery.xp-value-per-point", 0.25);
         String base = id.toString();
+        String priorDailyDate = data.getString(base + ".daily-date", "");
+        int priorDailyCount = data.getInt(base + ".daily-count", 0);
         data.set(base, null);
+        data.set(base + ".daily-date", priorDailyDate);
+        data.set(base + ".daily-count", priorDailyCount);
         if (!items.isEmpty() || totalXp > 0) {
             data.set(base + ".items", items);
             data.set(base + ".level", level);
@@ -84,7 +88,11 @@ public final class DeathRecoveryManager implements Listener {
         }
         long expires = data.getLong(base + ".expires-at", 0L);
         if (System.currentTimeMillis() >= expires) {
+            String dailyDate = data.getString(base + ".daily-date", "");
+            int dailyCount = data.getInt(base + ".daily-count", 0);
             data.set(base, null);
+            data.set(base + ".daily-date", dailyDate);
+            data.set(base + ".daily-count", dailyCount);
             save();
             plugin.tellPublic(player, "Your 30-minute recovery window has expired.");
             return;
@@ -160,8 +168,10 @@ public final class DeathRecoveryManager implements Listener {
         player.setTotalExperience(0);
         player.setLevel(level);
         player.setExp(Math.max(0.0f, Math.min(1.0f, progress)));
-        if (totalXp == 0) player.setTotalExperience(0);
+        player.setTotalExperience(totalXp);
         data.set(base, null);
+        data.set(base + ".daily-date", today.toString());
+        data.set(base + ".daily-count", used + 1);
         save();
         plugin.tellPublic(player, "Death inventory recovered for " + money(fee) + " coins.");
     }
