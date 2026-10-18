@@ -127,6 +127,7 @@ public final class LoanManager implements Listener {
         save();
         plugin.getHudManager().setLoan(id, 0, 0);
         plugin.tellPublic(player, "Loan repaid: " + money(owed) + " coins.");
+        plugin.announceLoanRepaid(player.getName(), owed, false);
         return true;
     }
 
@@ -149,6 +150,7 @@ public final class LoanManager implements Listener {
         plugin.setBalance(id, plugin.getBalance(id) + principal);
         plugin.getHudManager().setLoan(id, total, dueAt, dueAt + 12L * 60L * 60L * 1000L);
         plugin.tellPublic(player, "Loan approved: +" + amount + " coins. Repay " + money(total) + " within " + days + " days.");
+        plugin.announceLoanBorrow(player, amount, total, days);
     }
 
     private void processLoans() {
@@ -170,6 +172,7 @@ public final class LoanManager implements Listener {
                 plugin.getHudManager().setLoan(id, 0, 0);
                 Player player = Bukkit.getPlayer(id);
                 if (player != null) plugin.tellPublic(player, "Your loan was automatically repaid: " + money(owed) + " coins.");
+                plugin.announceLoanRepaid(player != null ? player.getName() : Bukkit.getOfflinePlayer(id).getName() != null ? Bukkit.getOfflinePlayer(id).getName() : id.toString(), owed, true);
             }
         }
     }
