@@ -210,6 +210,8 @@ utilities:
   max-homes: 3
   rtp-radius: 3000
   rtp-cooldown-seconds: 600
+  tpa-cost: 10
+  back-cost: 30
 
 # Enchantment book shop rules.
 book-shop:
