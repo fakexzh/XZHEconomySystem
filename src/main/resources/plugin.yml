@@ -24,6 +24,9 @@ commands:
   quests:
     description: Open the quest packs menu.
     usage: /quests
+  deathinventory:
+    description: Recover your most recent death inventory within 30 minutes.
+    usage: /deathinventory
   eco:
     description: Admin economy management.
     usage: /eco <set|add> <player> <amount>
