@@ -85,12 +85,15 @@ public final class HudManager {
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         for (String oldLine : sidebarLines.getOrDefault(id, java.util.List.of())) board.resetScores(oldLine);
         double balance = plugin.getBalance(id);
+        double bankBalance = plugin.getBankManager() == null ? 0.0 : plugin.getBankManager().getBalance(id);
         double owed = loanAmounts.getOrDefault(id, 0.0);
         long dueAt = loanDueTimes.getOrDefault(id, 0L);
         long graceUntil = loanGraceTimes.getOrDefault(id, 0L);
         java.util.List<String> lines = java.util.List.of(
-                ChatColor.GRAY + "Balance",
+                ChatColor.GRAY + "Pocket",
                 ChatColor.YELLOW + formatMoney(balance),
+                ChatColor.GRAY + "Bank",
+                ChatColor.GREEN + formatMoney(bankBalance),
                 ChatColor.DARK_GRAY + " ",
                 ChatColor.GRAY + "Loan owed",
                 (owed > 0 ? ChatColor.RED : ChatColor.GREEN) + formatMoney(owed),
