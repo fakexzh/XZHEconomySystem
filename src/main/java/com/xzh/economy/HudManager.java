@@ -26,6 +26,7 @@ public final class HudManager {
     private final Map<UUID, BossBar> questBars = new HashMap<>();
     private final Map<UUID, Double> loanAmounts = new HashMap<>();
     private final Map<UUID, Long> loanDueTimes = new HashMap<>();
+    private final Map<UUID, Long> loanGraceTimes = new HashMap<>();
     private final Map<UUID, Scoreboard> scoreboards = new HashMap<>();
     private final Map<UUID, java.util.List<String>> sidebarLines = new HashMap<>();
 
@@ -86,13 +87,14 @@ public final class HudManager {
         double balance = plugin.getBalance(id);
         double owed = loanAmounts.getOrDefault(id, 0.0);
         long dueAt = loanDueTimes.getOrDefault(id, 0L);
+        long graceUntil = loanGraceTimes.getOrDefault(id, 0L);
         java.util.List<String> lines = java.util.List.of(
                 ChatColor.GRAY + "Balance",
                 ChatColor.YELLOW + formatMoney(balance),
                 ChatColor.DARK_GRAY + " ",
                 ChatColor.GRAY + "Loan owed",
                 (owed > 0 ? ChatColor.RED : ChatColor.GREEN) + formatMoney(owed),
-                ChatColor.AQUA + clip(owed <= 0 ? "No active loan" : remaining(dueAt), 38)
+                ChatColor.AQUA + clip(owed <= 0 ? "No active loan" : remaining(dueAt, graceUntil), 38)
         );
         int score = lines.size();
         for (String line : lines) objective.getScore(line).setScore(score--);
@@ -100,14 +102,22 @@ public final class HudManager {
         if (player.getScoreboard() != board) player.setScoreboard(board);
     }
 
-    /** Sets or updates a player's loan balance and repayment due time (epoch milliseconds). */
+    /** Backward-compatible loan HUD update; assumes the standard 12-hour grace period. */
     public void setLoan(UUID playerId, double amountOwed, long dueAtEpochMillis) {
-        if (amountOwed <= 0) {
+        setLoan(playerId, amountOwed, dueAtEpochMillis,
+                amountOwed > 0 && dueAtEpochMillis > 0 ? dueAtEpochMillis + 12L * 60L * 60L * 1000L : 0L);
+    }
+
+    /** Sets loan amount, due time, and grace expiry (epoch milliseconds). */
+    public void setLoan(UUID playerId, double amountOwed, long dueAtEpochMillis, long graceUntilEpochMillis) {
+        if (!Double.isFinite(amountOwed) || amountOwed <= 0) {
             loanAmounts.remove(playerId);
             loanDueTimes.remove(playerId);
+            loanGraceTimes.remove(playerId);
         } else {
             loanAmounts.put(playerId, amountOwed);
             loanDueTimes.put(playerId, dueAtEpochMillis);
+            loanGraceTimes.put(playerId, graceUntilEpochMillis);
         }
         Player player = Bukkit.getPlayer(playerId);
         if (player != null) updateSidebar(player);
@@ -157,16 +167,19 @@ public final class HudManager {
                 .replaceAll("\\.00$", "");
     }
 
-    private String remaining(long dueAt) {
+    private String remaining(long dueAt, long graceUntil) {
+        long now = System.currentTimeMillis();
         if (dueAt <= 0) return "Due time unset";
-        long millis = dueAt - System.currentTimeMillis();
-        if (millis <= 0) return "OVERDUE";
-        Duration d = Duration.ofMillis(millis);
+        if (now >= graceUntil && graceUntil > 0) return "GRACE ENDED";
+        boolean overdue = now >= dueAt;
+        long millis = (overdue && graceUntil > 0 ? graceUntil : dueAt) - now;
+        Duration d = Duration.ofMillis(Math.max(0L, millis));
         long days = d.toDays();
         long hours = d.toHoursPart();
         long minutes = d.toMinutesPart();
-        return days > 0 ? days + "d " + hours + "h left" :
-                hours > 0 ? hours + "h " + minutes + "m left" : minutes + "m left";
+        String time = days > 0 ? days + "d " + hours + "h" :
+                hours > 0 ? hours + "h " + minutes + "m" : minutes + "m";
+        return overdue ? "OVERDUE · auto in " + time : time + " left";
     }
 
     private double clamp(double value) {
