@@ -167,6 +167,11 @@ public final class BookShopManager implements Listener {
         else if (action.equals("buy") && key != null) buy(player, key);
     }
 
+    public void clearCooldowns(UUID playerId) {
+        data.set("cooldowns." + playerId, null);
+        save();
+    }
+
     private void resetStockIfNeeded() {
         String today = java.time.LocalDate.now().toString();
         if (today.equals(data.getString("stock-date", ""))) return;
