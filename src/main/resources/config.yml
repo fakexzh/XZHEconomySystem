@@ -37,6 +37,16 @@ shop:
     cooked_beef: 1000
     iron_pickaxe: 100
     diamond_pickaxe: 30
+    iron_chestplate: 100
+    diamond_sword: 30
+    experience_bottle: 200
+    potion: 100
+    zombie_head: 10
+    chicken_spawn_egg: 10
+    cow_spawn_egg: 5
+    sheep_spawn_egg: 5
+    pig_spawn_egg: 5
+    egg: 2000
     elytra: 3
 
 # Player utility limits.
