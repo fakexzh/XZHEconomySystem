@@ -25,7 +25,7 @@ import java.util.UUID;
 
 /** Enchantment book catalogue with confirmation, per-player 24-hour cooldowns, and daily global stock. */
 public final class BookShopManager implements Listener {
-    private static final long COOLDOWN = 24L * 60L * 60L * 1000L;
+    
     private static final List<String> KEYS = List.of(
             "aqua_affinity", "bane_of_arthropods", "binding_curse", "blast_protection",
             "breach", "channeling", "density", "depth_strider", "efficiency", "feather_falling",
@@ -134,7 +134,7 @@ public final class BookShopManager implements Listener {
             return;
         }
         // Persist the cooldown and stock decrement before delivery to avoid duplicate purchases after a crash.
-        data.set(cooldownPath, now + COOLDOWN);
+        data.set(cooldownPath, now + plugin.getConfig().getLong("book-shop.cooldown-hours", 24) * 60L * 60L * 1000L);
         data.set("stock." + key, stock(key) - 1);
         save();
         plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) - cost);
@@ -172,13 +172,13 @@ public final class BookShopManager implements Listener {
         if (today.equals(data.getString("stock-date", ""))) return;
         data.set("stock", null);
         data.set("stock-date", today);
-        for (String key : KEYS) data.set("stock." + key, isLimited(key) ? 3 : 100);
+        for (String key : KEYS) data.set("stock." + key, stockLimit(key));
         save();
     }
 
     private int stock(String key) {
         resetStockIfNeeded();
-        return data.getInt("stock." + key, isLimited(key) ? 3 : 100);
+        return data.getInt("stock." + key, stockLimit(key));
     }
 
     private boolean isLimited(String key) {
@@ -187,7 +187,16 @@ public final class BookShopManager implements Listener {
                 "swift_sneak", "soul_speed", "frost_walker", "breach", "density").contains(key);
     }
 
+    private int stockLimit(String key) {
+        return Math.max(0, plugin.getConfig().getInt(isLimited(key)
+                ? "book-shop.rare-daily-stock" : "book-shop.normal-daily-stock", isLimited(key) ? 3 : 100));
+    }
+
     private double price(String key) {
+        return plugin.getConfig().getDouble("book-shop.prices." + key, defaultPrice(key));
+    }
+
+    private double defaultPrice(String key) {
         return switch (key) {
             case "mending" -> 1200;
             case "wind_burst" -> 1500;
