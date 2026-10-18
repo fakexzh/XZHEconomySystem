@@ -22,6 +22,9 @@ import java.util.UUID;
 public final class XZHEconomySystem extends JavaPlugin implements CommandExecutor, TabCompleter {
     private File balancesFile;
     private YamlConfiguration balances;
+    private File walletStatusFile;
+    private YamlConfiguration walletStatus;
+    private PocketCoinManager pocketCoinManager;
     private HudManager hudManager;
     private BankManager bankManager;
     private ShopManager shopManager;
@@ -47,6 +50,9 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             }
         }
         balances = YamlConfiguration.loadConfiguration(balancesFile);
+        walletStatusFile = new File(getDataFolder(), "wallets.yml");
+        walletStatus = YamlConfiguration.loadConfiguration(walletStatusFile);
+        pocketCoinManager = new PocketCoinManager(this);
         hudManager = new HudManager(this);
         hudManager.start();
         bankManager = new BankManager(this);
@@ -62,7 +68,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         registerVaultProvider();
         getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
             @org.bukkit.event.EventHandler
-            public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) { hudManager.onJoin(event.getPlayer()); }
+            public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) { initializePocketWallet(event.getPlayer()); hudManager.onJoin(event.getPlayer()); }
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
@@ -106,6 +112,39 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         }
     }
 
+    public PocketCoinManager getPocketCoinManager() { return pocketCoinManager; }
+
+    public void initializePocketWallet(Player player) {
+        if (walletStatus == null || walletStatus.getBoolean(player.getUniqueId().toString(), false)) return;
+        String key = player.getUniqueId().toString();
+        double initial = balances.contains(key)
+                ? Math.max(0.0, Math.round(balances.getDouble(key, 0.0)))
+                : Math.max(0.0, Math.round(getConfig().getDouble("starting-balance", 100.0)));
+        // Persist the migration marker before issuing items so a crash cannot duplicate old balances.
+        walletStatus.set(key, true);
+        balances.set(key, 0.0);
+        saveWalletStatus();
+        saveBalances();
+        pocketCoinManager.setCoins(player, initial);
+        balances.set(key, pocketCoinManager.count(player));
+        saveBalances();
+    }
+
+    public void setOfflinePocketSnapshot(String key, double amount) {
+        if (balances == null) return;
+        balances.set(key, Math.max(0.0, Math.round(amount)));
+        saveBalances();
+    }
+
+    private void saveWalletStatus() {
+        if (walletStatus == null || walletStatusFile == null) return;
+        try {
+            walletStatus.save(walletStatusFile);
+        } catch (IOException e) {
+            getLogger().severe("Could not save wallets.yml: " + e.getMessage());
+        }
+    }
+
     public double getCombinedBalance(UUID uuid) {
         double pocket = getBalance(uuid);
         double bank = bankManager == null ? 0.0 : bankManager.getBalance(uuid);
@@ -125,13 +164,22 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         return true;
     }
 
-    public boolean hasBalanceAccount(UUID uuid) { return balances.contains(uuid.toString()); }
+    public boolean hasBalanceAccount(UUID uuid) {
+        return balances.contains(uuid.toString()) || (walletStatus != null && walletStatus.getBoolean(uuid.toString(), false));
+    }
 
     public double getBalance(UUID uuid) {
         String key = uuid.toString();
+        Player online = Bukkit.getPlayer(uuid);
+        if (online != null) {
+            initializePocketWallet(online);
+            return pocketCoinManager.count(online);
+        }
         if (!balances.contains(key)) {
-            balances.set(key, getConfig().getDouble("starting-balance", 100.0));
+            balances.set(key, Math.max(0, Math.round(getConfig().getDouble("starting-balance", 100.0))));
+            if (walletStatus != null) walletStatus.set(key, false);
             saveBalances();
+            saveWalletStatus();
         }
         return Math.max(0.0, balances.getDouble(key, 0.0));
     }
@@ -141,10 +189,24 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             getLogger().warning("Rejected non-finite balance update for " + uuid + ".");
             return;
         }
-        double oldAmount = balances.getDouble(uuid.toString(), 0.0);
-        double newAmount = Math.max(0.0, round(amount));
-        balances.set(uuid.toString(), newAmount);
+        String key = uuid.toString();
+        Player online = Bukkit.getPlayer(uuid);
+        double oldAmount;
+        double newAmount = Math.max(0.0, Math.round(amount));
+        if (online != null) {
+            initializePocketWallet(online);
+            oldAmount = pocketCoinManager.count(online);
+            pocketCoinManager.setCoins(online, newAmount);
+            newAmount = pocketCoinManager.count(online);
+            balances.set(key, newAmount);
+            walletStatus.set(key, true);
+        } else {
+            oldAmount = balances.getDouble(key, 0.0);
+            balances.set(key, newAmount);
+            walletStatus.set(key, false);
+        }
         saveBalances();
+        saveWalletStatus();
         try {
             getDataFolder().mkdirs();
             java.nio.file.Files.writeString(transactionsFile.toPath(),
