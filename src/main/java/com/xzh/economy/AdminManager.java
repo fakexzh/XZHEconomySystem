@@ -54,6 +54,9 @@ public final class AdminManager implements Listener {
                 List.of("Refill to configured global stock caps"));
         add(inv, 20, Material.CLOCK, "Reset book cooldowns", "book-cooldown", List.of("Clear a player's 24-hour book cooldowns"));
         add(inv, 22, Material.REDSTONE, "Reload config", "reload", List.of("Reload config.yml values"));
+        add(inv, 24, Material.BARRIER, "Clear a player's loan", "clear-loan", List.of("Admin override: remove active debt"));
+        add(inv, 26, Material.CHEST, "Clear death recovery", "clear-recovery", List.of("Admin override: discard recovery snapshot"));
+        add(inv, 28, Material.TNT, "Reset global event", "reset-event", List.of("Reset shared event progress and reward stock"));
         add(inv, 18, Material.EMERALD, "Set item price", "price",
                 List.of("Configure buy or sell price for a material"));
         add(inv, 16, Material.BOOK, "Recent transactions", "transactions",
@@ -82,6 +85,9 @@ public final class AdminManager implements Listener {
             case "price" -> prompt(player, "price-material", "Type a material name in chat to configure its buy or sell price.");
             case "book-cooldown" -> prompt(player, "book-cooldown-player", "Type the player's exact name to reset book cooldowns.");
             case "reload" -> { plugin.reloadConfig(); player.sendMessage(ChatColor.GREEN + "config.yml reloaded."); player.closeInventory(); }
+            case "clear-loan" -> prompt(player, "clear-loan-player", "Type the player's exact name to clear their loan (or cancel).");
+            case "clear-recovery" -> prompt(player, "clear-recovery-player", "Type the player's exact name to discard their death recovery (or cancel).");
+            case "reset-event" -> { plugin.getQuestManager().adminResetEvent(); player.sendMessage(ChatColor.GREEN + "Global event progress and stock reset."); player.closeInventory(); }
             case "restock" -> {
                 plugin.getShopManager().restockAll();
                 player.sendMessage(ChatColor.GREEN + "Global shop stock restocked.");
@@ -136,6 +142,22 @@ public final class AdminManager implements Listener {
             plugin.setBalance(target.getUniqueId(), amount);
             prompts.remove(player.getUniqueId());
             player.sendMessage(ChatColor.GREEN + "Set " + name + "'s balance to " + amount + " coins.");
+            return;
+        }
+        if (prompt.equals("clear-loan-player")) {
+            if (!input.matches("[A-Za-z0-9_]{1,16}")) { player.sendMessage(ChatColor.RED + "Invalid player name. Try again or type cancel."); return; }
+            OfflinePlayer target = Bukkit.getOfflinePlayer(input);
+            plugin.getLoanManager().adminClearLoan(target.getUniqueId());
+            prompts.remove(player.getUniqueId());
+            player.sendMessage(ChatColor.GREEN + "Cleared active loan for " + input + ".");
+            return;
+        }
+        if (prompt.equals("clear-recovery-player")) {
+            if (!input.matches("[A-Za-z0-9_]{1,16}")) { player.sendMessage(ChatColor.RED + "Invalid player name. Try again or type cancel."); return; }
+            OfflinePlayer target = Bukkit.getOfflinePlayer(input);
+            plugin.getDeathRecoveryManager().adminClearRecovery(target.getUniqueId());
+            prompts.remove(player.getUniqueId());
+            player.sendMessage(ChatColor.GREEN + "Cleared death recovery for " + input + ".");
             return;
         }
         if (prompt.equals("book-cooldown-player")) {
