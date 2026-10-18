@@ -11,3 +11,15 @@ hud:
     position: sidebar
   quest-bossbar:
     enabled: true
+
+# Death inventory recovery. Recovery is available for 30 minutes, up to twice per day.
+death-recovery:
+  fee-multiplier: 1.5
+  xp-value-per-point: 0.25
+  material-values:
+    elytra: 2500
+    netherite_ingot: 300
+    diamond: 80
+    diamond_block: 720
+    ancient_debris: 120
+    mending: 100
