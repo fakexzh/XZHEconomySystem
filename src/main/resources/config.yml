@@ -16,6 +16,26 @@ bank:
   open-hour: 9
   close-hour: 20
 
+# Global announcements: only noteworthy shop purchases; borrowing and full loan repayments.
+announcements:
+  shop:
+    enabled: true
+    minimum-purchase-total: 1000
+    rare-items:
+      - ELYTRA
+      - NETHERITE_INGOT
+      - ENCHANTED_GOLDEN_APPLE
+      - TOTEM_OF_UNDYING
+      - TRIDENT
+      - MACE
+      - WITHER_SKELETON_SKULL
+      - SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE
+    progression-items:
+      - ELYTRA
+  loan:
+    borrowing: true
+    full-repayment: true
+
 # HUD settings
 hud:
   scoreboard:
