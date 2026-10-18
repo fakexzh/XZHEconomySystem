@@ -27,6 +27,10 @@ commands:
   deathinventory:
     description: Recover your most recent death inventory within 30 minutes.
     usage: /deathinventory
+  shopadmin:
+    description: Manage global shop stock.
+    usage: /shopadmin <restock|stock <MATERIAL> <amount>>
+    permission: xzh.admin
   eco:
     description: Admin economy management.
     usage: /eco <set|add> <player> <amount>
