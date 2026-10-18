@@ -16,6 +16,12 @@ commands:
   pay:
     description: Send coins to an online player.
     usage: /pay <player> <amount>
+  sendmoney:
+    description: Request a recipient-confirmed transfer of coins.
+    usage: /sendmoney <player> <amount>
+  askmoney:
+    description: Ask another player for a recipient-confirmed payment.
+    usage: /askmoney <player> <amount>
   shop:
     description: Open the XZH shop GUI.
     usage: /shop
