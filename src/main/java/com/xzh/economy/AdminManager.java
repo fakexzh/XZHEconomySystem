@@ -1,0 +1,188 @@
+package com.xzh.economy;
+
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.time.Instant;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class AdminManager implements Listener {
+    private final XZHEconomySystem plugin;
+    private final NamespacedKey actionKey;
+    private final Map<UUID, String> prompts = new ConcurrentHashMap<>();
+    private final File transactionsFile;
+
+    public AdminManager(XZHEconomySystem plugin) {
+        this.plugin = plugin;
+        actionKey = new NamespacedKey(plugin, "admin_action");
+        transactionsFile = new File(plugin.getDataFolder(), "transactions.log");
+        Bukkit.getPluginManager().registerEvents(this, plugin);
+    }
+
+    public void open(Player player) {
+        if (!player.hasPermission("xzh.admin")) {
+            player.sendMessage(ChatColor.RED + "No permission.");
+            return;
+        }
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_RED + "XZH Admin");
+        add(inv, 10, Material.GOLD_INGOT, "Set player balance", "balance",
+                List.of("Set an online or previously known player's balance"));
+        add(inv, 12, Material.CHEST, "Set global stock", "stock",
+                List.of("Set current stock for a material"));
+        add(inv, 14, Material.HOPPER, "Restock all shop items", "restock",
+                List.of("Refill to configured global stock caps"));
+        add(inv, 16, Material.BOOK, "Recent transactions", "transactions",
+                List.of("Show the last 10 balance changes"));
+        add(inv, 29, Material.MAP, "Diagnostics", "diagnostics",
+                List.of("Show online count and persisted data files"));
+        add(inv, 49, Material.BARRIER, "Close", "close", List.of());
+        player.openInventory(inv);
+    }
+
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!ChatColor.DARK_RED + "XZH Admin".equals(ChatColor.stripColor(event.getView().getTitle()))) return;
+        event.setCancelled(true);
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || !clicked.hasItemMeta()) return;
+        String action = clicked.getItemMeta().getPersistentDataContainer().get(actionKey, PersistentDataType.STRING);
+        if (action == null) return;
+        switch (action) {
+            case "balance" -> prompt(player, "balance-player", "Type the player's exact name in chat.");
+            case "stock" -> prompt(player, "stock-material", "Type a material name in chat (for example ELYTRA).");
+            case "restock" -> {
+                plugin.getShopManager().restockAll();
+                player.sendMessage(ChatColor.GREEN + "Global shop stock restocked.");
+                player.closeInventory();
+            }
+            case "transactions" -> { showTransactions(player); player.closeInventory(); }
+            case "diagnostics" -> { diagnostics(player); player.closeInventory(); }
+            case "close" -> player.closeInventory();
+            default -> { }
+        }
+    }
+
+    @EventHandler
+    public void onChat(AsyncPlayerChatEvent event) {
+        Player player = event.getPlayer();
+        String prompt = prompts.get(player.getUniqueId());
+        if (prompt == null) return;
+        event.setCancelled(true);
+        String input = event.getMessage().trim();
+        Bukkit.getScheduler().runTask(plugin, () -> processPrompt(player, prompt, input));
+    }
+
+    private void processPrompt(Player player, String prompt, String input) {
+        if (!player.isOnline()) { prompts.remove(player.getUniqueId()); return; }
+        if (!player.hasPermission("xzh.admin")) { prompts.remove(player.getUniqueId()); return; }
+        if (input.equalsIgnoreCase("cancel")) {
+            prompts.remove(player.getUniqueId());
+            player.sendMessage(ChatColor.YELLOW + "Admin action cancelled.");
+            return;
+        }
+        if (prompt.equals("balance-player")) {
+            if (!input.matches("[A-Za-z0-9_]{1,16}")) {
+                player.sendMessage(ChatColor.RED + "Invalid player name. Type a Minecraft username or 'cancel'.");
+                return;
+            }
+            prompts.put(player.getUniqueId(), "balance-amount:" + input);
+            player.sendMessage(ChatColor.YELLOW + "Type the new balance amount for " + input + " (or 'cancel').");
+            return;
+        }
+        if (prompt.startsWith("balance-amount:")) {
+            String name = prompt.substring("balance-amount:".length());
+            double amount;
+            try { amount = Double.parseDouble(input); }
+            catch (NumberFormatException ex) { player.sendMessage(ChatColor.RED + "Enter a valid amount or 'cancel'."); return; }
+            if (!Double.isFinite(amount) || amount < 0 || amount > 1.0E12) {
+                player.sendMessage(ChatColor.RED + "Amount must be between 0 and 1000000000000."); return;
+            }
+            OfflinePlayer target = Bukkit.getOfflinePlayer(name);
+            plugin.setBalance(target.getUniqueId(), amount);
+            prompts.remove(player.getUniqueId());
+            player.sendMessage(ChatColor.GREEN + "Set " + name + "'s balance to " + amount + " coins.");
+            return;
+        }
+        if (prompt.equals("stock-material")) {
+            Material material;
+            try { material = Material.valueOf(input.toUpperCase(Locale.ROOT)); }
+            catch (IllegalArgumentException ex) { player.sendMessage(ChatColor.RED + "Unknown material. Try again or type 'cancel'."); return; }
+            prompts.put(player.getUniqueId(), "stock-amount:" + material.name());
+            player.sendMessage(ChatColor.YELLOW + "Type the current stock amount for " + material.name() + " (0–1000000), or 'cancel'.");
+            return;
+        }
+        if (prompt.startsWith("stock-amount:")) {
+            String name = prompt.substring("stock-amount:".length());
+            int amount;
+            try { amount = Integer.parseInt(input); }
+            catch (NumberFormatException ex) { player.sendMessage(ChatColor.RED + "Enter a whole number or 'cancel'."); return; }
+            if (amount < 0 || amount > 1_000_000) {
+                player.sendMessage(ChatColor.RED + "Stock must be between 0 and 1000000."); return;
+            }
+            plugin.getShopManager().setStock(Material.valueOf(name), amount);
+            prompts.remove(player.getUniqueId());
+            player.sendMessage(ChatColor.GREEN + "Global stock for " + name + " set to " + amount + ".");
+        }
+    }
+
+    private void prompt(Player player, String state, String text) {
+        prompts.put(player.getUniqueId(), state);
+        player.closeInventory();
+        player.sendMessage(ChatColor.YELLOW + text + " Type 'cancel' to stop.");
+    }
+
+    private void showTransactions(Player player) {
+        try {
+            if (!transactionsFile.exists()) {
+                player.sendMessage(ChatColor.GRAY + "No transaction log entries yet.");
+                return;
+            }
+            List<String> lines = Files.readAllLines(transactionsFile.toPath());
+            player.sendMessage(ChatColor.GOLD + "Recent balance changes:");
+            int start = Math.max(0, lines.size() - 10);
+            for (int i = start; i < lines.size(); i++) player.sendMessage(ChatColor.GRAY + lines.get(i));
+        } catch (IOException ex) {
+            player.sendMessage(ChatColor.RED + "Could not read transaction log.");
+        }
+    }
+
+    private void diagnostics(Player player) {
+        player.sendMessage(ChatColor.GOLD + "XZHEconomySystem diagnostics");
+        player.sendMessage(ChatColor.GRAY + "Online players: " + Bukkit.getOnlinePlayers().size());
+        for (String name : List.of("balances.yml", "loans.yml", "quests.yml", "shop-stock.yml", "death-recovery.yml", "locations.yml", "transactions.log")) {
+            File f = new File(plugin.getDataFolder(), name);
+            player.sendMessage((f.exists() ? ChatColor.GREEN : ChatColor.RED) + name + ": " + (f.exists() ? f.length() + " bytes" : "not created yet"));
+        }
+    }
+
+    private void add(Inventory inv, int slot, Material material, String name, String action, List<String> lore) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(ChatColor.YELLOW + name);
+        meta.setLore(lore.stream().map(line -> ChatColor.GRAY + line).toList());
+        meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
+        item.setItemMeta(meta);
+        inv.setItem(slot, item);
+    }
+}
