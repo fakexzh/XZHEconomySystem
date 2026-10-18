@@ -23,7 +23,7 @@
 - `/spawn`, `/sethome [name]`, `/home [name]`, `/delhome [name]`
 - `/warp <name>`, `/tpa <player>`, `/tpaccept`, `/tpdeny`, `/back`
 - `/msg <player> <message>`, `/reply <message>`, `/ignore <player>`
-- `/afk`, `/near`, `/list`, `/top`, `/rtp`
+- `/afk`, `/near`, `/list`, `/top`, `/rtp`, `/kit starter`, `/help
 - `/eco <set|add> <online-player> <amount>` (operator/admin permission)
 - `/xzh`
 
