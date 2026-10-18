@@ -94,6 +94,11 @@ public final class ShopManager implements Listener {
         add(inv, 23, Material.ZOMBIE_HEAD, "Eggs & Heads", "category", "eggs-heads");
         add(inv, 25, Material.ELYTRA, "Special Items", "category", "special");
         add(inv, 28, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
+        add(inv, 30, Material.WRITABLE_BOOK, "Quest Packs", "quests", "quests");
+        add(inv, 32, Material.CHEST, "Death Inventory", "deathinventory", "deathinventory");
+        add(inv, 34, Material.GOLD_INGOT, "Balance", "balance", "balance");
+        add(inv, 36, Material.BOOK, "Help", "help", "help");
+        add(inv, 38, Material.CLOCK, "Loans", "loans", "loans");
         add(inv, 49, Material.GOLD_INGOT, "Sell Hand (held item)", "sell-hand", "hand");
         player.openInventory(inv);
     }
@@ -220,6 +225,14 @@ public final class ShopManager implements Listener {
         switch (action) {
             case "category" -> openCategory(player, value);
             case "books" -> plugin.getBookShopManager().open(player);
+            case "quests" -> plugin.getQuestManager().open(player);
+            case "deathinventory" -> plugin.getDeathRecoveryManager().open(player);
+            case "balance" -> plugin.tellPublic(player, "Balance: " + money(plugin.getBalance(player.getUniqueId())) + " coins.");
+            case "loans" -> plugin.getLoanManager().open(player);
+            case "help" -> {
+                plugin.tellPublic(player, "/shop, /balance, /pay, /loan, /quests, /deathinventory, /books");
+                player.closeInventory();
+            }
             case "category-page" -> {
                 String[] bits = value.split(":");
                 if (bits.length == 2) {
