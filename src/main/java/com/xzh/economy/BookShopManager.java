@@ -200,7 +200,8 @@ public final class BookShopManager implements Listener {
     }
 
     private double price(String key) {
-        return plugin.getConfig().getDouble("book-shop.prices." + key, defaultPrice(key));
+        double configured = plugin.getConfig().getDouble("book-shop.prices." + key, defaultPrice(key));
+        return Double.isFinite(configured) && configured >= 0.0 ? configured : defaultPrice(key);
     }
 
     private double defaultPrice(String key) {
