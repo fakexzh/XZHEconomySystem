@@ -526,7 +526,7 @@ public final class ShopManager implements Listener {
     private double buyPrice(Product p) {
         double configured = plugin.getConfig().getDouble(
                 "shop.prices." + p.material().name().toLowerCase(Locale.ROOT) + ".buy", p.buy());
-        return validPrice(configured) ? configured : p.buy();
+        return Math.ceil(validPrice(configured) ? configured : p.buy());
     }
 
     private double sellPrice(Product p) {
@@ -536,11 +536,11 @@ public final class ShopManager implements Listener {
         if (spawnEgg && plugin.getConfig().getBoolean("restrictions.buy-only-spawn-eggs", true)) return 0.0;
         if (plugin.getConfig().contains(pricePath)) {
             double configured = plugin.getConfig().getDouble(pricePath, p.sell());
-            return validPrice(configured) ? configured : p.sell();
+            return Math.floor(validPrice(configured) ? configured : p.sell());
         }
-        if (spawnEgg) return buyPrice(p) * 0.30;
+        if (spawnEgg) return Math.floor(buyPrice(p) * 0.30);
         double configured = plugin.getConfig().getDouble(pricePath, p.sell());
-        return validPrice(configured) ? configured : p.sell();
+        return Math.floor(validPrice(configured) ? configured : p.sell());
     }
 
     private boolean validPrice(double value) {
@@ -549,7 +549,7 @@ public final class ShopManager implements Listener {
 
     private double defaultSellPrice() {
         double configured = plugin.getConfig().getDouble("shop.default-sell-price", 0.1);
-        return validPrice(configured) ? configured : 0.1;
+        return Math.floor(validPrice(configured) ? configured : 0.1);
     }
 
     private Product product(Material material) {
