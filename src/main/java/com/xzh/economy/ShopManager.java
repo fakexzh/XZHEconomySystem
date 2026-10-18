@@ -90,7 +90,7 @@ public final class ShopManager implements Listener {
         new Product("eggs-heads", Material.ARMADILLO_SPAWN_EGG, 2500, 0),
         new Product("eggs-heads", Material.SNIFFER_SPAWN_EGG, 3500, 0),
         new Product("eggs-heads", Material.FROG_SPAWN_EGG, 2200, 0),
-        new Product("eggs-heads", Material.EGG, 2, 0.5),
+        new Product("eggs-heads", Material.EGG, 2, 0.6),
         new Product("special", Material.SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE, 600, 180),
         new Product("special", Material.DUNE_ARMOR_TRIM_SMITHING_TEMPLATE, 700, 210),
         new Product("special", Material.COAST_ARMOR_TRIM_SMITHING_TEMPLATE, 700, 210),
