@@ -53,9 +53,9 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         walletStatusFile = new File(getDataFolder(), "wallets.yml");
         walletStatus = YamlConfiguration.loadConfiguration(walletStatusFile);
         pocketCoinManager = new PocketCoinManager(this);
+        bankManager = new BankManager(this);
         hudManager = new HudManager(this);
         hudManager.start();
-        bankManager = new BankManager(this);
         shopManager = new ShopManager(this);
         bookShopManager = new BookShopManager(this);
         loanManager = new LoanManager(this);
@@ -118,9 +118,12 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     public void initializePocketWallet(Player player) {
         if (walletStatus == null || walletStatus.getBoolean(player.getUniqueId().toString(), false)) return;
         String key = player.getUniqueId().toString();
-        double initial = balances.contains(key)
-                ? Math.min(getPocketBalanceLimit(), Math.max(0.0, Math.round(balances.getDouble(key, 0.0))))
-                : Math.min(getPocketBalanceLimit(), Math.max(0.0, Math.round(getConfig().getDouble("starting-balance", 100.0))));
+        double requestedInitial = balances.contains(key)
+                ? Math.max(0.0, Math.round(balances.getDouble(key, 0.0)))
+                : Math.max(0.0, Math.round(getConfig().getDouble("starting-balance", 100.0)));
+        double initial = Math.min(getPocketBalanceLimit(), requestedInitial);
+        double overflow = Math.max(0.0, requestedInitial - initial);
+        if (overflow > 0 && bankManager != null) bankManager.setBalance(player.getUniqueId(), bankManager.getBalance(player.getUniqueId()) + overflow);
         // Persist the migration marker before issuing items so a crash cannot duplicate old balances.
         walletStatus.set(key, true);
         balances.set(key, 0.0);
@@ -193,7 +196,9 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         String key = uuid.toString();
         Player online = Bukkit.getPlayer(uuid);
         double oldAmount;
-        double newAmount = Math.min(getPocketBalanceLimit(), Math.max(0.0, Math.round(amount)));
+        double requestedAmount = Math.max(0.0, Math.round(amount));
+        double newAmount = Math.min(getPocketBalanceLimit(), requestedAmount);
+        double overflow = Math.max(0.0, requestedAmount - newAmount);
         if (online != null) {
             initializePocketWallet(online);
             oldAmount = pocketCoinManager.count(online);
@@ -205,6 +210,11 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             oldAmount = balances.getDouble(key, 0.0);
             balances.set(key, newAmount);
             walletStatus.set(key, false);
+        }
+        if (overflow > 0 && bankManager != null) {
+            bankManager.setBalance(uuid, bankManager.getBalance(uuid) + overflow);
+            Player recipient = Bukkit.getPlayer(uuid);
+            if (recipient != null) tell(recipient, "Your pocket wallet reached its limit; " + money(overflow) + " excess coins were secured in the bank.");
         }
         saveBalances();
         saveWalletStatus();
