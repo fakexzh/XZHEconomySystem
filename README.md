@@ -13,7 +13,7 @@ A Java plugin project targeting Purpur 26.3 (Java 25). This branch combines the 
 - Paid death inventory recovery: 30-minute window, two recoveries per day, configured recovery fee, and death money penalty.
 - HUD sidebar for balance, amount owed, and due/overdue time.
 - Admin GUI `/xzhadmin` for balance updates, shop stock management, transaction history, and diagnostics.
-- Essentials-style commands: spawn, homes, warps, TPA, back, private messages, ignore, AFK, near, list, top, and RTP.
+- Essentials-style commands: spawn, homes, warps, TPA, back, private messages, ignore, AFK, near, list, top, RTP, configurable starter kit, and help.
 - Librarian enchanted-book trade blocking.
 - YAML persistence for balances, loans, quests, shop stock, book cooldowns/stock, death recovery, and locations; balance changes are appended to a transaction log.
 
@@ -30,7 +30,7 @@ Player:
 - `/spawn`, `/sethome [name]`, `/home [name]`, `/delhome [name]`
 - `/warp <name>`, `/tpa <player>`, `/tpaccept`, `/tpdeny`, `/back`
 - `/msg <player> <message>`, `/reply <message>`, `/ignore <player>`
-- `/afk`, `/near`, `/list`, `/top`, `/rtp`
+- `/afk`, `/near`, `/list`, `/top`, `/rtp`, `/kit starter`, `/help
 
 Admin (permission `xzh.admin`, default OP):
 - `/eco <set|add> <online-player> <amount>`
@@ -43,7 +43,7 @@ Admin (permission `xzh.admin`, default OP):
 
 Requires JDK 25. Run `gradle clean build` or use the GitHub Actions workflow. Successful workflow runs publish a JAR artifact and a source ZIP.
 
-See [configuration documentation](docs/CONFIGURATION.md) and the [Falix install guide](docs/FALIX_INSTALL.md).
+See [configuration documentation](docs/CONFIGURATION.md), the [manual test checklist](docs/TEST_CHECKLIST.md), and the [Falix install guide](docs/FALIX_INSTALL.md).
 
 ## Known remaining work before a complete release
 
