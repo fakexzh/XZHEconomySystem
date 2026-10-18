@@ -11,6 +11,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -101,6 +102,11 @@ public final class AdminManager implements Listener {
             case "close" -> player.closeInventory();
             default -> { }
         }
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        prompts.remove(event.getPlayer().getUniqueId());
     }
 
     @EventHandler
