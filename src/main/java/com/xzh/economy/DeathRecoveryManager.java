@@ -83,7 +83,7 @@ public final class DeathRecoveryManager implements Listener {
             data.set(base + ".value", round(lostValue));
             data.set(base + ".expires-at", System.currentTimeMillis() + WINDOW_MILLIS);
             data.set(base + ".recovered", false);
-            double penalty = Math.min(1000.0, Math.max(10.0, lostValue * 0.10));
+            double penalty = Math.ceil(Math.min(1000.0, Math.max(10.0, lostValue * 0.10)));
             penalty = Math.min(penalty, plugin.getBalance(id));
             plugin.setBalance(id, plugin.getBalance(id) - penalty);
             plugin.tellPublic(player, "Death penalty: " + money(penalty) + " coins. Use /deathinventory within 30 minutes to recover your lost items and XP for a fee.");
@@ -131,7 +131,7 @@ public final class DeathRecoveryManager implements Listener {
             return;
         }
         double value = recoveryValue(base);
-        double fee = round(value * safeFeeMultiplier());
+        double fee = Math.ceil(value * safeFeeMultiplier());
         int count = readItems(base).stream().mapToInt(ItemStack::getAmount).sum();
         int xp = data.getInt(base + ".total-xp", 0);
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Death Inventory Recovery");
