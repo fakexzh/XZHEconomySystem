@@ -96,8 +96,8 @@ public final class ShopManager implements Listener {
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName(ChatColor.YELLOW + pretty(p.material()));
             List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.WHITE + "Buy: " + ChatColor.YELLOW + money(p.buy()) + " coins each");
-            lore.add(ChatColor.WHITE + "Sell: " + ChatColor.RED + money(p.sell()) + " coins each");
+            lore.add(ChatColor.WHITE + "Buy: " + ChatColor.YELLOW + money(buyPrice(p)) + " coins each");
+            lore.add(ChatColor.WHITE + "Sell: " + ChatColor.RED + money(sellPrice(p)) + " coins each");
             lore.add(ChatColor.WHITE + "Global stock: " + ChatColor.AQUA + getStock(p.material()) + "/" + stockLimit(p.material()));
             if (p.material() == Material.ELYTRA) lore.add(ChatColor.LIGHT_PURPLE + "Unlock: Visit the End first");
             lore.add(ChatColor.GRAY + "Click to choose quantity");
@@ -121,7 +121,7 @@ public final class ShopManager implements Listener {
             ItemStack item = new ItemStack(material, Math.min(64, quantities[i]));
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName(ChatColor.YELLOW + "Buy " + quantities[i]);
-            meta.setLore(List.of(ChatColor.WHITE + "Total: " + ChatColor.YELLOW + money(p.buy() * quantities[i]) + " coins",
+            meta.setLore(List.of(ChatColor.WHITE + "Total: " + ChatColor.YELLOW + money(buyPrice(p) * quantities[i]) + " coins",
                     ChatColor.WHITE + "Global stock: " + ChatColor.AQUA + getStock(material)));
             meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "confirm-buy");
             meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, material.name());
@@ -132,7 +132,7 @@ public final class ShopManager implements Listener {
         ItemStack sell = new ItemStack(material);
         ItemMeta sm = sell.getItemMeta();
         sm.setDisplayName(ChatColor.RED + "Sell all of this item in inventory");
-        sm.setLore(List.of(ChatColor.WHITE + "Value: " + ChatColor.RED + money(p.sell()) + " coins each",
+        sm.setLore(List.of(ChatColor.WHITE + "Value: " + ChatColor.RED + money(sellPrice(p)) + " coins each",
                 ChatColor.GRAY + "You will confirm before selling."));
         sm.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "confirm-sell");
         sm.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, material.name());
@@ -151,7 +151,7 @@ public final class ShopManager implements Listener {
         if (p == null && !buying) p = new Product("misc", material, 0.0, plugin.getConfig().getDouble("shop.default-sell-price", 0.1));
         if (p == null) return;
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Confirm transaction");
-        double total = (buying ? p.buy() : p.sell()) * quantity;
+        double total = (buying ? buyPrice(p) : sellPrice(p)) * quantity;
         ItemStack summary = new ItemStack(material, Math.min(64, quantity));
         ItemMeta sm = summary.getItemMeta();
         sm.setDisplayName(ChatColor.WHITE + (buying ? "Buy " : "Sell ") + quantity + " × " + pretty(material));
@@ -221,7 +221,7 @@ public final class ShopManager implements Listener {
                 if (p == null && !action.equals("buy") && material != null)
                     p = new Product("misc", material, 0.0, plugin.getConfig().getDouble("shop.default-sell-price", 0.1));
                 if (p == null || quantity < 1) return;
-                double total = (action.equals("buy") ? p.buy() : p.sell()) * quantity;
+                double total = (action.equals("buy") ? buyPrice(p) : sellPrice(p)) * quantity;
                 if (action.equals("buy") && material == Material.ELYTRA && !hasVisitedEnd(player)) {
                     plugin.tellPublic(player, "Elytra purchases unlock after you visit the End.");
                     player.closeInventory();
@@ -251,12 +251,12 @@ public final class ShopManager implements Listener {
                         player.closeInventory();
                         return;
                     }
-                    double charged = p.buy() * delivered;
+                    double charged = buyPrice(p) * delivered;
                     setStock(material, getStock(material) - delivered);
                     plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) - charged);
                     plugin.tellPublic(player, "Bought " + delivered + " × " + pretty(material) + " for " + money(charged) + " coins.");
                 } else {
-                    if (p.sell() * quantity < 1) {
+                    if (sellPrice(p) * quantity < 1) {
                         plugin.tellPublic(player, "Items worth less than 1 coin cannot be sold.");
                         player.closeInventory();
                         return;
@@ -281,7 +281,7 @@ public final class ShopManager implements Listener {
                         player.closeInventory();
                         return;
                     }
-                    double earned = p.sell() * sold;
+                    double earned = sellPrice(p) * sold;
                     plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + earned);
                     plugin.tellPublic(player, "Sold " + sold + " × " + pretty(material) + " for " + money(earned) + " coins.");
                 }
@@ -294,7 +294,7 @@ public final class ShopManager implements Listener {
                     return;
                 }
                 Product p = product(hand.getType());
-                double unitSell = p == null ? plugin.getConfig().getDouble("shop.default-sell-price", 0.1) : p.sell();
+                double unitSell = p == null ? plugin.getConfig().getDouble("shop.default-sell-price", 0.1) : sellPrice(p);
                 if (unitSell * hand.getAmount() < 1) {
                     plugin.tellPublic(player, "The held stack is worth less than 1 coin and cannot be sold.");
                     return;
@@ -360,6 +360,14 @@ public final class ShopManager implements Listener {
     private boolean hasVisitedEnd(Player player) {
         org.bukkit.advancement.Advancement advancement = plugin.getServer().getAdvancement(NamespacedKey.minecraft("end/enter_end"));
         return advancement == null || player.getAdvancementProgress(advancement).isDone();
+    }
+
+    private double buyPrice(Product p) {
+        return plugin.getConfig().getDouble("shop.prices." + p.material().name().toLowerCase(Locale.ROOT) + ".buy", p.buy());
+    }
+
+    private double sellPrice(Product p) {
+        return plugin.getConfig().getDouble("shop.prices." + p.material().name().toLowerCase(Locale.ROOT) + ".sell", p.sell());
     }
 
     private Product product(Material material) {
