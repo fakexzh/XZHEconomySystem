@@ -18,6 +18,31 @@ maximum-pay: 1000000.0
 - `starting-balance`: initial balance for a UUID that has never had a saved balance.
 - `minimum-pay` / `maximum-pay`: accepted range for `/pay`.
 
+## Global announcements
+
+```yaml
+announcements:
+  shop:
+    enabled: true
+    minimum-purchase-total: 1000
+    rare-items:
+      - ELYTRA
+      - NETHERITE_INGOT
+      - ENCHANTED_GOLDEN_APPLE
+      - TOTEM_OF_UNDYING
+      - TRIDENT
+      - MACE
+      - WITHER_SKELETON_SKULL
+      - SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE
+    progression-items:
+      - ELYTRA
+  loan:
+    borrowing: true
+    full-repayment: true
+```
+
+Shop announcements are limited to purchases at or above the configured total, listed rare items, or progression items. Loan announcements are sent when a loan is granted and when the full balance is repaid, including automatic repayment.
+
 ## Bank
 
 The separate `/bank` GUI is titled `XZH BANK`. Bank balances are stored in `bank-balances.yml`; pocket money is represented by tagged physical XZH coin items, with `balances.yml` holding migration/offline snapshots and `wallets.yml` tracking wallet initialization. Deposits and withdrawals are available only between the configured Minecraft-time hours; the bank menu and loan details remain accessible outside those hours. Shop purchases and loan repayments can spend pocket funds first and then bank funds at any time.
