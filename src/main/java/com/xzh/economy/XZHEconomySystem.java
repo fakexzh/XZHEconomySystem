@@ -80,6 +80,8 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     public LoanManager getLoanManager() { return loanManager; }
     public ShopManager getShopManager() { return shopManager; }
     public BookShopManager getBookShopManager() { return bookShopManager; }
+    public QuestManager getQuestManager() { return questManager; }
+    public DeathRecoveryManager getDeathRecoveryManager() { return deathRecoveryManager; }
 
     public void tellPublic(CommandSender sender, String message) { tell(sender, message); }
 
