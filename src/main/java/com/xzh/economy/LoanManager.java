@@ -41,7 +41,8 @@ public final class LoanManager implements Listener {
                 UUID id = UUID.fromString(key);
                 double owed = data.getDouble(key + ".amount", 0.0);
                 long due = data.getLong(key + ".due-at", 0L);
-                if (owed > 0) plugin.getHudManager().setLoan(id, owed, due);
+                long grace = data.getLong(key + ".grace-until", due + 12L * 60L * 60L * 1000L);
+                if (owed > 0) plugin.getHudManager().setLoan(id, owed, due, grace);
             } catch (IllegalArgumentException ignored) { }
         }
         actionKey = new NamespacedKey(plugin, "loan_action");
@@ -143,7 +144,7 @@ public final class LoanManager implements Listener {
         data.set(id + ".overdue", false);
         save();
         plugin.setBalance(id, plugin.getBalance(id) + principal);
-        plugin.getHudManager().setLoan(id, total, dueAt);
+        plugin.getHudManager().setLoan(id, total, dueAt, dueAt + 12L * 60L * 60L * 1000L);
         plugin.tellPublic(player, "Loan approved: +" + amount + " coins. Repay " + money(total) + " within " + days + " days.");
     }
 
