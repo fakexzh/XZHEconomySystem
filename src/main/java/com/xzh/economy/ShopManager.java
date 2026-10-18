@@ -509,11 +509,19 @@ public final class ShopManager implements Listener {
     }
 
     private double buyPrice(Product p) {
-        return plugin.getConfig().getDouble("shop.prices." + p.material().name().toLowerCase(Locale.ROOT) + ".buy", p.buy());
+        double configured = plugin.getConfig().getDouble(
+                "shop.prices." + p.material().name().toLowerCase(Locale.ROOT) + ".buy", p.buy());
+        return validPrice(configured) ? configured : p.buy();
     }
 
     private double sellPrice(Product p) {
-        return plugin.getConfig().getDouble("shop.prices." + p.material().name().toLowerCase(Locale.ROOT) + ".sell", p.sell());
+        double configured = plugin.getConfig().getDouble(
+                "shop.prices." + p.material().name().toLowerCase(Locale.ROOT) + ".sell", p.sell());
+        return validPrice(configured) ? configured : p.sell();
+    }
+
+    private boolean validPrice(double value) {
+        return Double.isFinite(value) && value >= 0.0;
     }
 
     private Product product(Material material) {
