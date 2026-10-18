@@ -79,6 +79,8 @@ public final class QuestManager implements Listener {
     public void adminClearQuest(UUID id) {
         data.set(id.toString(), null);
         travelRemainders.remove(id);
+        Player player = Bukkit.getPlayer(id);
+        if (player != null) plugin.getHudManager().hideActiveQuest(player);
         save();
     }
 
