@@ -41,7 +41,7 @@ public final class VaultEconomyProvider implements Economy {
 
     @Override public EconomyResponse withdrawPlayer(String playerName, double amount) { return withdrawPlayer(Bukkit.getOfflinePlayer(playerName), amount); }
     @Override public EconomyResponse withdrawPlayer(OfflinePlayer player, double amount) {
-        if (!validAmount(amount)) return response(0, getBalance(player), EconomyResponse.ResponseType.FAILURE, "Amount must be finite and non-negative.");
+        if (!validAmount(amount)) return response(0, getBalance(player), EconomyResponse.ResponseType.FAILURE, "Amount must be a whole, non-negative number of coins.");
         double balance = getBalance(player);
         if (balance < amount) return response(0, balance, EconomyResponse.ResponseType.FAILURE, "Insufficient funds.");
         plugin.setBalance(player.getUniqueId(), balance - amount);
@@ -78,7 +78,7 @@ public final class VaultEconomyProvider implements Economy {
     @Override public boolean createPlayerAccount(String playerName, String worldName) { return createPlayerAccount(playerName); }
     @Override public boolean createPlayerAccount(OfflinePlayer player, String worldName) { return createPlayerAccount(player); }
 
-    private boolean validAmount(double amount) { return Double.isFinite(amount) && amount >= 0; }
+    private boolean validAmount(double amount) { return Double.isFinite(amount) && amount >= 0 && amount == Math.rint(amount); }
     private EconomyResponse response(double amount, double balance, EconomyResponse.ResponseType type, String error) {
         return new EconomyResponse(amount, balance, type, error);
     }
