@@ -231,7 +231,7 @@ public final class ShopManager implements Listener {
         summary.setItemMeta(sm);
         inv.setItem(13, summary);
         add(inv, 11, Material.LIME_CONCRETE, "Confirm", buying ? "buy" : (handOnly ? "sell-hand-confirm" : "sell"), material.name() + ":" + quantity);
-        add(inv, 15, Material.RED_CONCRETE, "Cancel", "category-back", p.category());
+        add(inv, 15, Material.RED_CONCRETE, "Cancel", "category-back", handOnly ? "main" : p.category());
         player.openInventory(inv);
     }
 
