@@ -37,6 +37,7 @@ public final class PocketCoinManager implements Listener {
         PlayerInventory inventory = player.getInventory();
         for (ItemStack item : inventory.getStorageContents()) total += valueOf(item);
         total += valueOf(inventory.getItemInOffHand());
+        total += valueOf(player.getOpenInventory().getCursor());
         return total;
     }
 
@@ -48,6 +49,7 @@ public final class PocketCoinManager implements Listener {
             if (isCoin(item)) inventory.setItem(slot, null);
         }
         if (isCoin(inventory.getItemInOffHand())) inventory.setItemInOffHand(null);
+        if (isCoin(player.getOpenInventory().getCursor())) player.getOpenInventory().setCursor(null);
 
         List<ItemStack> coins = new ArrayList<>();
         long remaining = target;
