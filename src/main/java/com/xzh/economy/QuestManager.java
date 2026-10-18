@@ -94,6 +94,14 @@ public final class QuestManager implements Listener {
         save();
     }
 
+    public boolean setPackStock(String packId, int amount) {
+        Pack pack = packs.stream().filter(candidate -> candidate.id().equalsIgnoreCase(packId)).findFirst().orElse(null);
+        if (pack == null || amount < 0 || amount > 1_000_000) return false;
+        data.set("stock." + pack.id(), amount);
+        save();
+        return true;
+    }
+
     public void open(Player player) {
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "XZH Quest Packs");
         int slot = 0;
