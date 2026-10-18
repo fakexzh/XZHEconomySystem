@@ -192,6 +192,11 @@ public final class ShopManager implements Listener {
                 if (p == null || quantity < 1) return;
                 double total = (action.equals("buy") ? p.buy() : p.sell()) * quantity;
                 if (action.equals("buy")) {
+                    if (plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) {
+                        plugin.tellPublic(player, "Your loan is overdue. Shop purchases are locked until you repay it with /loan repay; selling is still allowed.");
+                        player.closeInventory();
+                        return;
+                    }
                     if (plugin.getBalance(player.getUniqueId()) < total) {
                         plugin.tellPublic(player, "Not enough coins.");
                         player.closeInventory();
