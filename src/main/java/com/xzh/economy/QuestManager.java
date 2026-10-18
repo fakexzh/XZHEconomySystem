@@ -57,6 +57,7 @@ public final class QuestManager implements Listener {
             for (Pack pack : packs) if (!data.contains("stock." + pack.id())) data.set("stock." + pack.id(), pack.stock());
         }
         save();
+        resetEventIfNeeded();
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) updateHud(player);
         }, 20L, 20L * 5L);
@@ -89,6 +90,7 @@ public final class QuestManager implements Listener {
             item.setItemMeta(meta);
             inv.setItem(slot++, item);
         }
+        add(inv, 22, Material.NETHER_STAR, ChatColor.LIGHT_PURPLE + "Global Event Quest", "event-open", "global");
         add(inv, 49, Material.BARRIER, ChatColor.RED + "Close", "close", "");
         player.openInventory(inv);
     }
@@ -138,7 +140,9 @@ public final class QuestManager implements Listener {
     public void onBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
         String target = data.getString(player.getUniqueId() + ".target", "");
-        if (target.equals("break") || target.equals("mine") && isOre(event.getBlock().getType())) increment(player, 1);
+        boolean ore = isOre(event.getBlock().getType());
+        if (ore) recordEventOre(player);
+        if (target.equals("break") || target.equals("mine") && ore) increment(player, 1);
     }
 
     @EventHandler
@@ -155,7 +159,7 @@ public final class QuestManager implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (title == null || !(title.equals("XZH Quest Packs") || title.equals("Confirm quest pack"))) return;
+        if (title == null || !(title.equals("XZH Quest Packs") || title.equals("Confirm quest pack") || title.equals("XZH Global Event"))) return;
         event.setCancelled(true);
         ItemStack item = event.getCurrentItem();
         if (item == null || !item.hasItemMeta()) return;
@@ -165,10 +169,89 @@ public final class QuestManager implements Listener {
         if (action == null) return;
         if (action.equals("close")) { player.closeInventory(); return; }
         if (action.equals("back")) { open(player); return; }
+        if (action.equals("event-open")) { openEvent(player); return; }
+        if (action.equals("event-claim")) { claimEvent(player); return; }
         Pack pack = packs.stream().filter(p -> p.id().equals(value)).findFirst().orElse(null);
         if (pack == null) return;
         if (action.equals("select")) confirm(player, pack);
         else if (action.equals("buy")) buy(player, pack);
+    }
+
+
+    private void resetEventIfNeeded() {
+        String today = LocalDate.now().toString();
+        if (!today.equals(data.getString("event.date", ""))) {
+            data.set("event", null);
+            data.set("event.date", today);
+            data.set("event.progress", 0);
+            data.set("event.goal", 500);
+            data.set("event.reward", 100);
+            data.set("event.claims-remaining", 25);
+            save();
+        }
+    }
+
+    private void recordEventOre(Player player) {
+        resetEventIfNeeded();
+        int goal = data.getInt("event.goal", 500);
+        int progress = Math.min(goal, data.getInt("event.progress", 0) + 1);
+        data.set("event.progress", progress);
+        String contributionPath = "event.contribution." + player.getUniqueId();
+        data.set(contributionPath, data.getInt(contributionPath, 0) + 1);
+        save();
+    }
+
+    private void openEvent(Player player) {
+        resetEventIfNeeded();
+        String contributionPath = "event.contribution." + player.getUniqueId();
+        boolean alreadyClaimed = LocalDate.now().toString().equals(
+                data.getString("event.claimed." + player.getUniqueId(), ""));
+        int progress = data.getInt("event.progress", 0);
+        int goal = data.getInt("event.goal", 500);
+        int contribution = data.getInt(contributionPath, 0);
+        int remaining = data.getInt("event.claims-remaining", 25);
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Global Event");
+        add(inv, 13, Material.NETHER_STAR, ChatColor.LIGHT_PURPLE + "Community Ore Rush", "event-info", "global",
+                List.of(ChatColor.WHITE + "Global progress: " + progress + "/" + goal + " ores",
+                        ChatColor.WHITE + "Your contribution: " + contribution + " ores",
+                        ChatColor.WHITE + "Reward: " + data.getInt("event.reward", 100) + " coins",
+                        ChatColor.WHITE + "Rewards remaining: " + remaining,
+                        ChatColor.GRAY + "Mine ores to contribute. Need 10 personal ores and global completion."));
+        add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "Claim event reward", "event-claim", "global",
+                List.of(ChatColor.WHITE + "Requires event complete and 10+ personal ores",
+                        ChatColor.GRAY + (alreadyClaimed ? "Already claimed today" : "One claim per player per day")));
+        add(inv, 15, Material.ARROW, ChatColor.WHITE + "Back", "back", "");
+        player.openInventory(inv);
+    }
+
+    private void claimEvent(Player player) {
+        resetEventIfNeeded();
+        UUID id = player.getUniqueId();
+        String today = LocalDate.now().toString();
+        if (today.equals(data.getString("event.claimed." + id, ""))) {
+            plugin.tellPublic(player, "You have already claimed today's global event reward.");
+            return;
+        }
+        if (data.getInt("event.progress", 0) < data.getInt("event.goal", 500)) {
+            plugin.tellPublic(player, "The global event objective is not complete yet.");
+            return;
+        }
+        if (data.getInt("event.contribution." + id, 0) < 10) {
+            plugin.tellPublic(player, "Contribute at least 10 ores before claiming the event reward.");
+            return;
+        }
+        int remaining = data.getInt("event.claims-remaining", 25);
+        if (remaining <= 0) {
+            plugin.tellPublic(player, "All global event rewards have been claimed today.");
+            return;
+        }
+        int reward = data.getInt("event.reward", 100);
+        data.set("event.claimed." + id, today);
+        data.set("event.claims-remaining", remaining - 1);
+        save();
+        plugin.setBalance(id, plugin.getBalance(id) + reward);
+        plugin.tellPublic(player, "Global event reward claimed: " + reward + " coins.");
+        openEvent(player);
     }
 
     private void increment(Player player, int amount) {
