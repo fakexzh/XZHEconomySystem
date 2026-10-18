@@ -16,7 +16,7 @@ public final class GuiDragGuard implements Listener {
             "XZH Shop", "Shop: ", "Choose quantity", "Confirm transaction",
             "XZH Enchantment Books ", "Confirm enchanted book",
             "XZH Loans", "Choose loan term", "Confirm loan",
-            "XZH Quest Packs", "Confirm quest pack", "XZH Global Event",
+            "XZH Quest Packs", "Confirm quest pack", "Confirm abandon quest", "XZH Global Event",
             "Death Inventory Recovery", "XZH Admin"
     };
 
