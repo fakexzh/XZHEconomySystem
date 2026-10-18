@@ -354,8 +354,8 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 double amount;
                 try { amount = round(Double.parseDouble(args[1])); }
                 catch (NumberFormatException e) { tell(sender, "Enter a valid number."); return true; }
-                if (!Double.isFinite(amount) || amount <= 0
-                        || amount < Math.max(0.01, getConfig().getDouble("minimum-pay", 1.0))
+                if (!Double.isFinite(amount) || amount <= 0 || amount != Math.rint(amount)
+                        || amount < Math.max(1.0, getConfig().getDouble("minimum-pay", 1.0))
                         || amount > getConfig().getDouble("maximum-pay", 1000000.0)) {
                     tell(sender, "That amount is outside the allowed range.");
                     return true;
@@ -367,8 +367,8 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 }
                 setBalance(player.getUniqueId(), senderBalance - amount);
                 setBalance(target.getUniqueId(), getBalance(target.getUniqueId()) + amount);
-                tell(player, "Sent §e" + money(amount) + " " + currency() + "§r to " + target.getName() + ".");
-                tell(target, "Received §e" + money(amount) + " " + currency() + "§r from " + player.getName() + ".");
+                tell(player, "Sent §e" + money(Math.round(amount)) + " " + currency() + "§r to " + target.getName() + ".");
+                tell(target, "Received §e" + money(Math.round(amount)) + " " + currency() + "§r from " + player.getName() + ".");
                 return true;
             }
             case "eco" -> {
