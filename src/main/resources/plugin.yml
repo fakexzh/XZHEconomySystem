@@ -35,6 +35,9 @@ commands:
     description: Open the XZH economy admin GUI.
     usage: /xzhadmin
     permission: xzh.admin
+  books:
+    description: Open the enchantment book shop.
+    usage: /books
   eco:
     description: Admin economy management.
     usage: /eco <set|add> <player> <amount>
