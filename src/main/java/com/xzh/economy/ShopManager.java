@@ -118,6 +118,8 @@ public final class ShopManager implements Listener {
         new Product("eggs-heads", Material.MOOSHROOM_SPAWN_EGG, 3000, 0),
         new Product("xp", Material.EXPERIENCE_BOTTLE, 25, 7.5),
         new Product("potions", Material.POTION, 75, 22.5),
+        new Product("potions", Material.SPLASH_POTION, 90, 27),
+        new Product("potions", Material.LINGERING_POTION, 120, 36),
         new Product("eggs-heads", Material.ZOMBIE_HEAD, 400, 120),
         new Product("eggs-heads", Material.CHICKEN_SPAWN_EGG, 1000, 0),
         new Product("eggs-heads", Material.COW_SPAWN_EGG, 1500, 0),
@@ -503,7 +505,9 @@ public final class ShopManager implements Listener {
 
     private ItemStack createStack(Material material, int amount) {
         ItemStack stack = new ItemStack(material, amount);
-        if (material == Material.POTION && stack.getItemMeta() instanceof PotionMeta meta) {
+        if ((material == Material.POTION || material == Material.SPLASH_POTION
+                || material == Material.LINGERING_POTION)
+                && stack.getItemMeta() instanceof PotionMeta meta) {
             meta.setBasePotionType(PotionType.STRENGTH);
             stack.setItemMeta(meta);
         }
