@@ -99,12 +99,20 @@ public final class ShopManager implements Listener {
     }
 
     private void openCategory(Player player, String category) {
+        openCategory(player, category, 0);
+    }
+
+    private void openCategory(Player player, String category, int requestedPage) {
         if (category.equals("food")) { openFoodMenu(player); return; }
         List<Product> list = products.stream().filter(p -> p.category().equals(category)).toList();
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "Shop: " + category);
-        int slot = 0;
-        for (Product p : list) {
-            if (slot >= 45) break;
+        int pages = Math.max(1, (list.size() + 44) / 45);
+        int page = Math.max(0, Math.min(requestedPage, pages - 1));
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "Shop: " + category + " " + (page + 1));
+        int start = page * 45;
+        int end = Math.min(list.size(), start + 45);
+        for (int index = start; index < end; index++) {
+            Product p = list.get(index);
+            int slot = index - start;
             ItemStack item = new ItemStack(p.material());
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName(ChatColor.YELLOW + pretty(p.material()));
@@ -118,9 +126,11 @@ public final class ShopManager implements Listener {
             meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "product");
             meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, p.material().name());
             item.setItemMeta(meta);
-            inv.setItem(slot++, item);
+            inv.setItem(slot, item);
         }
+        if (page > 0) add(inv, 45, Material.ARROW, "Previous page", "category-page", category + ":" + (page - 1));
         add(inv, 49, Material.ARROW, "Back", "back", "main");
+        if (page + 1 < pages) add(inv, 53, Material.ARROW, "Next page", "category-page", category + ":" + (page + 1));
         player.openInventory(inv);
     }
 
@@ -210,6 +220,13 @@ public final class ShopManager implements Listener {
         switch (action) {
             case "category" -> openCategory(player, value);
             case "books" -> plugin.getBookShopManager().open(player);
+            case "category-page" -> {
+                String[] bits = value.split(":");
+                if (bits.length == 2) {
+                    try { openCategory(player, bits[0], Integer.parseInt(bits[1])); }
+                    catch (NumberFormatException ignored) { openCategory(player, bits[0]); }
+                }
+            }
             case "product" -> {
                 Material material = parseMaterial(value);
                 if (material != null) openQuantity(player, material);
