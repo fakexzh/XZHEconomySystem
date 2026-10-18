@@ -113,13 +113,14 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     }
 
     public PocketCoinManager getPocketCoinManager() { return pocketCoinManager; }
+    public double getPocketBalanceLimit() { return Math.max(1000.0, getConfig().getDouble("wallet.max-pocket-coins", 1000000.0)); }
 
     public void initializePocketWallet(Player player) {
         if (walletStatus == null || walletStatus.getBoolean(player.getUniqueId().toString(), false)) return;
         String key = player.getUniqueId().toString();
         double initial = balances.contains(key)
-                ? Math.max(0.0, Math.round(balances.getDouble(key, 0.0)))
-                : Math.max(0.0, Math.round(getConfig().getDouble("starting-balance", 100.0)));
+                ? Math.min(getPocketBalanceLimit(), Math.max(0.0, Math.round(balances.getDouble(key, 0.0))))
+                : Math.min(getPocketBalanceLimit(), Math.max(0.0, Math.round(getConfig().getDouble("starting-balance", 100.0))));
         // Persist the migration marker before issuing items so a crash cannot duplicate old balances.
         walletStatus.set(key, true);
         balances.set(key, 0.0);
@@ -192,7 +193,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         String key = uuid.toString();
         Player online = Bukkit.getPlayer(uuid);
         double oldAmount;
-        double newAmount = Math.max(0.0, Math.round(amount));
+        double newAmount = Math.min(getPocketBalanceLimit(), Math.max(0.0, Math.round(amount)));
         if (online != null) {
             initializePocketWallet(online);
             oldAmount = pocketCoinManager.count(online);
