@@ -3,6 +3,7 @@ package com.xzh.economy;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
@@ -29,6 +30,7 @@ public final class UtilityManager implements Listener {
     private final Map<UUID, Long> requestExpiry = new HashMap<>();
     private final Map<UUID, UUID> replies = new HashMap<>();
     private final Map<UUID, Boolean> afk = new HashMap<>();
+    private final Map<UUID, Long> rtpCooldown = new HashMap<>();
 
     public UtilityManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -187,6 +189,35 @@ public final class UtilityManager implements Listener {
                         .filter(other -> !other.equals(player) && other.getLocation().distanceSquared(player.getLocation()) <= 10000)
                         .map(Player::getName).sorted().collect(java.util.stream.Collectors.joining(", "));
                 msg(player, nearby.isEmpty() ? "No players within 100 blocks." : "Nearby (100 blocks): " + nearby);
+                return true;
+            }
+            case "rtp" -> {
+                long now = System.currentTimeMillis();
+                long ready = rtpCooldown.getOrDefault(player.getUniqueId(), 0L);
+                if (now < ready) { msg(player, "Random teleport cooldown: " + ((ready - now + 999) / 1000) + " seconds."); return true; }
+                int radius = Math.max(100, plugin.getConfig().getInt("utilities.rtp-radius", 3000));
+                Location center = data.getLocation("spawn");
+                if (center == null) center = player.getWorld().getSpawnLocation();
+                World world = center.getWorld();
+                if (world == null) { msg(player, "No valid world for random teleport."); return true; }
+                java.util.concurrent.ThreadLocalRandom random = java.util.concurrent.ThreadLocalRandom.current();
+                for (int attempt = 0; attempt < 30; attempt++) {
+                    int x = center.getBlockX() + random.nextInt(-radius, radius + 1);
+                    int z = center.getBlockZ() + random.nextInt(-radius, radius + 1);
+                    Block floor = world.getHighestBlockAt(x, z);
+                    Material ground = floor.getType();
+                    Material feet = floor.getRelative(0, 1, 0).getType();
+                    Material head = floor.getRelative(0, 2, 0).getType();
+                    if (!ground.isSolid() || ground == Material.MAGMA_BLOCK || ground == Material.CACTUS
+                            || ground == Material.CAMPFIRE || ground == Material.SOUL_CAMPFIRE
+                            || ground == Material.FIRE || ground == Material.SOUL_FIRE
+                            || feet != Material.AIR || head != Material.AIR) continue;
+                    player.teleport(new Location(world, x + 0.5, floor.getY() + 1, z + 0.5));
+                    rtpCooldown.put(player.getUniqueId(), now + plugin.getConfig().getLong("utilities.rtp-cooldown-seconds", 600) * 1000L);
+                    msg(player, "Randomly teleported. Cooldown: 10 minutes.");
+                    return true;
+                }
+                msg(player, "Could not find a safe location. Try again.");
                 return true;
             }
             case "top" -> {
