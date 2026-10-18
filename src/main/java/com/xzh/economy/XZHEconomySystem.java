@@ -26,10 +26,13 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     private QuestManager questManager;
     private DeathRecoveryManager deathRecoveryManager;
     private UtilityManager utilityManager;
+    private AdminManager adminManager;
+    private File transactionsFile;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        transactionsFile = new File(getDataFolder(), "transactions.log");
         balancesFile = new File(getDataFolder(), "balances.yml");
         if (!balancesFile.exists()) {
             try {
@@ -48,13 +51,14 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         questManager = new QuestManager(this);
         deathRecoveryManager = new DeathRecoveryManager(this);
         utilityManager = new UtilityManager(this);
+        adminManager = new AdminManager(this);
         getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
             @org.bukkit.event.EventHandler
             public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) { hudManager.onJoin(event.getPlayer()); }
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
-        for (String name : List.of("xzh", "balance", "pay", "eco", "shop", "loan", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "sethome", "delhome", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top")) {
+        for (String name : List.of("xzh", "balance", "pay", "eco", "shop", "loan", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "sethome", "delhome", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "xzhadmin")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
@@ -72,6 +76,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
 
     public HudManager getHudManager() { return hudManager; }
     public LoanManager getLoanManager() { return loanManager; }
+    public ShopManager getShopManager() { return shopManager; }
 
     public void tellPublic(CommandSender sender, String message) { tell(sender, message); }
 
@@ -85,8 +90,20 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     }
 
     public void setBalance(UUID uuid, double amount) {
-        balances.set(uuid.toString(), Math.max(0.0, round(amount)));
+        double oldAmount = balances.getDouble(uuid.toString(), 0.0);
+        double newAmount = Math.max(0.0, round(amount));
+        balances.set(uuid.toString(), newAmount);
         saveBalances();
+        try {
+            getDataFolder().mkdirs();
+            java.nio.file.Files.writeString(transactionsFile.toPath(),
+                    java.time.Instant.now() + " uuid=" + uuid + " old=" + money(oldAmount)
+                            + " new=" + money(newAmount) + " delta=" + money(newAmount - oldAmount)
+                            + System.lineSeparator(),
+                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            getLogger().warning("Could not append transactions.log: " + e.getMessage());
+        }
     }
 
     private double round(double amount) {
@@ -132,6 +149,11 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 if (args.length == 1 && args[0].equalsIgnoreCase("repay")) return loanManager.repay(player);
                 if (args.length > 0) { tell(sender, "Usage: /loan [repay]"); return true; }
                 loanManager.open(player);
+                return true;
+            }
+            case "xzhadmin" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can open the admin GUI."); return true; }
+                adminManager.open(player);
                 return true;
             }
             case "shopadmin" -> {
