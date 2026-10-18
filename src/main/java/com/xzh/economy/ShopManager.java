@@ -46,6 +46,16 @@ public final class ShopManager implements Listener {
         new Product("food", Material.COOKED_BEEF, 14, 4.2),
         new Product("equipment", Material.IRON_PICKAXE, 120, 36),
         new Product("equipment", Material.DIAMOND_PICKAXE, 650, 195),
+        new Product("equipment", Material.IRON_CHESTPLATE, 180, 54),
+        new Product("equipment", Material.DIAMOND_SWORD, 500, 150),
+        new Product("xp", Material.EXPERIENCE_BOTTLE, 25, 7.5),
+        new Product("potions", Material.POTION, 75, 22.5),
+        new Product("eggs-heads", Material.ZOMBIE_HEAD, 400, 120),
+        new Product("eggs-heads", Material.CHICKEN_SPAWN_EGG, 1000, 0),
+        new Product("eggs-heads", Material.COW_SPAWN_EGG, 1500, 0),
+        new Product("eggs-heads", Material.SHEEP_SPAWN_EGG, 1500, 0),
+        new Product("eggs-heads", Material.PIG_SPAWN_EGG, 1500, 0),
+        new Product("eggs-heads", Material.EGG, 2, 0.5),
         new Product("special", Material.ELYTRA, 5000, 1500)
     );
 
@@ -62,13 +72,16 @@ public final class ShopManager implements Listener {
     }
 
     public void openMain(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "XZH Shop");
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH Shop");
         add(inv, 10, Material.IRON_INGOT, "Ores", "category", "ores");
         add(inv, 12, Material.BRICKS, "Blocks", "category", "blocks");
         add(inv, 14, Material.COOKED_BEEF, "Food", "category", "food");
-        add(inv, 16, Material.DIAMOND_PICKAXE, "Equipment", "category", "equipment");
-        add(inv, 22, Material.ELYTRA, "Special Items", "category", "special");
-        add(inv, 26, Material.GOLD_INGOT, "Sell Hand (held item)", "sell-hand", "hand");
+        add(inv, 16, Material.DIAMOND_PICKAXE, "Armor & Tools", "category", "equipment");
+        add(inv, 19, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
+        add(inv, 21, Material.POTION, "Potions", "category", "potions");
+        add(inv, 23, Material.ZOMBIE_HEAD, "Eggs & Heads", "category", "eggs-heads");
+        add(inv, 25, Material.ELYTRA, "Special Items", "category", "special");
+        add(inv, 49, Material.GOLD_INGOT, "Sell Hand (held item)", "sell-hand", "hand");
         player.openInventory(inv);
     }
 
