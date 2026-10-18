@@ -66,6 +66,48 @@ shop:
     diamond_pickaxe: 30
     iron_chestplate: 100
     diamond_sword: 30
+    iron_sword: 100
+    iron_axe: 100
+    diamond_axe: 30
+    diamond_shovel: 50
+    diamond_hoe: 30
+    netherite_pickaxe: 5
+    netherite_axe: 5
+    netherite_sword: 5
+    iron_helmet: 100
+    iron_leggings: 100
+    iron_boots: 100
+    diamond_helmet: 30
+    diamond_chestplate: 20
+    diamond_leggings: 20
+    diamond_boots: 30
+    netherite_helmet: 5
+    netherite_chestplate: 3
+    netherite_leggings: 3
+    netherite_boots: 5
+    bow: 100
+    crossbow: 75
+    shield: 100
+    trident: 5
+    mace: 3
+    totem_of_undying: 10
+    ender_chest: 50
+    golden_carrot: 500
+    pumpkin_pie: 500
+    golden_apple: 100
+    enchanted_golden_apple: 3
+    cooked_mutton: 500
+    creeper_head: 10
+    skeleton_skull: 10
+    wither_skeleton_skull: 3
+    cat_spawn_egg: 5
+    wolf_spawn_egg: 5
+    fox_spawn_egg: 5
+    parrot_spawn_egg: 3
+    bee_spawn_egg: 5
+    panda_spawn_egg: 3
+    goat_spawn_egg: 5
+    mooshroom_spawn_egg: 3
     experience_bottle: 200
     potion: 100
     zombie_head: 10
