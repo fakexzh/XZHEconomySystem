@@ -116,6 +116,10 @@ public final class ShopManager implements Listener {
     }
 
     private void openConfirm(Player player, Material material, int quantity, boolean buying) {
+        openConfirm(player, material, quantity, buying, false);
+    }
+
+    private void openConfirm(Player player, Material material, int quantity, boolean buying, boolean handOnly) {
         Product p = product(material);
         if (p == null) return;
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Confirm transaction");
@@ -126,7 +130,7 @@ public final class ShopManager implements Listener {
         sm.setLore(List.of(ChatColor.WHITE + "Total: " + (buying ? ChatColor.YELLOW : ChatColor.RED) + money(total) + " coins"));
         summary.setItemMeta(sm);
         inv.setItem(13, summary);
-        add(inv, 11, Material.LIME_CONCRETE, "Confirm", buying ? "buy" : "sell", material.name() + ":" + quantity);
+        add(inv, 11, Material.LIME_CONCRETE, "Confirm", buying ? "buy" : (handOnly ? "sell-hand-confirm" : "sell"), material.name() + ":" + quantity);
         add(inv, 15, Material.RED_CONCRETE, "Cancel", "category-back", p.category());
         player.openInventory(inv);
     }
@@ -178,7 +182,7 @@ public final class ShopManager implements Listener {
                     else openConfirm(player, material, amount, false);
                 }
             }
-            case "buy", "sell" -> {
+            case "buy", "sell", "sell-hand-confirm" -> {
                 String[] bits = value.split(":");
                 if (bits.length != 2) return;
                 Material material = parseMaterial(bits[0]);
@@ -210,7 +214,21 @@ public final class ShopManager implements Listener {
                         player.closeInventory();
                         return;
                     }
-                    int sold = remove(player, material, quantity);
+                    int sold;
+                    if (action.equals("sell-hand-confirm")) {
+                        ItemStack held = player.getInventory().getItemInMainHand();
+                        if (held.getType() != material || held.getAmount() < quantity) {
+                            plugin.tellPublic(player, "Your held item changed; nothing was sold.");
+                            player.closeInventory();
+                            return;
+                        }
+                        sold = quantity;
+                        int left = held.getAmount() - quantity;
+                        if (left <= 0) player.getInventory().setItemInMainHand(null);
+                        else held.setAmount(left);
+                    } else {
+                        sold = remove(player, material, quantity);
+                    }
                     if (sold < 1) {
                         plugin.tellPublic(player, "No matching items found.");
                         player.closeInventory();
@@ -229,7 +247,7 @@ public final class ShopManager implements Listener {
                     plugin.tellPublic(player, "That item cannot be sold here.");
                     return;
                 }
-                openConfirm(player, hand.getType(), hand.getAmount(), false);
+                openConfirm(player, hand.getType(), hand.getAmount(), false, true);
             }
         }
     }
