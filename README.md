@@ -4,7 +4,7 @@ A Java plugin project targeting Purpur 26.3 (Java 25). This branch combines the 
 
 ## Current features
 
-- Persistent coin balances, `/balance`, `/pay`, and admin `/eco`.
+- Persistent coin balances, `/balance`, `/pay`, admin `/eco`, and an optional Vault economy provider when Vault is installed.
 - Shop GUI with confirmation dialogs, quantities, curated products, global stock, daily restock, and cheap sell-hand support for unfeatured items.
 - Enchantment-book GUI with confirmation, 24-hour per-player cooldown per enchantment, and daily global limits for selected useful/rare books.
 - Elytra purchase lock until the player has visited the End.
