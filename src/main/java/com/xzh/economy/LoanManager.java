@@ -83,7 +83,7 @@ public final class LoanManager implements Listener {
         for (int i = 0; i < TERMS.length; i++) {
             int days = TERMS[i];
             double rate = rateFor(days);
-            double total = amount * (1 + rate * days);
+            double total = Math.ceil(amount * (1 + rate * days));
             add(inv, slots[i], Material.CLOCK, ChatColor.YELLOW.toString() + days + " days",
                     "term", amount, days,
                     List.of(ChatColor.WHITE + "Daily interest: " + (int)(rate * 100) + "%",
@@ -95,7 +95,7 @@ public final class LoanManager implements Listener {
     }
 
     private void openConfirm(Player player, int amount, int days) {
-        double total = amount * (1 + rateFor(days) * days);
+        double total = Math.ceil(amount * (1 + rateFor(days) * days));
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "XZH BANK: Confirm loan");
         add(inv, 13, Material.GOLD_INGOT, ChatColor.YELLOW + "Borrow " + amount + " coins",
                 "info", amount, days, List.of(
@@ -137,7 +137,7 @@ public final class LoanManager implements Listener {
             return;
         }
         double principal = amount;
-        double total = principal * (1 + rateFor(days) * days);
+        double total = Math.ceil(principal * (1 + rateFor(days) * days));
         long dueAt = System.currentTimeMillis() + days * 24L * 60L * 60L * 1000L;
         data.set(id + ".principal", principal);
         data.set(id + ".amount", total);
