@@ -59,6 +59,10 @@ public final class QuestManager implements Listener {
         save();
         resetEventIfNeeded();
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            resetPackStockIfNeeded();
+            resetEventIfNeeded();
+        }, 20L * 60L, 20L * 60L);
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) updateHud(player);
         }, 20L, 20L * 5L);
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
@@ -191,6 +195,14 @@ public final class QuestManager implements Listener {
         else if (action.equals("buy")) buy(player, pack);
     }
 
+
+    private void resetPackStockIfNeeded() {
+        String today = LocalDate.now().toString();
+        if (today.equals(data.getString("stock-reset-day", ""))) return;
+        for (Pack pack : packs) data.set("stock." + pack.id(), pack.stock());
+        data.set("stock-reset-day", today);
+        save();
+    }
 
     private void resetEventIfNeeded() {
         String today = LocalDate.now().toString();
