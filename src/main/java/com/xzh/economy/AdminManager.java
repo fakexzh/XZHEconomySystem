@@ -66,6 +66,7 @@ public final class AdminManager implements Listener {
         add(inv, 32, Material.NETHER_STAR, "Quest/event status", "quests", List.of("View global event progress and pack stock"));
         add(inv, 34, Material.CHEST, "Death recovery status", "recovery", List.of("View active recovery snapshots"));
         add(inv, 36, Material.WRITABLE_BOOK, "Reset active quest", "clear-quest", List.of("Cancel a player's active quest without refunding its pack cost"));
+        add(inv, 38, Material.BOOK, "Set quest pack stock", "quest-stock", List.of("Set daily global stock for a quest pack"));
         add(inv, 29, Material.MAP, "Diagnostics", "diagnostics",
                 List.of("Show online count and persisted data files"));
         add(inv, 49, Material.BARRIER, "Close", "close", List.of());
@@ -90,6 +91,7 @@ public final class AdminManager implements Listener {
             case "clear-loan" -> prompt(player, "clear-loan-player", "Type the player's exact name to clear their loan (or cancel).");
             case "clear-recovery" -> prompt(player, "clear-recovery-player", "Type the player's exact name to discard their death recovery (or cancel).");
             case "clear-quest" -> prompt(player, "clear-quest-player", "Type the player's exact name to clear their active quest (or cancel).");
+            case "quest-stock" -> prompt(player, "quest-stock-pack", "Type a quest pack id: beginner, miner, hunter, explorer, nether, or end.");
             case "reset-event" -> { plugin.getQuestManager().adminResetEvent(); player.sendMessage(ChatColor.GREEN + "Global event progress and stock reset."); player.closeInventory(); }
             case "restock" -> {
                 plugin.getShopManager().restockAll();
@@ -174,6 +176,27 @@ public final class AdminManager implements Listener {
             plugin.getQuestManager().adminClearQuest(target.getUniqueId());
             prompts.remove(player.getUniqueId());
             player.sendMessage(ChatColor.GREEN + "Cleared active quest for " + input + ".");
+            return;
+        }
+        if (prompt.equals("quest-stock-pack")) {
+            String pack = input.toLowerCase(Locale.ROOT);
+            if (!List.of("beginner", "miner", "hunter", "explorer", "nether", "end").contains(pack)) {
+                player.sendMessage(ChatColor.RED + "Unknown pack. Use beginner, miner, hunter, explorer, nether, or end (or cancel).");
+                return;
+            }
+            prompts.put(player.getUniqueId(), "quest-stock-amount:" + pack);
+            player.sendMessage(ChatColor.YELLOW + "Type the new global stock for " + pack + " (0–1000000), or cancel.");
+            return;
+        }
+        if (prompt.startsWith("quest-stock-amount:")) {
+            String pack = prompt.substring("quest-stock-amount:".length());
+            int amount;
+            try { amount = Integer.parseInt(input); }
+            catch (NumberFormatException ex) { player.sendMessage(ChatColor.RED + "Enter a whole number or cancel."); return; }
+            if (amount < 0 || amount > 1_000_000) { player.sendMessage(ChatColor.RED + "Stock must be between 0 and 1000000."); return; }
+            if (!plugin.getQuestManager().setPackStock(pack, amount)) { player.sendMessage(ChatColor.RED + "Could not update that quest pack."); return; }
+            prompts.remove(player.getUniqueId());
+            player.sendMessage(ChatColor.GREEN + "Global stock for " + pack + " set to " + amount + ".");
             return;
         }
         if (prompt.equals("book-cooldown-player")) {
