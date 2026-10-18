@@ -25,7 +25,7 @@ Run these on a disposable test world with a backup. Record any console error and
 - [ ] Repay early through the loan GUI and `/loan repay`.
 - [ ] With a test loan, verify overdue shop purchases are blocked while selling/quest progress still works.
 - [ ] Test auto-repayment at grace expiry with sufficient and insufficient balances.
-- [ ] Confirm sidebar shows balance, amount owed, and due/overdue state; confirm active quest boss bar displays objective and percentage.
+- [ ] Confirm sidebar shows balance, amount owed, and due time; during the 12-hour grace period it should show the auto-repayment countdown; after grace it should show grace ended. Confirm active quest boss bar displays objective and percentage.
 
 ## Quests and events
 - [ ] Buy each quest pack and confirm global stock decreases.
