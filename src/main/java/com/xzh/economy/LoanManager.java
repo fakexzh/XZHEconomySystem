@@ -82,7 +82,7 @@ public final class LoanManager implements Listener {
             int days = TERMS[i];
             double rate = rateFor(days);
             double total = amount * (1 + rate * days);
-            add(inv, slots[i], Material.CLOCK, ChatColor.YELLOW + days + " days",
+            add(inv, slots[i], Material.CLOCK, ChatColor.YELLOW.toString() + days + " days",
                     "term", amount, days,
                     List.of(ChatColor.WHITE + "Daily interest: " + (int)(rate * 100) + "%",
                             ChatColor.WHITE + "Total repayment: " + ChatColor.RED + money(total) + " coins",
