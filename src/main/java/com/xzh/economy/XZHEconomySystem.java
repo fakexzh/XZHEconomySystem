@@ -131,10 +131,6 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 + money(amount) + " coins§f" + (automatic ? " §7(automatic repayment)." : "."));
     }
 
-    private String money(double amount) {
-        return String.format(Locale.US, "%.2f", amount).replaceAll("\\\\.00$", "");
-    }
-
     @SuppressWarnings({"rawtypes", "unchecked"})
     private void registerVaultProvider() {
         if (getServer().getPluginManager().getPlugin("Vault") == null) return;
