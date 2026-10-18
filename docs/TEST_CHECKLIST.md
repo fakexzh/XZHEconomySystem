@@ -9,6 +9,8 @@ Run these on a disposable test world with a backup. Record any console error and
 
 ## Shop
 - [ ] Open `/shop`; verify category navigation and Back buttons.
+- [ ] Verify expanded Armor & Tools, cooked/raw food, heads, and friendly spawn egg catalog; confirm rare items use configured global stock caps.
+- [ ] Try dragging items into each economy GUI; the drag must be cancelled and no item may be deposited or lost.
 - [ ] Buy 1/10/32/64 of a featured item; verify confirmation, balance deduction, inventory capacity handling, and global stock decrease.
 - [ ] Cancel a purchase and confirm no balance/stock change.
 - [ ] Sell a featured item; verify 30% sellback.
@@ -27,6 +29,7 @@ Run these on a disposable test world with a backup. Record any console error and
 ## Quests and events
 - [ ] Buy each quest pack and confirm global stock decreases.
 - [ ] Complete block, ore, mob, Nether, End, and travel objectives.
+- [ ] In Creative and Spectator modes, verify block breaks, kills, and travel do not advance paid quests or the global ore event.
 - [ ] Verify completion reward, boss-bar removal, and pack stock reset on a new day.
 - [ ] Mine ores toward the global event; verify shared progress, personal contribution requirement, claim stock, and one claim per day.
 - [ ] Confirm reminder timing is 30 minutes.
@@ -38,7 +41,7 @@ Run these on a disposable test world with a backup. Record any console error and
 
 ## Utilities and administration
 - [ ] Test spawn, homes, warps, TPA accept/deny/expiry, back, private messages, ignore, AFK, near, list, top, and RTP safety/cooldown.
-- [ ] Open `/xzhadmin`; test balance edits, price edits, stock edits/restock, transaction history, diagnostics, book cooldown reset, loan/recovery overrides, global event reset, and config reload.
+- [ ] Open `/xzhadmin`; test balance edits, price edits, stock edits/restock, transaction history, diagnostics, book cooldown reset, active quest reset, loan/recovery overrides, global event reset, and config reload.
 - [ ] Verify librarian enchanted-book trades are unavailable.
 - [ ] Restart the server and verify all persistent data remains intact.
 
