@@ -179,6 +179,12 @@ public final class LoanManager implements Listener {
         };
     }
 
+    public void adminClearLoan(UUID id) {
+        data.set(id.toString(), null);
+        save();
+        plugin.getHudManager().setLoan(id, 0, 0);
+    }
+
     public boolean isShopPurchaseRestricted(UUID id) {
         return getOwed(id) > 0 && getDue(id) > 0 && System.currentTimeMillis() >= getDue(id);
     }
