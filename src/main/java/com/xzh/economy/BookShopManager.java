@@ -105,6 +105,10 @@ public final class BookShopManager implements Listener {
     }
 
     private void buy(Player player, String key) {
+        if (plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) {
+            plugin.tellPublic(player, "Your loan is overdue. New purchases are locked until you repay it with /loan repay.");
+            return;
+        }
         Enchantment enchant = enchantment(key);
         if (enchant == null) return;
         long now = System.currentTimeMillis();
