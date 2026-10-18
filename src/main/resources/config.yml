@@ -42,3 +42,5 @@ shop:
 # Player utility limits.
 utilities:
   max-homes: 3
+  rtp-radius: 3000
+  rtp-cooldown-seconds: 600
