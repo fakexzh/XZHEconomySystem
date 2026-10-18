@@ -80,7 +80,7 @@ restrictions:
   buy-only-spawn-eggs: true
 ```
 
-- `disable-librarian-enchanted-book-trades`: when enabled, librarian enchanted-book offers are blocked and existing offers are removed when interacted with.
+- `disable-librarian-enchanted-book-trades`: when enabled, librarian enchanted-book offers are blocked and existing offers are removed when interacted with. Turning it off allows future offers, but recipes removed while the restriction was enabled may not be restored automatically.
 - `elytra-requires-end-visit`: when enabled, players must unlock the vanilla End-visit advancement before buying an Elytra.
 - `buy-only-spawn-eggs`: when enabled, spawn eggs cannot be sold back to the shop. When disabled, eggs default to a 30% sellback unless a material-specific sell price overrides it.
 
