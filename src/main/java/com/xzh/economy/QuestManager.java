@@ -157,6 +157,7 @@ public final class QuestManager implements Listener {
 
     @EventHandler
     public void onBreak(BlockBreakEvent event) {
+        if (event.isCancelled()) return;
         Player player = event.getPlayer();
         String target = data.getString(player.getUniqueId() + ".target", "");
         boolean ore = isOre(event.getBlock().getType());
@@ -166,7 +167,7 @@ public final class QuestManager implements Listener {
 
     @EventHandler
     public void onMove(PlayerMoveEvent event) {
-        if (event.getTo() == null) return;
+        if (event.isCancelled() || event.getTo() == null) return;
         if (event.getFrom().getWorld() != event.getTo().getWorld()) return;
         if (event.getFrom().getBlockX() == event.getTo().getBlockX()
                 && event.getFrom().getBlockY() == event.getTo().getBlockY()
