@@ -178,7 +178,7 @@ public final class ShopManager implements Listener {
         add(inv, 32, Material.CHEST, "Death Inventory", "deathinventory", "deathinventory");
         add(inv, 34, Material.GOLD_INGOT, "Balance", "balance", "balance");
         add(inv, 36, Material.BOOK, "Help", "help", "help");
-        add(inv, 38, Material.CLOCK, "Loans", "loans", "loans");
+        add(inv, 38, Material.CLOCK, "XZH BANK", "bank", "bank");
         add(inv, 49, Material.GOLD_INGOT, "Sell Hand (held item)", "sell-hand", "hand");
         player.openInventory(inv);
     }
@@ -307,10 +307,10 @@ public final class ShopManager implements Listener {
             case "books" -> plugin.getBookShopManager().open(player);
             case "quests" -> plugin.getQuestManager().open(player);
             case "deathinventory" -> plugin.getDeathRecoveryManager().open(player);
-            case "balance" -> plugin.tellPublic(player, "Balance: " + money(plugin.getBalance(player.getUniqueId())) + " coins.");
-            case "loans" -> plugin.getLoanManager().open(player);
+            case "balance" -> plugin.tellPublic(player, "Pocket: " + money(plugin.getBalance(player.getUniqueId())) + " coins; Bank: " + money(plugin.getBankManager().getBalance(player.getUniqueId())) + " coins.");
+            case "bank" -> plugin.getBankManager().open(player);
             case "help" -> {
-                plugin.tellPublic(player, "/shop, /balance, /pay, /loan, /quests, /deathinventory, /books");
+                plugin.tellPublic(player, "/shop, /bank, /balance, /pay, /quests, /deathinventory, /books");
                 player.closeInventory();
             }
             case "category-page" -> {
@@ -371,7 +371,7 @@ public final class ShopManager implements Listener {
                         player.closeInventory();
                         return;
                     }
-                    if (plugin.getBalance(player.getUniqueId()) < total) {
+                    if (plugin.getCombinedBalance(player.getUniqueId()) + 1e-9 < total) {
                         plugin.tellPublic(player, "Not enough coins.");
                         player.closeInventory();
                         return;
@@ -386,7 +386,7 @@ public final class ShopManager implements Listener {
                     }
                     double charged = buyPrice(p) * delivered;
                     setStock(material, getStock(material) - delivered);
-                    plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) - charged);
+                    if (!plugin.spendAvailableFunds(player.getUniqueId(), charged)) {\n                        // Return the delivered items and stock if a concurrent economy action changed the balance.\n                        player.getInventory().removeItem(createStack(material, delivered));\n                        setStock(material, getStock(material) + delivered);\n                        plugin.tellPublic(player, "Purchase cancelled: your available funds changed.");\n                        player.closeInventory();\n                        return;\n                    }
                     plugin.tellPublic(player, "Bought " + delivered + " × " + pretty(material) + " for " + money(charged) + " coins.");
                 } else {
                     if (sellPrice(p) * quantity < 1) {
