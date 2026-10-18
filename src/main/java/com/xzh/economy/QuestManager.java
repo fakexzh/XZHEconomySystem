@@ -88,6 +88,7 @@ public final class QuestManager implements Listener {
         Bukkit.getPluginManager().registerEvents(this, plugin);
         resetEventIfNeeded();
         Bukkit.getScheduler().runTaskTimer(plugin, this::resetEventIfNeeded, 20L * 60L, 20L * 60L);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::refreshSingleShopIfDue, 20L * 60L, 20L * 60L);
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) updateHud(player);
         }, 20L, 20L * 5L);
@@ -282,6 +283,7 @@ public final class QuestManager implements Listener {
 
     @EventHandler
     public void onPickup(PlayerAttemptPickupItemEvent event) {
+        if (event.isCancelled()) return;
         Player p = event.getPlayer();
         if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         Material material = event.getItem().getItemStack().getType();
