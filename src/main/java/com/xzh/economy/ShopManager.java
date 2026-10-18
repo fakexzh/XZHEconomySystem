@@ -669,23 +669,33 @@ public final class ShopManager implements Listener {
 
     private double sellPrice(Product p) {
         if (p.category().equals("misc")) return p.sell();
-        String materialName = p.material().name().toLowerCase(Locale.ROOT);
-        boolean spawnEgg = materialName.endsWith("_spawn_egg");
-        if (spawnEgg && plugin.getConfig().getBoolean("restrictions.buy-only-spawn-eggs", true)) return 0.0;
-        if (p.potionType() != null) {
-            String variantSell = "shop.potion-prices." + p.potionType().name().toLowerCase(Locale.ROOT) + "." + materialName + ".sell";
-            if (plugin.getConfig().contains(variantSell)) {
-                double configured = plugin.getConfig().getDouble(variantSell, p.sell());
-                return validPrice(configured) ? configured : p.sell();
-            }
-            return p.sell();
+        String name = p.material().name();
+        String lower = name.toLowerCase(Locale.ROOT);
+        if (isUnsellableExploitItem(p.material())) return 0.0;
+        if (lower.endsWith("_spawn_egg") && plugin.getConfig().getBoolean("restrictions.buy-only-spawn-eggs", true)) return 0.0;
+        if (p.potionType() != null || p.category().equals("potions")) return 0.0;
+        // Resale is deliberately based on farmability/usefulness, never a blanket
+        // percentage of buy price. Common renewable blocks earn 1 coin per 64.
+        if (p.category().equals("blocks") && isFarmableCommonBlock(p.material())) return 1.0 / 64.0;
+        if (name.equals("DIAMOND")) return 5.0;
+        if (p.category().equals("blocks")) return Math.max(0.0, Math.floor(buyPrice(p) * 0.05));
+        if (p.category().equals("ores")) {
+            if (name.contains("NETHERITE")) return Math.max(1.0, Math.floor(buyPrice(p) * 0.03));
+            return Math.max(0.0, Math.floor(buyPrice(p) * 0.05));
         }
-        String pricePath = "shop.prices." + materialName + ".sell";
-        if (plugin.getConfig().contains(pricePath)) {
-            double configured = plugin.getConfig().getDouble(pricePath, p.sell());
-            return validPrice(configured) ? configured : p.sell();
+        if (p.category().equals("equipment")) {
+            if (name.equals("TOTEM_OF_UNDYING") || name.equals("TRIDENT") || name.equals("MACE")) return 0.0;
+            return Math.max(0.0, Math.floor(buyPrice(p) * 0.05));
         }
-        return p.sell();
+        if (p.category().startsWith("food")) return Math.max(0.0, Math.floor(buyPrice(p) * 0.05));
+        if (p.category().equals("eggs-heads")) {
+            if (name.endsWith("_SPAWN_EGG")) return 0.0;
+            return Math.max(0.0, Math.floor(buyPrice(p) * 0.01));
+        }
+        if (p.category().equals("xp")) return 0.0;
+        if (p.category().equals("seeds")) return seedSellPrice(p.material());
+        if (p.category().equals("special")) return 0.0;
+        return Math.max(0.0, Math.floor(buyPrice(p) * 0.02));
     }
 
     private double blockBuyPrice(Material m) {
