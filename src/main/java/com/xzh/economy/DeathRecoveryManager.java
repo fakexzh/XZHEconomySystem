@@ -120,7 +120,7 @@ public final class DeathRecoveryManager implements Listener {
             plugin.tellPublic(player, "You have reached the limit of 2 death recoveries today.");
             return;
         }
-        double value = data.getDouble(base + ".value", 0.0);
+        double value = recoveryValue(base);
         double fee = round(value * safeFeeMultiplier());
         int count = readItems(base).stream().mapToInt(ItemStack::getAmount).sum();
         int xp = data.getInt(base + ".total-xp", 0);
@@ -153,7 +153,7 @@ public final class DeathRecoveryManager implements Listener {
             plugin.tellPublic(player, "You have reached the limit of 2 death recoveries today.");
             return;
         }
-        double value = data.getDouble(base + ".value", 0.0);
+        double value = recoveryValue(base);
         double fee = round(value * safeFeeMultiplier());
         double balance = plugin.getBalance(player.getUniqueId());
         if (balance < fee) {
@@ -245,6 +245,11 @@ public final class DeathRecoveryManager implements Listener {
     private double safeFeeMultiplier() {
         double configured = plugin.getConfig().getDouble("death-recovery.fee-multiplier", 1.5);
         return Double.isFinite(configured) && configured >= 1.0 ? Math.min(configured, 10.0) : 1.5;
+    }
+
+    private double recoveryValue(String base) {
+        double value = data.getDouble(base + ".value", 0.0);
+        return Double.isFinite(value) && value >= 0.0 ? Math.min(value, 1.0E12) : 0.0;
     }
 
     private double defaultValue(Material m) {
