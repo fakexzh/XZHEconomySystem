@@ -54,3 +54,24 @@ utilities:
   max-homes: 3
   rtp-radius: 3000
   rtp-cooldown-seconds: 600
+
+# Enchantment book shop rules.
+book-shop:
+  cooldown-hours: 24
+  rare-daily-stock: 3
+  normal-daily-stock: 100
+  prices:
+    mending: 1200
+    wind_burst: 1500
+    swift_sneak: 700
+    soul_speed: 700
+    frost_walker: 700
+    fortune: 600
+    silk_touch: 600
+    unbreaking: 600
+    efficiency: 600
+    looting: 600
+    sharpness: 500
+    protection: 500
+    feather_falling: 500
+    power: 500
