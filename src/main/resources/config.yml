@@ -143,6 +143,20 @@ shop:
     bolt_armor_trim_smithing_template: 8
     elytra: 3
 
+# Quest pack stock resets to these values each server-local day.
+quests:
+  pack-stock:
+    beginner: 50
+    miner: 30
+    hunter: 25
+    explorer: 15
+    nether: 10
+    end: 5
+  global-event:
+    goal: 500
+    reward: 100
+    claims-per-day: 25
+
 # Configurable gameplay restrictions.
 restrictions:
   disable-librarian-enchanted-book-trades: true
