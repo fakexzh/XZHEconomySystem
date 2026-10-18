@@ -23,7 +23,10 @@ Run these on a disposable test world with a backup. Record any console error and
 ## Bank
 - `/bank` opens the separate `XZH BANK` GUI.
 - Verify the clock uses the configured bank world and deposit/withdrawal are permitted at 09:00 but blocked at 20:00 Minecraft time.
-- Verify deposits move funds from pocket to bank and withdrawals move funds from bank to pocket without changing the combined total.
+- Verify pocket currency appears as tagged XZH coin items in 1/10/100/1000 denominations; normal gold items must not count as coins.
+- Verify coins can be moved/traded, cannot be crafted or placed as blocks, and drop on overworld death without also being recoverable through the paid death snapshot.
+- Verify legacy balances migrate to physical coins once, with no duplicate starting balance after reconnect/restart.
+- Verify deposits move funds from pocket coin items to bank and withdrawals create coin items without changing the combined total.
 - Verify shop purchases and manual/automatic loan repayments can use bank funds even while the bank is closed.
 - Verify insufficient combined funds causes no partial charge and bank balances persist after a restart.
 - Verify the Loans button opens the loan GUI and loan confirmations still work from that menu.
