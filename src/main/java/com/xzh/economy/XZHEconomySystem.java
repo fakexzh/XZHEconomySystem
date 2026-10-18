@@ -20,6 +20,7 @@ import java.util.UUID;
 public final class XZHEconomySystem extends JavaPlugin implements CommandExecutor, TabCompleter {
     private File balancesFile;
     private YamlConfiguration balances;
+    private HudManager hudManager;
 
     @Override
     public void onEnable() {
@@ -34,6 +35,14 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             }
         }
         balances = YamlConfiguration.loadConfiguration(balancesFile);
+        hudManager = new HudManager(this);
+        hudManager.start();
+        getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
+            @org.bukkit.event.EventHandler
+            public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) { hudManager.onJoin(event.getPlayer()); }
+            @org.bukkit.event.EventHandler
+            public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
+        }, this);
         for (String name : List.of("xzh", "balance", "pay", "eco")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
@@ -46,8 +55,11 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
 
     @Override
     public void onDisable() {
+        if (hudManager != null) hudManager.shutdown();
         saveBalances();
     }
+
+    public HudManager getHudManager() { return hudManager; }
 
     public double getBalance(UUID uuid) {
         String key = uuid.toString();
