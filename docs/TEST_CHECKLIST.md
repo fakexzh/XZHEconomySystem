@@ -6,6 +6,7 @@ Run these on a disposable test world with a backup. Record any console error and
 - [ ] Start server on Java 25 / Purpur 26.3 and confirm the plugin enables without warnings/errors.
 - [ ] Run `/balance`, stop/restart, and confirm the balance persists.
 - [ ] Make a balance change and verify `plugins/XZHEconomySystem/transactions.log` records it.
+- [ ] Verify `/pay` rejects zero, negative, non-finite, and over-limit amounts; verify invalid negative/NaN configured shop and book prices fall back safely.
 
 ## Shop
 - [ ] Open `/shop`; verify category navigation and Back buttons.
