@@ -1,5 +1,8 @@
 package com.xzh.economy;
 
+import net.milkbowl.vault.economy.Economy;
+import org.bukkit.plugin.ServicePriority;
+
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -54,6 +57,10 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         deathRecoveryManager = new DeathRecoveryManager(this);
         utilityManager = new UtilityManager(this);
         adminManager = new AdminManager(this);
+        if (getServer().getPluginManager().getPlugin("Vault") != null) {
+            getServer().getServicesManager().register(Economy.class, new VaultEconomyProvider(this), this, ServicePriority.Normal);
+            getLogger().info("Vault economy provider registered.");
+        }
         getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
             @org.bukkit.event.EventHandler
             public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) { hudManager.onJoin(event.getPlayer()); }
@@ -84,6 +91,8 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     public DeathRecoveryManager getDeathRecoveryManager() { return deathRecoveryManager; }
 
     public void tellPublic(CommandSender sender, String message) { tell(sender, message); }
+
+    public boolean hasBalanceAccount(UUID uuid) { return balances.contains(uuid.toString()); }
 
     public double getBalance(UUID uuid) {
         String key = uuid.toString();
