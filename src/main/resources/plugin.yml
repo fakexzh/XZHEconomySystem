@@ -21,6 +21,9 @@ commands:
   loan:
     description: Open the loan menu or repay an active loan.
     usage: /loan [repay]
+  quests:
+    description: Open the quest packs menu.
+    usage: /quests
   eco:
     description: Admin economy management.
     usage: /eco <set|add> <player> <amount>
