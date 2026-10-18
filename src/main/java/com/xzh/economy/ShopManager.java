@@ -364,7 +364,10 @@ public final class ShopManager implements Listener {
                 Material material = parseMaterial(value);
                 Integer quantity = meta.getPersistentDataContainer().get(quantityKey, PersistentDataType.INTEGER);
                 Product selected = productFromMeta(meta);
-                if (material != null && quantity != null) openConfirm(player, selected == null ? material : selected, quantity, true);
+                if (quantity != null) {
+                    if (selected != null) openConfirm(player, selected, quantity, true);
+                    else if (material != null) openConfirm(player, material, quantity, true);
+                }
             }
             case "confirm-sell" -> {
                 Material material = parseMaterial(value);
@@ -610,7 +613,19 @@ public final class ShopManager implements Listener {
     }
 
     private String prettyPotion(PotionType type) {
-        return type.name().toLowerCase(Locale.ROOT).replace('_', ' ').replaceAll("\\b\\w", m -> m.group().toUpperCase(Locale.ROOT));
+        String text = type.name().toLowerCase(Locale.ROOT).replace('_', ' ');
+        StringBuilder result = new StringBuilder();
+        boolean capitalize = true;
+        for (char c : text.toCharArray()) {
+            if (capitalize && Character.isLetter(c)) {
+                result.append(Character.toUpperCase(c));
+                capitalize = false;
+            } else {
+                result.append(c);
+            }
+            if (c == ' ') capitalize = true;
+        }
+        return result.toString();
     }
 
     private String prettyProduct(Product product) {
