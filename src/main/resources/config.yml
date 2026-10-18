@@ -5,6 +5,13 @@ starting-balance: 100.0
 minimum-pay: 1.0
 maximum-pay: 1000000.0
 
+# Bank settings. Hours use Minecraft time from the configured clock world (default world).
+# Minecraft time 09:00 is tick 3000; 20:00 is tick 14000.
+bank:
+  clock-world: world
+  open-hour: 9
+  close-hour: 20
+
 # HUD settings
 hud:
   scoreboard:
