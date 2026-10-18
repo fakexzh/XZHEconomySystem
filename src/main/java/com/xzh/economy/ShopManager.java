@@ -68,6 +68,19 @@ public final class ShopManager implements Listener {
         new Product("eggs-heads", Material.SHEEP_SPAWN_EGG, 1500, 0),
         new Product("eggs-heads", Material.PIG_SPAWN_EGG, 1500, 0),
         new Product("eggs-heads", Material.EGG, 2, 0.5),
+        new Product("special", Material.SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE, 600, 180),
+        new Product("special", Material.DUNE_ARMOR_TRIM_SMITHING_TEMPLATE, 700, 210),
+        new Product("special", Material.COAST_ARMOR_TRIM_SMITHING_TEMPLATE, 700, 210),
+        new Product("special", Material.WARD_ARMOR_TRIM_SMITHING_TEMPLATE, 900, 270),
+        new Product("special", Material.SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE, 1500, 450),
+        new Product("special", Material.SPIRE_ARMOR_TRIM_SMITHING_TEMPLATE, 1000, 300),
+        new Product("special", Material.TIDE_ARMOR_TRIM_SMITHING_TEMPLATE, 1000, 300),
+        new Product("special", Material.WAYFINDER_ARMOR_TRIM_SMITHING_TEMPLATE, 900, 270),
+        new Product("special", Material.SHAPER_ARMOR_TRIM_SMITHING_TEMPLATE, 900, 270),
+        new Product("special", Material.RAISER_ARMOR_TRIM_SMITHING_TEMPLATE, 900, 270),
+        new Product("special", Material.HOST_ARMOR_TRIM_SMITHING_TEMPLATE, 900, 270),
+        new Product("special", Material.FLOW_ARMOR_TRIM_SMITHING_TEMPLATE, 1200, 360),
+        new Product("special", Material.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE, 1200, 360),
         new Product("special", Material.ELYTRA, 5000, 1500)
     );
 
