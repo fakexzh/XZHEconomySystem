@@ -13,8 +13,15 @@ import java.util.List;
 
 /** Prevents librarians from offering enchanted books, including already generated offers. */
 public final class LibrarianTradeListener implements Listener {
+    private final XZHEconomySystem plugin;
+
+    public LibrarianTradeListener(XZHEconomySystem plugin) {
+        this.plugin = plugin;
+    }
+
     @EventHandler
     public void onAcquireTrade(VillagerAcquireTradeEvent event) {
+        if (!plugin.getConfig().getBoolean("restrictions.disable-librarian-enchanted-book-trades", true)) return;
         if (event.getEntity() instanceof Villager villager
                 && villager.getProfession() == Villager.Profession.LIBRARIAN
                 && event.getRecipe().getResult().getType() == Material.ENCHANTED_BOOK) {
@@ -24,6 +31,7 @@ public final class LibrarianTradeListener implements Listener {
 
     @EventHandler
     public void onInteract(PlayerInteractEntityEvent event) {
+        if (!plugin.getConfig().getBoolean("restrictions.disable-librarian-enchanted-book-trades", true)) return;
         if (!(event.getRightClicked() instanceof Villager villager)
                 || villager.getProfession() != Villager.Profession.LIBRARIAN) return;
         List<MerchantRecipe> recipes = villager.getRecipes();
