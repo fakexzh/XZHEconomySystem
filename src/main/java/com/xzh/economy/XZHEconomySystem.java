@@ -1,6 +1,5 @@
 package com.xzh.economy;
 
-import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.ServicePriority;
 
 import org.bukkit.Bukkit;
@@ -57,10 +56,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         deathRecoveryManager = new DeathRecoveryManager(this);
         utilityManager = new UtilityManager(this);
         adminManager = new AdminManager(this);
-        if (getServer().getPluginManager().getPlugin("Vault") != null) {
-            getServer().getServicesManager().register(Economy.class, new VaultEconomyProvider(this), this, ServicePriority.High);
-            getLogger().info("Vault economy provider registered.");
-        }
+        registerVaultProvider();
         getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
             @org.bukkit.event.EventHandler
             public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) { hudManager.onJoin(event.getPlayer()); }
@@ -91,6 +87,20 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     public DeathRecoveryManager getDeathRecoveryManager() { return deathRecoveryManager; }
 
     public void tellPublic(CommandSender sender, String message) { tell(sender, message); }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void registerVaultProvider() {
+        if (getServer().getPluginManager().getPlugin("Vault") == null) return;
+        try {
+            Class<?> economyApi = Class.forName("net.milkbowl.vault.economy.Economy");
+            Class<?> providerType = Class.forName("com.xzh.economy.VaultEconomyProvider");
+            Object provider = providerType.getConstructor(XZHEconomySystem.class).newInstance(this);
+            getServer().getServicesManager().register((Class) economyApi, provider, this, ServicePriority.High);
+            getLogger().info("Vault economy provider registered.");
+        } catch (ReflectiveOperationException | LinkageError e) {
+            getLogger().warning("Vault was detected but the economy bridge could not be registered: " + e.getMessage());
+        }
+    }
 
     public boolean hasBalanceAccount(UUID uuid) { return balances.contains(uuid.toString()); }
 
