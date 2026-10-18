@@ -26,6 +26,8 @@ public final class HudManager {
     private final Map<UUID, BossBar> questBars = new HashMap<>();
     private final Map<UUID, Double> loanAmounts = new HashMap<>();
     private final Map<UUID, Long> loanDueTimes = new HashMap<>();
+    private final Map<UUID, Scoreboard> scoreboards = new HashMap<>();
+    private final Map<UUID, java.util.List<String>> sidebarLines = new HashMap<>();
 
     public HudManager(XZHEconomySystem plugin) {
         this.plugin = plugin;
@@ -42,6 +44,12 @@ public final class HudManager {
     public void shutdown() {
         for (BossBar bar : questBars.values()) bar.removeAll();
         questBars.clear();
+        ScoreboardManager manager = Bukkit.getScoreboardManager();
+        if (manager != null) {
+            for (Player player : Bukkit.getOnlinePlayers()) player.setScoreboard(manager.getMainScoreboard());
+        }
+        scoreboards.clear();
+        sidebarLines.clear();
     }
 
     public void onJoin(Player player) {
@@ -49,34 +57,47 @@ public final class HudManager {
     }
 
     public void onQuit(Player player) {
-        BossBar bar = questBars.remove(player.getUniqueId());
+        UUID id = player.getUniqueId();
+        BossBar bar = questBars.remove(id);
         if (bar != null) bar.removePlayer(player);
+        scoreboards.remove(id);
+        sidebarLines.remove(id);
     }
 
     private void updateSidebar(Player player) {
+        UUID id = player.getUniqueId();
         if (!plugin.getConfig().getBoolean("hud.scoreboard.enabled", true)) {
-            player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
+            ScoreboardManager manager = Bukkit.getScoreboardManager();
+            if (manager != null) player.setScoreboard(manager.getMainScoreboard());
+            scoreboards.remove(id);
+            sidebarLines.remove(id);
             return;
         }
         ScoreboardManager manager = Bukkit.getScoreboardManager();
         if (manager == null) return;
-        Scoreboard board = manager.getNewScoreboard();
-        Objective objective = board.registerNewObjective("xzhhud", Criteria.DUMMY,
-                ChatColor.GOLD + "" + ChatColor.BOLD + "XZH ECONOMY");
+        Scoreboard board = scoreboards.computeIfAbsent(id, ignored -> manager.getNewScoreboard());
+        Objective objective = board.getObjective("xzhhud");
+        if (objective == null) {
+            objective = board.registerNewObjective("xzhhud", Criteria.DUMMY,
+                    ChatColor.GOLD + "" + ChatColor.BOLD + "XZH ECONOMY");
+        }
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        UUID id = player.getUniqueId();
+        for (String oldLine : sidebarLines.getOrDefault(id, java.util.List.of())) board.resetScores(oldLine);
         double balance = plugin.getBalance(id);
         double owed = loanAmounts.getOrDefault(id, 0.0);
         long dueAt = loanDueTimes.getOrDefault(id, 0L);
-        int line = 6;
-        objective.getScore(ChatColor.GRAY + "Balance").setScore(line--);
-        objective.getScore(ChatColor.YELLOW + formatMoney(balance)).setScore(line--);
-        objective.getScore(ChatColor.DARK_GRAY + " ").setScore(line--);
-        objective.getScore(ChatColor.GRAY + "Loan owed").setScore(line--);
-        objective.getScore((owed > 0 ? ChatColor.RED : ChatColor.GREEN) + formatMoney(owed)).setScore(line--);
-        String time = owed <= 0 ? "No active loan" : remaining(dueAt);
-        objective.getScore(ChatColor.AQUA + clip(time, 38)).setScore(line);
-        player.setScoreboard(board);
+        java.util.List<String> lines = java.util.List.of(
+                ChatColor.GRAY + "Balance",
+                ChatColor.YELLOW + formatMoney(balance),
+                ChatColor.DARK_GRAY + " ",
+                ChatColor.GRAY + "Loan owed",
+                (owed > 0 ? ChatColor.RED : ChatColor.GREEN) + formatMoney(owed),
+                ChatColor.AQUA + clip(owed <= 0 ? "No active loan" : remaining(dueAt), 38)
+        );
+        int score = lines.size();
+        for (String line : lines) objective.getScore(line).setScore(score--);
+        sidebarLines.put(id, lines);
+        if (player.getScoreboard() != board) player.setScoreboard(board);
     }
 
     /** Sets or updates a player's loan balance and repayment due time (epoch milliseconds). */
