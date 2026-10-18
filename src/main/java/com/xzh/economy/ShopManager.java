@@ -262,7 +262,7 @@ public final class ShopManager implements Listener {
 
     private void openConfirm(Player player, Material material, int quantity, boolean buying, boolean handOnly) {
         Product p = product(material);
-        if (p == null && !buying) p = new Product("misc", material, 0.0, plugin.getConfig().getDouble("shop.default-sell-price", 0.1));
+        if (p == null && !buying) p = new Product("misc", material, 0.0, defaultSellPrice());
         if (p == null) return;
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Confirm transaction");
         double total = (buying ? buyPrice(p) : sellPrice(p)) * quantity;
@@ -522,6 +522,11 @@ public final class ShopManager implements Listener {
 
     private boolean validPrice(double value) {
         return Double.isFinite(value) && value >= 0.0;
+    }
+
+    private double defaultSellPrice() {
+        double configured = plugin.getConfig().getDouble("shop.default-sell-price", 0.1);
+        return validPrice(configured) ? configured : 0.1;
     }
 
     private Product product(Material material) {
