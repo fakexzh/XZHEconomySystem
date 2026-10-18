@@ -134,15 +134,44 @@ public final class UtilityManager implements Listener {
                 if (cmd.equals("tpdeny")) {
                     msg(player, "Teleport request denied."); msg(requester, player.getName() + " denied your teleport request.");
                 } else {
-                    requester.teleport(player.getLocation());
-                    msg(player, "Teleport request accepted."); msg(requester, "Teleported to " + player.getName() + ".");
+                    XZHEconomySystem economy = (XZHEconomySystem) plugin;
+                    double fee = Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-cost", 10.0));
+                    if (economy.getCombinedBalance(requesterId) + 1e-9 < fee) {
+                        msg(requester, "You need " + money(fee) + " coins to complete /tpa.");
+                        msg(player, "Teleport request could not complete because the requester cannot afford the fee.");
+                        return true;
+                    }
+                    boolean teleported = requester.teleport(player.getLocation());
+                    if (!teleported) {
+                        msg(requester, "Teleport failed; no fee was charged.");
+                        msg(player, "Teleport failed; no fee was charged.");
+                        return true;
+                    }
+                    if (!economy.spendAvailableFunds(requesterId, fee)) {
+                        msg(requester, "Teleport succeeded, but payment could not be collected. Please contact an admin.");
+                        msg(player, "Teleport request accepted.");
+                        return true;
+                    }
+                    msg(player, "Teleport request accepted.");
+                    msg(requester, "Teleported to " + player.getName() + " for " + money(fee) + " coins.");
                 }
                 return true;
             }
             case "back" -> {
                 Location loc = data.getLocation("back." + player.getUniqueId());
                 if (loc == null) { msg(player, "No saved death location."); return true; }
-                player.teleport(loc); msg(player, "Returned to your last death location."); return true;
+                XZHEconomySystem economy = (XZHEconomySystem) plugin;
+                double fee = Math.max(0.0, plugin.getConfig().getDouble("utilities.back-cost", 30.0));
+                if (economy.getCombinedBalance(player.getUniqueId()) + 1e-9 < fee) {
+                    msg(player, "You need " + money(fee) + " coins to use /back. Sell eligible items to earn coins, then repay any overdue loan.");
+                    return true;
+                }
+                if (!player.teleport(loc)) { msg(player, "Teleport failed; no fee was charged."); return true; }
+                if (!economy.spendAvailableFunds(player.getUniqueId(), fee)) {
+                    msg(player, "Teleport succeeded, but payment could not be collected. Please contact an admin.");
+                    return true;
+                }
+                msg(player, "Returned to your last death location for " + money(fee) + " coins."); return true;
             }
             case "msg" -> {
                 if (args.length < 2) { msg(player, "Usage: /msg <player> <message>"); return true; }
@@ -343,6 +372,15 @@ public final class UtilityManager implements Listener {
     public void onDeath(PlayerDeathEvent event) {
         data.set("back." + event.getEntity().getUniqueId(), event.getEntity().getLocation());
         save();
+        Player player = event.getEntity();
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!player.isOnline()) return;
+            msg(player, "You died. Use /back to return to your death location (30 coins), or /deathinventory to review recovery options.");
+        });
+    }
+
+    private String money(double amount) {
+        return String.format(Locale.US, "%.2f", amount).replaceAll("\\.00$", "");
     }
 
     private String homeName(String[] args) {
