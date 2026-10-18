@@ -27,6 +27,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     private DeathRecoveryManager deathRecoveryManager;
     private UtilityManager utilityManager;
     private AdminManager adminManager;
+    private BookShopManager bookShopManager;
     private File transactionsFile;
 
     @Override
@@ -46,6 +47,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         hudManager = new HudManager(this);
         hudManager.start();
         shopManager = new ShopManager(this);
+        bookShopManager = new BookShopManager(this);
         loanManager = new LoanManager(this);
         getServer().getPluginManager().registerEvents(new LibrarianTradeListener(), this);
         questManager = new QuestManager(this);
@@ -58,7 +60,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
-        for (String name : List.of("xzh", "balance", "pay", "eco", "shop", "loan", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "sethome", "delhome", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin")) {
+        for (String name : List.of("xzh", "balance", "pay", "eco", "shop", "loan", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "sethome", "delhome", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
@@ -77,6 +79,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     public HudManager getHudManager() { return hudManager; }
     public LoanManager getLoanManager() { return loanManager; }
     public ShopManager getShopManager() { return shopManager; }
+    public BookShopManager getBookShopManager() { return bookShopManager; }
 
     public void tellPublic(CommandSender sender, String message) { tell(sender, message); }
 
@@ -149,6 +152,11 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 if (args.length == 1 && args[0].equalsIgnoreCase("repay")) return loanManager.repay(player);
                 if (args.length > 0) { tell(sender, "Usage: /loan [repay]"); return true; }
                 loanManager.open(player);
+                return true;
+            }
+            case "books" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can open the book shop."); return true; }
+                bookShopManager.open(player);
                 return true;
             }
             case "xzhadmin" -> {
