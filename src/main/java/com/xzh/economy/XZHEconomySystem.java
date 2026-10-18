@@ -123,7 +123,6 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 : Math.max(0.0, Math.round(getConfig().getDouble("starting-balance", 100.0)));
         double initial = Math.min(getPocketBalanceLimit(), requestedInitial);
         double overflow = Math.max(0.0, requestedInitial - initial);
-        if (overflow > 0 && bankManager != null) bankManager.setBalance(player.getUniqueId(), bankManager.getBalance(player.getUniqueId()) + overflow);
         // Persist the migration marker before issuing items so a crash cannot duplicate old balances.
         walletStatus.set(key, true);
         balances.set(key, 0.0);
@@ -132,6 +131,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         pocketCoinManager.setCoins(player, initial);
         balances.set(key, pocketCoinManager.count(player));
         saveBalances();
+        if (overflow > 0 && bankManager != null) bankManager.setBalance(player.getUniqueId(), bankManager.getBalance(player.getUniqueId()) + overflow);
     }
 
     public void setOfflinePocketSnapshot(String key, double amount) {
@@ -363,7 +363,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                     return true;
                 }
                 double amount;
-                try { amount = round(Double.parseDouble(args[1])); }
+                try { amount = Double.parseDouble(args[1]); }
                 catch (NumberFormatException e) { tell(sender, "Enter a valid number."); return true; }
                 if (!Double.isFinite(amount) || amount <= 0 || amount != Math.rint(amount)
                         || amount < Math.max(1.0, getConfig().getDouble("minimum-pay", 1.0))
