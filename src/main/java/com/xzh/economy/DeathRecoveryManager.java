@@ -254,18 +254,29 @@ public final class DeathRecoveryManager implements Listener {
 
     private double defaultValue(Material m) {
         String n = m.name();
-        if (n.contains("ELYTRA")) return 2500;
-        if (n.contains("ARMOR_TRIM_SMITHING_TEMPLATE")) return n.contains("SILENCE") ? 1000 : (n.contains("FLOW") || n.contains("BOLT") ? 600 : 300);
+        if (n.equals("ELYTRA")) return 2500;
+        if (n.equals("ENCHANTED_GOLDEN_APPLE")) return 1250;
+        if (n.equals("GOLDEN_APPLE")) return 90;
+        if (n.equals("DIAMOND_BLOCK")) return 720;
+        if (n.equals("IRON_BLOCK")) return 180;
+        if (n.equals("GOLD_BLOCK")) return 72;
+        if (n.equals("NETHERITE_INGOT")) return 600;
+        if (n.equals("NETHERITE_SCRAP")) return 150;
+        if (n.equals("DIAMOND")) return 125;
+        if (n.equals("IRON_INGOT")) return 12;
+        if (n.equals("GOLD_INGOT")) return 20;
+        if (n.equals("EMERALD")) return 20;
+        if (n.equals("ANCIENT_DEBRIS")) return 120;
+        if (n.contains("ARMOR_TRIM_SMITHING_TEMPLATE"))
+            return n.contains("SILENCE") ? 1000 : (n.contains("FLOW") || n.contains("BOLT") ? 600 : 300);
         if (n.contains("SPAWN_EGG")) return n.contains("SNIFFER") ? 2000 : 1000;
         if (n.contains("ZOMBIE_HEAD") || n.contains("CREEPER_HEAD") || n.contains("SKELETON_SKULL")) return 200;
+        if (n.contains("WITHER_SKELETON_SKULL")) return 500;
         if (n.contains("ENCHANTED_BOOK")) return 100;
-        if (n.contains("NETHERITE")) return 300;
-        if (n.contains("DIAMOND")) return 80;
-        if (n.contains("TRIDENT") || n.contains("TOTEM") || n.contains("HEAVY_CORE")) return 150;
-        if (n.contains("ANCIENT_DEBRIS")) return 120;
-        if (n.contains("GOLD")) return 8;
-        if (n.contains("IRON")) return 5;
-        if (n.contains("EMERALD")) return 20;
+        if (n.contains("NETHERITE")) return 1200;
+        if (n.contains("DIAMOND")) return 300;
+        if (n.contains("IRON")) return 75;
+        if (n.contains("TRIDENT") || n.contains("TOTEM") || n.contains("HEAVY_CORE") || n.equals("MACE")) return 750;
         if (n.contains("ENDER_PEARL") || n.contains("BLAZE_ROD")) return 10;
         if (n.contains("FOOD") || n.contains("BEEF") || n.contains("PORKCHOP") || n.contains("BREAD")) return 2;
         if (m.isBlock()) return 1;
