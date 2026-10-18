@@ -110,6 +110,8 @@ shop:
     mooshroom_spawn_egg: 3
     experience_bottle: 200
     potion: 100
+    splash_potion: 75
+    lingering_potion: 25
     zombie_head: 10
     chicken_spawn_egg: 10
     cow_spawn_egg: 5
