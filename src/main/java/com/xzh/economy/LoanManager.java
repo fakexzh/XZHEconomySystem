@@ -179,6 +179,10 @@ public final class LoanManager implements Listener {
         };
     }
 
+    public boolean isShopPurchaseRestricted(UUID id) {
+        return getOwed(id) > 0 && getDue(id) > 0 && System.currentTimeMillis() >= getDue(id);
+    }
+
     private double getOwed(UUID id) { return data.getDouble(id + ".amount", 0.0); }
     private long getDue(UUID id) { return data.getLong(id + ".due-at", 0L); }
 
