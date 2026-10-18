@@ -111,16 +111,6 @@ public final class PocketCoinManager implements Listener {
     }
 
     @EventHandler
-    public void onDeath(PlayerDeathEvent event) {
-        // Coins remain in the normal death drops. Update the offline balance snapshot so it
-        // cannot be spent a second time while the player is dead or offline.
-        if (!event.getKeepInventory()) {
-            String key = event.getEntity().getUniqueId().toString();
-            plugin.setOfflinePocketSnapshot(key, 0.0);
-        }
-    }
-
-    @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         plugin.setOfflinePocketSnapshot(event.getPlayer().getUniqueId().toString(), count(event.getPlayer()));
     }
