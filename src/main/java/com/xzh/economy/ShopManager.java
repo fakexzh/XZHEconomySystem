@@ -306,7 +306,7 @@ public final class ShopManager implements Listener {
         return Math.max(0, stockData.getInt("items." + material.name().toLowerCase(Locale.ROOT), stockLimit(material)));
     }
 
-    private void setStock(Material material, int amount) {
+    public void setStock(Material material, int amount) {
         stockData.set("items." + material.name().toLowerCase(Locale.ROOT), Math.max(0, amount));
         saveStock();
     }
