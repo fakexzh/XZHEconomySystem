@@ -1,5 +1,242 @@
 # XZHEconomySystem 1.0.0
 currency-name: coins
+currency-name-singular: coin
 starting-balance: 100.0
 minimum-pay: 1.0
 maximum-pay: 1000000.0
+
+# Physical pocket coins. Excess pocket funds are automatically secured in the bank.
+wallet:
+  max-pocket-coins: 1000000
+
+# Bank settings. Hours use Minecraft time from the configured clock world (default world).
+# Minecraft time 09:00 is tick 3000; 20:00 is tick 14000.
+bank:
+  clock-world: world
+  open-hour: 9
+  close-hour: 20
+
+# Global announcements: only noteworthy shop purchases; borrowing and full loan repayments.
+announcements:
+  shop:
+    enabled: true
+    minimum-purchase-total: 1000
+    rare-items:
+      - ELYTRA
+      - NETHERITE_INGOT
+      - ENCHANTED_GOLDEN_APPLE
+      - TOTEM_OF_UNDYING
+      - TRIDENT
+      - MACE
+      - WITHER_SKELETON_SKULL
+      - SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE
+    progression-items:
+      - ELYTRA
+  loan:
+    borrowing: true
+    full-repayment: true
+
+# HUD settings
+hud:
+  clock:
+    enabled: true
+    format: "HH:mm"
+  scoreboard:
+    enabled: true
+    position: sidebar
+  quest-bossbar:
+    enabled: true
+
+# Death inventory recovery. Recovery is available for 30 minutes, up to twice per day.
+death-recovery:
+  overworld-only: true
+  fee-multiplier: 1.5
+  xp-value-per-point: 0.25
+  material-values:
+    elytra: 2500
+    netherite_ingot: 600
+    netherite_scrap: 150
+    diamond: 125
+    diamond_block: 720
+    ancient_debris: 120
+    mending: 100
+
+# Global shop stock caps. Stock is shared by every player and refills to these caps daily.
+shop:
+  default-sell-price: 0.1
+  prices:
+    elytra:
+      buy: 5000
+      sell: 1500
+    diamond:
+      buy: 250
+      sell: 75
+    iron_ingot:
+      buy: 25
+      sell: 7.5
+    cooked_beef:
+      buy: 14
+      sell: 4.2
+  stock-limits:
+    coal: 2000
+    iron_ingot: 1000
+    gold_ingot: 500
+    copper_ingot: 500
+    lapis_lazuli: 500
+    redstone: 500
+    emerald: 100
+    amethyst_shard: 300
+    quartz: 500
+    netherite_scrap: 20
+    netherite_ingot: 5
+    diamond: 250
+    obsidian: 250
+    glass: 1000
+    end_stone: 500
+    iron_block: 100
+    diamond_block: 10
+    bread: 1000
+    cooked_beef: 1000
+    iron_pickaxe: 100
+    diamond_pickaxe: 30
+    iron_chestplate: 100
+    diamond_sword: 30
+    iron_sword: 100
+    iron_axe: 100
+    diamond_axe: 30
+    diamond_shovel: 50
+    diamond_hoe: 30
+    netherite_pickaxe: 5
+    netherite_axe: 5
+    netherite_sword: 5
+    netherite_helmet: 5
+    netherite_chestplate: 5
+    netherite_leggings: 5
+    netherite_boots: 5
+    trident: 5
+    totem_of_undying: 3
+    mace: 5
+    iron_helmet: 100
+    iron_leggings: 100
+    iron_boots: 100
+    diamond_helmet: 30
+    diamond_chestplate: 20
+    diamond_leggings: 20
+    diamond_boots: 30
+    netherite_helmet: 5
+    netherite_chestplate: 3
+    netherite_leggings: 3
+    netherite_boots: 5
+    bow: 100
+    crossbow: 75
+    shield: 100
+    trident: 5
+    mace: 3
+    totem_of_undying: 10
+    ender_chest: 50
+    golden_carrot: 500
+    pumpkin_pie: 500
+    golden_apple: 100
+    enchanted_golden_apple: 3
+    cooked_mutton: 500
+    creeper_head: 10
+    skeleton_skull: 10
+    wither_skeleton_skull: 3
+    cat_spawn_egg: 5
+    wolf_spawn_egg: 5
+    fox_spawn_egg: 5
+    parrot_spawn_egg: 3
+    bee_spawn_egg: 5
+    panda_spawn_egg: 3
+    goat_spawn_egg: 5
+    mooshroom_spawn_egg: 3
+    experience_bottle: 200
+    potion: 100
+    splash_potion: 75
+    lingering_potion: 25
+    zombie_head: 10
+    chicken_spawn_egg: 10
+    cow_spawn_egg: 5
+    sheep_spawn_egg: 5
+    pig_spawn_egg: 5
+    horse_spawn_egg: 5
+    donkey_spawn_egg: 5
+    rabbit_spawn_egg: 5
+    turtle_spawn_egg: 5
+    axolotl_spawn_egg: 3
+    camel_spawn_egg: 5
+    armadillo_spawn_egg: 5
+    sniffer_spawn_egg: 2
+    frog_spawn_egg: 5
+    egg: 2000
+    sentry_armor_trim_smithing_template: 25
+    dune_armor_trim_smithing_template: 25
+    coast_armor_trim_smithing_template: 25
+    ward_armor_trim_smithing_template: 10
+    silence_armor_trim_smithing_template: 3
+    spire_armor_trim_smithing_template: 10
+    tide_armor_trim_smithing_template: 10
+    wayfinder_armor_trim_smithing_template: 15
+    shaper_armor_trim_smithing_template: 15
+    raiser_armor_trim_smithing_template: 15
+    host_armor_trim_smithing_template: 15
+    flow_armor_trim_smithing_template: 8
+    bolt_armor_trim_smithing_template: 8
+    netherite_upgrade_smithing_template: 10
+    elytra: 3
+
+# Quest pack stock resets to these values each server-local day.
+quests:
+  pack-stock:
+    beginner: 50
+    miner: 30
+    hunter: 25
+    explorer: 15
+    nether: 10
+    end: 5
+  global-event:
+    goal: 500
+    reward: 100
+    claims-per-day: 25
+
+# Configurable gameplay restrictions.
+restrictions:
+  disable-librarian-enchanted-book-trades: true
+  elytra-requires-end-visit: true
+  buy-only-spawn-eggs: true
+
+# Player utility limits.
+utilities:
+  max-homes: 3
+  rtp-radius: 3000
+  rtp-cooldown-seconds: 600
+
+# Enchantment book shop rules.
+book-shop:
+  cooldown-hours: 24
+  rare-daily-stock: 3
+  normal-daily-stock: 100
+  prices:
+    mending: 1200
+    wind_burst: 1500
+    swift_sneak: 700
+    soul_speed: 700
+    frost_walker: 700
+    fortune: 600
+    silk_touch: 600
+    unbreaking: 600
+    efficiency: 600
+    looting: 600
+    sharpness: 500
+    protection: 500
+    feather_falling: 500
+    power: 500
+
+# Configurable starter kit; items use MATERIAL:AMOUNT syntax.
+kits:
+  starter:
+    cooldown-hours: 24
+    items:
+      - STONE_PICKAXE:1
+      - BREAD:8
+      - TORCH:16

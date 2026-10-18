@@ -2,7 +2,7 @@ name: Build plugin
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, integrated-release ]
 permissions:
   contents: read
   actions: read
@@ -18,8 +18,15 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build with Gradle
         run: gradle clean build
+      - name: Package source archive
+        run: git archive --format=zip --output=build/XZHEconomySystem-source.zip HEAD
       - name: Upload plugin JAR
         uses: actions/upload-artifact@v4
         with:
           name: XZHEconomySystem-1.0.0
           path: build/libs/XZHEconomySystem-1.0.0.jar
+      - name: Upload source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: XZHEconomySystem-source
+          path: build/XZHEconomySystem-source.zip

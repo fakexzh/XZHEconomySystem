@@ -1,5 +1,7 @@
 package com.xzh.economy;
 
+import org.bukkit.plugin.ServicePriority;
+
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -20,10 +22,25 @@ import java.util.UUID;
 public final class XZHEconomySystem extends JavaPlugin implements CommandExecutor, TabCompleter {
     private File balancesFile;
     private YamlConfiguration balances;
+    private File walletStatusFile;
+    private YamlConfiguration walletStatus;
+    private PocketCoinManager pocketCoinManager;
+    private HudManager hudManager;
+    private BankManager bankManager;
+    private ShopManager shopManager;
+    private LoanManager loanManager;
+    private QuestManager questManager;
+    private DeathRecoveryManager deathRecoveryManager;
+    private UtilityManager utilityManager;
+    private AdminManager adminManager;
+    private BookShopManager bookShopManager;
+    private File transactionsFile;
+    private MoneyRequestManager moneyRequestManager;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        transactionsFile = new File(getDataFolder(), "transactions.log");
         balancesFile = new File(getDataFolder(), "balances.yml");
         if (!balancesFile.exists()) {
             try {
@@ -34,7 +51,30 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             }
         }
         balances = YamlConfiguration.loadConfiguration(balancesFile);
-        for (String name : List.of("xzh", "balance", "pay", "eco")) {
+        walletStatusFile = new File(getDataFolder(), "wallets.yml");
+        walletStatus = YamlConfiguration.loadConfiguration(walletStatusFile);
+        pocketCoinManager = new PocketCoinManager(this);
+        bankManager = new BankManager(this);
+        hudManager = new HudManager(this);
+        hudManager.start();
+        shopManager = new ShopManager(this);
+        bookShopManager = new BookShopManager(this);
+        loanManager = new LoanManager(this);
+        getServer().getPluginManager().registerEvents(new LibrarianTradeListener(this), this);
+        questManager = new QuestManager(this);
+        deathRecoveryManager = new DeathRecoveryManager(this);
+        utilityManager = new UtilityManager(this);
+        adminManager = new AdminManager(this);
+        moneyRequestManager = new MoneyRequestManager(this);
+        new GuiDragGuard(this);
+        registerVaultProvider();
+        getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
+            @org.bukkit.event.EventHandler
+            public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) { initializePocketWallet(event.getPlayer()); hudManager.onJoin(event.getPlayer()); }
+            @org.bukkit.event.EventHandler
+            public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
+        }, this);
+        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "sethome", "delhome", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit", "gmc", "gms", "gma", "gmsp", "day", "night", "gamemode", "heal", "feed", "fly", "weather")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
@@ -46,21 +86,183 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
 
     @Override
     public void onDisable() {
+        if (hudManager != null) hudManager.shutdown();
         saveBalances();
+    }
+
+    public HudManager getHudManager() { return hudManager; }
+    public BankManager getBankManager() { return bankManager; }
+    public LoanManager getLoanManager() { return loanManager; }
+    public ShopManager getShopManager() { return shopManager; }
+    public BookShopManager getBookShopManager() { return bookShopManager; }
+    public QuestManager getQuestManager() { return questManager; }
+    public DeathRecoveryManager getDeathRecoveryManager() { return deathRecoveryManager; }
+
+    public void tellPublic(CommandSender sender, String message) { tell(sender, message); }
+
+    /** Announces only configured high-value, rare, or progression purchases. */
+    public void announceSpecialPurchase(Player player, org.bukkit.Material material, int quantity, double total) {
+        if (!getConfig().getBoolean("announcements.shop.enabled", true)) return;
+        String item = material.name().toLowerCase(Locale.ROOT).replace('_', ' ');
+        boolean expensive = total >= getConfig().getDouble("announcements.shop.minimum-purchase-total", 1000.0);
+        boolean rare = getConfig().getStringList("announcements.shop.rare-items").stream()
+                .anyMatch(name -> name.equalsIgnoreCase(material.name()));
+        boolean progression = getConfig().getStringList("announcements.shop.progression-items").stream()
+                .anyMatch(name -> name.equalsIgnoreCase(material.name()));
+        if (!expensive && !rare && !progression) return;
+        String prefix = "§8[§6XZH SHOP§8] §r";
+        if (progression) {
+            Bukkit.broadcastMessage(prefix + "§e" + player.getName() + " §funlocked a progression item: §b"
+                    + item + " §7(" + money(total) + " coins).");
+        } else {
+            Bukkit.broadcastMessage(prefix + "§e" + player.getName() + " §fpurchased §b" + quantity + " × "
+                    + item + " §ffor §6" + money(total) + " coins§f.");
+        }
+    }
+
+    public void announceLoanBorrow(Player player, int principal, double repayment, int days) {
+        if (!getConfig().getBoolean("announcements.loan.borrowing", true)) return;
+        Bukkit.broadcastMessage("§8[§bXZH BANK§8] §e" + player.getName() + " §fborrowed §6"
+                + money(principal) + " coins§f. Repayment: §c" + money(repayment)
+                + " coins §fover §b" + days + " days§f.");
+    }
+
+    public void announceLoanRepaid(String playerName, double amount, boolean automatic) {
+        if (!getConfig().getBoolean("announcements.loan.full-repayment", true)) return;
+        Bukkit.broadcastMessage("§8[§bXZH BANK§8] §e" + playerName + " §ffully repaid their loan of §6"
+                + money(amount) + " coins§f" + (automatic ? " §7(automatic repayment)." : "."));
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void registerVaultProvider() {
+        if (getServer().getPluginManager().getPlugin("Vault") == null) return;
+        try {
+            Class<?> economyApi = Class.forName("net.milkbowl.vault.economy.Economy");
+            Class<?> providerType = Class.forName("com.xzh.economy.VaultEconomyProvider");
+            Object provider = providerType.getConstructor(XZHEconomySystem.class).newInstance(this);
+            getServer().getServicesManager().register((Class) economyApi, provider, this, ServicePriority.High);
+            getLogger().info("Vault economy provider registered.");
+        } catch (ReflectiveOperationException | LinkageError e) {
+            getLogger().warning("Vault was detected but the economy bridge could not be registered: " + e.getMessage());
+        }
+    }
+
+    public PocketCoinManager getPocketCoinManager() { return pocketCoinManager; }
+    public double getPocketBalanceLimit() { return Math.max(1000.0, getConfig().getDouble("wallet.max-pocket-coins", 1000000.0)); }
+
+    public void initializePocketWallet(Player player) {
+        if (walletStatus == null || walletStatus.getBoolean(player.getUniqueId().toString(), false)) return;
+        String key = player.getUniqueId().toString();
+        double requestedInitial = balances.contains(key)
+                ? Math.max(0.0, Math.round(balances.getDouble(key, 0.0)))
+                : Math.max(0.0, Math.round(getConfig().getDouble("starting-balance", 100.0)));
+        double initial = Math.min(getPocketBalanceLimit(), requestedInitial);
+        double overflow = Math.max(0.0, requestedInitial - initial);
+        // Persist the migration marker before issuing items so a crash cannot duplicate old balances.
+        walletStatus.set(key, true);
+        balances.set(key, 0.0);
+        saveWalletStatus();
+        saveBalances();
+        pocketCoinManager.setCoins(player, initial);
+        balances.set(key, pocketCoinManager.count(player));
+        saveBalances();
+        if (overflow > 0 && bankManager != null) bankManager.setBalance(player.getUniqueId(), bankManager.getBalance(player.getUniqueId()) + overflow);
+    }
+
+    public void setOfflinePocketSnapshot(String key, double amount) {
+        if (balances == null) return;
+        balances.set(key, Math.max(0.0, Math.round(amount)));
+        saveBalances();
+    }
+
+    private void saveWalletStatus() {
+        if (walletStatus == null || walletStatusFile == null) return;
+        try {
+            walletStatus.save(walletStatusFile);
+        } catch (IOException e) {
+            getLogger().severe("Could not save wallets.yml: " + e.getMessage());
+        }
+    }
+
+    public double getCombinedBalance(UUID uuid) {
+        double pocket = getBalance(uuid);
+        double bank = bankManager == null ? 0.0 : bankManager.getBalance(uuid);
+        return Math.round((pocket + bank) * 100.0) / 100.0;
+    }
+
+    /** Charges pocket funds first, then bank funds. Call on the server thread. */
+    public boolean spendAvailableFunds(UUID uuid, double amount) {
+        if (!Double.isFinite(amount) || amount < 0) return false;
+        double pocket = getBalance(uuid);
+        double bank = bankManager == null ? 0.0 : bankManager.getBalance(uuid);
+        if (pocket + bank + 1e-9 < amount) return false;
+        double fromPocket = Math.min(pocket, amount);
+        double remainder = Math.max(0.0, Math.round((amount - fromPocket) * 100.0) / 100.0);
+        setBalance(uuid, pocket - fromPocket);
+        if (remainder > 0 && bankManager != null) bankManager.setBalance(uuid, bank - remainder);
+        return true;
+    }
+
+    public boolean hasBalanceAccount(UUID uuid) {
+        return balances.contains(uuid.toString()) || (walletStatus != null && walletStatus.getBoolean(uuid.toString(), false));
     }
 
     public double getBalance(UUID uuid) {
         String key = uuid.toString();
+        Player online = Bukkit.getPlayer(uuid);
+        if (online != null) {
+            initializePocketWallet(online);
+            return pocketCoinManager.count(online);
+        }
         if (!balances.contains(key)) {
-            balances.set(key, getConfig().getDouble("starting-balance", 100.0));
+            balances.set(key, Math.max(0, Math.round(getConfig().getDouble("starting-balance", 100.0))));
+            if (walletStatus != null) walletStatus.set(key, false);
             saveBalances();
+            saveWalletStatus();
         }
         return Math.max(0.0, balances.getDouble(key, 0.0));
     }
 
     public void setBalance(UUID uuid, double amount) {
-        balances.set(uuid.toString(), Math.max(0.0, round(amount)));
+        if (!Double.isFinite(amount)) {
+            getLogger().warning("Rejected non-finite balance update for " + uuid + ".");
+            return;
+        }
+        String key = uuid.toString();
+        Player online = Bukkit.getPlayer(uuid);
+        double oldAmount;
+        double requestedAmount = Math.max(0.0, Math.round(amount));
+        double newAmount = Math.min(getPocketBalanceLimit(), requestedAmount);
+        double overflow = Math.max(0.0, requestedAmount - newAmount);
+        if (online != null) {
+            initializePocketWallet(online);
+            oldAmount = pocketCoinManager.count(online);
+            pocketCoinManager.setCoins(online, newAmount);
+            newAmount = pocketCoinManager.count(online);
+            balances.set(key, newAmount);
+            walletStatus.set(key, true);
+        } else {
+            oldAmount = balances.getDouble(key, 0.0);
+            balances.set(key, newAmount);
+            walletStatus.set(key, false);
+        }
+        if (overflow > 0 && bankManager != null) {
+            bankManager.setBalance(uuid, bankManager.getBalance(uuid) + overflow);
+            Player recipient = Bukkit.getPlayer(uuid);
+            if (recipient != null) tell(recipient, "Your pocket wallet reached its limit; " + money(overflow) + " excess coins were secured in the bank.");
+        }
         saveBalances();
+        saveWalletStatus();
+        try {
+            getDataFolder().mkdirs();
+            java.nio.file.Files.writeString(transactionsFile.toPath(),
+                    java.time.Instant.now() + " uuid=" + uuid + " old=" + money(oldAmount)
+                            + " new=" + money(newAmount) + " delta=" + money(newAmount - oldAmount)
+                            + System.lineSeparator(),
+                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            getLogger().warning("Could not append transactions.log: " + e.getMessage());
+        }
     }
 
     private double round(double amount) {
@@ -91,10 +293,117 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         switch (command.getName().toLowerCase(Locale.ROOT)) {
+            case "gmc", "gms", "gma", "gmsp", "gamemode", "day", "night", "heal", "feed", "fly", "weather" -> {
+                if (!sender.hasPermission("xzh.admin")) { tell(sender, "No permission."); return true; }
+                if (!(sender instanceof Player player)) { tell(sender, "This command can only be used by a player."); return true; }
+                String adminCommand = command.getName().toLowerCase(Locale.ROOT);
+                if (adminCommand.equals("gamemode")) {
+                    if (args.length != 1) { tell(sender, "Usage: /gamemode <survival|creative|adventure|spectator>"); return true; }
+                    switch (args[0].toLowerCase(Locale.ROOT)) {
+                        case "s", "survival", "0" -> player.setGameMode(org.bukkit.GameMode.SURVIVAL);
+                        case "c", "creative", "1" -> player.setGameMode(org.bukkit.GameMode.CREATIVE);
+                        case "a", "adventure", "2" -> player.setGameMode(org.bukkit.GameMode.ADVENTURE);
+                        case "sp", "spectator", "3" -> player.setGameMode(org.bukkit.GameMode.SPECTATOR);
+                        default -> { tell(sender, "Unknown gamemode."); return true; }
+                    }
+                    tell(sender, "Gamemode set to " + player.getGameMode().name().toLowerCase(Locale.ROOT) + ".");
+                    return true;
+                }
+                switch (adminCommand) {
+                    case "gmc" -> { player.setGameMode(org.bukkit.GameMode.CREATIVE); tell(sender, "Gamemode set to Creative."); }
+                    case "gms" -> { player.setGameMode(org.bukkit.GameMode.SURVIVAL); tell(sender, "Gamemode set to Survival."); }
+                    case "gma" -> { player.setGameMode(org.bukkit.GameMode.ADVENTURE); tell(sender, "Gamemode set to Adventure."); }
+                    case "gmsp" -> { player.setGameMode(org.bukkit.GameMode.SPECTATOR); tell(sender, "Gamemode set to Spectator."); }
+                    case "day" -> { player.getWorld().setTime(1000L); tell(sender, "World time set to day."); }
+                    case "night" -> { player.getWorld().setTime(13000L); tell(sender, "World time set to night."); }
+                    case "heal" -> { player.setHealth(player.getMaxHealth()); player.setFireTicks(0); tell(sender, "Health restored."); }
+                    case "feed" -> { player.setFoodLevel(20); player.setSaturation(20f); tell(sender, "Hunger restored."); }
+                    case "fly" -> { boolean enable = !player.getAllowFlight(); player.setAllowFlight(enable); if (!enable) player.setFlying(false); tell(sender, "Flight " + (enable ? "enabled" : "disabled") + "."); }
+                    case "weather" -> {
+                        if (args.length != 1) { tell(sender, "Usage: /weather <clear|rain|thunder>"); return true; }
+                        switch (args[0].toLowerCase(Locale.ROOT)) {
+                            case "clear" -> { player.getWorld().setStorm(false); player.getWorld().setThundering(false); }
+                            case "rain" -> { player.getWorld().setStorm(true); player.getWorld().setThundering(false); }
+                            case "thunder" -> { player.getWorld().setStorm(true); player.getWorld().setThundering(true); }
+                            default -> { tell(sender, "Unknown weather. Use clear, rain, or thunder."); return true; }
+                        }
+                        tell(sender, "Weather updated.");
+                    }
+                }
+                return true;
+            }
+            case "deathinventory" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can recover a death inventory."); return true; }
+                deathRecoveryManager.open(player);
+                return true;
+            }
+            case "quests" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can view quests."); return true; }
+                questManager.open(player);
+                return true;
+            }
+            case "bank" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can open the bank."); return true; }
+                bankManager.open(player);
+                return true;
+            }
+            case "loan" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can use loans."); return true; }
+                if (args.length == 1 && args[0].equalsIgnoreCase("repay")) return loanManager.repay(player);
+                if (args.length > 0) { tell(sender, "Usage: /loan [repay]"); return true; }
+                bankManager.open(player);
+                return true;
+            }
+            case "books" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can open the book shop."); return true; }
+                bookShopManager.open(player);
+                return true;
+            }
+            case "xzhadmin" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can open the admin GUI."); return true; }
+                adminManager.open(player);
+                return true;
+            }
+            case "shopadmin" -> {
+                if (!sender.hasPermission("xzh.admin")) { tell(sender, "No permission."); return true; }
+                if (args.length == 1 && args[0].equalsIgnoreCase("restock")) {
+                    shopManager.restockAll();
+                    tell(sender, "Global shop stock has been restocked to configured limits.");
+                    return true;
+                }
+                if (args.length == 3 && args[0].equalsIgnoreCase("stock")) {
+                    org.bukkit.Material material;
+                    int amount;
+                    try { material = org.bukkit.Material.valueOf(args[1].toUpperCase(Locale.ROOT)); amount = Integer.parseInt(args[2]); }
+                    catch (IllegalArgumentException ex) { tell(sender, "Usage: /shopadmin stock <MATERIAL> <amount>"); return true; }
+                    if (amount < 0 || amount > 1000000) { tell(sender, "Stock must be between 0 and 1000000."); return true; }
+                    shopManager.setStock(material, amount);
+                    tell(sender, "Global stock for " + material.name() + " set to " + amount + ".");
+                    return true;
+                }
+                tell(sender, "Usage: /shopadmin <restock|stock <MATERIAL> <amount>>");
+                return true;
+            }
+            case "shop" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can open the shop."); return true; }
+                if (shopManager != null) shopManager.openMain(player);
+                return true;
+            }
             case "xzh" -> {
                 tell(sender, "§eXZHEconomySystem §7v" + getPluginMeta().getVersion());
                 tell(sender, "§f/balance §7- check your coins");
                 tell(sender, "§f/pay <player> <amount> §7- send coins");
+                tell(sender, "§f/sendmoney <player> <amount> §7- request a confirmed transfer to them");
+                tell(sender, "§f/askmoney <player> <amount> §7- ask them for a confirmed payment");
+                tell(sender, "§f/shop §7- open XZH SHOP");
+                tell(sender, "§f/bank §7- open XZH BANK, deposits, withdrawals and loans");
+                if (sender.hasPermission("xzh.admin")) tell(sender, "§f/shopadmin <restock|stock> §7- manage global shop stock");
+                tell(sender, "§f/loan repay §7- repay an active loan (also available in /bank)");
+                tell(sender, "§f/quests §7- buy quest packs and track progress");
+                tell(sender, "§f/deathinventory §7- recover your last death inventory");
+                tell(sender, "§f/books §7- enchantment book shop");
+                tell(sender, "§f/kit starter §7- claim starter kit");
+                tell(sender, "§f/home, /sethome, /warp, /tpa, /back, /rtp §7- utilities");
                 if (sender.hasPermission("xzh.admin")) tell(sender, "§f/eco <set|add> <player> <amount> §7- admin economy");
                 return true;
             }
@@ -104,7 +413,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                         tell(sender, "Console usage: /balance <player>");
                         return true;
                     }
-                    tell(sender, "Balance: §e" + money(getBalance(player.getUniqueId())) + " " + currency());
+                    tell(sender, "Pocket: §e" + money(getBalance(player.getUniqueId())) + " " + currency() + " §7| Bank: §a" + money(bankManager.getBalance(player.getUniqueId())) + " " + currency());
                     return true;
                 }
                 Player target = Bukkit.getPlayerExact(args[0]);
@@ -112,8 +421,12 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                     tell(sender, "That player must be online.");
                     return true;
                 }
-                tell(sender, target.getName() + "'s balance: §e" + money(getBalance(target.getUniqueId())) + " " + currency());
+                tell(sender, target.getName() + " — Pocket: §e" + money(getBalance(target.getUniqueId())) + " " + currency() + " §7| Bank: §a" + money(bankManager.getBalance(target.getUniqueId())) + " " + currency());
                 return true;
+            }
+            case "sendmoney", "askmoney" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can use money requests."); return true; }
+                return moneyRequestManager.handle(player, command.getName(), args);
             }
             case "pay" -> {
                 if (!(sender instanceof Player player)) {
@@ -130,22 +443,30 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                     return true;
                 }
                 double amount;
-                try { amount = round(Double.parseDouble(args[1])); }
+                try { amount = Double.parseDouble(args[1]); }
                 catch (NumberFormatException e) { tell(sender, "Enter a valid number."); return true; }
-                if (!Double.isFinite(amount) || amount < getConfig().getDouble("minimum-pay", 1.0)
+                if (!Double.isFinite(amount) || amount <= 0 || amount != Math.rint(amount)
+                        || amount < Math.max(1.0, getConfig().getDouble("minimum-pay", 1.0))
                         || amount > getConfig().getDouble("maximum-pay", 1000000.0)) {
                     tell(sender, "That amount is outside the allowed range.");
                     return true;
                 }
-                double senderBalance = getBalance(player.getUniqueId());
-                if (senderBalance < amount) {
-                    tell(sender, "You don't have enough coins.");
+                double senderPocket = getBalance(player.getUniqueId());
+                double senderBank = bankManager == null ? 0.0 : bankManager.getBalance(player.getUniqueId());
+                if (senderPocket + senderBank + 1e-9 < amount) {
+                    tell(sender, "Not enough funds. Pocket: §e" + money(senderPocket)
+                            + "§r; bank: §a" + money(senderBank) + "§r; payment: §e" + money(amount) + "§r.");
                     return true;
                 }
-                setBalance(player.getUniqueId(), senderBalance - amount);
+                // Payments follow the same rule as shop purchases and loan repayments: pocket first, bank second.
+                if (!spendAvailableFunds(player.getUniqueId(), amount)) {
+                    tell(sender, "Payment failed because your available funds changed. No money was sent.");
+                    return true;
+                }
                 setBalance(target.getUniqueId(), getBalance(target.getUniqueId()) + amount);
-                tell(player, "Sent §e" + money(amount) + " " + currency() + "§r to " + target.getName() + ".");
-                tell(target, "Received §e" + money(amount) + " " + currency() + "§r from " + player.getName() + ".");
+                tell(player, "Sent §e" + money(Math.round(amount)) + " " + currency() + "§r to " + target.getName()
+                        + " (pocket first, then bank if needed).");
+                tell(target, "Received §e" + money(Math.round(amount)) + " " + currency() + "§r from " + player.getName() + ".");
                 return true;
             }
             case "eco" -> {
@@ -166,7 +487,9 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 tell(target, "Your balance is now §e" + money(newBalance) + " " + currency() + ".");
                 return true;
             }
-            default -> { return false; }
+            default -> {
+                return utilityManager != null && utilityManager.handle(sender, command.getName(), args);
+            }
         }
     }
 
@@ -176,6 +499,8 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         if (command.getName().equalsIgnoreCase("eco") && args.length == 1 && sender.hasPermission("xzh.admin")) {
             suggestions.add("set"); suggestions.add("add");
         } else if ((command.getName().equalsIgnoreCase("pay") && args.length == 1)
+                || (command.getName().equalsIgnoreCase("sendmoney") && args.length == 1)
+                || (command.getName().equalsIgnoreCase("askmoney") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("balance") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("eco") && args.length == 2 && sender.hasPermission("xzh.admin"))) {
             for (Player player : Bukkit.getOnlinePlayers()) suggestions.add(player.getName());

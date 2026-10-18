@@ -3,7 +3,8 @@ version: '1.0.0'
 main: com.xzh.economy.XZHEconomySystem
 api-version: '26.3'
 author: XZH
-description: A standalone starter economy plugin for Paper/Purpur 26.3.
+description: Integrated economy, shop, quests, loans, death recovery and utilities for Purpur 26.3.
+softdepend: [Vault]
 commands:
   xzh:
     description: Show XZHEconomySystem help and status.
@@ -15,11 +16,160 @@ commands:
   pay:
     description: Send coins to an online player.
     usage: /pay <player> <amount>
+  sendmoney:
+    description: Request a recipient-confirmed transfer of coins.
+    usage: /sendmoney <player> <amount>
+  askmoney:
+    description: Ask another player for a recipient-confirmed payment.
+    usage: /askmoney <player> <amount>
+  shop:
+    description: Open the XZH shop GUI.
+    usage: /shop
+  bank:
+    description: Open the XZH bank for deposits, withdrawals, and loans.
+    usage: /bank
+  loan:
+    description: Open the bank or repay an active loan.
+    usage: /loan [repay]
+  quests:
+    description: Open the quest packs menu.
+    usage: /quests
+  deathinventory:
+    description: Recover your most recent death inventory within 30 minutes.
+    usage: /deathinventory
+  shopadmin:
+    description: Manage global shop stock.
+    usage: /shopadmin <restock|stock <MATERIAL> <amount>>
+    permission: xzh.admin
+  xzhadmin:
+    description: Open the XZH economy admin GUI.
+    usage: /xzhadmin
+    permission: xzh.admin
+  books:
+    description: Open the enchantment book shop.
+    usage: /books
+  kit:
+    description: Claim a configured kit.
+    usage: /kit starter
   eco:
     description: Admin economy management.
     usage: /eco <set|add> <player> <amount>
     permission: xzh.admin
+  spawn:
+    description: Teleport to configured spawn.
+    usage: /spawn
+  setspawn:
+    description: Set the server spawn point.
+    usage: /setspawn
+    permission: xzh.admin
+  home:
+    description: Teleport to a saved home.
+    usage: /home [name]
+  sethome:
+    description: Save a home.
+    usage: /sethome [name]
+  delhome:
+    description: Delete a saved home.
+    usage: /delhome [name]
+  warp:
+    description: Teleport to a named warp.
+    usage: /warp <name>
+  setwarp:
+    description: Create or update a named warp.
+    usage: /setwarp <name>
+    permission: xzh.admin
+  delwarp:
+    description: Delete a named warp.
+    usage: /delwarp <name>
+    permission: xzh.admin
+  tpa:
+    description: Request teleportation to another player.
+    usage: /tpa <player>
+  tpaccept:
+    description: Accept a teleport request.
+    usage: /tpaccept
+  tpdeny:
+    description: Deny a teleport request.
+    usage: /tpdeny
+  back:
+    description: Return to your last death location.
+    usage: /back
+  msg:
+    description: Send a private message.
+    usage: /msg <player> <message>
+    aliases: [tell, whisper]
+  reply:
+    description: Reply to a private message.
+    usage: /reply <message>
+    aliases: [r]
+  ignore:
+    description: Toggle ignoring another online player.
+    usage: /ignore <player>
+  afk:
+    description: Toggle your AFK status.
+    usage: /afk
+  near:
+    description: List players within 100 blocks.
+    usage: /near
+  list:
+    description: List online players.
+    usage: /list
+    aliases: [online]
+  top:
+    description: Teleport to the surface at your current coordinates.
+    usage: /top
+  rtp:
+    description: Teleport to a random safe location.
+    usage: /rtp
+  gmc:
+    description: Set your gamemode to Creative.
+    usage: /gmc
+    permission: xzh.admin
+  gms:
+    description: Set your gamemode to Survival.
+    usage: /gms
+    permission: xzh.admin
+  gma:
+    description: Set your gamemode to Adventure.
+    usage: /gma
+    permission: xzh.admin
+  gmsp:
+    description: Set your gamemode to Spectator.
+    usage: /gmsp
+    permission: xzh.admin
+  day:
+    description: Set your current world to daytime.
+    usage: /day
+    permission: xzh.admin
+  gamemode:
+    description: Change your gamemode (admin only).
+    usage: /gamemode <survival|creative|adventure|spectator>
+    aliases: [gm]
+    permission: xzh.admin
+  heal:
+    description: Restore health and clear fire (admin only).
+    usage: /heal
+    permission: xzh.admin
+  feed:
+    description: Restore hunger (admin only).
+    usage: /feed
+    permission: xzh.admin
+  fly:
+    description: Toggle flight (admin only).
+    usage: /fly
+    permission: xzh.admin
+  weather:
+    description: Change world weather (admin only).
+    usage: /weather <clear|rain|thunder>
+    permission: xzh.admin
+  night:
+    description: Set your current world to nighttime.
+    usage: /night
+    permission: xzh.admin
 permissions:
+  xzh.kit.starter:
+    description: Allows claiming the starter kit.
+    default: true
   xzh.admin:
     description: Allows administration of the XZH economy.
     default: op

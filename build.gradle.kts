@@ -7,10 +7,14 @@ version = "1.0.0"
 
 repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://jitpack.io")
 }
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:26.3.build.195-stable")
+    compileOnly("com.github.MilkBowl:VaultAPI:1.7") {
+        exclude(group = "org.bukkit", module = "bukkit")
+    }
 }
 
 java {
