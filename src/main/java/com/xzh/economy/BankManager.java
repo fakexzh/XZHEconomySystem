@@ -146,9 +146,14 @@ public final class BankManager implements Listener {
                 double bank = getBalance(id);
                 double requested = switch (action) {
                     case "deposit-all" -> pocket;
-                    case "withdraw-all" -> bank;
+                    case "withdraw-all" -> Math.min(bank, Math.max(0.0, plugin.getPocketBalanceLimit() - pocket));
                     default -> value;
                 };
+                if (!deposit && requested > Math.max(0.0, plugin.getPocketBalanceLimit() - pocket)) {
+                    plugin.tellPublic(player, "Your pocket wallet is at its limit. Deposit coins before withdrawing more.");
+                    open(player);
+                    return;
+                }
                 if (!Double.isFinite(requested) || requested <= 0) {
                     plugin.tellPublic(player, deposit ? "You have no pocket money to deposit." : "You have no bank funds to withdraw.");
                     open(player);
