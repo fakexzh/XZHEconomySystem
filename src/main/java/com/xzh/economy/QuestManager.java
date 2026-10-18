@@ -52,10 +52,10 @@ public final class QuestManager implements Listener {
         Bukkit.getPluginManager().registerEvents(this, plugin);
         String today = LocalDate.now().toString();
         if (!today.equals(data.getString("stock-reset-day", ""))) {
-            for (Pack pack : packs) data.set("stock." + pack.id(), pack.stock());
+            for (Pack pack : packs) data.set("stock." + pack.id(), configuredPackStock(pack));
             data.set("stock-reset-day", today);
         } else {
-            for (Pack pack : packs) if (!data.contains("stock." + pack.id())) data.set("stock." + pack.id(), pack.stock());
+            for (Pack pack : packs) if (!data.contains("stock." + pack.id())) data.set("stock." + pack.id(), configuredPackStock(pack));
         }
         save();
         resetEventIfNeeded();
@@ -88,9 +88,9 @@ public final class QuestManager implements Listener {
         data.set("event", null);
         data.set("event.date", LocalDate.now().toString());
         data.set("event.progress", 0);
-        data.set("event.goal", 500);
-        data.set("event.reward", 100);
-        data.set("event.claims-remaining", 25);
+        data.set("event.goal", configuredEventGoal());
+        data.set("event.reward", configuredEventReward());
+        data.set("event.claims-remaining", configuredEventClaims());
         save();
     }
 
@@ -166,7 +166,7 @@ public final class QuestManager implements Listener {
             plugin.tellPublic(player, "Finish or abandon your active quest before buying another pack.");
             return;
         }
-        int stock = data.getInt("stock." + pack.id(), pack.stock());
+        int stock = data.getInt("stock." + pack.id(), configuredPackStock(pack));
         if (stock <= 0) { plugin.tellPublic(player, "That quest pack is out of global stock."); return; }
         double balance = plugin.getBalance(id);
         if (balance < pack.cost()) { plugin.tellPublic(player, "Not enough coins for this quest pack."); return; }
@@ -265,7 +265,7 @@ public final class QuestManager implements Listener {
     private void resetPackStockIfNeeded() {
         String today = LocalDate.now().toString();
         if (today.equals(data.getString("stock-reset-day", ""))) return;
-        for (Pack pack : packs) data.set("stock." + pack.id(), pack.stock());
+        for (Pack pack : packs) data.set("stock." + pack.id(), configuredPackStock(pack));
         data.set("stock-reset-day", today);
         save();
     }
@@ -276,16 +276,16 @@ public final class QuestManager implements Listener {
             data.set("event", null);
             data.set("event.date", today);
             data.set("event.progress", 0);
-            data.set("event.goal", 500);
-            data.set("event.reward", 100);
-            data.set("event.claims-remaining", 25);
+            data.set("event.goal", configuredEventGoal());
+            data.set("event.reward", configuredEventReward());
+            data.set("event.claims-remaining", configuredEventClaims());
             save();
         }
     }
 
     private void recordEventOre(Player player) {
         resetEventIfNeeded();
-        int goal = data.getInt("event.goal", 500);
+        int goal = data.getInt("event.goal", configuredEventGoal());
         int progress = Math.min(goal, data.getInt("event.progress", 0) + 1);
         data.set("event.progress", progress);
         String contributionPath = "event.contribution." + player.getUniqueId();
@@ -299,14 +299,14 @@ public final class QuestManager implements Listener {
         boolean alreadyClaimed = LocalDate.now().toString().equals(
                 data.getString("event.claimed." + player.getUniqueId(), ""));
         int progress = data.getInt("event.progress", 0);
-        int goal = data.getInt("event.goal", 500);
+        int goal = data.getInt("event.goal", configuredEventGoal());
         int contribution = data.getInt(contributionPath, 0);
-        int remaining = data.getInt("event.claims-remaining", 25);
+        int remaining = data.getInt("event.claims-remaining", configuredEventClaims());
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Global Event");
         add(inv, 13, Material.NETHER_STAR, ChatColor.LIGHT_PURPLE + "Community Ore Rush", "event-info", "global",
                 List.of(ChatColor.WHITE + "Global progress: " + progress + "/" + goal + " ores",
                         ChatColor.WHITE + "Your contribution: " + contribution + " ores",
-                        ChatColor.WHITE + "Reward: " + data.getInt("event.reward", 100) + " coins",
+                        ChatColor.WHITE + "Reward: " + data.getInt("event.reward", configuredEventReward()) + " coins",
                         ChatColor.WHITE + "Rewards remaining: " + remaining,
                         ChatColor.GRAY + "Mine ores to contribute. Need 10 personal ores and global completion."));
         add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "Claim event reward", "event-claim", "global",
@@ -324,7 +324,7 @@ public final class QuestManager implements Listener {
             plugin.tellPublic(player, "You have already claimed today's global event reward.");
             return;
         }
-        if (data.getInt("event.progress", 0) < data.getInt("event.goal", 500)) {
+        if (data.getInt("event.progress", 0) < data.getInt("event.goal", configuredEventGoal())) {
             plugin.tellPublic(player, "The global event objective is not complete yet.");
             return;
         }
@@ -332,12 +332,12 @@ public final class QuestManager implements Listener {
             plugin.tellPublic(player, "Contribute at least 10 ores before claiming the event reward.");
             return;
         }
-        int remaining = data.getInt("event.claims-remaining", 25);
+        int remaining = data.getInt("event.claims-remaining", configuredEventClaims());
         if (remaining <= 0) {
             plugin.tellPublic(player, "All global event rewards have been claimed today.");
             return;
         }
-        int reward = data.getInt("event.reward", 100);
+        int reward = data.getInt("event.reward", configuredEventReward());
         data.set("event.claimed." + id, today);
         data.set("event.claims-remaining", remaining - 1);
         save();
@@ -407,6 +407,23 @@ public final class QuestManager implements Listener {
         stack.setItemMeta(meta);
         inv.setItem(slot, stack);
     }
+    private int configuredPackStock(Pack pack) {
+        return Math.max(0, Math.min(1_000_000,
+                plugin.getConfig().getInt("quests.pack-stock." + pack.id(), pack.stock())));
+    }
+
+    private int configuredEventGoal() {
+        return Math.max(1, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.goal", 500)));
+    }
+
+    private int configuredEventReward() {
+        return Math.max(0, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.reward", 100)));
+    }
+
+    private int configuredEventClaims() {
+        return Math.max(0, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.claims-per-day", 25)));
+    }
+
     private void save() {
         try { data.save(file); } catch (IOException e) { plugin.getLogger().severe("Could not save quests.yml: " + e.getMessage()); }
     }
