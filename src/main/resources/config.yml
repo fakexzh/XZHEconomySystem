@@ -45,8 +45,20 @@ shop:
     coal: 2000
     iron_ingot: 1000
     gold_ingot: 500
+    copper_ingot: 500
+    lapis_lazuli: 500
+    redstone: 500
+    emerald: 100
+    amethyst_shard: 300
+    quartz: 500
+    netherite_scrap: 20
+    netherite_ingot: 5
     diamond: 250
     obsidian: 250
+    glass: 1000
+    end_stone: 500
+    iron_block: 100
+    diamond_block: 10
     bread: 1000
     cooked_beef: 1000
     iron_pickaxe: 100
