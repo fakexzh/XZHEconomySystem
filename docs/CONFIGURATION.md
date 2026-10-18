@@ -20,7 +20,7 @@ maximum-pay: 1000000.0
 
 ## Bank
 
-The separate `/bank` GUI is titled `XZH BANK`. It keeps bank balances in `bank-balances.yml`, separate from the existing pocket balance file. Deposits and withdrawals are available only between the configured Minecraft-time hours; the bank menu and loan details remain accessible outside those hours. Shop purchases and loan repayments can spend pocket funds first and then bank funds at any time.
+The separate `/bank` GUI is titled `XZH BANK`. Bank balances are stored in `bank-balances.yml`; pocket money is represented by tagged physical XZH coin items, with `balances.yml` holding migration/offline snapshots and `wallets.yml` tracking wallet initialization. Deposits and withdrawals are available only between the configured Minecraft-time hours; the bank menu and loan details remain accessible outside those hours. Shop purchases and loan repayments can spend pocket funds first and then bank funds at any time.
 
 ```yaml
 bank:
@@ -31,8 +31,19 @@ bank:
 
 - `clock-world`: world whose Minecraft day/night clock determines bank opening hours; if missing, the first loaded world is used.
 - `open-hour` / `close-hour`: 24-hour Minecraft time. The default is 09:00–20:00.
+- Pocket coins use server-tagged denominations of 1, 10, 100, and 1000 coins. They cannot be crafted or placed as blocks and naturally drop with inventory on death in worlds where items drop.
+- The default pocket carrying limit is 1,000,000 coins; overflow is secured in the bank. Withdrawals are limited by available pocket capacity.
 - Bank balance is saved separately. Deposit/withdraw buttons are disabled by server-side checks while the bank is closed; direct inventory clicks cannot bypass the hours.
 - The Loans menu is accessed from the bank. `/loan` opens the bank for compatibility, and `/loan repay` remains available as a direct repayment command.
+
+## Pocket wallet
+
+```yaml
+wallet:
+  max-pocket-coins: 1000000
+```
+
+`max-pocket-coins` limits the physical currency carried in inventory. Any excess credited to the pocket is automatically secured in the bank. The server migrates an existing saved balance into physical coins when a player first joins after this feature is installed.
 
 ## HUD
 
