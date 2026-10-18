@@ -123,3 +123,12 @@ book-shop:
     protection: 500
     feather_falling: 500
     power: 500
+
+# Configurable starter kit; items use MATERIAL:AMOUNT syntax.
+kits:
+  starter:
+    cooldown-hours: 24
+    items:
+      - STONE_PICKAXE:1
+      - BREAD:8
+      - TORCH:16
