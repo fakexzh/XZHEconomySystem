@@ -98,6 +98,43 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
 
     public void tellPublic(CommandSender sender, String message) { tell(sender, message); }
 
+    /** Announces only configured high-value, rare, or progression purchases. */
+    public void announceSpecialPurchase(Player player, org.bukkit.Material material, int quantity, double total) {
+        if (!getConfig().getBoolean("announcements.shop.enabled", true)) return;
+        String item = material.name().toLowerCase(Locale.ROOT).replace('_', ' ');
+        boolean expensive = total >= getConfig().getDouble("announcements.shop.minimum-purchase-total", 1000.0);
+        boolean rare = getConfig().getStringList("announcements.shop.rare-items").stream()
+                .anyMatch(name -> name.equalsIgnoreCase(material.name()));
+        boolean progression = getConfig().getStringList("announcements.shop.progression-items").stream()
+                .anyMatch(name -> name.equalsIgnoreCase(material.name()));
+        if (!expensive && !rare && !progression) return;
+        String prefix = "§8[§6XZH SHOP§8] §r";
+        if (progression) {
+            Bukkit.broadcastMessage(prefix + "§e" + player.getName() + " §funlocked a progression item: §b"
+                    + item + " §7(" + money(total) + " coins).");
+        } else {
+            Bukkit.broadcastMessage(prefix + "§e" + player.getName() + " §fpurchased §b" + quantity + " × "
+                    + item + " §ffor §6" + money(total) + " coins§f.");
+        }
+    }
+
+    public void announceLoanBorrow(Player player, int principal, double repayment, int days) {
+        if (!getConfig().getBoolean("announcements.loan.borrowing", true)) return;
+        Bukkit.broadcastMessage("§8[§bXZH BANK§8] §e" + player.getName() + " §fborrowed §6"
+                + money(principal) + " coins§f. Repayment: §c" + money(repayment)
+                + " coins §fover §b" + days + " days§f.");
+    }
+
+    public void announceLoanRepaid(String playerName, double amount, boolean automatic) {
+        if (!getConfig().getBoolean("announcements.loan.full-repayment", true)) return;
+        Bukkit.broadcastMessage("§8[§bXZH BANK§8] §e" + playerName + " §ffully repaid their loan of §6"
+                + money(amount) + " coins§f" + (automatic ? " §7(automatic repayment)." : "."));
+    }
+
+    private String money(double amount) {
+        return String.format(Locale.US, "%.2f", amount).replaceAll("\\\\.00$", "");
+    }
+
     @SuppressWarnings({"rawtypes", "unchecked"})
     private void registerVaultProvider() {
         if (getServer().getPluginManager().getPlugin("Vault") == null) return;
