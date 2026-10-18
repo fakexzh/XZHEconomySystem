@@ -294,7 +294,9 @@ public final class ShopManager implements Listener {
                     return;
                 }
                 Product p = product(hand.getType());
-                double unitSell = p == null ? plugin.getConfig().getDouble("shop.default-sell-price", 0.1) : sellPrice(p);
+                double unitSell = p == null
+                        ? plugin.getConfig().getDouble("shop.prices." + hand.getType().name().toLowerCase(Locale.ROOT) + ".sell", plugin.getConfig().getDouble("shop.default-sell-price", 0.1))
+                        : sellPrice(p);
                 if (unitSell * hand.getAmount() < 1) {
                     plugin.tellPublic(player, "The held stack is worth less than 1 coin and cannot be sold.");
                     return;
