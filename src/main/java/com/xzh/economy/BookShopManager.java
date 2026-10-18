@@ -34,7 +34,7 @@ public final class BookShopManager implements Listener {
             "multishot", "piercing", "power", "projectile_protection", "protection", "punch",
             "quick_charge", "respiration", "riptide", "sharpness", "silk_touch", "smite",
             "soul_speed", "sweeping_edge", "swift_sneak", "thorns", "unbreaking", "vanishing_curse",
-            "wind_burst"
+            "wind_burst", "lunge"
     );
     private final XZHEconomySystem plugin;
     private final File file;
@@ -187,6 +187,7 @@ public final class BookShopManager implements Listener {
         return switch (key) {
             case "mending" -> 1200;
             case "wind_burst" -> 1500;
+            case "lunge" -> 600;
             case "swift_sneak", "soul_speed", "frost_walker" -> 700;
             case "fortune", "silk_touch", "unbreaking", "efficiency", "looting" -> 600;
             case "sharpness", "protection", "feather_falling", "power", "breach", "density" -> 500;
