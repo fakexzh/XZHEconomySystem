@@ -98,6 +98,20 @@ utilities:
 
 The random teleport search is centered on the configured spawn when available and uses a safe-location check. The cooldown is currently in-memory and resets on a server restart.
 
+## Starter kit
+
+```yaml
+kits:
+  starter:
+    cooldown-hours: 24
+    items:
+      - STONE_PICKAXE:1
+      - BREAD:8
+      - TORCH:16
+```
+
+Item entries use `MATERIAL:AMOUNT`. The kit cooldown is persisted per player in `locations.yml`. The `xzh.kit.starter` permission defaults to true.
+
 ## Data files
 
 The plugin maintains separate YAML files for balances, loans, quests, shop stock, and death recovery. Back up the server and these files before testing a development build.
