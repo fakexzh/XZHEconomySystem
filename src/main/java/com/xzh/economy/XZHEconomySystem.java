@@ -27,6 +27,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     private PocketCoinManager pocketCoinManager;
     private HudManager hudManager;
     private BankManager bankManager;
+    private HotbarMenuManager hotbarMenuManager;
     private ShopManager shopManager;
     private LoanManager loanManager;
     private QuestManager questManager;
@@ -57,6 +58,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         hudManager = new HudManager(this);
         hudManager.start();
         shopManager = new ShopManager(this);
+        hotbarMenuManager = new HotbarMenuManager(this);
         bookShopManager = new BookShopManager(this);
         loanManager = new LoanManager(this);
         getServer().getPluginManager().registerEvents(new LibrarianTradeListener(this), this);
