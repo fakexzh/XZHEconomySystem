@@ -35,6 +35,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     private AdminManager adminManager;
     private BookShopManager bookShopManager;
     private File transactionsFile;
+    private MoneyRequestManager moneyRequestManager;
 
     @Override
     public void onEnable() {
@@ -64,6 +65,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         deathRecoveryManager = new DeathRecoveryManager(this);
         utilityManager = new UtilityManager(this);
         adminManager = new AdminManager(this);
+        moneyRequestManager = new MoneyRequestManager(this);
         new GuiDragGuard(this);
         registerVaultProvider();
         getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
@@ -72,7 +74,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
-        for (String name : List.of("xzh", "balance", "pay", "eco", "shop", "bank", "loan", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "sethome", "delhome", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit")) {
+        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "sethome", "delhome", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
@@ -352,6 +354,8 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 tell(sender, "§eXZHEconomySystem §7v" + getPluginMeta().getVersion());
                 tell(sender, "§f/balance §7- check your coins");
                 tell(sender, "§f/pay <player> <amount> §7- send coins");
+                tell(sender, "§f/sendmoney <player> <amount> §7- request a confirmed transfer to them");
+                tell(sender, "§f/askmoney <player> <amount> §7- ask them for a confirmed payment");
                 tell(sender, "§f/shop §7- open XZH SHOP");
                 tell(sender, "§f/bank §7- open XZH BANK, deposits, withdrawals and loans");
                 if (sender.hasPermission("xzh.admin")) tell(sender, "§f/shopadmin <restock|stock> §7- manage global shop stock");
@@ -380,6 +384,10 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 }
                 tell(sender, target.getName() + " — Pocket: §e" + money(getBalance(target.getUniqueId())) + " " + currency() + " §7| Bank: §a" + money(bankManager.getBalance(target.getUniqueId())) + " " + currency());
                 return true;
+            }
+            case "sendmoney", "askmoney" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can use money requests."); return true; }
+                return moneyRequestManager.handle(player, command.getName(), args);
             }
             case "pay" -> {
                 if (!(sender instanceof Player player)) {
@@ -445,6 +453,8 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         if (command.getName().equalsIgnoreCase("eco") && args.length == 1 && sender.hasPermission("xzh.admin")) {
             suggestions.add("set"); suggestions.add("add");
         } else if ((command.getName().equalsIgnoreCase("pay") && args.length == 1)
+                || (command.getName().equalsIgnoreCase("sendmoney") && args.length == 1)
+                || (command.getName().equalsIgnoreCase("askmoney") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("balance") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("eco") && args.length == 2 && sender.hasPermission("xzh.admin"))) {
             for (Player player : Bukkit.getOnlinePlayers()) suggestions.add(player.getName());
