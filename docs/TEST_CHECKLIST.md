@@ -42,7 +42,7 @@ Run these on a disposable test world with a backup. Record any console error and
 
 ## Utilities and administration
 - [ ] Test spawn, homes, warps, TPA accept/deny/expiry, back, private messages, ignore, AFK, near, list, top, and RTP safety/cooldown.
-- [ ] Open `/xzhadmin`; test balance edits, price edits, stock edits/restock, transaction history, diagnostics, book cooldown reset, active quest reset, loan/recovery overrides, global event reset, and config reload.
+- [ ] Open `/xzhadmin`; test balance edits, price edits, stock edits/restock, transaction history, diagnostics, book cooldown reset, active quest reset, quest pack stock control, loan/recovery overrides, global event reset, and config reload.
 - [ ] Verify librarian enchanted-book trades are unavailable.
 - [ ] Restart the server and verify all persistent data remains intact.
 
