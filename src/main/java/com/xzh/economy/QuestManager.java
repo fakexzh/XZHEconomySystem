@@ -11,6 +11,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -22,6 +23,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.time.LocalDate;
 
 /** Persisted starter quest-pack system with progress HUD and shared pack stock. */
 public final class QuestManager implements Listener {
@@ -47,7 +49,13 @@ public final class QuestManager implements Listener {
         actionKey = new NamespacedKey(plugin, "quest_action");
         valueKey = new NamespacedKey(plugin, "quest_value");
         Bukkit.getPluginManager().registerEvents(this, plugin);
-        for (Pack pack : packs) if (!data.contains("stock." + pack.id())) data.set("stock." + pack.id(), pack.stock());
+        String today = LocalDate.now().toString();
+        if (!today.equals(data.getString("stock-reset-day", ""))) {
+            for (Pack pack : packs) data.set("stock." + pack.id(), pack.stock());
+            data.set("stock-reset-day", today);
+        } else {
+            for (Pack pack : packs) if (!data.contains("stock." + pack.id())) data.set("stock." + pack.id(), pack.stock());
+        }
         save();
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) updateHud(player);
@@ -203,7 +211,7 @@ public final class QuestManager implements Listener {
             case "kill" -> "Defeat " + p.goal() + " mobs";
             case "nether-kill" -> "Defeat " + p.goal() + " mobs in the Nether";
             case "end-kill" -> "Defeat " + p.goal() + " mobs in the End";
-            default -> "Explore " + p.goal() + " blocks (tracking not yet enabled)";
+            default -> "Travel " + p.goal() + " blocks";
         };
     }
     private boolean isOre(Material m) {
