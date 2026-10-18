@@ -50,6 +50,7 @@ public final class BookShopManager implements Listener {
         bookKey = new NamespacedKey(plugin, "book_shop_key");
         resetStockIfNeeded();
         Bukkit.getPluginManager().registerEvents(this, plugin);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::resetStockIfNeeded, 20L * 60L, 20L * 60L);
     }
 
     public void open(Player player) { open(player, 0); }
