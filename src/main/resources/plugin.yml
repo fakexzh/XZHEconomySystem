@@ -41,9 +41,6 @@ commands:
   kit:
     description: Claim a configured kit.
     usage: /kit starter
-  help:
-    description: Show XZHEconomySystem commands.
-    usage: /help
   eco:
     description: Admin economy management.
     usage: /eco <set|add> <player> <amount>
