@@ -3,7 +3,7 @@ version: '1.0.0'
 main: com.xzh.economy.XZHEconomySystem
 api-version: '26.3'
 author: XZH
-description: A standalone starter economy plugin for Paper/Purpur 26.3.
+description: Integrated economy, shop, quests, loans, death recovery and utilities for Purpur 26.3.
 commands:
   xzh:
     description: Show XZHEconomySystem help and status.
