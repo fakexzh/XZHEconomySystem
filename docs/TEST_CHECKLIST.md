@@ -31,6 +31,15 @@ Run these on a disposable test world with a backup. Record any console error and
 - Verify insufficient combined funds causes no partial charge and bank balances persist after a restart.
 - Verify the Loans button opens the loan GUI and loan confirmations still work from that menu.
 
+## Money requests and global announcements
+- [ ] Use `/sendmoney <player> 500`; recipient gets an accept/decline GUI, and accepting transfers funds only once.
+- [ ] Use `/askmoney <player> 500`; target gets an accept/decline GUI and accepting pays the requester.
+- [ ] Verify decline, timeout, offline player, insufficient funds, and repeated pending requests do not move coins.
+- [ ] Buy an inexpensive common item and confirm no global shop announcement.
+- [ ] Buy an expensive or configured rare item and confirm the XZH SHOP announcement appears to all online players.
+- [ ] Buy Elytra after the End-visit requirement and confirm the progression announcement.
+- [ ] Borrow and fully repay a loan manually and automatically; confirm global XZH BANK announcements.
+
 ## Loans and HUD
 - [ ] Take each loan amount/term on a disposable player; verify displayed total repayment and due time.
 - [ ] Repay early through the loan GUI and `/loan repay`.
