@@ -178,7 +178,9 @@ public final class QuestManager implements Listener {
             travelRemainders.remove(id);
             return;
         }
-        double accumulated = travelRemainders.getOrDefault(id, 0.0) + event.getFrom().distance(event.getTo());
+        double step = event.getFrom().distance(event.getTo());
+        if (step > 10.0) { travelRemainders.remove(id); return; }
+        double accumulated = travelRemainders.getOrDefault(id, 0.0) + step;
         int distance = (int) Math.floor(accumulated);
         travelRemainders.put(id, accumulated - distance);
         if (distance > 0) increment(player, distance);
