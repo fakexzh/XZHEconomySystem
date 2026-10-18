@@ -19,8 +19,11 @@ commands:
   shop:
     description: Open the XZH shop GUI.
     usage: /shop
+  bank:
+    description: Open the XZH bank for deposits, withdrawals, and loans.
+    usage: /bank
   loan:
-    description: Open the loan menu or repay an active loan.
+    description: Open the bank or repay an active loan.
     usage: /loan [repay]
   quests:
     description: Open the quest packs menu.
