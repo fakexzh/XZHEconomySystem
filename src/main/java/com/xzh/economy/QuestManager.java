@@ -164,6 +164,19 @@ public final class QuestManager implements Listener {
     }
 
     @EventHandler
+    public void onMove(PlayerMoveEvent event) {
+        if (event.getTo() == null) return;
+        if (event.getFrom().getWorld() != event.getTo().getWorld()) return;
+        if (event.getFrom().getBlockX() == event.getTo().getBlockX()
+                && event.getFrom().getBlockY() == event.getTo().getBlockY()
+                && event.getFrom().getBlockZ() == event.getTo().getBlockZ()) return;
+        Player player = event.getPlayer();
+        if (!"travel".equals(data.getString(player.getUniqueId() + ".target", ""))) return;
+        int distance = (int) Math.floor(event.getFrom().distance(event.getTo()));
+        if (distance > 0) increment(player, distance);
+    }
+
+    @EventHandler
     public void onKill(EntityDeathEvent event) {
         Player player = event.getEntity().getKiller();
         if (player == null) return;
