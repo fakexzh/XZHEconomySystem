@@ -194,19 +194,26 @@ public final class QuestManager implements Listener {
             plugin.tellPublic(player, "Finish your active quest before buying another.");
             return;
         }
-        RandomQuest quest = randomPool.get(random.nextInt(randomPool.size()));
-        // Reward margin is intentionally varied from 30% to 50%; objective pool avoids trivial tasks.
+        RandomQuest template = randomPool.get(random.nextInt(randomPool.size()));
+        // Each purchase creates a fresh variant: both its target quantity and price vary.
+        int difficultyScale = 80 + random.nextInt(61);
+        int goal = Math.max(1, (int) Math.ceil(template.objective().goal() * difficultyScale / 100.0));
+        Objective objective = new Objective(template.objective().target(), goal,
+                template.objective().description().replaceFirst("\\d+", Integer.toString(goal)));
+        int cost = Math.max(100, (int) Math.round(template.cost() * (0.80 + random.nextDouble() * 0.41)));
         int margin = 30 + random.nextInt(21);
-        int reward = (int) Math.ceil(quest.cost() * (1.0 + margin / 100.0));
+        int reward = (int) Math.ceil(cost * (1.0 + margin / 100.0));
         double balance = plugin.getCombinedBalance(id);
-        if (balance < quest.cost() || !plugin.spendAvailableFunds(id, quest.cost())) {
-            plugin.tellPublic(player, "You need " + quest.cost() + " coins to buy this random quest.");
+        if (balance < cost || !plugin.spendAvailableFunds(id, cost)) {
+            plugin.tellPublic(player, "You need " + cost + " coins to buy this random quest.");
             return;
         }
-        startQuest(player, "single:" + System.currentTimeMillis(), quest.name(), quest.cost(), reward, List.of(quest.objective()));
+        String questName = template.name() + " #" + (data.getInt("single-shop.quest-sequence", 0) + 1);
+        data.set("single-shop.quest-sequence", data.getInt("single-shop.quest-sequence", 0) + 1);
+        startQuest(player, "single:" + System.currentTimeMillis(), questName, cost, reward, List.of(objective));
         data.set(id + ".profit-margin", margin);
         save();
-        plugin.tellPublic(player, "Random quest generated: " + quest.name() + ". Complete it for " + reward + " coins (" + margin + "% profit).");
+        plugin.tellPublic(player, "Random quest generated: " + questName + ". Complete it for " + reward + " coins (" + margin + "% profit).");
         player.closeInventory();
     }
 
