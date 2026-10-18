@@ -169,9 +169,6 @@ public final class QuestManager implements Listener {
     public void onMove(PlayerMoveEvent event) {
         if (event.isCancelled() || event.getTo() == null) return;
         if (event.getFrom().getWorld() != event.getTo().getWorld()) return;
-        if (event.getFrom().getBlockX() == event.getTo().getBlockX()
-                && event.getFrom().getBlockY() == event.getTo().getBlockY()
-                && event.getFrom().getBlockZ() == event.getTo().getBlockZ()) return;
         Player player = event.getPlayer();
         UUID id = player.getUniqueId();
         if (!"travel".equals(data.getString(id + ".target", ""))) {
