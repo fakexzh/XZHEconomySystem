@@ -20,6 +20,14 @@ Run these on a disposable test world with a backup. Record any console error and
 - [ ] Try to buy Elytra before and after entering the End.
 - [ ] Buy an enchantment book; verify the correct stored enchantment, 24-hour personal cooldown, and global daily stock cap.
 
+## Bank
+- `/bank` opens the separate `XZH BANK` GUI.
+- Verify the clock uses the configured bank world and deposit/withdrawal are permitted at 09:00 but blocked at 20:00 Minecraft time.
+- Verify deposits move funds from pocket to bank and withdrawals move funds from bank to pocket without changing the combined total.
+- Verify shop purchases and manual/automatic loan repayments can use bank funds even while the bank is closed.
+- Verify insufficient combined funds causes no partial charge and bank balances persist after a restart.
+- Verify the Loans button opens the loan GUI and loan confirmations still work from that menu.
+
 ## Loans and HUD
 - [ ] Take each loan amount/term on a disposable player; verify displayed total repayment and due time.
 - [ ] Repay early through the loan GUI and `/loan repay`.
