@@ -22,7 +22,7 @@ import java.util.UUID;
 
 /** Physical, server-tagged pocket currency. These items naturally drop with inventory on death. */
 public final class PocketCoinManager implements Listener {
-    private static final int[] DENOMINATIONS = {100, 10, 1};
+    private static final int[] DENOMINATIONS = {1000, 100, 10, 1};
     private final XZHEconomySystem plugin;
     private final NamespacedKey denominationKey;
 
@@ -77,12 +77,13 @@ public final class PocketCoinManager implements Listener {
         if (!isCoin(item)) return 0;
         Integer denomination = item.getItemMeta().getPersistentDataContainer()
                 .get(denominationKey, PersistentDataType.INTEGER);
-        if (denomination == null || (denomination != 1 && denomination != 10 && denomination != 100)) return 0;
+        if (denomination == null || (denomination != 1 && denomination != 10 && denomination != 100 && denomination != 1000)) return 0;
         return (long) item.getAmount() * denomination;
     }
 
     private ItemStack createCoin(int denomination, int amount) {
-        Material material = denomination == 100 ? Material.GOLD_BLOCK
+        Material material = denomination == 1000 ? Material.NETHER_STAR
+                : denomination == 100 ? Material.GOLD_BLOCK
                 : denomination == 10 ? Material.GOLD_INGOT : Material.GOLD_NUGGET;
         ItemStack item = new ItemStack(material, amount);
         ItemMeta meta = item.getItemMeta();
