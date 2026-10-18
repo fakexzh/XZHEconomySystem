@@ -3,3 +3,11 @@ currency-name: coins
 starting-balance: 100.0
 minimum-pay: 1.0
 maximum-pay: 1000000.0
+
+# HUD settings
+hud:
+  scoreboard:
+    enabled: true
+    position: sidebar
+  quest-bossbar:
+    enabled: true
