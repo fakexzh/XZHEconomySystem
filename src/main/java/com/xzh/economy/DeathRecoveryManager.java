@@ -97,6 +97,11 @@ public final class DeathRecoveryManager implements Listener {
         }
         ItemStack offhand = player.getInventory().getItemInOffHand();
         if (plugin.getPocketCoinManager().isCoin(offhand)) event.getDrops().add(offhand.clone());
+        ItemStack cursor = player.getOpenInventory().getCursor();
+        if (plugin.getPocketCoinManager().isCoin(cursor)) {
+            event.getDrops().add(cursor.clone());
+            player.getOpenInventory().setCursor(null);
+        }
         plugin.setOfflinePocketSnapshot(id.toString(), 0.0);
         save();
     }
