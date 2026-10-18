@@ -362,6 +362,12 @@ public final class ShopManager implements Listener {
         return advancement == null || player.getAdvancementProgress(advancement).isDone();
     }
 
+    public void setPrice(Material material, String kind, double amount) {
+        if (!kind.equals("buy") && !kind.equals("sell")) throw new IllegalArgumentException("kind must be buy or sell");
+        plugin.getConfig().set("shop.prices." + material.name().toLowerCase(Locale.ROOT) + "." + kind, amount);
+        plugin.saveConfig();
+    }
+
     private double buyPrice(Product p) {
         return plugin.getConfig().getDouble("shop.prices." + p.material().name().toLowerCase(Locale.ROOT) + ".buy", p.buy());
     }
