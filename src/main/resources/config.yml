@@ -1,5 +1,6 @@
 # XZHEconomySystem 1.0.0
 currency-name: coins
+currency-name-singular: coin
 starting-balance: 100.0
 minimum-pay: 1.0
 maximum-pay: 1000000.0
