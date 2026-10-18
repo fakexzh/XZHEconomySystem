@@ -114,6 +114,10 @@ public final class QuestManager implements Listener {
             inv.setItem(slot++, item);
         }
         add(inv, 22, Material.NETHER_STAR, ChatColor.LIGHT_PURPLE + "Global Event Quest", "event-open", "global");
+        if (!data.getString(player.getUniqueId() + ".active", "").isBlank()) {
+            add(inv, 40, Material.BARRIER, ChatColor.RED + "Abandon active quest", "abandon-confirm", "active",
+                    List.of(ChatColor.GRAY + "No refund for the quest pack cost."));
+        }
         add(inv, 49, Material.BARRIER, ChatColor.RED + "Close", "close", "");
         player.openInventory(inv);
     }
@@ -130,6 +134,16 @@ public final class QuestManager implements Listener {
         item.setItemMeta(meta);
         inv.setItem(13, item);
         add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "Confirm purchase", "buy", pack.id());
+        add(inv, 15, Material.RED_CONCRETE, ChatColor.RED + "Cancel", "back", "");
+        player.openInventory(inv);
+    }
+
+    private void confirmAbandon(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Confirm abandon quest");
+        add(inv, 13, Material.BARRIER, ChatColor.RED + "Abandon active quest", "abandon-info", "active",
+                List.of(ChatColor.WHITE + "Your current progress will be lost.",
+                        ChatColor.WHITE + "The quest pack cost will not be refunded."));
+        add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "Confirm abandon", "abandon", "active");
         add(inv, 15, Material.RED_CONCRETE, ChatColor.RED + "Cancel", "back", "");
         player.openInventory(inv);
     }
@@ -213,7 +227,8 @@ public final class QuestManager implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (title == null || !(title.equals("XZH Quest Packs") || title.equals("Confirm quest pack") || title.equals("XZH Global Event"))) return;
+        if (title == null || !(title.equals("XZH Quest Packs") || title.equals("Confirm quest pack")
+                || title.equals("Confirm abandon quest") || title.equals("XZH Global Event"))) return;
         event.setCancelled(true);
         ItemStack item = event.getCurrentItem();
         if (item == null || !item.hasItemMeta()) return;
@@ -225,6 +240,13 @@ public final class QuestManager implements Listener {
         if (action.equals("back")) { open(player); return; }
         if (action.equals("event-open")) { openEvent(player); return; }
         if (action.equals("event-claim")) { claimEvent(player); return; }
+        if (action.equals("abandon-confirm")) { confirmAbandon(player); return; }
+        if (action.equals("abandon")) {
+            adminClearQuest(player.getUniqueId());
+            plugin.tellPublic(player, "Quest abandoned. The pack cost is not refunded.");
+            open(player);
+            return;
+        }
         Pack pack = packs.stream().filter(p -> p.id().equals(value)).findFirst().orElse(null);
         if (pack == null) return;
         if (action.equals("select")) confirm(player, pack);
