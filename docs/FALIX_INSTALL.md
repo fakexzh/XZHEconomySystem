@@ -13,12 +13,17 @@
 
 - `/balance`, `/bal`, `/money`
 - `/pay <player> <amount>`
-- `/shop`
+- `/shop`, `/books`
 - `/shopadmin restock` (operator/admin permission)
 - `/shopadmin stock <MATERIAL> <amount>` (operator/admin permission)
+- `/xzhadmin` (admin GUI; includes balance/price/stock tools and subsystem overviews)
 - `/loan`, `/loan repay`
 - `/quests`
 - `/deathinventory`
+- `/spawn`, `/sethome [name]`, `/home [name]`, `/delhome [name]`
+- `/warp <name>`, `/tpa <player>`, `/tpaccept`, `/tpdeny`, `/back`
+- `/msg <player> <message>`, `/reply <message>`, `/ignore <player>`
+- `/afk`, `/near`, `/list`, `/top`, `/rtp`
 - `/eco <set|add> <online-player> <amount>` (operator/admin permission)
 - `/xzh`
 
