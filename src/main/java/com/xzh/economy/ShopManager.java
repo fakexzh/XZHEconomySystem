@@ -99,6 +99,7 @@ public final class ShopManager implements Listener {
             lore.add(ChatColor.WHITE + "Buy: " + ChatColor.YELLOW + money(p.buy()) + " coins each");
             lore.add(ChatColor.WHITE + "Sell: " + ChatColor.RED + money(p.sell()) + " coins each");
             lore.add(ChatColor.WHITE + "Global stock: " + ChatColor.AQUA + getStock(p.material()) + "/" + stockLimit(p.material()));
+            if (p.material() == Material.ELYTRA) lore.add(ChatColor.LIGHT_PURPLE + "Unlock: Visit the End first");
             lore.add(ChatColor.GRAY + "Click to choose quantity");
             meta.setLore(lore);
             meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "product");
@@ -221,6 +222,11 @@ public final class ShopManager implements Listener {
                     p = new Product("misc", material, 0.0, plugin.getConfig().getDouble("shop.default-sell-price", 0.1));
                 if (p == null || quantity < 1) return;
                 double total = (action.equals("buy") ? p.buy() : p.sell()) * quantity;
+                if (action.equals("buy") && material == Material.ELYTRA && !hasVisitedEnd(player)) {
+                    plugin.tellPublic(player, "Elytra purchases unlock after you visit the End.");
+                    player.closeInventory();
+                    return;
+                }
                 if (action.equals("buy")) {
                     if (getStock(material) < quantity) {
                         plugin.tellPublic(player, "Not enough global stock. Available: " + getStock(material) + ".");
@@ -349,6 +355,11 @@ public final class ShopManager implements Listener {
     private void saveStock() {
         try { stockData.save(stockFile); }
         catch (IOException e) { plugin.getLogger().severe("Could not save shop-stock.yml: " + e.getMessage()); }
+    }
+
+    private boolean hasVisitedEnd(Player player) {
+        org.bukkit.advancement.Advancement advancement = plugin.getServer().getAdvancement(NamespacedKey.minecraft("end/enter_end"));
+        return advancement == null || player.getAdvancementProgress(advancement).isDone();
     }
 
     private Product product(Material material) {
