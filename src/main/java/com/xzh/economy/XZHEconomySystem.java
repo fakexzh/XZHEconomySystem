@@ -23,6 +23,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     private HudManager hudManager;
     private ShopManager shopManager;
     private LoanManager loanManager;
+    private QuestManager questManager;
 
     @Override
     public void onEnable() {
@@ -42,13 +43,14 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         shopManager = new ShopManager(this);
         loanManager = new LoanManager(this);
         getServer().getPluginManager().registerEvents(new LibrarianTradeListener(), this);
+        questManager = new QuestManager(this);
         getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
             @org.bukkit.event.EventHandler
             public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) { hudManager.onJoin(event.getPlayer()); }
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
-        for (String name : List.of("xzh", "balance", "pay", "eco", "shop", "loan")) {
+        for (String name : List.of("xzh", "balance", "pay", "eco", "shop", "loan", "quests")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
@@ -110,6 +112,11 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         switch (command.getName().toLowerCase(Locale.ROOT)) {
+            case "quests" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can view quests."); return true; }
+                questManager.open(player);
+                return true;
+            }
             case "loan" -> {
                 if (!(sender instanceof Player player)) { tell(sender, "Only players can use loans."); return true; }
                 if (args.length == 1 && args[0].equalsIgnoreCase("repay")) return loanManager.repay(player);
@@ -128,6 +135,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 tell(sender, "§f/pay <player> <amount> §7- send coins");
                 tell(sender, "§f/shop §7- open the shop");
                 tell(sender, "§f/loan [repay] §7- borrow or repay coins");
+                tell(sender, "§f/quests §7- buy quest packs and track progress");
                 if (sender.hasPermission("xzh.admin")) tell(sender, "§f/eco <set|add> <player> <amount> §7- admin economy");
                 return true;
             }
