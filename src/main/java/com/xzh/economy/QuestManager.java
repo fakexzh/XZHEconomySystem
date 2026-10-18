@@ -33,6 +33,7 @@ public final class QuestManager implements Listener {
     private final YamlConfiguration data;
     private final NamespacedKey actionKey;
     private final NamespacedKey valueKey;
+    private final java.util.Map<UUID, Double> travelRemainders = new java.util.HashMap<>();
     private final List<Pack> packs = List.of(
         new Pack("beginner", "Beginner", Material.WHEAT, 25, 40, "break", 16, 50),
         new Pack("miner", "Miner", Material.IRON_PICKAXE, 75, 120, "mine", 32, 30),
@@ -171,8 +172,14 @@ public final class QuestManager implements Listener {
                 && event.getFrom().getBlockY() == event.getTo().getBlockY()
                 && event.getFrom().getBlockZ() == event.getTo().getBlockZ()) return;
         Player player = event.getPlayer();
-        if (!"travel".equals(data.getString(player.getUniqueId() + ".target", ""))) return;
-        int distance = (int) Math.floor(event.getFrom().distance(event.getTo()));
+        UUID id = player.getUniqueId();
+        if (!"travel".equals(data.getString(id + ".target", ""))) {
+            travelRemainders.remove(id);
+            return;
+        }
+        double accumulated = travelRemainders.getOrDefault(id, 0.0) + event.getFrom().distance(event.getTo());
+        int distance = (int) Math.floor(accumulated);
+        travelRemainders.put(id, accumulated - distance);
         if (distance > 0) increment(player, distance);
     }
 
@@ -303,6 +310,7 @@ public final class QuestManager implements Listener {
             int reward = data.getInt(id + ".reward", 0);
             plugin.setBalance(id, plugin.getBalance(id) + reward);
             plugin.tellPublic(player, "Quest completed! Reward: " + reward + " coins.");
+            travelRemainders.remove(id);
             data.set(id.toString(), null);
             plugin.getHudManager().hideActiveQuest(player);
         } else {
