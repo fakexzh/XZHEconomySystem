@@ -76,6 +76,12 @@ public final class QuestManager implements Listener {
         }, 20L * 60L * 30L, 20L * 60L * 30L);
     }
 
+    public void adminClearQuest(UUID id) {
+        data.set(id.toString(), null);
+        travelRemainders.remove(id);
+        save();
+    }
+
     public void adminResetEvent() {
         data.set("event", null);
         data.set("event.date", LocalDate.now().toString());
