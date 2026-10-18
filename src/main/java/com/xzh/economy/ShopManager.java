@@ -11,6 +11,10 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.configuration.file.YamlConfiguration;
+import java.io.File;
+import java.io.IOException;
+import java.time.LocalDate;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -27,6 +31,8 @@ public final class ShopManager implements Listener {
     private final NamespacedKey actionKey;
     private final NamespacedKey materialKey;
     private final NamespacedKey quantityKey;
+    private final File stockFile;
+    private final YamlConfiguration stockData;
 
     private record Product(String category, Material material, double buy, double sell) {}
 
@@ -48,7 +54,11 @@ public final class ShopManager implements Listener {
         this.actionKey = new NamespacedKey(plugin, "shop_action");
         this.materialKey = new NamespacedKey(plugin, "shop_material");
         this.quantityKey = new NamespacedKey(plugin, "shop_quantity");
+        this.stockFile = new File(plugin.getDataFolder(), "shop-stock.yml");
+        this.stockData = YamlConfiguration.loadConfiguration(stockFile);
+        initializeStock();
         Bukkit.getPluginManager().registerEvents(this, plugin);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::restockIfDue, 20L * 60L, 20L * 60L);
     }
 
     public void openMain(Player player) {
@@ -74,6 +84,7 @@ public final class ShopManager implements Listener {
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.WHITE + "Buy: " + ChatColor.YELLOW + money(p.buy()) + " coins each");
             lore.add(ChatColor.WHITE + "Sell: " + ChatColor.RED + money(p.sell()) + " coins each");
+            lore.add(ChatColor.WHITE + "Global stock: " + ChatColor.AQUA + getStock(p.material()) + "/" + stockLimit(p.material()));
             lore.add(ChatColor.GRAY + "Click to choose quantity");
             meta.setLore(lore);
             meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "product");
@@ -95,7 +106,8 @@ public final class ShopManager implements Listener {
             ItemStack item = new ItemStack(material, Math.min(64, quantities[i]));
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName(ChatColor.YELLOW + "Buy " + quantities[i]);
-            meta.setLore(List.of(ChatColor.WHITE + "Total: " + ChatColor.YELLOW + money(p.buy() * quantities[i]) + " coins"));
+            meta.setLore(List.of(ChatColor.WHITE + "Total: " + ChatColor.YELLOW + money(p.buy() * quantities[i]) + " coins",
+                    ChatColor.WHITE + "Global stock: " + ChatColor.AQUA + getStock(material)));
             meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "confirm-buy");
             meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, material.name());
             meta.getPersistentDataContainer().set(quantityKey, PersistentDataType.INTEGER, quantities[i]);
@@ -192,6 +204,11 @@ public final class ShopManager implements Listener {
                 if (p == null || quantity < 1) return;
                 double total = (action.equals("buy") ? p.buy() : p.sell()) * quantity;
                 if (action.equals("buy")) {
+                    if (getStock(material) < quantity) {
+                        plugin.tellPublic(player, "Not enough global stock. Available: " + getStock(material) + ".");
+                        player.closeInventory();
+                        return;
+                    }
                     if (plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) {
                         plugin.tellPublic(player, "Your loan is overdue. Shop purchases are locked until you repay it with /loan repay; selling is still allowed.");
                         player.closeInventory();
@@ -211,6 +228,7 @@ public final class ShopManager implements Listener {
                         return;
                     }
                     double charged = p.buy() * delivered;
+                    setStock(material, getStock(material) - delivered);
                     plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) - charged);
                     plugin.tellPublic(player, "Bought " + delivered + " × " + pretty(material) + " for " + money(charged) + " coins.");
                 } else {
@@ -255,6 +273,59 @@ public final class ShopManager implements Listener {
                 openConfirm(player, hand.getType(), hand.getAmount(), false, true);
             }
         }
+    }
+
+
+    private void initializeStock() {
+        boolean changed = false;
+        for (Product p : products) {
+            String key = "items." + p.material().name().toLowerCase(Locale.ROOT);
+            if (!stockData.contains(key)) {
+                stockData.set(key, stockLimit(p.material()));
+                changed = true;
+            }
+        }
+        if (!stockData.contains("last-restock-date")) {
+            stockData.set("last-restock-date", LocalDate.now().toString());
+            changed = true;
+        }
+        if (changed) saveStock();
+        restockIfDue();
+    }
+
+    private int stockLimit(Material material) {
+        int fallback = material == Material.ELYTRA ? 3
+                : material == Material.DIAMOND_PICKAXE ? 30
+                : material == Material.IRON_PICKAXE ? 100 : 1000;
+        return Math.max(0, plugin.getConfig().getInt(
+                "shop.stock-limits." + material.name().toLowerCase(Locale.ROOT), fallback));
+    }
+
+    private int getStock(Material material) {
+        restockIfDue();
+        return Math.max(0, stockData.getInt("items." + material.name().toLowerCase(Locale.ROOT), stockLimit(material)));
+    }
+
+    private void setStock(Material material, int amount) {
+        stockData.set("items." + material.name().toLowerCase(Locale.ROOT), Math.max(0, amount));
+        saveStock();
+    }
+
+    public void restockAll() {
+        for (Product p : products) stockData.set("items." + p.material().name().toLowerCase(Locale.ROOT), stockLimit(p.material()));
+        stockData.set("last-restock-date", LocalDate.now().toString());
+        saveStock();
+    }
+
+    private void restockIfDue() {
+        String today = LocalDate.now().toString();
+        if (today.equals(stockData.getString("last-restock-date", ""))) return;
+        restockAll();
+    }
+
+    private void saveStock() {
+        try { stockData.save(stockFile); }
+        catch (IOException e) { plugin.getLogger().severe("Could not save shop-stock.yml: " + e.getMessage()); }
     }
 
     private Product product(Material material) {
