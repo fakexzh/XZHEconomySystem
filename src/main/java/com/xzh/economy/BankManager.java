@@ -39,12 +39,12 @@ public final class BankManager implements Listener {
     }
 
     public double getBalance(UUID id) {
-        return Math.max(0.0, data.getDouble(id.toString(), 0.0));
+        return Math.max(0.0, Math.round(data.getDouble(id.toString(), 0.0)));
     }
 
     public void setBalance(UUID id, double amount) {
         if (!Double.isFinite(amount) || amount < 0) return;
-        data.set(id.toString(), Math.round(amount * 100.0) / 100.0);
+        data.set(id.toString(), Math.round(amount));
         save();
     }
 
