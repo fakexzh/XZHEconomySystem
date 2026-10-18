@@ -115,19 +115,28 @@ public final class LoanManager implements Listener {
             return true;
         }
         double balance = plugin.getCombinedBalance(id);
-        if (balance + 1e-9 < owed) {
-            plugin.tellPublic(player, "You need " + money(owed) + " coins to repay in full; your combined pocket and bank balance is " + money(balance) + ".");
+        double payment = Math.min(balance, owed);
+        if (payment <= 0.0) {
+            plugin.tellPublic(player, "You have no available pocket or bank funds to repay this loan yet.");
             return true;
         }
-        if (!plugin.spendAvailableFunds(id, owed)) {
+        if (!plugin.spendAvailableFunds(id, payment)) {
             plugin.tellPublic(player, "Repayment failed because your available funds changed. Please try again.");
             return true;
         }
-        data.set(id.toString(), null);
-        save();
-        plugin.getHudManager().setLoan(id, 0, 0);
-        plugin.tellPublic(player, "Loan repaid: " + money(owed) + " coins.");
-        plugin.announceLoanRepaid(player.getName(), owed, false);
+        double remaining = Math.max(0.0, Math.round((owed - payment) * 100.0) / 100.0);
+        if (remaining <= 0.0) {
+            data.set(id.toString(), null);
+            save();
+            plugin.getHudManager().setLoan(id, 0, 0);
+            plugin.tellPublic(player, "Loan fully repaid: " + money(payment) + " coins.");
+            plugin.announceLoanRepaid(player.getName(), payment, false);
+        } else {
+            data.set(id + ".amount", remaining);
+            save();
+            plugin.getHudManager().setLoan(id, remaining, getDue(id), data.getLong(id + ".grace-until", getDue(id)));
+            plugin.tellPublic(player, "Partial loan repayment: " + money(payment) + " coins. Remaining debt: " + money(remaining) + " coins. Shop purchases stay locked if your loan is overdue.");
+        }
         return true;
     }
 
@@ -166,13 +175,35 @@ public final class LoanManager implements Listener {
                 data.set(key + ".overdue", true);
                 save();
             }
-            if (now >= grace && plugin.getCombinedBalance(id) + 1e-9 >= owed && plugin.spendAvailableFunds(id, owed)) {
-                data.set(key, null);
+            // Do not collect anything during the term or the 12-hour grace period.
+            // Once grace expires, perform one safe partial sweep only. Any remaining
+            // debt must be repaid manually; earnings are not silently confiscated again.
+            if (now >= grace && !data.getBoolean(key + ".auto-sweep-done", false)) {
+                double available = plugin.getCombinedBalance(id);
+                double collected = Math.min(available, owed);
+                data.set(key + ".auto-sweep-done", true);
+                if (collected > 0.0 && plugin.spendAvailableFunds(id, collected)) {
+                    double remaining = Math.max(0.0, Math.round((owed - collected) * 100.0) / 100.0);
+                    Player player = Bukkit.getPlayer(id);
+                    if (remaining <= 0.0) {
+                        data.set(key, null);
+                        save();
+                        plugin.getHudManager().setLoan(id, 0, 0);
+                        if (player != null) plugin.tellPublic(player, "Your overdue loan was automatically repaid: " + money(collected) + " coins.");
+                        String name = player != null ? player.getName() : (Bukkit.getOfflinePlayer(id).getName() != null ? Bukkit.getOfflinePlayer(id).getName() : id.toString());
+                        plugin.announceLoanRepaid(name, collected, true);
+                        continue;
+                    }
+                    data.set(key + ".amount", remaining);
+                    if (player != null) {
+                        plugin.getHudManager().setLoan(id, remaining, due, grace);
+                        plugin.tellPublic(player, "Your loan is overdue. " + money(collected) + " coins were collected from pocket first, then bank. Remaining debt: " + money(remaining) + ". Shop purchases are locked until full repayment.");
+                    }
+                } else {
+                    Player player = Bukkit.getPlayer(id);
+                    if (player != null) plugin.tellPublic(player, "Your loan is overdue and you have no available funds to collect. Shop purchases are locked until full repayment.");
+                }
                 save();
-                plugin.getHudManager().setLoan(id, 0, 0);
-                Player player = Bukkit.getPlayer(id);
-                if (player != null) plugin.tellPublic(player, "Your loan was automatically repaid: " + money(owed) + " coins.");
-                plugin.announceLoanRepaid(player != null ? player.getName() : Bukkit.getOfflinePlayer(id).getName() != null ? Bukkit.getOfflinePlayer(id).getName() : id.toString(), owed, true);
             }
         }
     }
@@ -193,7 +224,7 @@ public final class LoanManager implements Listener {
     }
 
     public boolean isShopPurchaseRestricted(UUID id) {
-        return getOwed(id) > 0 && getDue(id) > 0 && System.currentTimeMillis() >= getDue(id);
+        return getOwed(id) > 0 && data.getLong(id + ".grace-until", getDue(id) + 12L * 60L * 60L * 1000L) > 0 && System.currentTimeMillis() >= data.getLong(id + ".grace-until", getDue(id) + 12L * 60L * 60L * 1000L);
     }
 
     private double getOwed(UUID id) { return data.getDouble(id + ".amount", 0.0); }
