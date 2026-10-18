@@ -41,7 +41,7 @@ public final class UtilityManager implements Listener {
 
     public boolean handle(CommandSender sender, String command, String[] args) {
         String cmd = command.toLowerCase(Locale.ROOT);
-        if (!(sender instanceof Player p) && !cmd.equals("list")) {
+        if (!(sender instanceof Player p) && !cmd.equals("list") && !cmd.equals("help")) {
             sender.sendMessage("This command can only be used by a player.");
             return true;
         }
@@ -178,6 +178,42 @@ public final class UtilityManager implements Listener {
                 afk.put(player.getUniqueId(), value);
                 Bukkit.broadcastMessage(ChatColor.GRAY + player.getName() + (value ? " is now AFK." : " is no longer AFK."));
                 return true;
+            }
+            case "help" -> {
+                sender.sendMessage(ChatColor.GOLD + "XZHEconomySystem commands:");
+                sender.sendMessage(ChatColor.WHITE + "/balance, /pay, /shop, /books, /loan, /quests, /deathinventory");
+                sender.sendMessage(ChatColor.WHITE + "/spawn, /home, /sethome, /delhome, /warp, /tpa, /tpaccept, /tpdeny, /back, /rtp");
+                sender.sendMessage(ChatColor.WHITE + "/msg, /reply, /ignore, /afk, /near, /list, /top, /kit");
+                if (sender.hasPermission("xzh.admin")) sender.sendMessage(ChatColor.WHITE + "/xzhadmin, /eco, /shopadmin, /setspawn, /setwarp, /delwarp");
+                return true;
+            }
+            case "kit" -> {
+                if (args.length != 1 || !args[0].equalsIgnoreCase("starter")) { msg(player, "Usage: /kit starter"); return true; }
+                if (!player.hasPermission("xzh.kit.starter")) { msg(player, "No permission for this kit."); return true; }
+                String path = "kits." + player.getUniqueId() + ".starter-last";
+                long cooldown = Math.max(1L, plugin.getConfig().getLong("kits.starter.cooldown-hours", 24)) * 60L * 60L * 1000L;
+                long last = data.getLong(path, 0L);
+                long now = System.currentTimeMillis();
+                if (last > 0 && now < last + cooldown) { msg(player, "Starter kit cooldown: " + ((last + cooldown - now) / 3_600_000L) + " hours remaining."); return true; }
+                List<String> entries = plugin.getConfig().getStringList("kits.starter.items");
+                if (entries.isEmpty()) { msg(player, "The starter kit has no items configured."); return true; }
+                java.util.List<ItemStack> kitItems = new java.util.ArrayList<>();
+                for (String entry : entries) {
+                    String[] bits = entry.split(":");
+                    Material material;
+                    int amount;
+                    try { material = Material.valueOf(bits[0].toUpperCase(Locale.ROOT)); amount = bits.length > 1 ? Integer.parseInt(bits[1]) : 1; }
+                    catch (IllegalArgumentException ex) { plugin.getLogger().warning("Invalid starter kit entry: " + entry); continue; }
+                    if (amount < 1 || amount > 64 || material.isAir()) continue;
+                    kitItems.add(new org.bukkit.inventory.ItemStack(material, amount));
+                }
+                if (kitItems.isEmpty()) { msg(player, "The starter kit configuration contains no valid items."); return true; }
+                data.set(path, now); save();
+                for (org.bukkit.inventory.ItemStack kitItem : kitItems) {
+                    for (org.bukkit.inventory.ItemStack leftover : player.getInventory().addItem(kitItem).values())
+                        player.getWorld().dropItemNaturally(player.getLocation(), leftover);
+                }
+                msg(player, "Starter kit claimed."); return true;
             }
             case "list" -> {
                 String names = Bukkit.getOnlinePlayers().stream().map(Player::getName).sorted().collect(java.util.stream.Collectors.joining(", "));
