@@ -363,14 +363,6 @@ public final class ShopManager implements Listener {
     }
 
     private double buyPrice(Product p) {
-        return plugin.getConfig().getDouble("shop.prices." + p.material().name().toLowerCase(Locale.ROOT) + ".buy", buyPrice(p));
-    }
-
-    private double sellPrice(Product p) {
-        return plugin.getConfig().getDouble("shop.prices." + p.material().name().toLowerCase(Locale.ROOT) + ".sell", sellPrice(p));
-    }
-
-    private double buyPrice(Product p) {
         return plugin.getConfig().getDouble("shop.prices." + p.material().name().toLowerCase(Locale.ROOT) + ".buy", p.buy());
     }
 
