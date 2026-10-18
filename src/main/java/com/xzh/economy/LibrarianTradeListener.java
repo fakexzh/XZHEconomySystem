@@ -15,7 +15,8 @@ import java.util.List;
 public final class LibrarianTradeListener implements Listener {
     @EventHandler
     public void onAcquireTrade(VillagerAcquireTradeEvent event) {
-        if (event.getEntity().getProfession() == Villager.Profession.LIBRARIAN
+        if (event.getEntity() instanceof Villager villager
+                && villager.getProfession() == Villager.Profession.LIBRARIAN
                 && event.getRecipe().getResult().getType() == Material.ENCHANTED_BOOK) {
             event.setCancelled(true);
         }
