@@ -58,7 +58,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
-        for (String name : List.of("xzh", "balance", "pay", "eco", "shop", "loan", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "sethome", "delhome", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "xzhadmin")) {
+        for (String name : List.of("xzh", "balance", "pay", "eco", "shop", "loan", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "sethome", "delhome", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
