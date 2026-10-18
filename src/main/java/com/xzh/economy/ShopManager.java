@@ -395,6 +395,7 @@ public final class ShopManager implements Listener {
                         return;
                     }
                     plugin.tellPublic(player, "Bought " + delivered + " × " + pretty(material) + " for " + money(charged) + " coins.");
+                    plugin.announceSpecialPurchase(player, material, delivered, charged);
                 } else {
                     if (sellPrice(p) * quantity < 1) {
                         plugin.tellPublic(player, "Items worth less than 1 coin cannot be sold.");
