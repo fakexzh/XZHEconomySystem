@@ -133,6 +133,7 @@ public final class ShopManager implements Listener {
 
     private void openConfirm(Player player, Material material, int quantity, boolean buying, boolean handOnly) {
         Product p = product(material);
+        if (p == null && !buying) p = new Product("misc", material, 0.0, plugin.getConfig().getDouble("shop.default-sell-price", 0.1));
         if (p == null) return;
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Confirm transaction");
         double total = (buying ? p.buy() : p.sell()) * quantity;
@@ -201,6 +202,8 @@ public final class ShopManager implements Listener {
                 int quantity;
                 try { quantity = Integer.parseInt(bits[1]); } catch (NumberFormatException ex) { return; }
                 Product p = material == null ? null : product(material);
+                if (p == null && !action.equals("buy") && material != null)
+                    p = new Product("misc", material, 0.0, plugin.getConfig().getDouble("shop.default-sell-price", 0.1));
                 if (p == null || quantity < 1) return;
                 double total = (action.equals("buy") ? p.buy() : p.sell()) * quantity;
                 if (action.equals("buy")) {
@@ -265,9 +268,14 @@ public final class ShopManager implements Listener {
             }
             case "sell-hand" -> {
                 ItemStack hand = player.getInventory().getItemInMainHand();
-                Product p = hand.getType() == Material.AIR ? null : product(hand.getType());
-                if (p == null || p.sell() * hand.getAmount() < 1) {
-                    plugin.tellPublic(player, "That item cannot be sold here.");
+                if (hand.getType() == Material.AIR) {
+                    plugin.tellPublic(player, "Hold an item first.");
+                    return;
+                }
+                Product p = product(hand.getType());
+                double unitSell = p == null ? plugin.getConfig().getDouble("shop.default-sell-price", 0.1) : p.sell();
+                if (unitSell * hand.getAmount() < 1) {
+                    plugin.tellPublic(player, "The held stack is worth less than 1 coin and cannot be sold.");
                     return;
                 }
                 openConfirm(player, hand.getType(), hand.getAmount(), false, true);
