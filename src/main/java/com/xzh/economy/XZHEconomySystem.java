@@ -41,6 +41,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         hudManager.start();
         shopManager = new ShopManager(this);
         loanManager = new LoanManager(this);
+        getServer().getPluginManager().registerEvents(new LibrarianTradeListener(), this);
         getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
             @org.bukkit.event.EventHandler
             public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) { hudManager.onJoin(event.getPlayer()); }
