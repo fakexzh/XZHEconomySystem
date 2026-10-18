@@ -270,8 +270,8 @@ public final class DeathRecoveryManager implements Listener {
         if (n.contains("ARMOR_TRIM_SMITHING_TEMPLATE"))
             return n.contains("SILENCE") ? 1000 : (n.contains("FLOW") || n.contains("BOLT") ? 600 : 300);
         if (n.contains("SPAWN_EGG")) return n.contains("SNIFFER") ? 2000 : 1000;
-        if (n.contains("ZOMBIE_HEAD") || n.contains("CREEPER_HEAD") || n.contains("SKELETON_SKULL")) return 200;
         if (n.contains("WITHER_SKELETON_SKULL")) return 500;
+        if (n.contains("ZOMBIE_HEAD") || n.contains("CREEPER_HEAD") || n.equals("SKELETON_SKULL")) return 200;
         if (n.contains("ENCHANTED_BOOK")) return 100;
         if (n.contains("NETHERITE")) return 1200;
         if (n.contains("DIAMOND")) return 300;
