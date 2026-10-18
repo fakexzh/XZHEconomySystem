@@ -18,6 +18,22 @@ maximum-pay: 1000000.0
 - `starting-balance`: initial balance for a UUID that has never had a saved balance.
 - `minimum-pay` / `maximum-pay`: accepted range for `/pay`.
 
+## Bank
+
+The separate `/bank` GUI is titled `XZH BANK`. It keeps bank balances in `bank-balances.yml`, separate from the existing pocket balance file. Deposits and withdrawals are available only between the configured Minecraft-time hours; the bank menu and loan details remain accessible outside those hours. Shop purchases and loan repayments can spend pocket funds first and then bank funds at any time.
+
+```yaml
+bank:
+  clock-world: world
+  open-hour: 9
+  close-hour: 20
+```
+
+- `clock-world`: world whose Minecraft day/night clock determines bank opening hours; if missing, the first loaded world is used.
+- `open-hour` / `close-hour`: 24-hour Minecraft time. The default is 09:00–20:00.
+- Bank balance is saved separately. Deposit/withdraw buttons are disabled by server-side checks while the bank is closed; direct inventory clicks cannot bypass the hours.
+- The Loans menu is accessed from the bank. `/loan` opens the bank for compatibility, and `/loan repay` remains available as a direct repayment command.
+
 ## HUD
 
 ```yaml
@@ -29,7 +45,7 @@ hud:
     enabled: true
 ```
 
-The sidebar shows balance, active loan amount owed, and time remaining/overdue state. The active quest boss bar is driven by quest progress.
+The sidebar shows pocket balance, bank balance, active loan amount owed, and time remaining/overdue state. The active quest boss bar is driven by quest progress.
 
 ## Shop global stock
 
