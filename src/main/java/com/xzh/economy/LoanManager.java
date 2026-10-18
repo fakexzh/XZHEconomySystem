@@ -61,8 +61,8 @@ public final class LoanManager implements Listener {
                     "status", 0, 0, List.of(
                     ChatColor.WHITE + "Owed: " + ChatColor.RED + money(owed) + " coins",
                     ChatColor.WHITE + "Due: " + ChatColor.AQUA + remaining(getDue(id)),
-                    ChatColor.GRAY + "Use the Repay button or /loan repay."));
-            add(inv, 15, Material.GOLD_INGOT, ChatColor.GREEN + "Repay now", "repay", 0, 0, List.of(ChatColor.WHITE + "Repay the full outstanding amount"));
+                    ChatColor.GRAY + "Repay available funds or use /loan repay."));
+            add(inv, 15, Material.GOLD_INGOT, ChatColor.GREEN + "Repay now", "repay", 0, 0, List.of(ChatColor.WHITE + "Repay available funds; full repayment clears the loan"));
             add(inv, 22, Material.ARROW, ChatColor.WHITE + "Close", "close", 0, 0, List.of());
         } else {
             int[] slots = {10, 11, 12, 13, 14};
