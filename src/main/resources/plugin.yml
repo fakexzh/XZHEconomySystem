@@ -18,6 +18,9 @@ commands:
   shop:
     description: Open the XZH shop GUI.
     usage: /shop
+  loan:
+    description: Open the loan menu or repay an active loan.
+    usage: /loan [repay]
   eco:
     description: Admin economy management.
     usage: /eco <set|add> <player> <amount>
