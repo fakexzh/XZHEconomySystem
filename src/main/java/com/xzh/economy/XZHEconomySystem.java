@@ -116,7 +116,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
 
     public void setBalance(UUID uuid, double amount) {
         double oldAmount = balances.getDouble(uuid.toString(), 0.0);
-        double newAmount = Math.max(0.0, round(amount));
+        double newAmount = Double.isFinite(amount) ? Math.max(0.0, round(amount)) : 0.0;
         balances.set(uuid.toString(), newAmount);
         saveBalances();
         try {
@@ -260,7 +260,8 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 double amount;
                 try { amount = round(Double.parseDouble(args[1])); }
                 catch (NumberFormatException e) { tell(sender, "Enter a valid number."); return true; }
-                if (!Double.isFinite(amount) || amount < getConfig().getDouble("minimum-pay", 1.0)
+                if (!Double.isFinite(amount) || amount <= 0
+                        || amount < Math.max(0.01, getConfig().getDouble("minimum-pay", 1.0))
                         || amount > getConfig().getDouble("maximum-pay", 1000000.0)) {
                     tell(sender, "That amount is outside the allowed range.");
                     return true;
