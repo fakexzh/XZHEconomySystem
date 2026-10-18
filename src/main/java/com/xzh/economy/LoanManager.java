@@ -61,6 +61,7 @@ public final class LoanManager implements Listener {
                     ChatColor.WHITE + "Owed: " + ChatColor.RED + money(owed) + " coins",
                     ChatColor.WHITE + "Due: " + ChatColor.AQUA + remaining(getDue(id)),
                     ChatColor.GRAY + "Use /loan repay to repay in full."));
+            add(inv, 15, Material.GOLD_INGOT, ChatColor.GREEN + "Repay now", "repay", 0, 0, List.of(ChatColor.WHITE + "Repay the full outstanding amount"));
             add(inv, 22, Material.ARROW, ChatColor.WHITE + "Close", "close", 0, 0, List.of());
         } else {
             int[] slots = {10, 11, 12, 13, 14};
@@ -212,6 +213,7 @@ public final class LoanManager implements Listener {
             case "term" -> openConfirm(player, a, t);
             case "back" -> openTerms(player, a);
             case "confirm" -> { grant(player, a, t); player.closeInventory(); }
+            case "repay" -> { repay(player); player.closeInventory(); }
             case "cancel", "close" -> player.closeInventory();
             default -> { }
         }
