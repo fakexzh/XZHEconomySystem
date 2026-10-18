@@ -12,13 +12,10 @@ import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.ScoreboardManager;
 import org.bukkit.scoreboard.Criteria;
 
-import java.io.File;
-import java.io.IOException;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import org.bukkit.configuration.file.YamlConfiguration;
 
 /**
  * Owns the player's economy sidebar and active-quest boss bar.
@@ -27,21 +24,12 @@ import org.bukkit.configuration.file.YamlConfiguration;
 public final class HudManager {
     private final XZHEconomySystem plugin;
     private final Map<UUID, BossBar> questBars = new HashMap<>();
-    private final File loansFile;
-    private final YamlConfiguration loans;
+    private final Map<UUID, Double> loanAmounts = new HashMap<>();
+    private final Map<UUID, Long> loanDueTimes = new HashMap<>();
 
     public HudManager(XZHEconomySystem plugin) {
         this.plugin = plugin;
-        this.loansFile = new File(plugin.getDataFolder(), "loans.yml");
-        if (!loansFile.exists()) {
-            try {
-                plugin.getDataFolder().mkdirs();
-                loansFile.createNewFile();
-            } catch (IOException e) {
-                plugin.getLogger().severe("Could not create loans.yml: " + e.getMessage());
-            }
-        }
-        this.loans = YamlConfiguration.loadConfiguration(loansFile);
+
     }
 
     public void start() {
@@ -52,7 +40,6 @@ public final class HudManager {
     }
 
     public void shutdown() {
-        saveLoans();
         for (BossBar bar : questBars.values()) bar.removeAll();
         questBars.clear();
     }
@@ -79,8 +66,8 @@ public final class HudManager {
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         UUID id = player.getUniqueId();
         double balance = plugin.getBalance(id);
-        double owed = loans.getDouble(id + ".amount", 0.0);
-        long dueAt = loans.getLong(id + ".due-at", 0L);
+        double owed = loanAmounts.getOrDefault(id, 0.0);
+        long dueAt = loanDueTimes.getOrDefault(id, 0L);
         int line = 6;
         objective.getScore(ChatColor.GRAY + "Balance").setScore(line--);
         objective.getScore(ChatColor.YELLOW + formatMoney(balance)).setScore(line--);
@@ -95,22 +82,22 @@ public final class HudManager {
     /** Sets or updates a player's loan balance and repayment due time (epoch milliseconds). */
     public void setLoan(UUID playerId, double amountOwed, long dueAtEpochMillis) {
         if (amountOwed <= 0) {
-            loans.set(playerId.toString(), null);
+            loanAmounts.remove(playerId);
+            loanDueTimes.remove(playerId);
         } else {
-            loans.set(playerId + ".amount", amountOwed);
-            loans.set(playerId + ".due-at", dueAtEpochMillis);
+            loanAmounts.put(playerId, amountOwed);
+            loanDueTimes.put(playerId, dueAtEpochMillis);
         }
-        saveLoans();
         Player player = Bukkit.getPlayer(playerId);
         if (player != null) updateSidebar(player);
     }
 
     public double getLoanAmount(UUID playerId) {
-        return loans.getDouble(playerId + ".amount", 0.0);
+        return loanAmounts.getOrDefault(playerId, 0.0);
     }
 
     public long getLoanDueAt(UUID playerId) {
-        return loans.getLong(playerId + ".due-at", 0L);
+        return loanDueTimes.getOrDefault(playerId, 0L);
     }
 
     /**
@@ -137,14 +124,6 @@ public final class HudManager {
         if (bar != null) {
             bar.removePlayer(player);
             bar.setVisible(false);
-        }
-    }
-
-    private void saveLoans() {
-        try {
-            loans.save(loansFile);
-        } catch (IOException e) {
-            plugin.getLogger().severe("Could not save loans.yml: " + e.getMessage());
         }
     }
 
