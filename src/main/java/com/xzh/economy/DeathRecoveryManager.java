@@ -88,6 +88,11 @@ public final class DeathRecoveryManager implements Listener {
         save();
     }
 
+    public void adminClearRecovery(UUID id) {
+        data.set(id.toString(), null);
+        save();
+    }
+
     public void open(Player player) {
         String base = player.getUniqueId().toString();
         if (!hasRecovery(base)) {
