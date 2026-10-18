@@ -58,7 +58,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         utilityManager = new UtilityManager(this);
         adminManager = new AdminManager(this);
         if (getServer().getPluginManager().getPlugin("Vault") != null) {
-            getServer().getServicesManager().register(Economy.class, new VaultEconomyProvider(this), this, ServicePriority.Normal);
+            getServer().getServicesManager().register(Economy.class, new VaultEconomyProvider(this), this, ServicePriority.High);
             getLogger().info("Vault economy provider registered.");
         }
         getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
