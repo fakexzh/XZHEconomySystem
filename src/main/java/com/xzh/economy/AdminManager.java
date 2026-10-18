@@ -62,7 +62,7 @@ public final class AdminManager implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (!ChatColor.DARK_RED + "XZH Admin".equals(ChatColor.stripColor(event.getView().getTitle()))) return;
+        if (!"XZH Admin".equals(ChatColor.stripColor(event.getView().getTitle()))) return;
         event.setCancelled(true);
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || !clicked.hasItemMeta()) return;
