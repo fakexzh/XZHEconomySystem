@@ -23,6 +23,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     private File balancesFile;
     private YamlConfiguration balances;
     private HudManager hudManager;
+    private BankManager bankManager;
     private ShopManager shopManager;
     private LoanManager loanManager;
     private QuestManager questManager;
@@ -48,6 +49,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         balances = YamlConfiguration.loadConfiguration(balancesFile);
         hudManager = new HudManager(this);
         hudManager.start();
+        bankManager = new BankManager(this);
         shopManager = new ShopManager(this);
         bookShopManager = new BookShopManager(this);
         loanManager = new LoanManager(this);
@@ -64,7 +66,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
-        for (String name : List.of("xzh", "balance", "pay", "eco", "shop", "loan", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "sethome", "delhome", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit")) {
+        for (String name : List.of("xzh", "balance", "pay", "eco", "shop", "bank", "loan", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "sethome", "delhome", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
@@ -81,6 +83,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     }
 
     public HudManager getHudManager() { return hudManager; }
+    public BankManager getBankManager() { return bankManager; }
     public LoanManager getLoanManager() { return loanManager; }
     public ShopManager getShopManager() { return shopManager; }
     public BookShopManager getBookShopManager() { return bookShopManager; }
@@ -101,6 +104,25 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         } catch (ReflectiveOperationException | LinkageError e) {
             getLogger().warning("Vault was detected but the economy bridge could not be registered: " + e.getMessage());
         }
+    }
+
+    public double getCombinedBalance(UUID uuid) {
+        double pocket = getBalance(uuid);
+        double bank = bankManager == null ? 0.0 : bankManager.getBalance(uuid);
+        return Math.round((pocket + bank) * 100.0) / 100.0;
+    }
+
+    /** Charges pocket funds first, then bank funds. Call on the server thread. */
+    public boolean spendAvailableFunds(UUID uuid, double amount) {
+        if (!Double.isFinite(amount) || amount < 0) return false;
+        double pocket = getBalance(uuid);
+        double bank = bankManager == null ? 0.0 : bankManager.getBalance(uuid);
+        if (pocket + bank + 1e-9 < amount) return false;
+        double fromPocket = Math.min(pocket, amount);
+        double remainder = Math.max(0.0, Math.round((amount - fromPocket) * 100.0) / 100.0);
+        setBalance(uuid, pocket - fromPocket);
+        if (remainder > 0 && bankManager != null) bankManager.setBalance(uuid, bank - remainder);
+        return true;
     }
 
     public boolean hasBalanceAccount(UUID uuid) { return balances.contains(uuid.toString()); }
@@ -173,11 +195,16 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 questManager.open(player);
                 return true;
             }
+            case "bank" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can open the bank."); return true; }
+                bankManager.open(player);
+                return true;
+            }
             case "loan" -> {
                 if (!(sender instanceof Player player)) { tell(sender, "Only players can use loans."); return true; }
                 if (args.length == 1 && args[0].equalsIgnoreCase("repay")) return loanManager.repay(player);
                 if (args.length > 0) { tell(sender, "Usage: /loan [repay]"); return true; }
-                loanManager.open(player);
+                bankManager.open(player);
                 return true;
             }
             case "books" -> {
@@ -219,9 +246,10 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 tell(sender, "§eXZHEconomySystem §7v" + getPluginMeta().getVersion());
                 tell(sender, "§f/balance §7- check your coins");
                 tell(sender, "§f/pay <player> <amount> §7- send coins");
-                tell(sender, "§f/shop §7- open the shop");
+                tell(sender, "§f/shop §7- open XZH SHOP");
+                tell(sender, "§f/bank §7- open XZH BANK, deposits, withdrawals and loans");
                 if (sender.hasPermission("xzh.admin")) tell(sender, "§f/shopadmin <restock|stock> §7- manage global shop stock");
-                tell(sender, "§f/loan [repay] §7- borrow or repay coins");
+                tell(sender, "§f/loan repay §7- repay an active loan (also available in /bank)");
                 tell(sender, "§f/quests §7- buy quest packs and track progress");
                 tell(sender, "§f/deathinventory §7- recover your last death inventory");
                 tell(sender, "§f/books §7- enchantment book shop");
