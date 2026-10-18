@@ -1,0 +1,224 @@
+package com.xzh.economy;
+
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
+
+/** Persisted starter quest-pack system with progress HUD and shared pack stock. */
+public final class QuestManager implements Listener {
+    private record Pack(String id, String name, Material icon, int cost, int reward, String target, int goal, int stock) {}
+    private final XZHEconomySystem plugin;
+    private final File file;
+    private final YamlConfiguration data;
+    private final NamespacedKey actionKey;
+    private final NamespacedKey valueKey;
+    private final List<Pack> packs = List.of(
+        new Pack("beginner", "Beginner", Material.WHEAT, 25, 40, "break", 16, 50),
+        new Pack("miner", "Miner", Material.IRON_PICKAXE, 75, 120, "mine", 32, 30),
+        new Pack("hunter", "Hunter", Material.BOW, 100, 160, "kill", 10, 25),
+        new Pack("explorer", "Explorer", Material.COMPASS, 200, 350, "travel", 500, 15),
+        new Pack("nether", "Nether", Material.NETHERRACK, 300, 500, "nether-kill", 10, 10),
+        new Pack("end", "End", Material.END_STONE, 750, 1250, "end-kill", 10, 5)
+    );
+
+    public QuestManager(XZHEconomySystem plugin) {
+        this.plugin = plugin;
+        file = new File(plugin.getDataFolder(), "quests.yml");
+        data = YamlConfiguration.loadConfiguration(file);
+        actionKey = new NamespacedKey(plugin, "quest_action");
+        valueKey = new NamespacedKey(plugin, "quest_value");
+        Bukkit.getPluginManager().registerEvents(this, plugin);
+        for (Pack pack : packs) if (!data.contains("stock." + pack.id())) data.set("stock." + pack.id(), pack.stock());
+        save();
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            for (Player player : Bukkit.getOnlinePlayers()) updateHud(player);
+        }, 20L, 20L * 5L);
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                if (data.getString(player.getUniqueId() + ".active", "").isBlank()) continue;
+                player.sendActionBar(ChatColor.GOLD + "Quest: " + ChatColor.YELLOW
+                        + data.getString(player.getUniqueId() + ".name", "Active quest")
+                        + ChatColor.GRAY + " — " + progressText(player.getUniqueId()));
+            }
+        }, 20L * 60L * 30L, 20L * 60L * 30L);
+    }
+
+    public void open(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "XZH Quest Packs");
+        int slot = 0;
+        for (Pack pack : packs) {
+            ItemStack item = new ItemStack(pack.icon());
+            ItemMeta meta = item.getItemMeta();
+            meta.setDisplayName(ChatColor.YELLOW + pack.name() + " Quest Pack");
+            meta.setLore(List.of(
+                    ChatColor.WHITE + "Cost: " + ChatColor.YELLOW + pack.cost() + " coins",
+                    ChatColor.WHITE + "Reward: " + ChatColor.GREEN + pack.reward() + " coins",
+                    ChatColor.WHITE + "Objective: " + ChatColor.AQUA + describe(pack),
+                    ChatColor.GRAY + "Global stock: " + data.getInt("stock." + pack.id()),
+                    ChatColor.GRAY + "Click to buy (confirmation follows)"
+            ));
+            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "select");
+            meta.getPersistentDataContainer().set(valueKey, PersistentDataType.STRING, pack.id());
+            item.setItemMeta(meta);
+            inv.setItem(slot++, item);
+        }
+        add(inv, 49, Material.BARRIER, ChatColor.RED + "Close", "close", "");
+        player.openInventory(inv);
+    }
+
+    private void confirm(Player player, Pack pack) {
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Confirm quest pack");
+        ItemStack item = new ItemStack(pack.icon());
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(ChatColor.YELLOW + pack.name() + " Quest Pack");
+        meta.setLore(List.of(ChatColor.WHITE + "Pay: " + pack.cost() + " coins",
+                ChatColor.WHITE + "Reward on completion: " + pack.reward() + " coins",
+                ChatColor.WHITE + "Objective: " + describe(pack),
+                ChatColor.GRAY + "Global stock is consumed on purchase and is not refunded."));
+        item.setItemMeta(meta);
+        inv.setItem(13, item);
+        add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "Confirm purchase", "buy", pack.id());
+        add(inv, 15, Material.RED_CONCRETE, ChatColor.RED + "Cancel", "back", "");
+        player.openInventory(inv);
+    }
+
+    private void buy(Player player, Pack pack) {
+        UUID id = player.getUniqueId();
+        if (!data.getString(id + ".active", "").isBlank()) {
+            plugin.tellPublic(player, "Finish or abandon your active quest before buying another pack.");
+            return;
+        }
+        int stock = data.getInt("stock." + pack.id(), pack.stock());
+        if (stock <= 0) { plugin.tellPublic(player, "That quest pack is out of global stock."); return; }
+        double balance = plugin.getBalance(id);
+        if (balance < pack.cost()) { plugin.tellPublic(player, "Not enough coins for this quest pack."); return; }
+        plugin.setBalance(id, balance - pack.cost());
+        data.set("stock." + pack.id(), stock - 1);
+        data.set(id + ".active", pack.id());
+        data.set(id + ".name", pack.name());
+        data.set(id + ".progress", 0);
+        data.set(id + ".goal", pack.goal());
+        data.set(id + ".reward", pack.reward());
+        data.set(id + ".target", pack.target());
+        data.set(id + ".started-at", System.currentTimeMillis());
+        save();
+        updateHud(player);
+        plugin.tellPublic(player, "Quest started: " + pack.name() + ". " + describe(pack));
+        player.closeInventory();
+    }
+
+    @EventHandler
+    public void onBreak(BlockBreakEvent event) {
+        Player player = event.getPlayer();
+        String target = data.getString(player.getUniqueId() + ".target", "");
+        if (target.equals("break") || target.equals("mine") && isOre(event.getBlock().getType())) increment(player, 1);
+    }
+
+    @EventHandler
+    public void onKill(EntityDeathEvent event) {
+        Player player = event.getEntity().getKiller();
+        if (player == null) return;
+        String target = data.getString(player.getUniqueId() + ".target", "");
+        if (target.equals("kill")) increment(player, 1);
+        else if (target.equals("nether-kill") && event.getEntity().getWorld().getEnvironment() == org.bukkit.World.Environment.NETHER) increment(player, 1);
+        else if (target.equals("end-kill") && event.getEntity().getWorld().getEnvironment() == org.bukkit.World.Environment.THE_END) increment(player, 1);
+    }
+
+    @EventHandler
+    public void onClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        String title = ChatColor.stripColor(event.getView().getTitle());
+        if (title == null || !(title.equals("XZH Quest Packs") || title.equals("Confirm quest pack"))) return;
+        event.setCancelled(true);
+        ItemStack item = event.getCurrentItem();
+        if (item == null || !item.hasItemMeta()) return;
+        ItemMeta meta = item.getItemMeta();
+        String action = meta.getPersistentDataContainer().get(actionKey, PersistentDataType.STRING);
+        String value = meta.getPersistentDataContainer().get(valueKey, PersistentDataType.STRING);
+        if (action == null) return;
+        if (action.equals("close")) { player.closeInventory(); return; }
+        if (action.equals("back")) { open(player); return; }
+        Pack pack = packs.stream().filter(p -> p.id().equals(value)).findFirst().orElse(null);
+        if (pack == null) return;
+        if (action.equals("select")) confirm(player, pack);
+        else if (action.equals("buy")) buy(player, pack);
+    }
+
+    private void increment(Player player, int amount) {
+        UUID id = player.getUniqueId();
+        String active = data.getString(id + ".active", "");
+        if (active.isBlank()) return;
+        int progress = data.getInt(id + ".progress", 0) + amount;
+        int goal = data.getInt(id + ".goal", 1);
+        if (progress >= goal) {
+            int reward = data.getInt(id + ".reward", 0);
+            plugin.setBalance(id, plugin.getBalance(id) + reward);
+            plugin.tellPublic(player, "Quest completed! Reward: " + reward + " coins.");
+            data.set(id.toString(), null);
+            plugin.getHudManager().hideActiveQuest(player);
+        } else {
+            data.set(id + ".progress", progress);
+            updateHud(player);
+        }
+        save();
+    }
+
+    private void updateHud(Player player) {
+        UUID id = player.getUniqueId();
+        String active = data.getString(id + ".active", "");
+        if (active.isBlank()) { plugin.getHudManager().hideActiveQuest(player); return; }
+        int progress = data.getInt(id + ".progress", 0);
+        int goal = Math.max(1, data.getInt(id + ".goal", 1));
+        plugin.getHudManager().showActiveQuest(player, data.getString(id + ".name", active),
+                progress + "/" + goal + " " + data.getString(id + ".target", "objective"),
+                Math.min(1.0, (double) progress / goal));
+    }
+
+    private String progressText(UUID id) {
+        return data.getInt(id + ".progress", 0) + "/" + Math.max(1, data.getInt(id + ".goal", 1));
+    }
+    private String describe(Pack p) {
+        return switch (p.target()) {
+            case "break" -> "Break " + p.goal() + " blocks";
+            case "mine" -> "Mine " + p.goal() + " ore blocks";
+            case "kill" -> "Defeat " + p.goal() + " mobs";
+            case "nether-kill" -> "Defeat " + p.goal() + " mobs in the Nether";
+            case "end-kill" -> "Defeat " + p.goal() + " mobs in the End";
+            default -> "Explore " + p.goal() + " blocks (tracking not yet enabled)";
+        };
+    }
+    private boolean isOre(Material m) {
+        return m.name().endsWith("_ORE") || m == Material.ANCIENT_DEBRIS;
+    }
+    private void add(Inventory inv, int slot, Material material, String name, String action, String value) {
+        ItemStack stack = new ItemStack(material);
+        ItemMeta meta = stack.getItemMeta();
+        meta.setDisplayName(name);
+        meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
+        meta.getPersistentDataContainer().set(valueKey, PersistentDataType.STRING, value);
+        stack.setItemMeta(meta);
+        inv.setItem(slot, stack);
+    }
+    private void save() {
+        try { data.save(file); } catch (IOException e) { plugin.getLogger().severe("Could not save quests.yml: " + e.getMessage()); }
+    }
+}
