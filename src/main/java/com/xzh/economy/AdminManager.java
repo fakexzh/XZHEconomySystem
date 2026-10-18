@@ -51,6 +51,8 @@ public final class AdminManager implements Listener {
                 List.of("Set current stock for a material"));
         add(inv, 14, Material.HOPPER, "Restock all shop items", "restock",
                 List.of("Refill to configured global stock caps"));
+        add(inv, 18, Material.EMERALD, "Set item price", "price",
+                List.of("Configure buy or sell price for a material"));
         add(inv, 16, Material.BOOK, "Recent transactions", "transactions",
                 List.of("Show the last 10 balance changes"));
         add(inv, 29, Material.MAP, "Diagnostics", "diagnostics",
@@ -71,6 +73,7 @@ public final class AdminManager implements Listener {
         switch (action) {
             case "balance" -> prompt(player, "balance-player", "Type the player's exact name in chat.");
             case "stock" -> prompt(player, "stock-material", "Type a material name in chat (for example ELYTRA).");
+            case "price" -> prompt(player, "price-material", "Type a material name in chat to configure its buy or sell price.");
             case "restock" -> {
                 plugin.getShopManager().restockAll();
                 player.sendMessage(ChatColor.GREEN + "Global shop stock restocked.");
@@ -122,6 +125,35 @@ public final class AdminManager implements Listener {
             plugin.setBalance(target.getUniqueId(), amount);
             prompts.remove(player.getUniqueId());
             player.sendMessage(ChatColor.GREEN + "Set " + name + "'s balance to " + amount + " coins.");
+            return;
+        }
+        if (prompt.equals("price-material")) {
+            Material material;
+            try { material = Material.valueOf(input.toUpperCase(Locale.ROOT)); }
+            catch (IllegalArgumentException ex) { player.sendMessage(ChatColor.RED + "Unknown material. Try again or type cancel."); return; }
+            prompts.put(player.getUniqueId(), "price-kind:" + material.name());
+            player.sendMessage(ChatColor.YELLOW + "Type buy or sell for " + material.name() + ", or cancel.");
+            return;
+        }
+        if (prompt.startsWith("price-kind:")) {
+            String material = prompt.substring("price-kind:".length());
+            if (!input.equalsIgnoreCase("buy") && !input.equalsIgnoreCase("sell")) {
+                player.sendMessage(ChatColor.RED + "Type buy or sell, or cancel."); return;
+            }
+            prompts.put(player.getUniqueId(), "price-amount:" + material + ":" + input.toLowerCase(Locale.ROOT));
+            player.sendMessage(ChatColor.YELLOW + "Type the new " + input.toLowerCase(Locale.ROOT) + " price for " + material + " (0–1000000), or cancel.");
+            return;
+        }
+        if (prompt.startsWith("price-amount:")) {
+            String[] parts = prompt.split(":");
+            double amount;
+            try { amount = Double.parseDouble(input); }
+            catch (NumberFormatException ex) { player.sendMessage(ChatColor.RED + "Enter a valid price or cancel."); return; }
+            if (!Double.isFinite(amount) || amount < 0 || amount > 1_000_000) { player.sendMessage(ChatColor.RED + "Price must be between 0 and 1000000."); return; }
+            Material material = Material.valueOf(parts[1]);
+            plugin.getShopManager().setPrice(material, parts[2], amount);
+            prompts.remove(player.getUniqueId());
+            player.sendMessage(ChatColor.GREEN + "Set " + parts[2] + " price for " + material.name() + " to " + amount + " coins.");
             return;
         }
         if (prompt.equals("stock-material")) {
