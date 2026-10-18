@@ -102,6 +102,9 @@ commands:
   top:
     description: Teleport to the surface at your current coordinates.
     usage: /top
+  rtp:
+    description: Teleport to a random safe location.
+    usage: /rtp
 permissions:
   xzh.admin:
     description: Allows administration of the XZH economy.
