@@ -301,9 +301,14 @@ public final class QuestManager implements Listener {
         return m.name().endsWith("_ORE") || m == Material.ANCIENT_DEBRIS;
     }
     private void add(Inventory inv, int slot, Material material, String name, String action, String value) {
+        add(inv, slot, material, name, action, value, List.of());
+    }
+
+    private void add(Inventory inv, int slot, Material material, String name, String action, String value, List<String> lore) {
         ItemStack stack = new ItemStack(material);
         ItemMeta meta = stack.getItemMeta();
         meta.setDisplayName(name);
+        meta.setLore(lore);
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         meta.getPersistentDataContainer().set(valueKey, PersistentDataType.STRING, value);
         stack.setItemMeta(meta);
