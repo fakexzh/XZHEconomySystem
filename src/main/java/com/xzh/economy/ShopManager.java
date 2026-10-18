@@ -353,7 +353,9 @@ public final class ShopManager implements Listener {
                     p = new Product("misc", material, 0.0, plugin.getConfig().getDouble("shop.default-sell-price", 0.1));
                 if (p == null || quantity < 1) return;
                 double total = (action.equals("buy") ? buyPrice(p) : sellPrice(p)) * quantity;
-                if (action.equals("buy") && material == Material.ELYTRA && !hasVisitedEnd(player)) {
+                if (action.equals("buy") && material == Material.ELYTRA
+                        && plugin.getConfig().getBoolean("restrictions.elytra-requires-end-visit", true)
+                        && !hasVisitedEnd(player)) {
                     plugin.tellPublic(player, "Elytra purchases unlock after you visit the End.");
                     player.closeInventory();
                     return;
@@ -521,8 +523,16 @@ public final class ShopManager implements Listener {
     }
 
     private double sellPrice(Product p) {
-        double configured = plugin.getConfig().getDouble(
-                "shop.prices." + p.material().name().toLowerCase(Locale.ROOT) + ".sell", p.sell());
+        String materialName = p.material().name().toLowerCase(Locale.ROOT);
+        String pricePath = "shop.prices." + materialName + ".sell";
+        boolean spawnEgg = materialName.endsWith("_spawn_egg");
+        if (spawnEgg && plugin.getConfig().getBoolean("restrictions.buy-only-spawn-eggs", true)) return 0.0;
+        if (plugin.getConfig().contains(pricePath)) {
+            double configured = plugin.getConfig().getDouble(pricePath, p.sell());
+            return validPrice(configured) ? configured : p.sell();
+        }
+        if (spawnEgg) return buyPrice(p) * 0.30;
+        double configured = plugin.getConfig().getDouble(pricePath, p.sell());
         return validPrice(configured) ? configured : p.sell();
     }
 
