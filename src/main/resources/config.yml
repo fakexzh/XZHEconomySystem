@@ -37,3 +37,7 @@ shop:
     iron_pickaxe: 100
     diamond_pickaxe: 30
     elytra: 3
+
+# Player utility limits.
+utilities:
+  max-homes: 3
