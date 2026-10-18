@@ -33,6 +33,7 @@ Run these on a disposable test world with a backup. Record any console error and
 - [ ] In Creative and Spectator modes, verify block breaks, kills, and travel do not advance paid quests or the global ore event.
 - [ ] Verify completion reward, boss-bar removal, and pack stock reset on a new day.
 - [ ] Mine ores toward the global event; verify shared progress, personal contribution requirement, claim stock, and one claim per day.
+- [ ] Change `quests.global-event` goal/reward/claims and `quests.pack-stock` values, reload, and verify the next daily reset uses the configured defaults.
 - [ ] Confirm reminder timing is 30 minutes.
 
 ## Death recovery and world rules
