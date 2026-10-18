@@ -177,7 +177,7 @@ Item entries use `MATERIAL:AMOUNT`. The kit cooldown is persisted per player in 
 
 ## Data files
 
-The plugin maintains separate YAML files for balances, loans, quests, shop stock, and death recovery. Back up the server and these files before testing a development build.
+The plugin maintains separate YAML files for pocket-balance snapshots and wallet migration status (`balances.yml`, `wallets.yml`), bank savings (`bank-balances.yml`), loans, quests, shop stock, book cooldowns, and death recovery. Back up the server and these files before testing a development build.
 
 ## Important scope note
 
