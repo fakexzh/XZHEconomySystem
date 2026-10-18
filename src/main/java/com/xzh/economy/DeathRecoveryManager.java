@@ -42,8 +42,16 @@ public final class DeathRecoveryManager implements Listener {
 
     @EventHandler
     public void onDeath(PlayerDeathEvent event) {
-        if (event.getKeepInventory()) return;
         Player player = event.getEntity();
+        if (plugin.getConfig().getBoolean("death-recovery.overworld-only", true)
+                && player.getWorld().getEnvironment() != org.bukkit.World.Environment.NORMAL) {
+            event.setKeepInventory(true);
+            event.setKeepLevel(true);
+            event.getDrops().clear();
+            event.setDroppedExp(0);
+            return;
+        }
+        if (event.getKeepInventory()) return;
         UUID id = player.getUniqueId();
         List<ItemStack> items = new ArrayList<>();
         for (ItemStack drop : event.getDrops()) {
