@@ -69,6 +69,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     }
 
     public HudManager getHudManager() { return hudManager; }
+    public LoanManager getLoanManager() { return loanManager; }
 
     public void tellPublic(CommandSender sender, String message) { tell(sender, message); }
 
