@@ -45,6 +45,15 @@ Requires JDK 25. Run `gradle clean build` or use the GitHub Actions workflow. Su
 
 See [configuration documentation](docs/CONFIGURATION.md), the [manual test checklist](docs/TEST_CHECKLIST.md), and the [Falix install guide](docs/FALIX_INSTALL.md).
 
-## Known remaining work before a complete release
+## Release validation still required
 
-The current branch still needs a full feature audit and live-server testing. In particular, verify every GUI/action against the final specification, review all loan overdue/grace behavior, expand the admin GUI to manage every subsystem, validate item pricing/restrictions and shop stock persistence, and confirm death recovery/XP behavior through real deaths and restarts. A successful compile is not a substitute for a runtime test on Purpur 26.3.
+The integrated feature set now compiles and the workflow publishes both the plugin JAR and source archive. A green build confirms compilation and packaging only; it does **not** prove runtime behavior on Purpur 26.3.
+
+Before production use, run [the manual test checklist](docs/TEST_CHECKLIST.md) on a disposable Purpur 26.3 server, especially:
+- GUI buy/sell confirmation, inventory-full handling, global stock and daily resets.
+- Loan due time, 12-hour grace countdown, overdue purchase restrictions, and auto-repayment with both sufficient and insufficient funds.
+- Death inventory and XP recovery through deaths, full inventories, expiry, and server restarts.
+- Vault compatibility with the economy plugins you intend to run.
+- Librarian trade restrictions, End-visit Elytra unlock, quest progress/event claims, and all utility commands.
+
+No live Purpur server is attached to this workflow, so these runtime checks must be performed on your test server before calling this a production release.
