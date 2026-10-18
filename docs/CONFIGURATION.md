@@ -4,8 +4,11 @@ This document describes the settings currently implemented by the development br
 
 ## Economy
 
+The plugin registers as a Vault economy provider when Vault is installed. If another economy plugin is installed too, make sure XZHEconomySystem is intended to be the primary provider.
+
 ```yaml
 currency-name: coins
+currency-name-singular: coin
 starting-balance: 100.0
 minimum-pay: 1.0
 maximum-pay: 1000000.0
