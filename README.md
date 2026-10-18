@@ -4,7 +4,7 @@ A Java plugin project targeting Purpur 26.3 (Java 25). This branch combines the 
 
 ## Current features
 
-- Persistent pocket balances, separate bank balances, `/balance`, `/pay`, admin `/eco`, and an optional Vault economy provider when Vault is installed.
+- Physical, server-tagged XZH pocket coins in 1/10/100/1000 denominations that naturally drop on death, separate persistent bank balances, `/balance`, `/pay`, admin `/eco`, and an optional Vault bridge.
 - Shop GUI with confirmation dialogs, quantities, curated products, global stock, daily restock, and cheap sell-hand support for unfeatured items.
 - Enchantment-book GUI with confirmation, 24-hour per-player cooldown per enchantment, and daily global limits for selected useful/rare books.
 - Elytra purchase lock until the player has visited the End.
