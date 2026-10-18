@@ -45,12 +45,13 @@ shop:
     elytra: 3
 ```
 
-Stock is shared across all players and saved in `shop-stock.yml`. Each configured value is the daily restock cap. The administrator command `/shopadmin stock <MATERIAL> <amount>` changes current stock; `/shopadmin restock` refills configured shop products immediately.
+Stock is shared across all players and saved in `shop-stock.yml`. Each configured value is the daily restock cap. Buy/sell prices can be overridden under `shop.prices.<material>.buy` and `shop.prices.<material>.sell`; unfeatured held items use `shop.default-sell-price`. The administrator command `/shopadmin stock <MATERIAL> <amount>` changes current stock; `/shopadmin restock` refills configured shop products immediately.
 
 ## Death recovery
 
 ```yaml
 death-recovery:
+  overworld-only: true
   fee-multiplier: 1.5
   xp-value-per-point: 0.25
   material-values:
@@ -66,6 +67,36 @@ death-recovery:
 - Fee: estimated lost value multiplied by `fee-multiplier`.
 - On death, the money penalty is 10% of estimated lost value, bounded to 10–1000 coins and capped by the player's available balance.
 - Per-material entries override the built-in estimate. Use lowercase material names.
+
+## Enchantment books
+
+The book shop is available through `/books` and the main `/shop` menu. Each player has a configurable cooldown per enchantment, while selected useful/rare books have a shared global daily stock cap.
+
+```yaml
+book-shop:
+  cooldown-hours: 24
+  rare-daily-stock: 3
+  normal-daily-stock: 100
+  prices:
+    mending: 1200
+    wind_burst: 1500
+    swift_sneak: 700
+    soul_speed: 700
+    frost_walker: 700
+```
+
+Price entries are optional overrides; omitted entries use built-in defaults. Selected rare books (including Mending) reset to the rare daily stock limit each day. Administrators can clear an individual player's book cooldowns from `/xzhadmin`.
+
+## Player utilities
+
+```yaml
+utilities:
+  max-homes: 3
+  rtp-radius: 3000
+  rtp-cooldown-seconds: 600
+```
+
+The random teleport search is centered on the configured spawn when available and uses a safe-location check. The cooldown is currently in-memory and resets on a server restart.
 
 ## Data files
 
