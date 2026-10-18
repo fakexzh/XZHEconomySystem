@@ -21,6 +21,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     private File balancesFile;
     private YamlConfiguration balances;
     private HudManager hudManager;
+    private ShopManager shopManager;
 
     @Override
     public void onEnable() {
@@ -37,13 +38,14 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         balances = YamlConfiguration.loadConfiguration(balancesFile);
         hudManager = new HudManager(this);
         hudManager.start();
+        shopManager = new ShopManager(this);
         getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
             @org.bukkit.event.EventHandler
             public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) { hudManager.onJoin(event.getPlayer()); }
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
-        for (String name : List.of("xzh", "balance", "pay", "eco")) {
+        for (String name : List.of("xzh", "balance", "pay", "eco", "shop")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
@@ -60,6 +62,8 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     }
 
     public HudManager getHudManager() { return hudManager; }
+
+    public void tellPublic(CommandSender sender, String message) { tell(sender, message); }
 
     public double getBalance(UUID uuid) {
         String key = uuid.toString();
@@ -103,6 +107,11 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         switch (command.getName().toLowerCase(Locale.ROOT)) {
+            case "shop" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can open the shop."); return true; }
+                if (shopManager != null) shopManager.openMain(player);
+                return true;
+            }
             case "xzh" -> {
                 tell(sender, "§eXZHEconomySystem §7v" + getPluginMeta().getVersion());
                 tell(sender, "§f/balance §7- check your coins");
