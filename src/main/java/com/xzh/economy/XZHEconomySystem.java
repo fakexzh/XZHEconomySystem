@@ -51,7 +51,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         shopManager = new ShopManager(this);
         bookShopManager = new BookShopManager(this);
         loanManager = new LoanManager(this);
-        getServer().getPluginManager().registerEvents(new LibrarianTradeListener(), this);
+        getServer().getPluginManager().registerEvents(new LibrarianTradeListener(this), this);
         questManager = new QuestManager(this);
         deathRecoveryManager = new DeathRecoveryManager(this);
         utilityManager = new UtilityManager(this);
