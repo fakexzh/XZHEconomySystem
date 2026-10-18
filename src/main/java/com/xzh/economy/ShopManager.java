@@ -11,6 +11,8 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionType;
 import org.bukkit.configuration.file.YamlConfiguration;
 import java.io.File;
 import java.io.IOException;
@@ -188,7 +190,7 @@ public final class ShopManager implements Listener {
         int[] quantities = {1, 10, 32, 64};
         int[] slots = {10, 11, 19, 20};
         for (int i = 0; i < quantities.length; i++) {
-            ItemStack item = new ItemStack(material, Math.min(64, quantities[i]));
+            ItemStack item = createStack(material, Math.min(64, quantities[i]));
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName(ChatColor.YELLOW + "Buy " + quantities[i]);
             meta.setLore(List.of(ChatColor.WHITE + "Total: " + ChatColor.YELLOW + money(buyPrice(p) * quantities[i]) + " coins",
@@ -222,7 +224,7 @@ public final class ShopManager implements Listener {
         if (p == null) return;
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Confirm transaction");
         double total = (buying ? buyPrice(p) : sellPrice(p)) * quantity;
-        ItemStack summary = new ItemStack(material, Math.min(64, quantity));
+        ItemStack summary = createStack(material, Math.min(64, quantity));
         ItemMeta sm = summary.getItemMeta();
         sm.setDisplayName(ChatColor.WHITE + (buying ? "Buy " : "Sell ") + quantity + " × " + pretty(material));
         sm.setLore(List.of(ChatColor.WHITE + "Total: " + (buying ? ChatColor.YELLOW : ChatColor.RED) + money(total) + " coins"));
@@ -328,7 +330,7 @@ public final class ShopManager implements Listener {
                         player.closeInventory();
                         return;
                     }
-                    java.util.Map<Integer, ItemStack> leftovers = player.getInventory().addItem(new ItemStack(material, quantity));
+                    java.util.Map<Integer, ItemStack> leftovers = player.getInventory().addItem(createStack(material, quantity));
                     int notGiven = leftovers.values().stream().mapToInt(ItemStack::getAmount).sum();
                     int delivered = quantity - notGiven;
                     if (delivered <= 0) {
@@ -453,6 +455,15 @@ public final class ShopManager implements Listener {
         if (!kind.equals("buy") && !kind.equals("sell")) throw new IllegalArgumentException("kind must be buy or sell");
         plugin.getConfig().set("shop.prices." + material.name().toLowerCase(Locale.ROOT) + "." + kind, amount);
         plugin.saveConfig();
+    }
+
+    private ItemStack createStack(Material material, int amount) {
+        ItemStack stack = new ItemStack(material, amount);
+        if (material == Material.POTION && stack.getItemMeta() instanceof PotionMeta meta) {
+            meta.setBasePotionType(PotionType.STRENGTH);
+            stack.setItemMeta(meta);
+        }
+        return stack;
     }
 
     private double buyPrice(Product p) {
