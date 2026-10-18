@@ -36,6 +36,14 @@ public final class LoanManager implements Listener {
         this.plugin = plugin;
         file = new File(plugin.getDataFolder(), "loans.yml");
         data = YamlConfiguration.loadConfiguration(file);
+        for (String key : data.getKeys(false)) {
+            try {
+                UUID id = UUID.fromString(key);
+                double owed = data.getDouble(key + ".amount", 0.0);
+                long due = data.getLong(key + ".due-at", 0L);
+                if (owed > 0) plugin.getHudManager().setLoan(id, owed, due);
+            } catch (IllegalArgumentException ignored) { }
+        }
         actionKey = new NamespacedKey(plugin, "loan_action");
         amountKey = new NamespacedKey(plugin, "loan_amount");
         termKey = new NamespacedKey(plugin, "loan_term");
