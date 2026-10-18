@@ -164,7 +164,7 @@ public final class ShopManager implements Listener {
     }
 
     public void openMain(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH Shop");
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP");
         add(inv, 10, Material.IRON_INGOT, "Ores", "category", "ores");
         add(inv, 12, Material.BRICKS, "Blocks", "category", "blocks");
         add(inv, 14, Material.COOKED_BEEF, "Food", "category", "food");
@@ -192,7 +192,7 @@ public final class ShopManager implements Listener {
         List<Product> list = products.stream().filter(p -> p.category().equals(category)).toList();
         int pages = Math.max(1, (list.size() + 44) / 45);
         int page = Math.max(0, Math.min(requestedPage, pages - 1));
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "Shop: " + category + " " + (page + 1));
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP: " + category + " " + (page + 1));
         int start = page * 45;
         int end = Math.min(list.size(), start + 45);
         for (int index = start; index < end; index++) {
@@ -220,7 +220,7 @@ public final class ShopManager implements Listener {
     }
 
     private void openFoodMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "Shop: food");
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "XZH SHOP: food");
         add(inv, 11, Material.COOKED_BEEF, "Cooked Food", "category", "food-cooked");
         add(inv, 15, Material.BEEF, "Raw Food", "category", "food-raw");
         add(inv, 22, Material.ARROW, "Back", "back", "main");
@@ -293,7 +293,7 @@ public final class ShopManager implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (title == null || !title.startsWith("XZH Shop") && !title.startsWith("Shop: ")
+        if (title == null || !title.startsWith("XZH SHOP")
                 && !title.equals("Choose quantity") && !title.equals("Confirm transaction")) return;
         event.setCancelled(true);
         ItemStack clicked = event.getCurrentItem();
