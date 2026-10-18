@@ -143,6 +143,12 @@ shop:
     bolt_armor_trim_smithing_template: 8
     elytra: 3
 
+# Configurable gameplay restrictions.
+restrictions:
+  disable-librarian-enchanted-book-trades: true
+  elytra-requires-end-visit: true
+  buy-only-spawn-eggs: true
+
 # Player utility limits.
 utilities:
   max-homes: 3
