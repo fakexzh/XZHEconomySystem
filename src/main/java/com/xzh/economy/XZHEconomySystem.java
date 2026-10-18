@@ -264,7 +264,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                         tell(sender, "Console usage: /balance <player>");
                         return true;
                     }
-                    tell(sender, "Balance: §e" + money(getBalance(player.getUniqueId())) + " " + currency());
+                    tell(sender, "Pocket: §e" + money(getBalance(player.getUniqueId())) + " " + currency() + " §7| Bank: §a" + money(bankManager.getBalance(player.getUniqueId())) + " " + currency());
                     return true;
                 }
                 Player target = Bukkit.getPlayerExact(args[0]);
@@ -272,7 +272,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                     tell(sender, "That player must be online.");
                     return true;
                 }
-                tell(sender, target.getName() + "'s balance: §e" + money(getBalance(target.getUniqueId())) + " " + currency());
+                tell(sender, target.getName() + " — Pocket: §e" + money(getBalance(target.getUniqueId())) + " " + currency() + " §7| Bank: §a" + money(bankManager.getBalance(target.getUniqueId())) + " " + currency());
                 return true;
             }
             case "pay" -> {
