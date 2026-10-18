@@ -59,8 +59,9 @@ death-recovery:
   xp-value-per-point: 0.25
   material-values:
     elytra: 2500
-    netherite_ingot: 300
-    diamond: 80
+    netherite_ingot: 600
+    netherite_scrap: 150
+    diamond: 125
     diamond_block: 720
     ancient_debris: 120
 ```
@@ -70,6 +71,25 @@ death-recovery:
 - Fee: estimated lost value multiplied by `fee-multiplier`.
 - On death, the money penalty is 10% of estimated lost value, bounded to 10–1000 coins and capped by the player's available balance.
 - Per-material entries override the built-in estimate. Use lowercase material names.
+
+## Quests and global event
+
+```yaml
+quests:
+  pack-stock:
+    beginner: 50
+    miner: 30
+    hunter: 25
+    explorer: 15
+    nether: 10
+    end: 5
+  global-event:
+    goal: 500
+    reward: 100
+    claims-per-day: 25
+```
+
+Quest pack stock resets to these configured values each server-local day. The global event uses a shared ore goal, pays the configured reward, and allows the configured number of successful claims per day. `/xzhadmin` can also change the current pack stock until the next daily reset.
 
 ## Gameplay restrictions
 
