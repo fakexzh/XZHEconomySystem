@@ -20,8 +20,9 @@ death-recovery:
   xp-value-per-point: 0.25
   material-values:
     elytra: 2500
-    netherite_ingot: 300
-    diamond: 80
+    netherite_ingot: 600
+    netherite_scrap: 150
+    diamond: 125
     diamond_block: 720
     ancient_debris: 120
     mending: 100
