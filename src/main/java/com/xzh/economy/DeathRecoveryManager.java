@@ -63,7 +63,10 @@ public final class DeathRecoveryManager implements Listener {
         event.getDrops().clear();
         event.setDroppedExp(0);
 
-        double lostValue = valueOf(items) + totalXp * plugin.getConfig().getDouble("death-recovery.xp-value-per-point", 0.25);
+        double configuredXpValue = plugin.getConfig().getDouble("death-recovery.xp-value-per-point", 0.25);
+        double xpValue = Double.isFinite(configuredXpValue) && configuredXpValue >= 0
+                ? Math.min(configuredXpValue, 1000.0) : 0.25;
+        double lostValue = Math.max(0.0, valueOf(items) + totalXp * xpValue);
         String base = id.toString();
         String priorDailyDate = data.getString(base + ".daily-date", "");
         int priorDailyCount = data.getInt(base + ".daily-count", 0);
@@ -118,7 +121,7 @@ public final class DeathRecoveryManager implements Listener {
             return;
         }
         double value = data.getDouble(base + ".value", 0.0);
-        double fee = round(value * plugin.getConfig().getDouble("death-recovery.fee-multiplier", 1.5));
+        double fee = round(value * safeFeeMultiplier());
         int count = readItems(base).stream().mapToInt(ItemStack::getAmount).sum();
         int xp = data.getInt(base + ".total-xp", 0);
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Death Inventory Recovery");
@@ -151,7 +154,7 @@ public final class DeathRecoveryManager implements Listener {
             return;
         }
         double value = data.getDouble(base + ".value", 0.0);
-        double fee = round(value * plugin.getConfig().getDouble("death-recovery.fee-multiplier", 1.5));
+        double fee = round(value * safeFeeMultiplier());
         double balance = plugin.getBalance(player.getUniqueId());
         if (balance < fee) {
             plugin.tellPublic(player, "Recovery costs " + money(fee) + " coins; your balance is " + money(balance) + ".");
@@ -225,7 +228,9 @@ public final class DeathRecoveryManager implements Listener {
         double total = 0;
         for (ItemStack item : items) {
             String path = "death-recovery.material-values." + item.getType().name().toLowerCase(Locale.ROOT);
-            double unit = plugin.getConfig().getDouble(path, defaultValue(item.getType()));
+            double configured = plugin.getConfig().getDouble(path, defaultValue(item.getType()));
+            double unit = Double.isFinite(configured) && configured >= 0
+                    ? Math.min(configured, 1.0E9) : defaultValue(item.getType());
             total += unit * item.getAmount();
             if (item.hasItemMeta() && item.getItemMeta().hasEnchants()) total += item.getAmount() * 10.0 * item.getItemMeta().getEnchants().size();
             if (item.getItemMeta() instanceof org.bukkit.inventory.meta.EnchantmentStorageMeta stored && stored.hasStoredEnchants()) {
@@ -234,7 +239,12 @@ public final class DeathRecoveryManager implements Listener {
                 }
             }
         }
-        return round(total);
+        return Double.isFinite(total) ? round(Math.min(total, 1.0E12)) : 1.0E12;
+    }
+
+    private double safeFeeMultiplier() {
+        double configured = plugin.getConfig().getDouble("death-recovery.fee-multiplier", 1.5);
+        return Double.isFinite(configured) && configured >= 1.0 ? Math.min(configured, 10.0) : 1.5;
     }
 
     private double defaultValue(Material m) {
