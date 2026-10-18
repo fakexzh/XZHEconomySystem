@@ -25,6 +25,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     private LoanManager loanManager;
     private QuestManager questManager;
     private DeathRecoveryManager deathRecoveryManager;
+    private UtilityManager utilityManager;
 
     @Override
     public void onEnable() {
@@ -46,13 +47,14 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         getServer().getPluginManager().registerEvents(new LibrarianTradeListener(), this);
         questManager = new QuestManager(this);
         deathRecoveryManager = new DeathRecoveryManager(this);
+        utilityManager = new UtilityManager(this);
         getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
             @org.bukkit.event.EventHandler
             public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) { hudManager.onJoin(event.getPlayer()); }
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
-        for (String name : List.of("xzh", "balance", "pay", "eco", "shop", "loan", "quests", "deathinventory", "shopadmin")) {
+        for (String name : List.of("xzh", "balance", "pay", "eco", "shop", "loan", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "sethome", "delhome", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
@@ -237,7 +239,9 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 tell(target, "Your balance is now §e" + money(newBalance) + " " + currency() + ".");
                 return true;
             }
-            default -> { return false; }
+            default -> {
+                return utilityManager != null && utilityManager.handle(sender, command.getName(), args);
+            }
         }
     }
 
