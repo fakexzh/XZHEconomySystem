@@ -386,7 +386,14 @@ public final class ShopManager implements Listener {
                     }
                     double charged = buyPrice(p) * delivered;
                     setStock(material, getStock(material) - delivered);
-                    if (!plugin.spendAvailableFunds(player.getUniqueId(), charged)) {\n                        // Return the delivered items and stock if a concurrent economy action changed the balance.\n                        player.getInventory().removeItem(createStack(material, delivered));\n                        setStock(material, getStock(material) + delivered);\n                        plugin.tellPublic(player, "Purchase cancelled: your available funds changed.");\n                        player.closeInventory();\n                        return;\n                    }
+                    if (!plugin.spendAvailableFunds(player.getUniqueId(), charged)) {
+                        // Return the delivered items and stock if a concurrent economy action changed the balance.
+                        player.getInventory().removeItem(createStack(material, delivered));
+                        setStock(material, getStock(material) + delivered);
+                        plugin.tellPublic(player, "Purchase cancelled: your available funds changed.");
+                        player.closeInventory();
+                        return;
+                    }
                     plugin.tellPublic(player, "Bought " + delivered + " × " + pretty(material) + " for " + money(charged) + " coins.");
                 } else {
                     if (sellPrice(p) * quantity < 1) {
