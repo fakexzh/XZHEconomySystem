@@ -83,10 +83,9 @@ public final class PocketCoinManager implements Listener {
     }
 
     private ItemStack createCoin(int denomination, int amount) {
-        Material material = denomination == 1000 ? Material.NETHER_STAR
-                : denomination == 100 ? Material.GOLD_BLOCK
-                : denomination == 10 ? Material.GOLD_INGOT : Material.GOLD_NUGGET;
-        ItemStack item = new ItemStack(material, amount);
+        // Use a non-placeable nugget base for every denomination; the persistent tag and name
+        // distinguish official currency from ordinary gold nuggets.
+        ItemStack item = new ItemStack(Material.GOLD_NUGGET, amount);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.GOLD + "XZH Coin " + ChatColor.YELLOW + "(" + denomination + ")");
         meta.setLore(List.of(ChatColor.GRAY + "Official XZH pocket currency",
