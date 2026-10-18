@@ -115,8 +115,12 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     }
 
     public void setBalance(UUID uuid, double amount) {
+        if (!Double.isFinite(amount)) {
+            getLogger().warning("Rejected non-finite balance update for " + uuid + ".");
+            return;
+        }
         double oldAmount = balances.getDouble(uuid.toString(), 0.0);
-        double newAmount = Double.isFinite(amount) ? Math.max(0.0, round(amount)) : 0.0;
+        double newAmount = Math.max(0.0, round(amount));
         balances.set(uuid.toString(), newAmount);
         saveBalances();
         try {
