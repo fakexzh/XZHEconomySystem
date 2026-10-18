@@ -81,6 +81,7 @@ public final class ShopManager implements Listener {
         add(inv, 21, Material.POTION, "Potions", "category", "potions");
         add(inv, 23, Material.ZOMBIE_HEAD, "Eggs & Heads", "category", "eggs-heads");
         add(inv, 25, Material.ELYTRA, "Special Items", "category", "special");
+        add(inv, 28, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
         add(inv, 49, Material.GOLD_INGOT, "Sell Hand (held item)", "sell-hand", "hand");
         player.openInventory(inv);
     }
@@ -186,6 +187,7 @@ public final class ShopManager implements Listener {
         if (action == null || value == null) return;
         switch (action) {
             case "category" -> openCategory(player, value);
+            case "books" -> plugin.getBookShopManager().open(player);
             case "product" -> {
                 Material material = parseMaterial(value);
                 if (material != null) openQuantity(player, material);
