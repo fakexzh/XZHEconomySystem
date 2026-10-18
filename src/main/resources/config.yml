@@ -5,6 +5,10 @@ starting-balance: 100.0
 minimum-pay: 1.0
 maximum-pay: 1000000.0
 
+# Physical pocket coins. Excess pocket funds are automatically secured in the bank.
+wallet:
+  max-pocket-coins: 1000000
+
 # Bank settings. Hours use Minecraft time from the configured clock world (default world).
 # Minecraft time 09:00 is tick 3000; 20:00 is tick 14000.
 bank:
