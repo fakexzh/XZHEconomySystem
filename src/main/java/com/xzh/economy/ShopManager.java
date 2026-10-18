@@ -404,6 +404,11 @@ public final class ShopManager implements Listener {
                     int sold;
                     if (action.equals("sell-hand-confirm")) {
                         ItemStack held = player.getInventory().getItemInMainHand();
+                        if (plugin.getPocketCoinManager().isCoin(held)) {
+                            plugin.tellPublic(player, "Physical pocket coins cannot be sold as shop items.");
+                            player.closeInventory();
+                            return;
+                        }
                         if (held.getType() != material || held.getAmount() < quantity) {
                             plugin.tellPublic(player, "Your held item changed; nothing was sold.");
                             player.closeInventory();
@@ -429,6 +434,10 @@ public final class ShopManager implements Listener {
             }
             case "sell-hand" -> {
                 ItemStack hand = player.getInventory().getItemInMainHand();
+                if (plugin.getPocketCoinManager().isCoin(hand)) {
+                    plugin.tellPublic(player, "Physical pocket coins cannot be sold as shop items.");
+                    return;
+                }
                 if (hand.getType() == Material.AIR) {
                     plugin.tellPublic(player, "Hold an item first.");
                     return;
@@ -561,14 +570,14 @@ public final class ShopManager implements Listener {
     private int count(Player player, Material material) {
         int total = 0;
         for (ItemStack item : player.getInventory().getStorageContents())
-            if (item != null && item.getType() == material) total += item.getAmount();
+            if (item != null && item.getType() == material && !plugin.getPocketCoinManager().isCoin(item)) total += item.getAmount();
         return total;
     }
     private int remove(Player player, Material material, int requested) {
         int remaining = requested;
         for (int i = 0; i < player.getInventory().getStorageContents().length && remaining > 0; i++) {
             ItemStack item = player.getInventory().getItem(i);
-            if (item == null || item.getType() != material) continue;
+            if (item == null || item.getType() != material || plugin.getPocketCoinManager().isCoin(item)) continue;
             int take = Math.min(item.getAmount(), remaining);
             item.setAmount(item.getAmount() - take);
             remaining -= take;
