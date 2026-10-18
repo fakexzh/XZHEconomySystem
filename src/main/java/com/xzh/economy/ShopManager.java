@@ -37,7 +37,7 @@ public final class ShopManager implements Listener {
     private record Product(String category, Material material, double buy, double sell) {}
 
     private final List<Product> products = List.of(
-        new Product("ores", Material.COAL, 8, 2),
+        new Product("ores", Material.COAL, 8, 2.4),
         new Product("ores", Material.IRON_INGOT, 25, 7.5),
         new Product("ores", Material.GOLD_INGOT, 40, 12),
         new Product("ores", Material.DIAMOND, 250, 75),
