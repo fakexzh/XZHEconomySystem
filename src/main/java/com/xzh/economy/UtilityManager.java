@@ -213,8 +213,9 @@ public final class UtilityManager implements Listener {
                             || ground == Material.FIRE || ground == Material.SOUL_FIRE
                             || feet != Material.AIR || head != Material.AIR) continue;
                     player.teleport(new Location(world, x + 0.5, floor.getY() + 1, z + 0.5));
-                    rtpCooldown.put(player.getUniqueId(), now + plugin.getConfig().getLong("utilities.rtp-cooldown-seconds", 600) * 1000L);
-                    msg(player, "Randomly teleported. Cooldown: 10 minutes.");
+                    long cooldownSeconds = Math.max(1L, plugin.getConfig().getLong("utilities.rtp-cooldown-seconds", 600));
+                    rtpCooldown.put(player.getUniqueId(), now + cooldownSeconds * 1000L);
+                    msg(player, "Randomly teleported. Cooldown: " + Math.max(1L, cooldownSeconds / 60L) + " minutes.");
                     return true;
                 }
                 msg(player, "Could not find a safe location. Try again.");
