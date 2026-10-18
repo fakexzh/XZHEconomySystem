@@ -42,8 +42,20 @@ public final class ShopManager implements Listener {
         new Product("ores", Material.GOLD_INGOT, 40, 12),
         new Product("ores", Material.DIAMOND, 250, 75),
         new Product("blocks", Material.OBSIDIAN, 30, 9),
-        new Product("food", Material.BREAD, 8, 2.4),
-        new Product("food", Material.COOKED_BEEF, 14, 4.2),
+        new Product("food-cooked", Material.BREAD, 8, 2.4),
+        new Product("food-cooked", Material.COOKED_BEEF, 14, 4.2),
+        new Product("food-cooked", Material.COOKED_PORKCHOP, 16, 4.8),
+        new Product("food-cooked", Material.COOKED_CHICKEN, 12, 3.6),
+        new Product("food-cooked", Material.BAKED_POTATO, 7, 2.1),
+        new Product("food-cooked", Material.COOKED_COD, 10, 3),
+        new Product("food-cooked", Material.COOKED_SALMON, 12, 3.6),
+        new Product("food-raw", Material.BEEF, 8, 2.4),
+        new Product("food-raw", Material.PORKCHOP, 9, 2.7),
+        new Product("food-raw", Material.CHICKEN, 7, 2.1),
+        new Product("food-raw", Material.COD, 5, 1.5),
+        new Product("food-raw", Material.SALMON, 6, 1.8),
+        new Product("food-raw", Material.MUTTON, 7, 2.1),
+        new Product("food-raw", Material.RABBIT, 7, 2.1),
         new Product("equipment", Material.IRON_PICKAXE, 120, 36),
         new Product("equipment", Material.DIAMOND_PICKAXE, 650, 195),
         new Product("equipment", Material.IRON_CHESTPLATE, 180, 54),
@@ -87,6 +99,7 @@ public final class ShopManager implements Listener {
     }
 
     private void openCategory(Player player, String category) {
+        if (category.equals("food")) { openFoodMenu(player); return; }
         List<Product> list = products.stream().filter(p -> p.category().equals(category)).toList();
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "Shop: " + category);
         int slot = 0;
@@ -111,12 +124,20 @@ public final class ShopManager implements Listener {
         player.openInventory(inv);
     }
 
+    private void openFoodMenu(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "Shop: food");
+        add(inv, 11, Material.COOKED_BEEF, "Cooked Food", "category", "food-cooked");
+        add(inv, 15, Material.BEEF, "Raw Food", "category", "food-raw");
+        add(inv, 22, Material.ARROW, "Back", "back", "main");
+        player.openInventory(inv);
+    }
+
     private void openQuantity(Player player, Material material) {
         Product p = product(material);
         if (p == null) return;
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "Choose quantity");
         int[] quantities = {1, 10, 32, 64};
-        int[] slots = {10, 12, 14, 16};
+        int[] slots = {10, 11, 19, 20};
         for (int i = 0; i < quantities.length; i++) {
             ItemStack item = new ItemStack(material, Math.min(64, quantities[i]));
             ItemMeta meta = item.getItemMeta();
@@ -137,7 +158,7 @@ public final class ShopManager implements Listener {
         sm.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "confirm-sell");
         sm.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, material.name());
         sell.setItemMeta(sm);
-        inv.setItem(22, sell);
+        inv.setItem(15, sell);
         add(inv, 26, Material.ARROW, "Back", "category-back", p.category());
         player.openInventory(inv);
     }
