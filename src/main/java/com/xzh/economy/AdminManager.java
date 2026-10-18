@@ -65,6 +65,7 @@ public final class AdminManager implements Listener {
         add(inv, 30, Material.WRITABLE_BOOK, "Loans overview", "loans", List.of("View active loan count and total owed"));
         add(inv, 32, Material.NETHER_STAR, "Quest/event status", "quests", List.of("View global event progress and pack stock"));
         add(inv, 34, Material.CHEST, "Death recovery status", "recovery", List.of("View active recovery snapshots"));
+        add(inv, 36, Material.WRITABLE_BOOK, "Reset active quest", "clear-quest", List.of("Cancel a player's active quest without refunding its pack cost"));
         add(inv, 29, Material.MAP, "Diagnostics", "diagnostics",
                 List.of("Show online count and persisted data files"));
         add(inv, 49, Material.BARRIER, "Close", "close", List.of());
@@ -88,6 +89,7 @@ public final class AdminManager implements Listener {
             case "reload" -> { plugin.reloadConfig(); player.sendMessage(ChatColor.GREEN + "config.yml reloaded."); player.closeInventory(); }
             case "clear-loan" -> prompt(player, "clear-loan-player", "Type the player's exact name to clear their loan (or cancel).");
             case "clear-recovery" -> prompt(player, "clear-recovery-player", "Type the player's exact name to discard their death recovery (or cancel).");
+            case "clear-quest" -> prompt(player, "clear-quest-player", "Type the player's exact name to clear their active quest (or cancel).");
             case "reset-event" -> { plugin.getQuestManager().adminResetEvent(); player.sendMessage(ChatColor.GREEN + "Global event progress and stock reset."); player.closeInventory(); }
             case "restock" -> {
                 plugin.getShopManager().restockAll();
@@ -164,6 +166,14 @@ public final class AdminManager implements Listener {
             plugin.getDeathRecoveryManager().adminClearRecovery(target.getUniqueId());
             prompts.remove(player.getUniqueId());
             player.sendMessage(ChatColor.GREEN + "Cleared death recovery for " + input + ".");
+            return;
+        }
+        if (prompt.equals("clear-quest-player")) {
+            if (!input.matches("[A-Za-z0-9_]{1,16}")) { player.sendMessage(ChatColor.RED + "Invalid player name. Try again or type cancel."); return; }
+            OfflinePlayer target = Bukkit.getOfflinePlayer(input);
+            plugin.getQuestManager().adminClearQuest(target.getUniqueId());
+            prompts.remove(player.getUniqueId());
+            player.sendMessage(ChatColor.GREEN + "Cleared active quest for " + input + ".");
             return;
         }
         if (prompt.equals("book-cooldown-player")) {
