@@ -193,15 +193,23 @@ public final class ShopManager implements Listener {
                         player.closeInventory();
                         return;
                     }
-                    if (player.getInventory().firstEmpty() == -1 && !player.getInventory().contains(material)) {
+                    java.util.Map<Integer, ItemStack> leftovers = player.getInventory().addItem(new ItemStack(material, quantity));
+                    int notGiven = leftovers.values().stream().mapToInt(ItemStack::getAmount).sum();
+                    int delivered = quantity - notGiven;
+                    if (delivered <= 0) {
                         plugin.tellPublic(player, "Your inventory is full.");
                         player.closeInventory();
                         return;
                     }
-                    plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) - total);
-                    player.getInventory().addItem(new ItemStack(material, quantity));
-                    plugin.tellPublic(player, "Bought " + quantity + " × " + pretty(material) + " for " + money(total) + " coins.");
+                    double charged = p.buy() * delivered;
+                    plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) - charged);
+                    plugin.tellPublic(player, "Bought " + delivered + " × " + pretty(material) + " for " + money(charged) + " coins.");
                 } else {
+                    if (p.sell() * quantity < 1) {
+                        plugin.tellPublic(player, "Items worth less than 1 coin cannot be sold.");
+                        player.closeInventory();
+                        return;
+                    }
                     int sold = remove(player, material, quantity);
                     if (sold < 1) {
                         plugin.tellPublic(player, "No matching items found.");
@@ -209,11 +217,6 @@ public final class ShopManager implements Listener {
                         return;
                     }
                     double earned = p.sell() * sold;
-                    if (earned < 1) {
-                        plugin.tellPublic(player, "Items worth less than 1 coin cannot be sold.");
-                        player.closeInventory();
-                        return;
-                    }
                     plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + earned);
                     plugin.tellPublic(player, "Sold " + sold + " × " + pretty(material) + " for " + money(earned) + " coins.");
                 }
