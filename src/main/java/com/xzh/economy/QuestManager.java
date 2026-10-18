@@ -113,6 +113,10 @@ public final class QuestManager implements Listener {
 
     private void buy(Player player, Pack pack) {
         UUID id = player.getUniqueId();
+        if (plugin.getLoanManager().isShopPurchaseRestricted(id)) {
+            plugin.tellPublic(player, "Your loan is overdue. You can keep earning quest rewards, but new quest packs are locked until repayment.");
+            return;
+        }
         if (!data.getString(id + ".active", "").isBlank()) {
             plugin.tellPublic(player, "Finish or abandon your active quest before buying another pack.");
             return;
