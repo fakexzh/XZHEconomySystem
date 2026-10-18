@@ -38,6 +38,12 @@ commands:
   books:
     description: Open the enchantment book shop.
     usage: /books
+  kit:
+    description: Claim a configured kit.
+    usage: /kit starter
+  help:
+    description: Show XZHEconomySystem commands.
+    usage: /help
   eco:
     description: Admin economy management.
     usage: /eco <set|add> <player> <amount>
@@ -109,6 +115,9 @@ commands:
     description: Teleport to a random safe location.
     usage: /rtp
 permissions:
+  xzh.kit.starter:
+    description: Allows claiming the starter kit.
+    default: true
   xzh.admin:
     description: Allows administration of the XZH economy.
     default: op
