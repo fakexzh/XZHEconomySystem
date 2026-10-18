@@ -36,7 +36,7 @@ public final class QuestManager implements Listener {
     private final java.util.Map<UUID, Double> travelRemainders = new java.util.HashMap<>();
     private final List<Pack> packs = List.of(
         new Pack("beginner", "Beginner", Material.WHEAT, 25, 40, "break", 16, 50),
-        new Pack("miner", "Miner", Material.IRON_PICKAXE, 75, 120, "mine", 32, 30),
+        new Pack("miner", "Miner", Material.DIAMOND_PICKAXE, 100, 1200, "diamond-mine", 30, 30),
         new Pack("hunter", "Hunter", Material.BOW, 100, 160, "kill", 10, 25),
         new Pack("explorer", "Explorer", Material.COMPASS, 200, 350, "travel", 500, 15),
         new Pack("nether", "Nether", Material.NETHERRACK, 300, 500, "nether-kill", 10, 10),
@@ -195,6 +195,8 @@ public final class QuestManager implements Listener {
         boolean ore = isOre(event.getBlock().getType());
         if (ore) recordEventOre(player);
         if (target.equals("break") || target.equals("mine") && ore) increment(player, 1);
+        else if (target.equals("diamond-mine") && (event.getBlock().getType() == Material.DIAMOND_ORE
+                || event.getBlock().getType() == Material.DEEPSLATE_DIAMOND_ORE)) increment(player, 1);
     }
 
     @EventHandler
@@ -384,6 +386,7 @@ public final class QuestManager implements Listener {
         return switch (p.target()) {
             case "break" -> "Break " + p.goal() + " blocks";
             case "mine" -> "Mine " + p.goal() + " ore blocks";
+            case "diamond-mine" -> "Mine " + p.goal() + " diamond ore blocks";
             case "kill" -> "Defeat " + p.goal() + " mobs";
             case "nether-kill" -> "Defeat " + p.goal() + " mobs in the Nether";
             case "end-kill" -> "Defeat " + p.goal() + " mobs in the End";
