@@ -190,7 +190,8 @@ public final class BookShopManager implements Listener {
     private boolean isLimited(String key) {
         return List.of("mending", "unbreaking", "efficiency", "fortune", "silk_touch",
                 "sharpness", "protection", "feather_falling", "looting", "power", "wind_burst",
-                "swift_sneak", "soul_speed", "frost_walker", "breach", "density").contains(key);
+                "swift_sneak", "soul_speed", "frost_walker", "breach", "density", "lunge",
+                "infinity", "riptide", "channeling", "thorns", "sweeping_edge").contains(key);
     }
 
     private int stockLimit(String key) {
