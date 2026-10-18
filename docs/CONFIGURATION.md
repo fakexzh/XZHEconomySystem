@@ -71,6 +71,19 @@ death-recovery:
 - On death, the money penalty is 10% of estimated lost value, bounded to 10–1000 coins and capped by the player's available balance.
 - Per-material entries override the built-in estimate. Use lowercase material names.
 
+## Gameplay restrictions
+
+```yaml
+restrictions:
+  disable-librarian-enchanted-book-trades: true
+  elytra-requires-end-visit: true
+  buy-only-spawn-eggs: true
+```
+
+- `disable-librarian-enchanted-book-trades`: when enabled, librarian enchanted-book offers are blocked and existing offers are removed when interacted with.
+- `elytra-requires-end-visit`: when enabled, players must unlock the vanilla End-visit advancement before buying an Elytra.
+- `buy-only-spawn-eggs`: when enabled, spawn eggs cannot be sold back to the shop. When disabled, eggs default to a 30% sellback unless a material-specific sell price overrides it.
+
 ## Enchantment books
 
 The book shop is available through `/books` and the main `/shop` menu. Each player has a configurable cooldown per enchantment, while selected useful/rare books have a shared global daily stock cap.
