@@ -61,6 +61,19 @@ shop:
     sheep_spawn_egg: 5
     pig_spawn_egg: 5
     egg: 2000
+    sentry_armor_trim_smithing_template: 25
+    dune_armor_trim_smithing_template: 25
+    coast_armor_trim_smithing_template: 25
+    ward_armor_trim_smithing_template: 10
+    silence_armor_trim_smithing_template: 3
+    spire_armor_trim_smithing_template: 10
+    tide_armor_trim_smithing_template: 10
+    wayfinder_armor_trim_smithing_template: 15
+    shaper_armor_trim_smithing_template: 15
+    raiser_armor_trim_smithing_template: 15
+    host_armor_trim_smithing_template: 15
+    flow_armor_trim_smithing_template: 8
+    bolt_armor_trim_smithing_template: 8
     elytra: 3
 
 # Player utility limits.
