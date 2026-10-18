@@ -72,6 +72,15 @@ shop:
     cow_spawn_egg: 5
     sheep_spawn_egg: 5
     pig_spawn_egg: 5
+    horse_spawn_egg: 5
+    donkey_spawn_egg: 5
+    rabbit_spawn_egg: 5
+    turtle_spawn_egg: 5
+    axolotl_spawn_egg: 3
+    camel_spawn_egg: 5
+    armadillo_spawn_egg: 5
+    sniffer_spawn_egg: 2
+    frog_spawn_egg: 5
     egg: 2000
     sentry_armor_trim_smithing_template: 25
     dune_armor_trim_smithing_template: 25
