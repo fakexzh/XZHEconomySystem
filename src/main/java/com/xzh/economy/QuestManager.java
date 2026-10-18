@@ -165,6 +165,8 @@ public final class QuestManager implements Listener {
     public void onBreak(BlockBreakEvent event) {
         if (event.isCancelled()) return;
         Player player = event.getPlayer();
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         String target = data.getString(player.getUniqueId() + ".target", "");
         boolean ore = isOre(event.getBlock().getType());
         if (ore) recordEventOre(player);
@@ -177,6 +179,11 @@ public final class QuestManager implements Listener {
         if (event.getFrom().getWorld() != event.getTo().getWorld()) return;
         Player player = event.getPlayer();
         UUID id = player.getUniqueId();
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) {
+            travelRemainders.remove(id);
+            return;
+        }
         if (!"travel".equals(data.getString(id + ".target", ""))) {
             travelRemainders.remove(id);
             return;
@@ -192,7 +199,8 @@ public final class QuestManager implements Listener {
     @EventHandler
     public void onKill(EntityDeathEvent event) {
         Player player = event.getEntity().getKiller();
-        if (player == null) return;
+        if (player == null || player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         String target = data.getString(player.getUniqueId() + ".target", "");
         if (target.equals("kill")) increment(player, 1);
         else if (target.equals("nether-kill") && event.getEntity().getWorld().getEnvironment() == org.bukkit.World.Environment.NETHER) increment(player, 1);
