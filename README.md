@@ -5,6 +5,8 @@ A Java plugin project targeting Purpur 26.3 (Java 25). This branch combines the 
 ## Current features
 
 - Physical, server-tagged XZH pocket coins in 1/10/100/1000 denominations that naturally drop on death, separate persistent bank balances, `/balance`, `/pay`, admin `/eco`, and an optional Vault bridge.
+- Recipient-confirmed `/sendmoney <player> <amount>` and `/askmoney <player> <amount>` requests with accept/decline GUI and 60-second expiry.
+- Configurable global announcements for expensive/rare shop purchases, progression unlocks, new loans, and full loan repayments.
 - Shop GUI with confirmation dialogs, quantities, curated products, global stock, daily restock, and cheap sell-hand support for unfeatured items.
 - Enchantment-book GUI with confirmation, 24-hour per-player cooldown per enchantment, and daily global limits for selected useful/rare books.
 - Elytra purchase lock until the player has visited the End.
@@ -24,6 +26,7 @@ Player:
 - `/xzh`
 - `/balance`, `/bal`, `/money`
 - `/pay <player> <amount>`
+- `/sendmoney <player> <amount>`, `/askmoney <player> <amount>` (recipient confirmation required)
 - `/shop`, `/bank`, `/books`
 - `/loan` (opens the bank), `/loan repay`
 - `/quests`
