@@ -197,7 +197,7 @@ public final class QuestManager implements Listener {
             lore.add(ChatColor.WHITE + "Required amount: " + offer.objective().goal());
             lore.add(ChatColor.WHITE + "Purchase price: " + ChatColor.YELLOW + cost + " coins");
             lore.add(ChatColor.WHITE + "Completion reward: " + ChatColor.GREEN + reward + " coins");
-            lore.add(ChatColor.GRAY + "Some jobs have a time limit.");
+            lore.add(isTimedSingle(offer) ? ChatColor.RED + "Time limit: 30 minutes" : ChatColor.GRAY + "No time limit");
             lore.add(ChatColor.GRAY + "Refresh in " + (mins / 60) + "h " + (mins % 60) + "m");
             add(inv, 10 + i, offer.icon(), ChatColor.YELLOW + offer.name(), "single-buy", Integer.toString(i), lore);
         }
@@ -220,6 +220,8 @@ public final class QuestManager implements Listener {
             lore.add(ChatColor.WHITE + "Objectives:");
             for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + "• " + objective.description());
             lore.add(unlocked ? ChatColor.GREEN + "UNLOCKED" : ChatColor.RED + "Locked: complete " + pack.advancement());
+            int timerMinutes = packTimerLimitMinutes(pack.id());
+            lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
             lore.add(ChatColor.GRAY + "Fixed handcrafted pack; multi-objective");
             add(inv, slot++, unlocked ? pack.icon() : Material.BARRIER,
                 (unlocked ? ChatColor.YELLOW : ChatColor.RED) + pack.name(), unlocked ? "pack-select" : "locked", pack.id(), lore);
@@ -234,6 +236,8 @@ public final class QuestManager implements Listener {
         lore.add(ChatColor.WHITE + "Cost: " + pack.cost() + " coins");
         lore.add(ChatColor.WHITE + "Reward: " + pack.reward() + " coins");
         for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + objective.description());
+        int timerMinutes = packTimerLimitMinutes(pack.id());
+        lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
         add(inv, 13, pack.icon(), ChatColor.YELLOW + pack.name(), "pack-info", pack.id(), lore);
         add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "Confirm purchase", "pack-buy", pack.id());
         add(inv, 15, Material.RED_CONCRETE, ChatColor.RED + "Cancel", "back-packs", "");
@@ -416,6 +420,14 @@ public final class QuestManager implements Listener {
             if (data.getInt(base + ".progress", 0) < data.getInt(base + ".goal", 1)) return false;
         }
         return true;
+    }
+
+    private int packTimerLimitMinutes(String packId) {
+        return switch (packId) {
+            case "debris_hunter", "nether_hunter", "nether_blaze", "ocean_fisher", "salmon_run", "deep_sea", "explorer_trail", "monster_patrol", "raid_supply" -> 30;
+            case "diamond_miner", "pearl_trader", "animal_breeder", "cattle_feed", "sheep_flock", "woodcutter", "builder_supply" -> 60;
+            default -> 0;
+        };
     }
 
     private long timerLimitSeconds(UUID playerId, String activeId) {
