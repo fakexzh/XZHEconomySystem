@@ -676,9 +676,8 @@ public final class ShopManager implements Listener {
         if (p.potionType() != null || p.category().equals("potions")) return 0.0;
         // Resale is deliberately based on farmability/usefulness, never a blanket
         // percentage of buy price. Common renewable blocks earn 1 coin per 64.
-        if (p.category().equals("blocks") && isFarmableCommonBlock(p.material())) return 1.0 / 64.0;
+        if (p.category().equals("blocks")) return 1.0 / 64.0;
         if (name.equals("DIAMOND")) return 5.0;
-        if (p.category().equals("blocks")) return Math.max(0.0, Math.floor(buyPrice(p) * 0.05));
         if (p.category().equals("ores")) {
             if (name.contains("NETHERITE")) return Math.max(1.0, Math.floor(buyPrice(p) * 0.03));
             return Math.max(0.0, Math.floor(buyPrice(p) * 0.05));
@@ -760,7 +759,10 @@ public final class ShopManager implements Listener {
                 || name.equals("NETHER_STAR")
                 || name.equals("DRAGON_EGG")
                 || name.equals("DRAGON_HEAD")
-                || name.equals("END_CRYSTAL");
+                || name.equals("END_CRYSTAL")
+                || name.equals("DIAMOND_BLOCK")
+                || name.equals("NETHERITE_BLOCK")
+                || name.equals("EMERALD_BLOCK");
     }
 
     private boolean validPrice(double value) {
