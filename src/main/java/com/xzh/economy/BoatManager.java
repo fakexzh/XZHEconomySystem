@@ -54,7 +54,8 @@ public final class BoatManager implements Listener {
         chestKey = new NamespacedKey(plugin, "xzh_boat_chest");
         entityTierKey = new NamespacedKey(plugin, "xzh_boat_entity_tier");
         Bukkit.getPluginManager().registerEvents(this, plugin);
-        Bukkit.getScheduler().runTaskTimer(plugin, this::applyBoatSpeeds, 1L, 1L);
+        // Re-apply settings periodically so the selected speed survives entity updates/reloads.
+        Bukkit.getScheduler().runTaskTimer(plugin, this::applyBoatSpeeds, 1L, 20L);
     }
 
     public void open(Player player) {
@@ -216,16 +217,31 @@ public final class BoatManager implements Listener {
         String tier = item.getItemMeta().getPersistentDataContainer().get(tierKey, PersistentDataType.STRING);
         if (tier == null || find(tier) == null) return;
         Player player = event.getPlayer();
+        // Boat placement happens as part of the interaction; inspect the nearby entity next tick.
         Bukkit.getScheduler().runTask(plugin, () -> {
-            for (Entity entity : player.getNearbyEntities(4, 4, 4)) {
-                if (!(entity instanceof Boat boat)) continue;
-                if (boat.getPassengers().contains(player) || boat.getLocation().distanceSquared(player.getLocation()) < 9) {
-                    boat.getPersistentDataContainer().set(entityTierKey, PersistentDataType.STRING, tier);
-                    boat.addScoreboardTag("xzh_boat_" + tier);
-                    break;
+            Boat candidate = null;
+            double nearest = Double.MAX_VALUE;
+            for (Entity entity : player.getNearbyEntities(5, 4, 5)) {
+                if (!(entity instanceof Boat boat) || boat.getPersistentDataContainer().has(entityTierKey, PersistentDataType.STRING)) continue;
+                if (!matchesBoatMaterial(boat, item.getType())) continue;
+                double distance = boat.getLocation().distanceSquared(player.getLocation());
+                if (distance < nearest) {
+                    nearest = distance;
+                    candidate = boat;
                 }
             }
+            if (candidate != null) {
+                candidate.getPersistentDataContainer().set(entityTierKey, PersistentDataType.STRING, tier);
+                candidate.addScoreboardTag("xzh_boat_" + tier);
+                applyBoatSpeed(candidate, tier);
+            }
         });
+    }
+
+    private boolean matchesBoatMaterial(Boat boat, Material itemMaterial) {
+        String materialName = itemMaterial.name();
+        String wood = materialName.replace("_CHEST_BOAT", "").replace("_BOAT", "");
+        return boat.getBoatType().name().equals(wood);
     }
 
     private void applyBoatSpeeds() {
@@ -233,16 +249,22 @@ public final class BoatManager implements Listener {
             for (Entity entity : world.getEntities()) {
                 if (!(entity instanceof Boat boat)) continue;
                 String tier = boat.getPersistentDataContainer().get(entityTierKey, PersistentDataType.STRING);
-                if (tier == null) continue;
-                double cap = switch (tier) { case "aura" -> 0.34; case "super" -> 0.46; default -> 0.25; };
-                Vector v = boat.getVelocity();
-                double horizontal = Math.sqrt(v.getX() * v.getX() + v.getZ() * v.getZ());
-                if (horizontal > 0.01 && horizontal < cap) {
-                    double scale = cap / horizontal;
-                    boat.setVelocity(new Vector(v.getX() * scale, v.getY(), v.getZ() * scale));
-                }
+                if (tier != null) applyBoatSpeed(boat, tier);
             }
         }
+    }
+
+    private void applyBoatSpeed(Boat boat, String tier) {
+        // Bukkit's max-speed property is the actual boat movement cap; changing velocity
+        // alone is overwritten by vanilla movement physics and made tiers feel identical.
+        double maxSpeed = switch (tier) {
+            case "aura" -> 0.55;
+            case "super" -> 0.75;
+            default -> 0.40;
+        };
+        boat.setMaxSpeed(maxSpeed);
+        boat.setOccupiedDeceleration(0.0);
+        boat.setUnoccupiedDeceleration(0.0);
     }
 
     private ItemStack travelEgg(Material material, String tier, String name) {
