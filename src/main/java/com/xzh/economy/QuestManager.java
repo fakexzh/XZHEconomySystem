@@ -95,7 +95,7 @@ public final class QuestManager implements Listener {
         new RandomQuest("Fishing for Cod", Material.COD, 90, 126, new Objective("fish:COD", 20, "Catch 20 Cod")),
         new RandomQuest("Fishing for Salmon", Material.SALMON, 110, 154, new Objective("fish:SALMON", 20, "Catch 20 Salmon")),
         new RandomQuest("Feed the Cows", Material.WHEAT, 100, 140, new Objective("feed:COW", 20, "Feed 20 cows")),
-        new RandomQuest("Animal Breeding", Material.PIG, 120, 168, new Objective("breed:ANY", 10, "Breed 10 animals")),
+        new RandomQuest("Animal Breeding", Material.PORKCHOP, 120, 168, new Objective("breed:ANY", 10, "Breed 10 animals")),
         new RandomQuest("Travel Contract", Material.COMPASS, 100, 140, new Objective("travel", 2500, "Travel 2,500 blocks")),
         new RandomQuest("Woodcutting Contract", Material.OAK_LOG, 100, 140, new Objective("break:OAK_LOG", 128, "Chop 128 Oak Logs")),
         new RandomQuest("Crop Delivery", Material.CARROT, 85, 119, new Objective("collect:CARROT", 96, "Collect 96 Carrots")),
