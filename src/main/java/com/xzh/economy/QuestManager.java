@@ -418,8 +418,16 @@ public final class QuestManager implements Listener {
         return true;
     }
 
-    private long timerLimitSeconds(String activeId) {
-        if (activeId == null || !activeId.startsWith("pack:")) return 0L;
+    private long timerLimitSeconds(UUID playerId, String activeId) {
+        if (activeId == null || activeId.isBlank()) return 0L;
+        if (activeId.startsWith("single:")) {
+            String questName = data.getString(playerId + ".name", "");
+            return switch (questName.replaceFirst(" #\\d+$", "")) {
+                case "Ancient Debris Search", "Raid the Fortress", "Fishing for Cod", "Travel Contract", "Wither Skeleton Hunt" -> 30L * 60L;
+                default -> 0L;
+            };
+        }
+        if (!activeId.startsWith("pack:")) return 0L;
         String packId = activeId.substring("pack:".length());
         return switch (packId) {
             case "debris_hunter", "nether_hunter", "nether_blaze", "ocean_fisher", "salmon_run", "deep_sea", "explorer_trail", "monster_patrol", "raid_supply" -> 30L * 60L;
@@ -431,7 +439,7 @@ public final class QuestManager implements Listener {
     private void expireTimedQuestIfNeeded(Player player) {
         UUID id = player.getUniqueId();
         String active = data.getString(id + ".active", "");
-        long limit = timerLimitSeconds(active);
+        long limit = timerLimitSeconds(id, active);
         if (limit <= 0) return;
         long started = data.getLong(id + ".started-at", System.currentTimeMillis());
         if (System.currentTimeMillis() - started <= limit * 1000L) return;
