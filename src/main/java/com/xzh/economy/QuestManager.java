@@ -130,6 +130,7 @@ public final class QuestManager implements Listener {
         resetEventIfNeeded();
         Bukkit.getScheduler().runTaskTimer(plugin, this::resetEventIfNeeded, 20L * 60L, 20L * 60L);
         Bukkit.getScheduler().runTaskTimer(plugin, this::refreshSingleShopIfDue, 20L * 60L, 20L * 60L);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::refreshSecretQuestIfDue, 20L * 60L, 20L * 60L);
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) updateHud(player);
         }, 20L, 20L * 5L);
@@ -173,7 +174,7 @@ public final class QuestManager implements Listener {
                     ChatColor.GRAY + "Shop offer refreshes every 2 hours"));
         add(inv, 13, Material.ENCHANTED_BOOK, ChatColor.LIGHT_PURPLE + "Achievement Quest Packs", "section-packs", "packs",
             List.of(ChatColor.GRAY + "Hard multi-objective challenges",
-                    ChatColor.GRAY + "Unlock packs by completing Minecraft advancements"));
+                    ChatColor.GRAY + "Each locked pack explains its unlock requirement"));
         add(inv, 16, Material.NETHER_STAR, ChatColor.GOLD + "Global Quest", "section-global", "global",
             List.of(ChatColor.GRAY + "Everyone contributes to shared progress",
                     ChatColor.GRAY + "Server reminders every 15 minutes"));
@@ -201,10 +202,15 @@ public final class QuestManager implements Listener {
             lore.add(ChatColor.GRAY + "Refresh in " + (mins / 60) + "h " + (mins % 60) + "m");
             add(inv, 10 + i, offer.icon(), ChatColor.YELLOW + offer.name(), "single-buy", Integer.toString(i), lore);
         }
+        add(inv, 22, Material.ENDER_EYE, ChatColor.LIGHT_PURPLE + "??? Secret Quest", "single-secret-buy", "secret",
+            List.of(ChatColor.WHITE + "Purchase price: " + ChatColor.YELLOW + data.getInt("single-shop.secret.cost", 250) + " coins",
+                    ChatColor.WHITE + "Profit: " + ChatColor.GREEN + "+" + data.getInt("single-shop.secret.margin", 40) + "%",
+                    ChatColor.GRAY + "Objective and reward details are hidden.",
+                    ChatColor.GRAY + "Refresh in " + Math.max(0, (data.getLong("single-shop.secret.next-refresh", System.currentTimeMillis()) - System.currentTimeMillis()) / 60000L) + " minute(s)"));
         add(inv, 31, Material.CLOCK, ChatColor.AQUA + "Offer refresh", "single-info", "",
-            List.of(ChatColor.WHITE + "Five different offers are available.",
-                    ChatColor.WHITE + "Offers refresh every 2 hours.",
-                    ChatColor.GRAY + "Buying one starts it and replaces that slot."));
+            List.of(ChatColor.WHITE + "Five regular offers refresh every 2 hours.",
+                    ChatColor.WHITE + "The secret quest refreshes every 30 minutes.",
+                    ChatColor.GRAY + "Buying a quest reveals its objective."));
         add(inv, 49, Material.ARROW, ChatColor.WHITE + "Back", "back", "");
         player.openInventory(inv);
     }
@@ -219,7 +225,7 @@ public final class QuestManager implements Listener {
             lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + pack.reward() + " coins");
             lore.add(ChatColor.WHITE + "Objectives:");
             for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + "• " + objective.description());
-            lore.add(unlocked ? ChatColor.GREEN + "UNLOCKED" : ChatColor.RED + "Locked: complete " + pack.advancement());
+            lore.add(unlocked ? ChatColor.GREEN + "UNLOCKED" : ChatColor.RED + "Unlock requirement: " + unlockDescription(pack.id()));
             int timerMinutes = packTimerLimitMinutes(pack.id());
             lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
             lore.add(ChatColor.GRAY + "Fixed handcrafted pack; multi-objective");
@@ -248,21 +254,24 @@ public final class QuestManager implements Listener {
         UUID id = player.getUniqueId();
         if (plugin.getLoanManager().isShopPurchaseRestricted(id)) { plugin.tellPublic(player, "Your loan is overdue. Quest purchases are locked; sell eligible items and repay your debt."); return; }
         if (!data.getString(id + ".active", "").isBlank()) { plugin.tellPublic(player, "Finish your active quest before buying another."); return; }
-        if (offerSlot < 0 || offerSlot >= 5) return;
-        int poolIndex = Math.floorMod(data.getInt("single-shop.offers." + offerSlot, offerSlot), randomPool.size());
+        if (offerSlot < 0 || offerSlot > 5) return;
+        boolean secret = offerSlot == 5;
+        if (secret) refreshSecretQuestIfDue();
+        int poolIndex = Math.floorMod(data.getInt(secret ? "single-shop.secret.offer" : "single-shop.offers." + offerSlot, offerSlot), randomPool.size());
         RandomQuest template = randomPool.get(poolIndex);
         int difficultyScale = 85 + random.nextInt(51);
         int goal = Math.max(1, (int) Math.ceil(template.objective().goal() * difficultyScale / 100.0));
         Objective objective = new Objective(template.objective().target(), goal, template.objective().description().replaceFirst("\\d+", Integer.toString(goal)));
-        int cost = Math.max(50, (int) Math.round(template.cost() * (0.90 + random.nextDouble() * 0.21)));
-        int margin = 30 + random.nextInt(21);
+        int cost = secret ? data.getInt("single-shop.secret.cost", 250) : Math.max(50, (int) Math.round(template.cost() * (0.90 + random.nextDouble() * 0.21)));
+        int margin = secret ? data.getInt("single-shop.secret.margin", 40) : 30 + random.nextInt(21);
         int reward = (int) Math.ceil(cost * (1.0 + margin / 100.0));
         if (plugin.getCombinedBalance(id) < cost || !plugin.spendAvailableFunds(id, cost)) { plugin.tellPublic(player, "You need " + cost + " coins to buy this random quest."); return; }
         String questName = template.name() + " #" + (data.getInt("single-shop.quest-sequence", 0) + 1);
         data.set("single-shop.quest-sequence", data.getInt("single-shop.quest-sequence", 0) + 1);
         startQuest(player, "single:" + System.currentTimeMillis(), questName, cost, reward, List.of(objective));
         data.set(id + ".profit-margin", margin);
-        data.set("single-shop.offers." + offerSlot, random.nextInt(randomPool.size()));
+        if (secret) refreshSecretQuestNow();
+        else data.set("single-shop.offers." + offerSlot, random.nextInt(randomPool.size()));
         save();
         plugin.tellPublic(player, "Started " + questName + ": " + objective.description() + ". Cost " + cost + "; reward " + reward + " coins. " + (isTimedSingle(template) ? "Time limit: 30 minutes." : "No timer."));
         player.closeInventory();
@@ -568,6 +577,46 @@ public final class QuestManager implements Listener {
 
     private long nextRefresh(long now) { return ((now / (2L * 60L * 60L * 1000L)) + 1L) * (2L * 60L * 60L * 1000L); }
 
+    private void refreshSecretQuestIfDue() {
+        long now = System.currentTimeMillis();
+        if (data.getLong("single-shop.secret.next-refresh", 0L) <= now) refreshSecretQuestNow();
+    }
+
+    private void refreshSecretQuestNow() {
+        long now = System.currentTimeMillis();
+        data.set("single-shop.secret.offer", random.nextInt(randomPool.size()));
+        data.set("single-shop.secret.cost", 150 + random.nextInt(351));
+        data.set("single-shop.secret.margin", 30 + random.nextInt(51));
+        data.set("single-shop.secret.next-refresh", ((now / (30L * 60L * 1000L)) + 1L) * (30L * 60L * 1000L));
+        save();
+    }
+
+    private String unlockDescription(String id) {
+        return switch (id) {
+            case "stone_survey" -> "Craft iron tools";
+            case "coal_contract" -> "Smelt an iron ingot";
+            case "iron_miner", "copper_miner", "deepslate_delver" -> "Craft iron tools";
+            case "gold_digger" -> "Upgrade your tools with gold";
+            case "diamond_miner" -> "Mine a diamond";
+            case "quartz_quarry", "nether_hunter", "magma_march", "hoglin_hunt" -> "Enter the Nether";
+            case "debris_hunter" -> "Obtain Ancient Debris";
+            case "nether_blaze" -> "Obtain a Blaze Rod";
+            case "end_expedition", "pearl_trader" -> "Enter the End";
+            case "dragon_slayer" -> "Defeat the Ender Dragon";
+            case "ocean_fisher" -> "Catch a fish";
+            case "salmon_run", "deep_sea" -> "Catch a fish";
+            case "farm_starter", "root_vegetables" -> "Plant and grow a crop";
+            case "baked_goods", "meat_supply" -> "Complete the Balanced Diet food challenge";
+            case "animal_breeder", "cattle_feed", "sheep_flock" -> "Breed an animal";
+            case "woodcutter", "builder_supply" -> "Upgrade your tools";
+            case "explorer_trail" -> "Discover many Overworld biomes";
+            case "monster_patrol" -> "Defeat a hostile mob";
+            case "raid_supply" -> "Fire a crossbow";
+            case "wither_siege" -> "Summon the Wither";
+            default -> "Complete the related Minecraft challenge";
+        };
+    }
+
     private boolean hasAdvancement(Player player, String rawKey) {
         NamespacedKey key = NamespacedKey.fromString(rawKey);
         if (key == null) return false;
@@ -613,6 +662,7 @@ public final class QuestManager implements Listener {
             case "section-packs" -> openPacks(player);
             case "section-global" -> openGlobal(player);
             case "single-buy" -> { try { buyRandom(player, Integer.parseInt(value)); } catch (NumberFormatException ignored) { } }
+            case "single-secret-buy" -> buyRandom(player, 5)
             case "single-info" -> plugin.tellPublic(player, "Five random quests are available; each purchase replaces its offer slot.");
             case "pack-select" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> confirmPack(player, p));
             case "pack-buy" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> buyPack(player, p));
