@@ -78,6 +78,7 @@ public final class ShopManager implements Listener {
         new Product("food-raw", Material.SALMON, 6, 1.8),
         new Product("food-raw", Material.MUTTON, 7, 2.1),
         new Product("food-raw", Material.RABBIT, 7, 2.1),
+        new Product("food-raw", Material.MILK_BUCKET, 15, 10),
         new Product("equipment", Material.IRON_PICKAXE, 120, 36),
         new Product("equipment", Material.DIAMOND_PICKAXE, 650, 195),
         new Product("equipment", Material.IRON_CHESTPLATE, 180, 54),
@@ -205,6 +206,20 @@ public final class ShopManager implements Listener {
                 products.add(new Product("seeds", material, seedBuyPrice(material), seedSellPrice(material)));
             }
         }
+        // Keep flowers and dyes out of Blocks and in their own tidy category.
+        for (Material material : Material.values()) {
+            if (isFlowerOrDyeMaterial(material) && material.isItem()
+                    && products.stream().noneMatch(p -> p.material() == material && p.potionType() == null)) {
+                products.add(new Product("flowers-dyes", material, flowerDyeBuyPrice(material), 0.0));
+            }
+        }
+        // Utility, lighting, crafting stations and bookshelves live in Essentials, not Blocks.
+        for (Material material : Material.values()) {
+            if (isEssentialsMaterial(material) && material.isItem()
+                    && products.stream().noneMatch(p -> p.material() == material && p.potionType() == null)) {
+                products.add(new Product("essentials", material, essentialsBuyPrice(material), 0.0));
+            }
+        }
         this.stockFile = new File(plugin.getDataFolder(), "shop-stock.yml");
         this.stockData = YamlConfiguration.loadConfiguration(stockFile);
         initializeStock();
@@ -216,6 +231,8 @@ public final class ShopManager implements Listener {
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP");
         add(inv, 10, Material.IRON_INGOT, "Ores", "category", "ores");
         add(inv, 12, Material.BRICKS, "Blocks", "category", "blocks");
+        add(inv, 15, Material.ANVIL, "Essentials", "category", "essentials");
+        add(inv, 24, Material.POPPY, "Flowers & Dyes", "category", "flowers-dyes");
         add(inv, 13, Material.WHEAT_SEEDS, "Seeds & Farming", "category", "seeds");
         add(inv, 14, Material.COOKED_BEEF, "Food", "category", "food");
         add(inv, 16, Material.DIAMOND_PICKAXE, "Armor & Tools", "category", "equipment");
@@ -307,6 +324,7 @@ public final class ShopManager implements Listener {
                     ChatColor.GRAY + "Unstackable; right-click to consume.",
                     ChatColor.GREEN + "Click to review purchase"));
             meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "xp-buy");
+            meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, Material.EXPERIENCE_BOTTLE.name());
             meta.getPersistentDataContainer().set(quantityKey, PersistentDataType.INTEGER, points[i]);
             meta.getPersistentDataContainer().set(xpPointsKey, PersistentDataType.INTEGER, prices[i]);
             bottle.setItemMeta(meta);
@@ -317,9 +335,10 @@ public final class ShopManager implements Listener {
         ItemMeta sm = sell.getItemMeta();
         sm.setDisplayName(ChatColor.GREEN + "Sell my XP bar");
         sm.setLore(List.of(ChatColor.WHITE + "Your current XP: " + xp + " points",
-                ChatColor.WHITE + "Payout: " + ChatColor.YELLOW + money(xp * plugin.getConfig().getDouble("death-recovery.xp-value-per-point", 0.1)) + " coins",
+                ChatColor.WHITE + "Payout: " + ChatColor.YELLOW + money(xp * plugin.getConfig().getDouble("shop.xp-value-per-point", 0.1)) + " coins",
                 ChatColor.GRAY + "Sells all current XP after confirmation."));
         sm.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "xp-sell");
+        sm.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, Material.EXPERIENCE_BOTTLE.name());
         sell.setItemMeta(sm);
         inv.setItem(22, sell);
         add(inv, 26, Material.ARROW, "Back", "back", "main");
@@ -841,6 +860,9 @@ public final class ShopManager implements Listener {
         if (p.category().equals("misc")) return p.sell();
         String name = p.material().name();
         String lower = name.toLowerCase(Locale.ROOT);
+        if (name.equals("ELYTRA")) return Math.floor(buyPrice(p) * 0.30);
+        if (name.equals("TRIDENT") || name.equals("TOTEM_OF_UNDYING")) return 200.0;
+        if (name.equals("MILK_BUCKET")) return 10.0;
         if (isUnsellableExploitItem(p.material())) return 0.0;
         if (lower.endsWith("_spawn_egg") && plugin.getConfig().getBoolean("restrictions.buy-only-spawn-eggs", true)) return 0.0;
         if (p.potionType() != null || p.category().equals("potions")) return 0.0;
@@ -858,7 +880,7 @@ public final class ShopManager implements Listener {
             return Math.max(0.0, Math.floor(buyPrice(p) * 0.05));
         }
         if (p.category().equals("equipment")) {
-            if (name.equals("TOTEM_OF_UNDYING") || name.equals("TRIDENT") || name.equals("MACE")) return 0.0;
+            if (name.equals("MACE")) return 0.0;
             return Math.max(0.0, Math.floor(buyPrice(p) * 0.05));
         }
         if (p.category().startsWith("food")) return Math.max(1.0, Math.floor(buyPrice(p) * 0.15));
@@ -869,7 +891,7 @@ public final class ShopManager implements Listener {
         }
         if (p.category().equals("xp")) return 0.0;
         if (p.category().equals("seeds")) return seedSellPrice(p.material());
-        if (p.category().equals("special")) return 0.0;
+        if (p.category().equals("special")) return name.equals("ELYTRA") ? Math.floor(buyPrice(p) * 0.30) : 0.0;
         return Math.max(0.0, Math.floor(buyPrice(p) * 0.02));
     }
 
@@ -887,7 +909,8 @@ public final class ShopManager implements Listener {
 
     private boolean isBuildingBlock(Material material) {
         String n = material.name();
-        if (n.endsWith("_STAIRS") || n.endsWith("_SLAB") || n.endsWith("_FENCE") || n.endsWith("_FENCE_GATE")
+        if (isFlowerOrDyeMaterial(material) || isEssentialsMaterial(material)
+                || n.endsWith("_STAIRS") || n.endsWith("_SLAB") || n.endsWith("_FENCE") || n.endsWith("_FENCE_GATE")
                 || n.endsWith("_WALL") || n.endsWith("_DOOR") || n.endsWith("_TRAPDOOR") || n.endsWith("_BUTTON")
                 || n.endsWith("_PRESSURE_PLATE") || n.endsWith("_SIGN") || n.endsWith("_HANGING_SIGN")
                 || n.endsWith("_BANNER") || n.endsWith("_HEAD") || n.endsWith("_SKULL") || n.endsWith("_BED")
@@ -898,6 +921,59 @@ public final class ShopManager implements Listener {
                 || n.endsWith("_SPAWN_EGG") || n.endsWith("_ORE")) return false;
         return !n.equals("PLAYER_HEAD") && !n.equals("DRAGON_EGG") && !n.equals("END_CRYSTAL")
                 && !n.equals("ENCHANTING_TABLE") && !n.equals("BREWING_STAND") && !n.equals("SPAWNER");
+    }
+
+    private boolean isFlowerOrDyeMaterial(Material material) {
+        String n = material.name();
+        if (n.endsWith("_DYE")) return true;
+        return n.contains("FLOWER") || n.endsWith("_TULIP") || n.endsWith("_ORCHID")
+                || n.endsWith("_BLUET") || n.endsWith("_DAISY") || n.equals("DANDELION")
+                || n.equals("POPPY") || n.equals("ALLIUM") || n.equals("LILAC")
+                || n.equals("PEONY") || n.equals("SUNFLOWER") || n.equals("ROSE_BUSH")
+                || n.equals("LILY_OF_THE_VALLEY") || n.equals("PITCHER_PLANT")
+                || n.equals("SPORE_BLOSSOM") || n.equals("CHORUS_FLOWER")
+                || n.equals("CACTUS_FLOWER");
+    }
+
+    private double flowerDyeBuyPrice(Material material) {
+        String n = material.name();
+        if (n.endsWith("_DYE")) return 8.0;
+        if (n.equals("WITHER_ROSE") || n.equals("PITCHER_PLANT") || n.equals("TORCHFLOWER")) return 80.0;
+        if (n.equals("SUNFLOWER") || n.equals("LILAC") || n.equals("ROSE_BUSH") || n.equals("PEONY")) return 12.0;
+        return 5.0;
+    }
+
+    private boolean isEssentialsMaterial(Material material) {
+        String n = material.name();
+        if (n.endsWith("_TORCH") || n.endsWith("_LANTERN") || n.endsWith("_CANDLE")
+                || n.endsWith("_FROGLIGHT") || n.endsWith("_CAMPFIRE")) return true;
+        return switch (n) {
+            case "LEAD", "TORCH", "SOUL_TORCH", "REDSTONE_TORCH", "LANTERN", "SOUL_LANTERN",
+                 "END_ROD", "GLOWSTONE", "SEA_LANTERN", "SHROOMLIGHT", "BEACON",
+                 "ANVIL", "CHIPPED_ANVIL", "DAMAGED_ANVIL", "CRAFTING_TABLE",
+                 "FLETCHING_TABLE", "SMITHING_TABLE", "CARTOGRAPHY_TABLE", "LOOM",
+                 "STONECUTTER", "GRINDSTONE", "ENCHANTING_TABLE", "BREWING_STAND",
+                 "LECTERN", "SMOKER", "BLAST_FURNACE", "FURNACE", "CAMPFIRE",
+                 "SOUL_CAMPFIRE", "BOOK", "BOOKSHELF", "CHISELED_BOOKSHELF",
+                 "WRITABLE_BOOK", "WRITTEN_BOOK", "PAPER", "SCAFFOLDING", "LADDER",
+                 "CHAIN", "LIGHTNING_ROD", "BELL", "DECORATED_POT" -> true;
+            default -> false;
+        };
+    }
+
+    private double essentialsBuyPrice(Material material) {
+        String n = material.name();
+        if (n.equals("BEACON")) return 1500.0;
+        if (n.contains("ANVIL")) return 250.0;
+        if (n.endsWith("_TABLE") || n.equals("CRAFTING_TABLE") || n.equals("ENCHANTING_TABLE")) return 40.0;
+        if (n.equals("LEAD")) return 25.0;
+        if (n.equals("BOOKSHELF") || n.equals("CHISELED_BOOKSHELF")) return 35.0;
+        if (n.equals("BOOK") || n.equals("WRITABLE_BOOK") || n.equals("WRITTEN_BOOK")) return 10.0;
+        if (n.contains("CAMPFIRE")) return 35.0;
+        if (n.contains("LANTERN") || n.contains("FROGLIGHT") || n.equals("SEA_LANTERN")
+                || n.equals("GLOWSTONE") || n.equals("SHROOMLIGHT")) return 25.0;
+        if (n.contains("TORCH")) return 3.0;
+        return 15.0;
     }
 
     private double foodBuyPrice(Material material) {
@@ -964,8 +1040,6 @@ public final class ShopManager implements Listener {
                 || name.equals("ENCHANTED_GOLDEN_APPLE")
                 || name.equals("SHULKER_SHELL")
                 || name.contains("SHULKER_BOX")
-                || name.equals("TOTEM_OF_UNDYING")
-                || name.equals("TRIDENT")
                 || name.equals("WITHER_SKELETON_SKULL")
                 || name.equals("NETHER_STAR")
                 || name.equals("DRAGON_EGG")
