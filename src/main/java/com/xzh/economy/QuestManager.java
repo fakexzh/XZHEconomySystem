@@ -130,7 +130,7 @@ public final class QuestManager implements Listener {
         new Pack("potato_farmer", "Potato Farmer", Material.POTATO, 609, 853, "minecraft:husbandry/plant_seed", List.of(new Objective("collect:POTATO", 128, "Collect 128 Potatoes"))),
         new Pack("beetroot_farmer", "Beetroot Farmer", Material.BEETROOT, 105, 147, "minecraft:husbandry/plant_seed", List.of(new Objective("collect:BEETROOT", 128, "Collect 128 Beetroots"))),
         new Pack("melon_delivery", "Melon Delivery", Material.MELON_SLICE, 152, 228, "minecraft:husbandry/plant_seed", List.of(new Objective("collect:MELON_SLICE", 192, "Collect 192 Melon Slices"))),
-        new Pack("pumpkin_delivery", "Pumpkin Delivery", Material.PUMPKIN, 199, 279, "minecraft:husbandry/plant_seed", List.of(new Objective("collect:PUMPKIN", 64, "Collect 64 Pumpkins"))),
+        new Pack("pumpkin_delivery", "Pumpkin Delivery", Material.PUMPKIN, 199, 279, "minecraft:husbandry/plant_seed", List.of(new Objective("collect:PUMPKIN", 64, "Collect 64 Pumpkins")))
     );
 
     private final List<RandomQuest> randomPool = List.of(
