@@ -195,8 +195,8 @@ public final class LoanManager implements Listener {
                         continue;
                     }
                     data.set(key + ".amount", remaining);
+                    plugin.getHudManager().setLoan(id, remaining, due, grace);
                     if (player != null) {
-                        plugin.getHudManager().setLoan(id, remaining, due, grace);
                         plugin.tellPublic(player, "Your loan is overdue. " + money(collected) + " coins were collected from pocket first, then bank. Remaining debt: " + money(remaining) + ". Shop purchases are locked until full repayment.");
                     }
                 } else {
