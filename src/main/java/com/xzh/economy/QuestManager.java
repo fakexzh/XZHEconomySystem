@@ -184,6 +184,7 @@ public final class QuestManager implements Listener {
 
     private void openSingle(Player player) {
         refreshSingleShopIfDue();
+        refreshSecretQuestIfDue();
         long next = data.getLong("single-shop.next-refresh", nextRefresh(System.currentTimeMillis()));
         long mins = Math.max(0, (next - System.currentTimeMillis()) / 60000L);
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "XZH Single Quests");
@@ -662,7 +663,7 @@ public final class QuestManager implements Listener {
             case "section-packs" -> openPacks(player);
             case "section-global" -> openGlobal(player);
             case "single-buy" -> { try { buyRandom(player, Integer.parseInt(value)); } catch (NumberFormatException ignored) { } }
-            case "single-secret-buy" -> buyRandom(player, 5)
+            case "single-secret-buy" -> buyRandom(player, 5);
             case "single-info" -> plugin.tellPublic(player, "Five random quests are available; each purchase replaces its offer slot.");
             case "pack-select" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> confirmPack(player, p));
             case "pack-buy" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> buyPack(player, p));
