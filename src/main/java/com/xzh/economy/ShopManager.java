@@ -8,6 +8,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.block.Action;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -34,6 +36,8 @@ public final class ShopManager implements Listener {
     private final NamespacedKey materialKey;
     private final NamespacedKey quantityKey;
     private final NamespacedKey potionTypeKey;
+    private final NamespacedKey xpBottleKey;
+    private final NamespacedKey xpPointsKey;
     private final File stockFile;
     private final YamlConfiguration stockData;
 
@@ -158,6 +162,8 @@ public final class ShopManager implements Listener {
         this.materialKey = new NamespacedKey(plugin, "shop_material");
         this.quantityKey = new NamespacedKey(plugin, "shop_quantity");
         this.potionTypeKey = new NamespacedKey(plugin, "shop_potion_type");
+        this.xpBottleKey = new NamespacedKey(plugin, "xzh_xp_bottle");
+        this.xpPointsKey = new NamespacedKey(plugin, "xzh_xp_points");
         // Include every potion base type in all three bottle forms. Variant identity is
         // stored in item metadata so buying a Strength potion cannot become a Water potion.
         for (PotionType type : PotionType.values()) {
@@ -168,11 +174,22 @@ public final class ShopManager implements Listener {
             products.add(new Product("potions", Material.SPLASH_POTION, base + 15, 0, type));
             products.add(new Product("potions", Material.LINGERING_POTION, base + 35, 0, type));
         }
-        // Dynamically include every block item exposed by the running Minecraft API.
+        // Add every edible food item so players can sell crops, fish, cooked food, and other food.
+        for (Material material : Material.values()) {
+            if (material.isItem() && material.isEdible()
+                    && products.stream().noneMatch(p -> p.material() == material && p.potionType() == null)) {
+                String category = material.name().startsWith("COOKED_") || material.name().equals("BAKED_POTATO")
+                        || material.name().equals("BREAD") || material.name().equals("COOKIE") || material.name().equals("CAKE")
+                        || material.name().equals("PUMPKIN_PIE") ? "food-cooked" : "food-raw";
+                double buy = Math.max(2.0, foodBuyPrice(material));
+                products.add(new Product(category, material, buy, Math.max(1.0, Math.floor(buy * 0.15))));
+            }
+        }
+        // Dynamically include survival building blocks only, not crafted variants or heads.
         // Existing curated products keep their configured prices; newly added farmable
         // blocks use conservative buy values and earn only 1 coin per full stack at most.
         for (Material material : Material.values()) {
-            if (material.isBlock() && material.isItem() && !material.isAir() && !isCreativeOnlyBlock(material)
+            if (material.isBlock() && material.isItem() && !material.isAir() && isBuildingBlock(material) && !isCreativeOnlyBlock(material)
                     && products.stream().noneMatch(p -> p.material() == material && p.potionType() == null)) {
                 double buy = blockBuyPrice(material);
                 double sell = isFarmableCommonBlock(material) ? (1.0 / 64.0) : 0.0;
@@ -210,7 +227,7 @@ public final class ShopManager implements Listener {
         add(inv, 34, Material.GOLD_INGOT, "Balance", "balance", "balance");
         add(inv, 36, Material.BOOK, "Help", "help", "help");
         add(inv, 38, Material.CLOCK, "XZH BANK", "bank", "bank");
-        add(inv, 49, Material.GOLD_INGOT, "Sell Hand (held item)", "sell-hand", "hand");
+        add(inv, 49, Material.GOLD_INGOT, "Sell Hand (held item)", "sell-hand", "hand", List.of(ChatColor.WHITE + "Hold an item to preview its sale.", ChatColor.GRAY + "Shows item, quantity, unit price, and total payout.", ChatColor.YELLOW + "Click to review; confirmation required."));
         player.openInventory(inv);
     }
 
@@ -220,6 +237,7 @@ public final class ShopManager implements Listener {
 
     private void openCategory(Player player, String category, int requestedPage) {
         if (category.equals("food")) { openFoodMenu(player); return; }
+        if (category.equals("xp")) { openXpMenu(player); return; }
         List<Product> list = products.stream().filter(p -> p.category().equals(category)).toList();
         int pages = Math.max(1, (list.size() + 44) / 45);
         int page = Math.max(0, Math.min(requestedPage, pages - 1));
@@ -249,6 +267,115 @@ public final class ShopManager implements Listener {
         add(inv, 49, Material.ARROW, "Back", "back", "main");
         if (page + 1 < pages) add(inv, 53, Material.ARROW, "Next page", "category-page", category + ":" + (page + 1));
         player.openInventory(inv);
+    }
+
+    private void openHandSellConfirm(Player player, ItemStack hand, double unitSell) {
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Confirm Sell Hand");
+        ItemStack summary = hand.clone();
+        ItemMeta meta = summary.getItemMeta();
+        double total = unitSell * hand.getAmount();
+        meta.setDisplayName(ChatColor.YELLOW + "Sell " + hand.getAmount() + " × " + pretty(hand.getType()));
+        meta.setLore(List.of(ChatColor.WHITE + "Item: " + ChatColor.AQUA + pretty(hand.getType()),
+                ChatColor.WHITE + "Quantity: " + ChatColor.AQUA + hand.getAmount(),
+                ChatColor.WHITE + "Price each: " + ChatColor.YELLOW + money(unitSell) + " coins",
+                ChatColor.WHITE + "Total payout: " + ChatColor.GREEN + money(total) + " coins",
+                ChatColor.GRAY + "Hover to inspect the item; confirm to sell."));
+        summary.setItemMeta(meta);
+        inv.setItem(13, summary);
+        add(inv, 11, Material.LIME_CONCRETE, "Confirm sale", "sell-hand-confirm", hand.getType().name() + ":-:" + hand.getAmount());
+        add(inv, 15, Material.RED_CONCRETE, "Cancel", "category-back", "main");
+        player.openInventory(inv);
+    }
+
+    private void openXpMenu(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "XZH SHOP: XP");
+        int[] points = {25, 100, 250, 500};
+        int[] prices = {8, 25, 55, 100};
+        int[] slots = {10, 12, 14, 16};
+        for (int i = 0; i < points.length; i++) {
+            ItemStack bottle = customXpBottle(points[i]);
+            ItemMeta meta = bottle.getItemMeta();
+            meta.setDisplayName(ChatColor.AQUA + "XP Bottle — " + points[i] + " XP");
+            meta.setLore(List.of(ChatColor.WHITE + "Contains: " + points[i] + " XP points",
+                    ChatColor.WHITE + "Price: " + ChatColor.YELLOW + prices[i] + " coins",
+                    ChatColor.GRAY + "Unstackable; right-click to consume.",
+                    ChatColor.GREEN + "Click to review purchase"));
+            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "xp-buy");
+            meta.getPersistentDataContainer().set(quantityKey, PersistentDataType.INTEGER, points[i]);
+            meta.getPersistentDataContainer().set(xpPointsKey, PersistentDataType.INTEGER, prices[i]);
+            bottle.setItemMeta(meta);
+            inv.setItem(slots[i], bottle);
+        }
+        int xp = totalExperience(player);
+        ItemStack sell = new ItemStack(Material.EXPERIENCE_BOTTLE);
+        ItemMeta sm = sell.getItemMeta();
+        sm.setDisplayName(ChatColor.GREEN + "Sell my XP bar");
+        sm.setLore(List.of(ChatColor.WHITE + "Your current XP: " + xp + " points",
+                ChatColor.WHITE + "Payout: " + ChatColor.YELLOW + money(xp * plugin.getConfig().getDouble("shop.xp-value-per-point", 0.1)) + " coins",
+                ChatColor.GRAY + "Sells all current XP after confirmation."));
+        sm.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "xp-sell");
+        sell.setItemMeta(sm);
+        inv.setItem(22, sell);
+        add(inv, 26, Material.ARROW, "Back", "back", "main");
+        player.openInventory(inv);
+    }
+
+    private ItemStack customXpBottle(int points) {
+        ItemStack item = new ItemStack(Material.EXPERIENCE_BOTTLE);
+        ItemMeta meta = item.getItemMeta();
+        meta.setMaxStackSize(1);
+        meta.setDisplayName(ChatColor.AQUA + "XP Bottle — " + points + " XP");
+        meta.setLore(List.of(ChatColor.GRAY + "A sealed bottle containing " + points + " XP points."));
+        meta.getPersistentDataContainer().set(xpBottleKey, PersistentDataType.BYTE, (byte) 1);
+        meta.getPersistentDataContainer().set(xpPointsKey, PersistentDataType.INTEGER, points);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private void openXpConfirm(Player player, boolean selling, int points, int price) {
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Confirm XP transaction");
+        ItemStack summary = selling ? new ItemStack(Material.EXPERIENCE_BOTTLE) : customXpBottle(points);
+        ItemMeta meta = summary.getItemMeta();
+        meta.setDisplayName(ChatColor.WHITE + (selling ? "Sell your XP bar" : "Buy XP Bottle — " + points + " XP"));
+        double payout = selling ? points * plugin.getConfig().getDouble("shop.xp-value-per-point", 0.1) : price;
+        meta.setLore(List.of(ChatColor.WHITE + "XP amount: " + points + " points",
+                ChatColor.WHITE + (selling ? "You receive: " : "You pay: ") + ChatColor.YELLOW + money(payout) + " coins",
+                ChatColor.GRAY + (selling ? "Your current XP will be set to zero." : "Bottle is unstackable and consumed by right-click.")));
+        summary.setItemMeta(meta);
+        inv.setItem(13, summary);
+        add(inv, 11, Material.LIME_CONCRETE, "Confirm", selling ? "xp-sell-confirm" : "xp-buy-confirm", points + ":" + price);
+        add(inv, 15, Material.RED_CONCRETE, "Cancel", "category-back", "xp");
+        player.openInventory(inv);
+    }
+
+    private int totalExperience(Player player) {
+        int level = player.getLevel();
+        int total = 0;
+        for (int i = 0; i < level; i++) total += xpToNextLevel(i);
+        return total + Math.round(player.getExp() * xpToNextLevel(level));
+    }
+
+    private int xpToNextLevel(int level) {
+        if (level <= 16) return 2 * level + 7;
+        if (level <= 31) return 5 * level - 38;
+        return 9 * level - 158;
+    }
+
+    @EventHandler
+    public void onUseXpBottle(PlayerInteractEvent event) {
+        if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        ItemStack item = event.getItem();
+        if (item == null || !item.hasItemMeta()) return;
+        ItemMeta meta = item.getItemMeta();
+        if (!meta.getPersistentDataContainer().has(xpBottleKey, PersistentDataType.BYTE)) return;
+        event.setCancelled(true);
+        int points = meta.getPersistentDataContainer().getOrDefault(xpPointsKey, PersistentDataType.INTEGER, 0);
+        if (points <= 0) return;
+        if (item.getAmount() <= 1) event.getPlayer().getInventory().setItem(event.getHand(), null);
+        else item.setAmount(item.getAmount() - 1);
+        event.getPlayer().giveExp(points);
+        event.getPlayer().updateInventory();
+        plugin.tellPublic(event.getPlayer(), "Consumed an XP bottle and received " + points + " XP points.");
     }
 
     private void openFoodMenu(Player player) {
@@ -369,6 +496,33 @@ public final class ShopManager implements Listener {
                     try { openCategory(player, bits[0], Integer.parseInt(bits[1])); }
                     catch (NumberFormatException ignored) { openCategory(player, bits[0]); }
                 }
+            }
+            case "xp-buy" -> {
+                Integer points = meta.getPersistentDataContainer().get(quantityKey, PersistentDataType.INTEGER);
+                Integer price = meta.getPersistentDataContainer().get(xpPointsKey, PersistentDataType.INTEGER);
+                if (points != null && price != null) openXpConfirm(player, false, points, price);
+            }
+            case "xp-sell" -> openXpConfirm(player, true, totalExperience(player), 0);
+            case "xp-buy-confirm", "xp-sell-confirm" -> {
+                String[] parts = value.split(":");
+                if (parts.length != 2) return;
+                int points; int price;
+                try { points = Integer.parseInt(parts[0]); price = Integer.parseInt(parts[1]); } catch (NumberFormatException ex) { return; }
+                if (action.equals("xp-buy-confirm")) {
+                    if (plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) { plugin.tellPublic(player, "Your loan is overdue. Purchases are locked."); return; }
+                    if (plugin.getCombinedBalance(player.getUniqueId()) < price || !plugin.spendAvailableFunds(player.getUniqueId(), price)) { plugin.tellPublic(player, "Not enough coins."); return; }
+                    java.util.Map<Integer, ItemStack> leftovers = player.getInventory().addItem(customXpBottle(points));
+                    if (!leftovers.isEmpty()) { plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + price); plugin.tellPublic(player, "Inventory full; purchase cancelled and refunded."); }
+                    else plugin.tellPublic(player, "Bought an XP bottle containing " + points + " XP for " + price + " coins.");
+                } else {
+                    int actual = totalExperience(player);
+                    if (actual <= 0 || actual != points) { plugin.tellPublic(player, "Your XP changed; reopen the XP menu and confirm again."); openXpMenu(player); return; }
+                    double payout = actual * plugin.getConfig().getDouble("shop.xp-value-per-point", 0.1);
+                    player.setExp(0f); player.setLevel(0); player.setTotalExperience(0);
+                    plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + payout);
+                    plugin.tellPublic(player, "Sold " + actual + " XP points for " + money(payout) + " coins.");
+                }
+                player.closeInventory();
             }
             case "product" -> {
                 Product selected = productFromMeta(meta);
@@ -521,8 +675,7 @@ public final class ShopManager implements Listener {
                     plugin.tellPublic(player, "The held stack is worth less than 1 coin and cannot be sold.");
                     return;
                 }
-                if (p != null && p.potionType() != null) openConfirm(player, p, hand.getAmount(), false, true);
-                else openConfirm(player, hand.getType(), hand.getAmount(), false, true);
+                openHandSellConfirm(player, hand, unitSell);
             }
         }
     }
@@ -676,9 +829,14 @@ public final class ShopManager implements Listener {
         if (p.potionType() != null || p.category().equals("potions")) return 0.0;
         // Resale is deliberately based on farmability/usefulness, never a blanket
         // percentage of buy price. Common renewable blocks earn 1 coin per 64.
+        if (name.equals("ANCIENT_DEBRIS")) return 20.0;
+        if (name.equals("NETHERITE_SCRAP")) return 35.0;
+        if (name.equals("NETHERITE_INGOT")) return 100.0;
         if (p.category().equals("blocks")) return 1.0 / 64.0;
         if (name.equals("DIAMOND")) return 5.0;
         if (p.category().equals("ores")) {
+            if (name.equals("NETHERITE_SCRAP")) return 35.0;
+            if (name.equals("NETHERITE_INGOT")) return 100.0;
             if (name.contains("NETHERITE")) return Math.max(1.0, Math.floor(buyPrice(p) * 0.03));
             return Math.max(0.0, Math.floor(buyPrice(p) * 0.05));
         }
@@ -686,7 +844,7 @@ public final class ShopManager implements Listener {
             if (name.equals("TOTEM_OF_UNDYING") || name.equals("TRIDENT") || name.equals("MACE")) return 0.0;
             return Math.max(0.0, Math.floor(buyPrice(p) * 0.05));
         }
-        if (p.category().startsWith("food")) return Math.max(0.0, Math.floor(buyPrice(p) * 0.05));
+        if (p.category().startsWith("food")) return Math.max(1.0, Math.floor(buyPrice(p) * 0.15));
         if (p.category().equals("eggs-heads")) {
             if (name.endsWith("_SPAWN_EGG")) return 0.0;
             if (name.equals("EGG")) return 1.0 / 64.0;
@@ -708,6 +866,32 @@ public final class ShopManager implements Listener {
         if (n.contains("OBSIDIAN") || n.contains("CRYING")) return 30.0;
         if (n.contains("COPPER") || n.contains("IRON") || n.contains("GOLD") || n.contains("DIAMOND") || n.contains("EMERALD")) return 100.0;
         return 10.0;
+    }
+
+    private boolean isBuildingBlock(Material material) {
+        String n = material.name();
+        if (n.endsWith("_STAIRS") || n.endsWith("_SLAB") || n.endsWith("_FENCE") || n.endsWith("_FENCE_GATE")
+                || n.endsWith("_WALL") || n.endsWith("_DOOR") || n.endsWith("_TRAPDOOR") || n.endsWith("_BUTTON")
+                || n.endsWith("_PRESSURE_PLATE") || n.endsWith("_SIGN") || n.endsWith("_HANGING_SIGN")
+                || n.endsWith("_BANNER") || n.endsWith("_HEAD") || n.endsWith("_SKULL") || n.endsWith("_BED")
+                || n.endsWith("_CANDLE") || n.endsWith("_CORAL") || n.endsWith("_CORAL_FAN")
+                || n.endsWith("_SAPLING") || n.endsWith("_FLOWER") || n.endsWith("_TULIP")
+                || n.endsWith("_CARPET") || n.endsWith("_RAIL") || n.endsWith("_TORCH")
+                || n.endsWith("_ANVIL") || n.endsWith("_CHEST") || n.endsWith("_SHULKER_BOX")
+                || n.endsWith("_SPAWN_EGG") || n.endsWith("_ORE")) return false;
+        return !n.equals("PLAYER_HEAD") && !n.equals("DRAGON_EGG") && !n.equals("END_CRYSTAL")
+                && !n.equals("ENCHANTING_TABLE") && !n.equals("BREWING_STAND") && !n.equals("SPAWNER");
+    }
+
+    private double foodBuyPrice(Material material) {
+        String n = material.name();
+        if (n.contains("ENCHANTED_GOLDEN_APPLE")) return 2500;
+        if (n.contains("GOLDEN_APPLE")) return 180;
+        if (n.contains("GOLDEN_CARROT")) return 10;
+        if (n.contains("BEEF") || n.contains("PORKCHOP") || n.contains("MUTTON")) return 10;
+        if (n.contains("SALMON") || n.contains("COD") || n.contains("CHICKEN") || n.contains("RABBIT")) return 7;
+        if (n.contains("POTATO") || n.contains("CARROT") || n.contains("BEETROOT") || n.contains("MELON") || n.contains("BERRY")) return 3;
+        return 5;
     }
 
     private boolean isCreativeOnlyBlock(Material material) {
