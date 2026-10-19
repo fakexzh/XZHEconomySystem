@@ -83,6 +83,20 @@ public final class QuestManager implements Listener {
         this.plugin = plugin;
         file = new File(plugin.getDataFolder(), "quests.yml");
         data = YamlConfiguration.loadConfiguration(file);
+        // Remove active quests from the retired system so old easy objectives cannot persist.
+        boolean migratedOldQuests = false;
+        for (String root : new ArrayList<>(data.getKeys(false))) {
+            try {
+                UUID.fromString(root);
+                if (data.contains(root + ".active") && !data.contains(root + ".objective-count")) {
+                    data.set(root, null);
+                    migratedOldQuests = true;
+                }
+            } catch (IllegalArgumentException ignored) { }
+        }
+        if (migratedOldQuests) {
+            try { data.save(file); } catch (IOException e) { plugin.getLogger().severe("Could not migrate old quest data: " + e.getMessage()); }
+        }
         actionKey = new NamespacedKey(plugin, "quest_action");
         valueKey = new NamespacedKey(plugin, "quest_value");
         Bukkit.getPluginManager().registerEvents(this, plugin);
