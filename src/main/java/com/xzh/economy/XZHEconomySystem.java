@@ -390,6 +390,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 return true;
             }
             case "xzh" -> {
+                if (args.length > 0 && args[0].equalsIgnoreCase("time")) return utilityManager.handle(sender, "xzh", args);
                 tell(sender, "§eXZHEconomySystem §7v" + getPluginMeta().getVersion());
                 tell(sender, "§f/balance §7- check your coins");
                 tell(sender, "§f/pay <player> <amount> §7- send coins");
