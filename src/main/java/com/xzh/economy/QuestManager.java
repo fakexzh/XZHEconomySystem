@@ -15,6 +15,10 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerFishEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.entity.EntityBreedEvent;
+import org.bukkit.entity.Animals;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -45,38 +49,61 @@ public final class QuestManager implements Listener {
     private final List<Double> travelRemainders = new ArrayList<>();
 
     private final List<Pack> packs = List.of(
-        new Pack("nether_hunter", "Nether Trophy Hunt", Material.WITHER_SKELETON_SKULL, 400, 560,
-            "minecraft:nether/root", List.of(
-                new Objective("kill:WITHER_SKELETON", 20, "Kill 20 Wither Skeletons"),
-                new Objective("collect:WITHER_SKELETON_SKULL", 2, "Collect 2 Wither Skeleton Skulls"))),
-        new Pack("nether_blaze", "Fortress Conqueror", Material.BLAZE_ROD, 550, 825,
-            "minecraft:nether/root", List.of(
-                new Objective("kill:BLAZE", 25, "Kill 25 Blazes"),
-                new Objective("collect:BLAZE_ROD", 48, "Collect 48 Blaze Rods"))),
-        new Pack("end_expedition", "End Expedition", Material.END_STONE, 900, 1350,
-            "minecraft:story/enter_the_end", List.of(
-                new Objective("kill:ENDERMAN", 30, "Kill 30 Endermen"),
-                new Objective("break:END_STONE", 128, "Mine 128 End Stone"),
-                new Objective("collect:ENDER_PEARL", 32, "Collect 32 Ender Pearls")))
+        new Pack("stone_survey", "Stone Survey", Material.IRON_PICKAXE, 80, 112, "minecraft:story/iron_tools", List.of(new Objective("break:STONE", 256, "Mine 256 Stone"))),
+        new Pack("coal_contract", "Coal Contract", Material.COAL, 100, 140, "minecraft:story/smelt_iron", List.of(new Objective("collect:COAL", 64, "Collect 64 Coal"))),
+        new Pack("iron_miner", "Iron Miner", Material.RAW_IRON, 140, 196, "minecraft:story/iron_tools", List.of(new Objective("break:IRON_ORE", 48, "Mine 48 Iron Ore"))),
+        new Pack("copper_miner", "Copper Rush", Material.COPPER_INGOT, 120, 168, "minecraft:story/iron_tools", List.of(new Objective("collect:RAW_COPPER", 96, "Collect 96 Raw Copper"))),
+        new Pack("gold_digger", "Gold Digger", Material.GOLD_INGOT, 220, 308, "minecraft:story/upgrade_tools", List.of(new Objective("break:GOLD_ORE", 32, "Mine 32 Gold Ore"))),
+        new Pack("diamond_miner", "Diamond Prospector", Material.DIAMOND_PICKAXE, 350, 490, "minecraft:story/mine_diamond", List.of(new Objective("break:DIAMOND_ORE", 16, "Mine 16 Diamond Ore"))),
+        new Pack("deepslate_delver", "Deepslate Delver", Material.DEEPSLATE, 180, 252, "minecraft:story/iron_tools", List.of(new Objective("break:DEEPSLATE", 384, "Mine 384 Deepslate"))),
+        new Pack("quartz_quarry", "Quartz Quarry", Material.QUARTZ, 240, 336, "minecraft:nether/root", List.of(new Objective("break:NETHER_QUARTZ_ORE", 64, "Mine 64 Nether Quartz Ore"))),
+        new Pack("debris_hunter", "Ancient Debris Hunt", Material.ANCIENT_DEBRIS, 550, 770, "minecraft:nether/obtain_ancient_debris", List.of(new Objective("break:ANCIENT_DEBRIS", 10, "Mine 10 Ancient Debris"))),
+        new Pack("nether_hunter", "Nether Trophy Hunt", Material.WITHER_SKELETON_SKULL, 400, 560, "minecraft:nether/root", List.of(new Objective("kill:WITHER_SKELETON", 20, "Kill 20 Wither Skeletons"), new Objective("collect:WITHER_SKELETON_SKULL", 2, "Collect 2 Wither Skeleton Skulls"))),
+        new Pack("nether_blaze", "Fortress Conqueror", Material.BLAZE_ROD, 550, 825, "minecraft:nether/obtain_blaze_rod", List.of(new Objective("kill:BLAZE", 25, "Kill 25 Blazes"), new Objective("collect:BLAZE_ROD", 32, "Collect 32 Blaze Rods"))),
+        new Pack("magma_march", "Magma March", Material.MAGMA_BLOCK, 260, 364, "minecraft:nether/root", List.of(new Objective("break:MAGMA_BLOCK", 96, "Mine 96 Magma Blocks"))),
+        new Pack("hoglin_hunt", "Hoglin Hunt", Material.PORKCHOP, 300, 420, "minecraft:nether/root", List.of(new Objective("kill:HOGLIN", 20, "Hunt 20 Hoglins"))),
+        new Pack("end_expedition", "End Expedition", Material.END_STONE, 900, 1350, "minecraft:story/enter_the_end", List.of(new Objective("kill:ENDERMAN", 30, "Kill 30 Endermen"), new Objective("break:END_STONE", 128, "Mine 128 End Stone"), new Objective("collect:ENDER_PEARL", 32, "Collect 32 Ender Pearls"))),
+        new Pack("dragon_slayer", "Dragon Slayer", Material.DRAGON_HEAD, 1800, 2700, "minecraft:end/kill_dragon", List.of(new Objective("kill:ENDER_DRAGON", 1, "Defeat the Ender Dragon"))),
+        new Pack("pearl_trader", "Pearl Trader", Material.ENDER_PEARL, 320, 448, "minecraft:story/enter_the_end", List.of(new Objective("collect:ENDER_PEARL", 48, "Collect 48 Ender Pearls"))),
+        new Pack("ocean_fisher", "Ocean Fishing", Material.FISHING_ROD, 180, 252, "minecraft:husbandry/tactical_fishing", List.of(new Objective("fish:COD", 16, "Catch 16 Cod while fishing"))),
+        new Pack("salmon_run", "Salmon Run", Material.SALMON, 200, 280, "minecraft:husbandry/fishy_business", List.of(new Objective("fish:SALMON", 16, "Catch 16 Salmon while fishing"))),
+        new Pack("deep_sea", "Deep Sea Haul", Material.TROPICAL_FISH, 420, 588, "minecraft:husbandry/fishy_business", List.of(new Objective("fish:TROPICAL_FISH", 8, "Catch 8 Tropical Fish"))),
+        new Pack("farm_starter", "Farm Starter", Material.WHEAT, 70, 98, "minecraft:husbandry/plant_seed", List.of(new Objective("collect:WHEAT", 64, "Harvest or collect 64 Wheat"))),
+        new Pack("root_vegetables", "Root Vegetable Run", Material.CARROT, 100, 140, "minecraft:husbandry/plant_seed", List.of(new Objective("collect:CARROT", 128, "Collect 128 Carrots"))),
+        new Pack("baked_goods", "Baker's Order", Material.BREAD, 120, 168, "minecraft:husbandry/balanced_diet", List.of(new Objective("collect:BREAD", 64, "Collect 64 Bread"))),
+        new Pack("meat_supply", "Meat Supply", Material.COOKED_BEEF, 180, 252, "minecraft:husbandry/balanced_diet", List.of(new Objective("collect:COOKED_BEEF", 64, "Collect 64 Cooked Beef"))),
+        new Pack("animal_breeder", "Animal Breeder", Material.WHEAT, 150, 210, "minecraft:husbandry/breed_an_animal", List.of(new Objective("breed:ANY", 12, "Breed 12 animals"))),
+        new Pack("cattle_feed", "Cattle Feeding", Material.WHEAT, 110, 154, "minecraft:husbandry/breed_an_animal", List.of(new Objective("feed:COW", 20, "Feed 20 cows"))),
+        new Pack("sheep_flock", "Sheep Flock", Material.WHITE_WOOL, 140, 196, "minecraft:husbandry/breed_an_animal", List.of(new Objective("feed:SHEEP", 20, "Feed 20 sheep"))),
+        new Pack("woodcutter", "Woodcutter Contract", Material.IRON_AXE, 130, 182, "minecraft:story/upgrade_tools", List.of(new Objective("break:OAK_LOG", 128, "Chop 128 Oak Logs"))),
+        new Pack("builder_supply", "Builder's Supply", Material.BRICKS, 240, 336, "minecraft:story/upgrade_tools", List.of(new Objective("collect:BRICKS", 128, "Collect 128 Bricks"))),
+        new Pack("explorer_trail", "Explorer's Trail", Material.COMPASS, 160, 224, "minecraft:adventure/adventuring_time", List.of(new Objective("travel", 5000, "Travel 5,000 blocks"))),
+        new Pack("monster_patrol", "Monster Patrol", Material.IRON_SWORD, 200, 280, "minecraft:adventure/kill_a_mob", List.of(new Objective("kill:ZOMBIE", 30, "Kill 30 Zombies"), new Objective("kill:SKELETON", 20, "Kill 20 Skeletons"))),
+        new Pack("raid_supply", "Raid Supply", Material.CROSSBOW, 380, 532, "minecraft:adventure/ol_betsy", List.of(new Objective("kill:PILLAGER", 25, "Defeat 25 Pillagers"))),
+        new Pack("wither_siege", "Wither Siege", Material.NETHER_STAR, 2500, 3750, "minecraft:nether/summon_wither", List.of(new Objective("kill:WITHER", 1, "Defeat the Wither"), new Objective("collect:NETHER_STAR", 1, "Collect a Nether Star")))
     );
 
     private final List<RandomQuest> randomPool = List.of(
-        new RandomQuest("Deep Diamond Expedition", Material.DIAMOND, 180, 252,
-            new Objective("break:DIAMOND_ORE", 12, "Mine 12 Diamond Ore")),
-        new RandomQuest("Ancient Debris Search", Material.ANCIENT_DEBRIS, 260, 390,
-            new Objective("break:ANCIENT_DEBRIS", 8, "Mine 8 Ancient Debris")),
-        new RandomQuest("Raid the Fortress", Material.BLAZE_ROD, 220, 330,
-            new Objective("kill:BLAZE", 18, "Kill 18 Blazes in the Nether")),
-        new RandomQuest("Undead Patrol", Material.BOW, 150, 210,
-            new Objective("kill:ZOMBIE", 35, "Kill 35 Zombies")),
-        new RandomQuest("Ocean Treasure Hunt", Material.PRISMARINE_SHARD, 200, 300,
-            new Objective("break:PRISMARINE", 96, "Mine 96 Prismarine blocks")),
-        new RandomQuest("Ender Pearl Collection", Material.ENDER_PEARL, 240, 360,
-            new Objective("collect:ENDER_PEARL", 24, "Collect 24 Ender Pearls")),
-        new RandomQuest("Iron Supply Contract", Material.RAW_IRON, 130, 182,
-            new Objective("break:IRON_ORE", 64, "Mine 64 Iron Ore")),
-        new RandomQuest("Wither Skeleton Hunt", Material.WITHER_SKELETON_SKULL, 350, 525,
-            new Objective("kill:WITHER_SKELETON", 16, "Kill 16 Wither Skeletons"))
+        new RandomQuest("Deep Diamond Expedition", Material.DIAMOND, 180, 252, new Objective("break:DIAMOND_ORE", 12, "Mine 12 Diamond Ore")),
+        new RandomQuest("Ancient Debris Search", Material.ANCIENT_DEBRIS, 260, 390, new Objective("break:ANCIENT_DEBRIS", 8, "Mine 8 Ancient Debris")),
+        new RandomQuest("Raid the Fortress", Material.BLAZE_ROD, 220, 330, new Objective("kill:BLAZE", 18, "Kill 18 Blazes in the Nether")),
+        new RandomQuest("Undead Patrol", Material.BOW, 150, 210, new Objective("kill:ZOMBIE", 35, "Kill 35 Zombies")),
+        new RandomQuest("Ocean Treasure Hunt", Material.PRISMARINE_SHARD, 200, 300, new Objective("break:PRISMARINE", 96, "Mine 96 Prismarine blocks")),
+        new RandomQuest("Ender Pearl Collection", Material.ENDER_PEARL, 240, 360, new Objective("collect:ENDER_PEARL", 24, "Collect 24 Ender Pearls")),
+        new RandomQuest("Iron Supply Contract", Material.RAW_IRON, 130, 182, new Objective("break:IRON_ORE", 64, "Mine 64 Iron Ore")),
+        new RandomQuest("Wither Skeleton Hunt", Material.WITHER_SKELETON_SKULL, 350, 525, new Objective("kill:WITHER_SKELETON", 16, "Kill 16 Wither Skeletons")),
+        new RandomQuest("Fishing for Cod", Material.COD, 90, 126, new Objective("fish:COD", 20, "Catch 20 Cod")),
+        new RandomQuest("Fishing for Salmon", Material.SALMON, 110, 154, new Objective("fish:SALMON", 20, "Catch 20 Salmon")),
+        new RandomQuest("Feed the Cows", Material.WHEAT, 100, 140, new Objective("feed:COW", 20, "Feed 20 cows")),
+        new RandomQuest("Animal Breeding", Material.PIG, 120, 168, new Objective("breed:ANY", 10, "Breed 10 animals")),
+        new RandomQuest("Travel Contract", Material.COMPASS, 100, 140, new Objective("travel", 2500, "Travel 2,500 blocks")),
+        new RandomQuest("Woodcutting Contract", Material.OAK_LOG, 100, 140, new Objective("break:OAK_LOG", 128, "Chop 128 Oak Logs")),
+        new RandomQuest("Crop Delivery", Material.CARROT, 85, 119, new Objective("collect:CARROT", 96, "Collect 96 Carrots")),
+        new RandomQuest("Blaze Rod Shipment", Material.BLAZE_ROD, 190, 266, new Objective("collect:BLAZE_ROD", 32, "Collect 32 Blaze Rods")),
+        new RandomQuest("Sand Quarry", Material.SAND, 75, 105, new Objective("break:SAND", 256, "Mine 256 Sand")),
+        new RandomQuest("Monster Cleanup", Material.IRON_SWORD, 140, 196, new Objective("kill:SKELETON", 30, "Kill 30 Skeletons")),
+        new RandomQuest("Food Pantry", Material.BREAD, 90, 126, new Objective("collect:BREAD", 64, "Collect 64 Bread")),
+        new RandomQuest("Quartz Shipment", Material.QUARTZ, 160, 224, new Objective("collect:QUARTZ", 96, "Collect 96 Nether Quartz"))
     );
 
     public QuestManager(XZHEconomySystem plugin) {
@@ -109,9 +136,9 @@ public final class QuestManager implements Listener {
         // Shared global reminder and progress broadcast every 15 minutes while the event is active.
         Bukkit.getScheduler().runTaskTimer(plugin, this::broadcastGlobalProgress, 20L * 60L * 15L, 20L * 60L * 15L);
         if (!data.contains("single-shop.next-refresh")) {
-            data.set("single-shop.next-refresh", nextRefresh(System.currentTimeMillis()));
+            data.set("single-shop.next-refresh", 0L);
             data.set("single-shop.refresh-id", 0);
-            save();
+            refreshSingleShopIfDue();
         }
     }
 
@@ -158,13 +185,27 @@ public final class QuestManager implements Listener {
         refreshSingleShopIfDue();
         long next = data.getLong("single-shop.next-refresh", nextRefresh(System.currentTimeMillis()));
         long mins = Math.max(0, (next - System.currentTimeMillis()) / 60000L);
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Single Quests");
-        add(inv, 13, Material.WRITABLE_BOOK, ChatColor.YELLOW + "Buy Random Quest", "single-buy", "random",
-            List.of(ChatColor.WHITE + "A new random quest is generated for every purchase",
-                    ChatColor.WHITE + "Reward: 30%-50% profit based on difficulty",
-                    ChatColor.GRAY + "Shop refresh in " + (mins / 60) + "h " + (mins % 60) + "m",
-                    ChatColor.GRAY + "One active quest at a time"));
-        add(inv, 22, Material.ARROW, ChatColor.WHITE + "Back", "back", "");
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "XZH Single Quests");
+        for (int i = 0; i < 5; i++) {
+            int poolIndex = data.getInt("single-shop.offers." + i, i % randomPool.size());
+            RandomQuest offer = randomPool.get(Math.floorMod(poolIndex, randomPool.size()));
+            int cost = offer.cost();
+            int reward = (int) Math.ceil(cost * 1.4);
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.WHITE + "Job: " + offer.name());
+            lore.add(ChatColor.AQUA + offer.objective().description());
+            lore.add(ChatColor.WHITE + "Required amount: " + offer.objective().goal());
+            lore.add(ChatColor.WHITE + "Purchase price: " + ChatColor.YELLOW + cost + " coins");
+            lore.add(ChatColor.WHITE + "Completion reward: " + ChatColor.GREEN + reward + " coins");
+            lore.add(ChatColor.GRAY + "Some jobs have a time limit.");
+            lore.add(ChatColor.GRAY + "Refresh in " + (mins / 60) + "h " + (mins % 60) + "m");
+            add(inv, 10 + i, offer.icon(), ChatColor.YELLOW + offer.name(), "single-buy", Integer.toString(i), lore);
+        }
+        add(inv, 31, Material.CLOCK, ChatColor.AQUA + "Offer refresh", "single-info", "",
+            List.of(ChatColor.WHITE + "Five different offers are available.",
+                    ChatColor.WHITE + "Offers refresh every 2 hours.",
+                    ChatColor.GRAY + "Buying one starts it and replaces that slot."));
+        add(inv, 49, Material.ARROW, ChatColor.WHITE + "Back", "back", "");
         player.openInventory(inv);
     }
 
@@ -199,37 +240,34 @@ public final class QuestManager implements Listener {
         player.openInventory(inv);
     }
 
-    private void buyRandom(Player player) {
+    private void buyRandom(Player player, int offerSlot) {
         UUID id = player.getUniqueId();
-        if (plugin.getLoanManager().isShopPurchaseRestricted(id)) {
-            plugin.tellPublic(player, "Your loan is overdue. Quest purchases are locked; sell eligible items and repay your debt.");
-            return;
-        }
-        if (!data.getString(id + ".active", "").isBlank()) {
-            plugin.tellPublic(player, "Finish your active quest before buying another.");
-            return;
-        }
-        RandomQuest template = randomPool.get(random.nextInt(randomPool.size()));
-        // Each purchase creates a fresh variant: both its target quantity and price vary.
-        int difficultyScale = 80 + random.nextInt(61);
+        if (plugin.getLoanManager().isShopPurchaseRestricted(id)) { plugin.tellPublic(player, "Your loan is overdue. Quest purchases are locked; sell eligible items and repay your debt."); return; }
+        if (!data.getString(id + ".active", "").isBlank()) { plugin.tellPublic(player, "Finish your active quest before buying another."); return; }
+        if (offerSlot < 0 || offerSlot >= 5) return;
+        int poolIndex = Math.floorMod(data.getInt("single-shop.offers." + offerSlot, offerSlot), randomPool.size());
+        RandomQuest template = randomPool.get(poolIndex);
+        int difficultyScale = 85 + random.nextInt(51);
         int goal = Math.max(1, (int) Math.ceil(template.objective().goal() * difficultyScale / 100.0));
-        Objective objective = new Objective(template.objective().target(), goal,
-                template.objective().description().replaceFirst("\\d+", Integer.toString(goal)));
-        int cost = Math.max(100, (int) Math.round(template.cost() * (0.80 + random.nextDouble() * 0.41)));
+        Objective objective = new Objective(template.objective().target(), goal, template.objective().description().replaceFirst("\\d+", Integer.toString(goal)));
+        int cost = Math.max(50, (int) Math.round(template.cost() * (0.90 + random.nextDouble() * 0.21)));
         int margin = 30 + random.nextInt(21);
         int reward = (int) Math.ceil(cost * (1.0 + margin / 100.0));
-        double balance = plugin.getCombinedBalance(id);
-        if (balance < cost || !plugin.spendAvailableFunds(id, cost)) {
-            plugin.tellPublic(player, "You need " + cost + " coins to buy this random quest.");
-            return;
-        }
+        if (plugin.getCombinedBalance(id) < cost || !plugin.spendAvailableFunds(id, cost)) { plugin.tellPublic(player, "You need " + cost + " coins to buy this random quest."); return; }
         String questName = template.name() + " #" + (data.getInt("single-shop.quest-sequence", 0) + 1);
         data.set("single-shop.quest-sequence", data.getInt("single-shop.quest-sequence", 0) + 1);
         startQuest(player, "single:" + System.currentTimeMillis(), questName, cost, reward, List.of(objective));
         data.set(id + ".profit-margin", margin);
+        data.set("single-shop.offers." + offerSlot, random.nextInt(randomPool.size()));
         save();
-        plugin.tellPublic(player, "Random quest generated: " + questName + ". Complete it for " + reward + " coins (" + margin + "% profit).");
+        plugin.tellPublic(player, "Started " + questName + ": " + objective.description() + ". Cost " + cost + "; reward " + reward + " coins. " + (isTimedSingle(template) ? "Time limit: 30 minutes." : "No timer."));
         player.closeInventory();
+    }
+
+    private boolean isTimedSingle(RandomQuest quest) {
+        return quest.name().equals("Ancient Debris Search") || quest.name().equals("Raid the Fortress")
+                || quest.name().equals("Fishing for Cod") || quest.name().equals("Travel Contract")
+                || quest.name().equals("Wither Skeleton Hunt");
     }
 
     private void buyPack(Player player, Pack pack) {
@@ -316,6 +354,29 @@ public final class QuestManager implements Listener {
         if (matchesTarget(id, "travel")) incrementTarget(p, "travel", (int) Math.floor(step));
     }
 
+    @EventHandler
+    public void onFish(PlayerFishEvent event) {
+        if (event.isCancelled() || event.getState() != PlayerFishEvent.State.CAUGHT_FISH || !(event.getCaught() instanceof org.bukkit.entity.Item caught)) return;
+        Player player = event.getPlayer();
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        incrementTarget(player, "fish:" + caught.getItemStack().getType().name(), 1);
+    }
+
+    @EventHandler
+    public void onBreed(EntityBreedEvent event) {
+        if (!(event.getBreeder() instanceof Player player)) return;
+        incrementTarget(player, "breed:ANY", 1);
+    }
+
+    @EventHandler
+    public void onFeed(PlayerInteractEntityEvent event) {
+        if (!(event.getRightClicked() instanceof Animals animal)) return;
+        Player player = event.getPlayer();
+        ItemStack held = player.getInventory().getItem(event.getHand());
+        if (held == null || !held.getType().isEdible()) return;
+        incrementTarget(player, "feed:" + animal.getType().name(), 1);
+    }
+
     private void incrementTarget(Player player, String target, int amount) {
         if (amount <= 0) return;
         UUID id = player.getUniqueId();
@@ -357,7 +418,31 @@ public final class QuestManager implements Listener {
         return true;
     }
 
+    private long timerLimitSeconds(String activeId) {
+        if (activeId == null || !activeId.startsWith("pack:")) return 0L;
+        String packId = activeId.substring("pack:".length());
+        return switch (packId) {
+            case "debris_hunter", "nether_hunter", "nether_blaze", "ocean_fisher", "salmon_run", "deep_sea", "explorer_trail", "monster_patrol", "raid_supply" -> 30L * 60L;
+            case "diamond_miner", "pearl_trader", "animal_breeder", "cattle_feed", "sheep_flock", "woodcutter", "builder_supply" -> 60L * 60L;
+            default -> 0L;
+        };
+    }
+
+    private void expireTimedQuestIfNeeded(Player player) {
+        UUID id = player.getUniqueId();
+        String active = data.getString(id + ".active", "");
+        long limit = timerLimitSeconds(active);
+        if (limit <= 0) return;
+        long started = data.getLong(id + ".started-at", System.currentTimeMillis());
+        if (System.currentTimeMillis() - started <= limit * 1000L) return;
+        data.set(id.toString(), null);
+        save();
+        plugin.getHudManager().hideActiveQuest(player);
+        plugin.tellPublic(player, "Quest timer expired. The quest was forfeited; choose another challenge.");
+    }
+
     private void updateHud(Player player) {
+        expireTimedQuestIfNeeded(player);
         UUID id = player.getUniqueId();
         String active = data.getString(id + ".active", "");
         if (active.isBlank()) { plugin.getHudManager().hideActiveQuest(player); return; }
@@ -441,8 +526,14 @@ public final class QuestManager implements Listener {
         if (next <= 0 || now >= next) {
             data.set("single-shop.next-refresh", nextRefresh(now));
             data.set("single-shop.refresh-id", data.getInt("single-shop.refresh-id", 0) + 1);
+            List<Integer> choices = new ArrayList<>();
+            while (choices.size() < 5) {
+                int candidate = random.nextInt(randomPool.size());
+                if (!choices.contains(candidate)) choices.add(candidate);
+            }
+            for (int i = 0; i < choices.size(); i++) data.set("single-shop.offers." + i, choices.get(i));
             save();
-            Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Quests] New random single-quest offers are available!");
+            Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Quests] Five new random single-quest offers are available!");
         }
     }
 
@@ -492,7 +583,8 @@ public final class QuestManager implements Listener {
             case "section-single" -> openSingle(player);
             case "section-packs" -> openPacks(player);
             case "section-global" -> openGlobal(player);
-            case "single-buy" -> buyRandom(player);
+            case "single-buy" -> { try { buyRandom(player, Integer.parseInt(value)); } catch (NumberFormatException ignored) { } }
+            case "single-info" -> plugin.tellPublic(player, "Five random quests are available; each purchase replaces its offer slot.");
             case "pack-select" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> confirmPack(player, p));
             case "pack-buy" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> buyPack(player, p));
             case "global-claim" -> claimGlobal(player);
