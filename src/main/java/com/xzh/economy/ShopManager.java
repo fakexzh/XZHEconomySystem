@@ -38,6 +38,7 @@ public final class ShopManager implements Listener {
     private final NamespacedKey potionTypeKey;
     private final NamespacedKey xpBottleKey;
     private final NamespacedKey xpPointsKey;
+    private final NamespacedKey sellUnitPriceKey;
     private final File stockFile;
     private final YamlConfiguration stockData;
 
@@ -164,6 +165,7 @@ public final class ShopManager implements Listener {
         this.potionTypeKey = new NamespacedKey(plugin, "shop_potion_type");
         this.xpBottleKey = new NamespacedKey(plugin, "xzh_xp_bottle");
         this.xpPointsKey = new NamespacedKey(plugin, "xzh_xp_points");
+        this.sellUnitPriceKey = new NamespacedKey(plugin, "xzh_sell_unit_price");
         // Include every potion base type in all three bottle forms. Variant identity is
         // stored in item metadata so buying a Strength potion cannot become a Water potion.
         for (PotionType type : PotionType.values()) {
@@ -283,6 +285,10 @@ public final class ShopManager implements Listener {
         summary.setItemMeta(meta);
         inv.setItem(13, summary);
         add(inv, 11, Material.LIME_CONCRETE, "Confirm sale", "sell-hand-confirm", hand.getType().name() + ":-:" + hand.getAmount());
+        ItemStack confirm = inv.getItem(11);
+        ItemMeta confirmMeta = confirm.getItemMeta();
+        confirmMeta.getPersistentDataContainer().set(sellUnitPriceKey, PersistentDataType.DOUBLE, unitSell);
+        confirm.setItemMeta(confirmMeta);
         add(inv, 15, Material.RED_CONCRETE, "Cancel", "category-back", "main");
         player.openInventory(inv);
     }
@@ -311,7 +317,7 @@ public final class ShopManager implements Listener {
         ItemMeta sm = sell.getItemMeta();
         sm.setDisplayName(ChatColor.GREEN + "Sell my XP bar");
         sm.setLore(List.of(ChatColor.WHITE + "Your current XP: " + xp + " points",
-                ChatColor.WHITE + "Payout: " + ChatColor.YELLOW + money(xp * plugin.getConfig().getDouble("shop.xp-value-per-point", 0.1)) + " coins",
+                ChatColor.WHITE + "Payout: " + ChatColor.YELLOW + money(xp * plugin.getConfig().getDouble("death-recovery.xp-value-per-point", 0.1)) + " coins",
                 ChatColor.GRAY + "Sells all current XP after confirmation."));
         sm.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "xp-sell");
         sell.setItemMeta(sm);
@@ -571,8 +577,9 @@ public final class ShopManager implements Listener {
                 int quantity;
                 try { quantity = Integer.parseInt(bits[bits.length - 1]); } catch (NumberFormatException ex) { return; }
                 Product p = material == null ? null : (potionTypeName.equals("-") ? product(material) : potionProduct(material, potionTypeName));
+                double handUnitPrice = meta.getPersistentDataContainer().getOrDefault(sellUnitPriceKey, PersistentDataType.DOUBLE, defaultSellPrice());
                 if (p == null && !action.equals("buy") && material != null)
-                    p = new Product("misc", material, 0.0, plugin.getConfig().getDouble("shop.default-sell-price", 0.1));
+                    p = new Product("misc", material, 0.0, action.equals("sell-hand-confirm") ? handUnitPrice : defaultSellPrice());
                 if (p == null || quantity < 1) return;
                 if (!action.equals("buy") && isUnsellableExploitItem(material)) {
                     plugin.tellPublic(player, "This item cannot be sold to the XZH shop because it is exploit-prone or intended to remain rare.");
