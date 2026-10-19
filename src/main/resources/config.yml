@@ -251,6 +251,11 @@ kits:
       - BREAD:8
       - TORCH:16
 
+# Travel shop restrictions. Spawn eggs can still be purchased from the Travel menu.
+travel:
+  disable-natural-horse-donkey-spawning: true
+  disable-horse-donkey-breeding: true
+
 # XZH premium boats. Prices are defined by the curated BoatManager offers.
 premium-boats:
   enabled: true
