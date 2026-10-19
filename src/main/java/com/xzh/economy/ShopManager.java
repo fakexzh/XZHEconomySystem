@@ -131,9 +131,7 @@ public final class ShopManager implements Listener {
         new Product("eggs-heads", Material.COW_SPAWN_EGG, 1500, 0),
         new Product("eggs-heads", Material.SHEEP_SPAWN_EGG, 1500, 0),
         new Product("eggs-heads", Material.PIG_SPAWN_EGG, 1500, 0),
-        new Product("eggs-heads", Material.HORSE_SPAWN_EGG, 2500, 0),
-        new Product("eggs-heads", Material.DONKEY_SPAWN_EGG, 2500, 0),
-        new Product("eggs-heads", Material.RABBIT_SPAWN_EGG, 1800, 0),
+                new Product("eggs-heads", Material.RABBIT_SPAWN_EGG, 1800, 0),
         new Product("eggs-heads", Material.TURTLE_SPAWN_EGG, 2200, 0),
         new Product("eggs-heads", Material.AXOLOTL_SPAWN_EGG, 2800, 0),
         new Product("eggs-heads", Material.CAMEL_SPAWN_EGG, 3000, 0),
@@ -236,7 +234,7 @@ public final class ShopManager implements Listener {
         add(inv, 13, Material.WHEAT_SEEDS, "Seeds & Farming", "category", "seeds");
         add(inv, 14, Material.COOKED_BEEF, "Food", "category", "food");
         add(inv, 16, Material.DIAMOND_PICKAXE, "Armor & Tools", "category", "equipment");
-        add(inv, 17, Material.OAK_BOAT, "XZH Premium Boats", "category", "boats");
+        add(inv, 17, Material.OAK_BOAT, "Travel", "category", "travel");
         add(inv, 19, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
         add(inv, 21, Material.POTION, "Potions", "category", "potions");
         add(inv, 23, Material.ZOMBIE_HEAD, "Eggs & Heads", "category", "eggs-heads");
@@ -256,8 +254,8 @@ public final class ShopManager implements Listener {
     }
 
     private void openCategory(Player player, String category, int requestedPage) {
-        if (category.equals("boats")) { plugin.getBoatManager().open(player); return; }
-        if (category.equals("food")) { openFoodMenu(player); return;
+        if (category.equals("travel")) { plugin.getBoatManager().open(player); return; }
+        if (category.equals("food")) { openFoodMenu(player); return; }
         if (category.equals("xp")) { openXpMenu(player); return; }
         List<Product> list = products.stream().filter(p -> p.category().equals(category)).toList();
         int pages = Math.max(1, (list.size() + 44) / 45);
