@@ -41,6 +41,9 @@ commands:
     description: Manage global shop stock.
     usage: /shopadmin <restock|stock <MATERIAL> <amount>>
     permission: xzh.admin
+  helpxzh:
+    description: Open the clickable XZH server guide.
+    usage: /helpxzh
   xzhadmin:
     description: Open the XZH economy admin GUI.
     usage: /xzhadmin
