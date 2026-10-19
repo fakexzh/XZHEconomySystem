@@ -60,7 +60,7 @@ public final class LoanManager implements Listener {
             add(inv, 13, Material.WRITABLE_BOOK, ChatColor.YELLOW + "Active loan",
                     "status", 0, 0, List.of(
                     ChatColor.WHITE + "Owed: " + ChatColor.RED + money(owed) + " coins",
-                    ChatColor.WHITE + "Due: " + ChatColor.AQUA + remaining(getDue(id)),
+                    ChatColor.WHITE + "Status: " + ChatColor.AQUA + loanStatus(id),
                     ChatColor.GRAY + "Repay available funds or use /loan repay."));
             add(inv, 15, Material.GOLD_INGOT, ChatColor.GREEN + "Repay now", "repay", 0, 0, List.of(ChatColor.WHITE + "Repay available funds; full repayment clears the loan"));
             add(inv, 22, Material.ARROW, ChatColor.WHITE + "Close", "close", 0, 0, List.of());
@@ -267,6 +267,15 @@ public final class LoanManager implements Listener {
         meta.getPersistentDataContainer().set(termKey, PersistentDataType.INTEGER, term);
         stack.setItemMeta(meta);
         inv.setItem(slot, stack);
+    }
+
+    private String loanStatus(UUID id) {
+        long now = System.currentTimeMillis();
+        long due = getDue(id);
+        long grace = data.getLong(id + ".grace-until", due + 12L * 60L * 60L * 1000L);
+        if (now < due) return "Due in " + remaining(due);
+        if (now < grace) return "Grace period: " + remaining(grace) + " left";
+        return "OVERDUE — purchases locked";
     }
 
     private String remaining(long due) {
