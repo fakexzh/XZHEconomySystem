@@ -134,8 +134,24 @@ public final class BoatManager implements Listener {
             Inventory confirm = Bukkit.createInventory(null, 27, "Confirm Travel Item");
             Material egg = "horse".equals(tier) ? Material.HORSE_SPAWN_EGG : Material.DONKEY_SPAWN_EGG;
             String name = ("horse".equals(tier) ? "Horse" : "Donkey") + " Spawn Egg";
-            confirm.setItem(13, travelEgg(egg, tier, name));
-            confirm.setItem(26, backItem());
+            ItemStack preview = travelEgg(egg, "preview", name);
+            ItemMeta previewMeta = preview.getItemMeta();
+            previewMeta.setLore(List.of(ChatColor.WHITE + "Price: " + ChatColor.YELLOW + "2,500 coins"));
+            preview.setItemMeta(previewMeta);
+            confirm.setItem(13, preview);
+            ItemStack yes = new ItemStack(Material.LIME_CONCRETE);
+            ItemMeta yesMeta = yes.getItemMeta();
+            yesMeta.setDisplayName(ChatColor.GREEN + "Confirm purchase");
+            yesMeta.setLore(List.of(ChatColor.WHITE + "Price: " + ChatColor.YELLOW + "2,500 coins"));
+            yesMeta.getPersistentDataContainer().set(tierKey, PersistentDataType.STRING, tier);
+            yes.setItemMeta(yesMeta);
+            confirm.setItem(11, yes);
+            ItemStack no = new ItemStack(Material.RED_CONCRETE);
+            ItemMeta noMeta = no.getItemMeta();
+            noMeta.setDisplayName(ChatColor.RED + "Cancel");
+            noMeta.getPersistentDataContainer().set(tierKey, PersistentDataType.STRING, "back");
+            no.setItemMeta(noMeta);
+            confirm.setItem(15, no);
             player.openInventory(confirm);
             return;
         }
