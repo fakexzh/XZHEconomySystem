@@ -868,7 +868,11 @@ public final class ShopManager implements Listener {
         if (name.equals("MILK_BUCKET")) return 10.0;
         if (isUnsellableExploitItem(p.material())) return 0.0;
         if (lower.endsWith("_spawn_egg") && plugin.getConfig().getBoolean("restrictions.buy-only-spawn-eggs", true)) return 0.0;
-        if (p.potionType() != null || p.category().equals("potions")) return 0.0;
+        // Every potion form and base type resells for 20% of its actual configured buy price.
+        // This covers regular, splash, and lingering potions, including upgraded/extended variants.
+        if (p.potionType() != null || p.category().equals("potions")) {
+            return Math.floor(buyPrice(p) * 0.20);
+        }
         // Resale is deliberately based on farmability/usefulness, never a blanket
         // percentage of buy price. Common renewable blocks earn 1 coin per 64.
         if (name.equals("ANCIENT_DEBRIS")) return 20.0;
