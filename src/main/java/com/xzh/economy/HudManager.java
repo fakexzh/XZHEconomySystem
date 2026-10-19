@@ -11,7 +11,7 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.ScoreboardManager;
 import org.bukkit.scoreboard.Criteria;
-import org.bukkit.scoreboard.NumberFormat;
+import io.papermc.paper.scoreboard.numbers.NumberFormat;
 
 import java.time.Duration;
 import java.time.LocalTime;
