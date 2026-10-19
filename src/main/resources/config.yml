@@ -71,7 +71,7 @@ death-recovery:
 
 # Global shop stock caps. Stock is shared by every player and refills to these caps daily.\n# Resale values are deliberately item-specific in code; legacy 30% sell defaults are not used.
 shop:
-  default-sell-price: 0.1
+  default-sell-price: 0.015625
   prices:
     elytra:
       buy: 5000
