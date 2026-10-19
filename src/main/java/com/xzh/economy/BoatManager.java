@@ -41,11 +41,11 @@ public final class BoatManager implements Listener {
 
     private final List<BoatOffer> offers = List.of(
         new BoatOffer("basic", "Basic Boat", Material.OAK_BOAT, Material.OAK_CHEST_BOAT,
-            200, 300, "Natural wooden raft", "Black XZH", "Normal speed"),
+            200, 300, "Natural wooden raft", "Black XZH", "Vanilla speed (1x)"),
         new BoatOffer("aura", "Aura Boat", Material.BIRCH_BOAT, Material.BIRCH_CHEST_BOAT,
-            700, 999, "Premium white finish", "Black XZH", "Mid speed"),
+            700, 999, "Premium white finish", "Black XZH", "2x vanilla speed"),
         new BoatOffer("super", "Super Boat", Material.DARK_OAK_BOAT, Material.DARK_OAK_CHEST_BOAT,
-            1500, 2100, "Sleek black speedboat", "White XZH", "High speed")
+            1500, 2100, "Sleek black speedboat", "White XZH", "3x vanilla speed")
     );
 
     public BoatManager(XZHEconomySystem plugin) {
@@ -255,16 +255,15 @@ public final class BoatManager implements Listener {
     }
 
     private void applyBoatSpeed(Boat boat, String tier) {
-        // Bukkit's max-speed property is the actual boat movement cap; changing velocity
-        // alone is overwritten by vanilla movement physics and made tiers feel identical.
+        // Bukkit's default boat max speed is 0.4 blocks/tick. Keep Basic at vanilla
+        // speed, then scale the cap to 2x and 3x for Aura and Super.
+        // Leave deceleration settings at their vanilla defaults.
         double maxSpeed = switch (tier) {
-            case "aura" -> 0.55;
-            case "super" -> 0.75;
+            case "aura" -> 0.80;
+            case "super" -> 1.20;
             default -> 0.40;
         };
         boat.setMaxSpeed(maxSpeed);
-        boat.setOccupiedDeceleration(0.0);
-        boat.setUnoccupiedDeceleration(0.0);
     }
 
     private ItemStack travelEgg(Material material, String tier, String name) {
