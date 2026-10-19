@@ -35,7 +35,7 @@ public final class UtilityManager implements Listener {
     private final Map<UUID, UUID> replies = new HashMap<>();
     private final Map<UUID, Boolean> afk = new HashMap<>();
     private final Map<UUID, Long> rtpCooldown = new HashMap<>();
-    private double fractionalTimeTicks;
+    private final Map<UUID, Double> fractionalTimeTicks = new HashMap<>();
 
     public UtilityManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -430,12 +430,11 @@ public final class UtilityManager implements Listener {
             boolean day = time < 12000L;
             int minutes = Math.max(1, plugin.getConfig().getInt(day ? "time-control.daylength-minutes" : "time-control.nightlength-minutes", 30));
             double ticksPerSecond = 12000.0 / (minutes * 60.0);
-            fractionalTimeTicks += ticksPerSecond / Math.max(1, Bukkit.getWorlds().stream().filter(w -> w.getEnvironment() == World.Environment.NORMAL).count());
-            long advance = (long) fractionalTimeTicks;
-            if (advance > 0) {
-                fractionalTimeTicks -= advance;
-                world.setTime(Math.floorMod(time + advance, 24000L));
-            }
+            UUID worldId = world.getUID();
+            double accumulated = fractionalTimeTicks.getOrDefault(worldId, 0.0) + ticksPerSecond;
+            long advance = (long) accumulated;
+            fractionalTimeTicks.put(worldId, accumulated - advance);
+            if (advance > 0) world.setTime(Math.floorMod(time + advance, 24000L));
         }
     }
 
