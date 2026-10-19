@@ -40,6 +40,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        migrateEconomyConfig();
         transactionsFile = new File(getDataFolder(), "transactions.log");
         balancesFile = new File(getDataFolder(), "balances.yml");
         if (!balancesFile.exists()) {
@@ -91,6 +92,35 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     }
 
     public HudManager getHudManager() { return hudManager; }
+    private void migrateEconomyConfig() {
+        boolean changed = false;
+        // Existing server config.yml files are not overwritten by saveDefaultConfig().
+        // Migrate the old economy defaults so the anti-farming balance applies on upgrade.
+        if (Math.abs(getConfig().getDouble("shop.prices.diamond.buy", 250.0) - 250.0) < 0.0001) {
+            getConfig().set("shop.prices.diamond.buy", 100.0);
+            changed = true;
+        }
+        if (Math.abs(getConfig().getDouble("shop.prices.diamond.sell", 75.0) - 75.0) < 0.0001) {
+            getConfig().set("shop.prices.diamond.sell", 5.0);
+            changed = true;
+        }
+        if (getConfig().getDouble("shop.default-sell-price", 0.1) > 0.015625) {
+            getConfig().set("shop.default-sell-price", 0.015625);
+            changed = true;
+        }
+        if (!getConfig().contains("utilities.tpa-cost")) { getConfig().set("utilities.tpa-cost", 10.0); changed = true; }
+        if (!getConfig().contains("utilities.back-cost")) { getConfig().set("utilities.back-cost", 30.0); changed = true; }
+        if (!getConfig().contains("time-control.enabled")) { getConfig().set("time-control.enabled", true); changed = true; }
+        if (!getConfig().contains("time-control.daylength-minutes")) { getConfig().set("time-control.daylength-minutes", 30); changed = true; }
+        if (!getConfig().contains("time-control.nightlength-minutes")) { getConfig().set("time-control.nightlength-minutes", 30); changed = true; }
+        if (!getConfig().contains("time-control.paused")) { getConfig().set("time-control.paused", false); changed = true; }
+        if (!getConfig().contains("announcements.bank.enabled")) { getConfig().set("announcements.bank.enabled", true); changed = true; }
+        if (changed) {
+            saveConfig();
+            getLogger().info("Migrated legacy config defaults for revised XZH economy rules.");
+        }
+    }
+
     public BankManager getBankManager() { return bankManager; }
     public LoanManager getLoanManager() { return loanManager; }
     public ShopManager getShopManager() { return shopManager; }
