@@ -690,6 +690,7 @@ public final class ShopManager implements Listener {
         if (p.category().startsWith("food")) return Math.max(0.0, Math.floor(buyPrice(p) * 0.05));
         if (p.category().equals("eggs-heads")) {
             if (name.endsWith("_SPAWN_EGG")) return 0.0;
+            if (name.equals("EGG")) return 1.0 / 64.0;
             return Math.max(0.0, Math.floor(buyPrice(p) * 0.01));
         }
         if (p.category().equals("xp")) return 0.0;
@@ -739,7 +740,7 @@ public final class ShopManager implements Listener {
     private double seedSellPrice(Material m) {
         String n = m.name();
         if (n.contains("TORCHFLOWER") || n.contains("PITCHER")) return 0.0;
-        return 0.1;
+        return 1.0 / 64.0;
     }
 
     /** Items that must never be convertible into shop money, even if a config assigns a sell price. */
