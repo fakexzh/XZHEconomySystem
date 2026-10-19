@@ -172,7 +172,7 @@ public final class ShopManager implements Listener {
         // Existing curated products keep their configured prices; newly added farmable
         // blocks use conservative buy values and earn only 1 coin per full stack at most.
         for (Material material : Material.values()) {
-            if (material.isBlock() && material.isItem() && !material.isAir()
+            if (material.isBlock() && material.isItem() && !material.isAir() && !isCreativeOnlyBlock(material)
                     && products.stream().noneMatch(p -> p.material() == material && p.potionType() == null)) {
                 double buy = blockBuyPrice(material);
                 double sell = isFarmableCommonBlock(material) ? (1.0 / 64.0) : 0.0;
@@ -708,6 +708,16 @@ public final class ShopManager implements Listener {
         if (n.contains("OBSIDIAN") || n.contains("CRYING")) return 30.0;
         if (n.contains("COPPER") || n.contains("IRON") || n.contains("GOLD") || n.contains("DIAMOND") || n.contains("EMERALD")) return 100.0;
         return 10.0;
+    }
+
+    private boolean isCreativeOnlyBlock(Material material) {
+        return switch (material.name()) {
+            case "BEDROCK", "BARRIER", "COMMAND_BLOCK", "CHAIN_COMMAND_BLOCK",
+                 "REPEATING_COMMAND_BLOCK", "COMMAND_BLOCK_MINECART", "STRUCTURE_BLOCK",
+                 "STRUCTURE_VOID", "JIGSAW", "END_PORTAL_FRAME", "SPAWNER",
+                 "LIGHT", "DEBUG_STICK", "KNOWLEDGE_BOOK", "PLAYER_HEAD" -> true;
+            default -> false;
+        };
     }
 
     private boolean isFarmableCommonBlock(Material m) {
