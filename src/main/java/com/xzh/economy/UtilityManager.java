@@ -35,12 +35,14 @@ public final class UtilityManager implements Listener {
     private final Map<UUID, UUID> replies = new HashMap<>();
     private final Map<UUID, Boolean> afk = new HashMap<>();
     private final Map<UUID, Long> rtpCooldown = new HashMap<>();
+    private double fractionalTimeTicks;
 
     public UtilityManager(JavaPlugin plugin) {
         this.plugin = plugin;
         file = new File(plugin.getDataFolder(), "locations.yml");
         data = YamlConfiguration.loadConfiguration(file);
         Bukkit.getPluginManager().registerEvents(this, plugin);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::advanceServerTime, 20L, 20L);
     }
 
     public boolean handle(CommandSender sender, String command, String[] args) {
@@ -218,6 +220,45 @@ public final class UtilityManager implements Listener {
                 Bukkit.broadcastMessage(ChatColor.GRAY + player.getName() + (value ? " is now AFK." : " is no longer AFK."));
                 return true;
             }
+            case "xzh" -> {
+                if (args.length == 0 || !args[0].equalsIgnoreCase("time")) {
+                    msg(player, "Usage: /xzh time <daylength|nightlength <minutes>|set <day|night>|pause|resume|info>");
+                    return true;
+                }
+                if (!player.hasPermission("xzh.admin")) { msg(player, "No permission."); return true; }
+                if (args.length == 2 && args[1].equalsIgnoreCase("pause")) {
+                    plugin.getConfig().set("time-control.paused", true); saveConfig();
+                    msg(player, "Custom day/night cycle paused."); return true;
+                }
+                if (args.length == 2 && args[1].equalsIgnoreCase("resume")) {
+                    plugin.getConfig().set("time-control.paused", false); saveConfig();
+                    msg(player, "Custom day/night cycle resumed."); return true;
+                }
+                if (args.length == 2 && args[1].equalsIgnoreCase("info")) {
+                    msg(player, "Day: " + plugin.getConfig().getInt("time-control.daylength-minutes", 30)
+                        + " minutes; night: " + plugin.getConfig().getInt("time-control.nightlength-minutes", 30)
+                        + " minutes; paused: " + plugin.getConfig().getBoolean("time-control.paused", false) + ".");
+                    return true;
+                }
+                if (args.length == 3 && args[1].equalsIgnoreCase("set")) {
+                    if (args[2].equalsIgnoreCase("day")) {
+                        for (World world : Bukkit.getWorlds()) if (world.getEnvironment() == World.Environment.NORMAL) world.setTime(1000L);
+                    } else if (args[2].equalsIgnoreCase("night")) {
+                        for (World world : Bukkit.getWorlds()) if (world.getEnvironment() == World.Environment.NORMAL) world.setTime(13000L);
+                    } else { msg(player, "Use /xzh time set <day|night>."); return true; }
+                    msg(player, "Server world time updated."); return true;
+                }
+                if (args.length == 3 && (args[1].equalsIgnoreCase("daylength") || args[1].equalsIgnoreCase("nightlength"))) {
+                    int minutes;
+                    try { minutes = Integer.parseInt(args[2]); } catch (NumberFormatException ex) { msg(player, "Minutes must be a number from 1 to 240."); return true; }
+                    if (minutes < 1 || minutes > 240) { msg(player, "Minutes must be between 1 and 240."); return true; }
+                    plugin.getConfig().set("time-control." + (args[1].equalsIgnoreCase("daylength") ? "daylength-minutes" : "nightlength-minutes"), minutes);
+                    saveConfig();
+                    msg(player, "Custom " + args[1].replace("length", "") + " length set to " + minutes + " minutes."); return true;
+                }
+                msg(player, "Usage: /xzh time <daylength|nightlength <minutes>|set <day|night>|pause|resume|info>");
+                return true;
+            }
             case "help" -> {
                 sender.sendMessage(ChatColor.GOLD + "XZHEconomySystem commands:");
                 sender.sendMessage(ChatColor.WHITE + "/balance, /pay, /shop, /books, /loan, /quests, /deathinventory");
@@ -377,6 +418,30 @@ public final class UtilityManager implements Listener {
             if (!player.isOnline()) return;
             msg(player, "You died. Use /back to return to your death location (30 coins), or /deathinventory to review recovery options.");
         });
+    }
+
+    private void advanceServerTime() {
+        if (!plugin.getConfig().getBoolean("time-control.enabled", true)) return;
+        for (World world : Bukkit.getWorlds()) {
+            if (world.getEnvironment() != World.Environment.NORMAL) continue;
+            world.setGameRule(org.bukkit.GameRule.DO_DAYLIGHT_CYCLE, false);
+            if (plugin.getConfig().getBoolean("time-control.paused", false)) continue;
+            long time = Math.floorMod(world.getTime(), 24000L);
+            boolean day = time < 12000L;
+            int minutes = Math.max(1, plugin.getConfig().getInt(day ? "time-control.daylength-minutes" : "time-control.nightlength-minutes", 30));
+            double ticksPerSecond = 12000.0 / (minutes * 60.0);
+            fractionalTimeTicks += ticksPerSecond / Math.max(1, Bukkit.getWorlds().stream().filter(w -> w.getEnvironment() == World.Environment.NORMAL).count());
+            long advance = (long) fractionalTimeTicks;
+            if (advance > 0) {
+                fractionalTimeTicks -= advance;
+                world.setTime(Math.floorMod(time + advance, 24000L));
+            }
+        }
+    }
+
+    private void saveConfig() {
+        try { plugin.getConfig().save(new File(plugin.getDataFolder(), "config.yml")); }
+        catch (IOException e) { plugin.getLogger().severe("Could not save time-control settings: " + e.getMessage()); }
     }
 
     private String money(double amount) {
