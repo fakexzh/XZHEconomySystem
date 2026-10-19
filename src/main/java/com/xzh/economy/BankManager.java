@@ -28,6 +28,9 @@ public final class BankManager implements Listener {
     private final YamlConfiguration data;
     private final NamespacedKey actionKey;
     private final NamespacedKey amountKey;
+    private Boolean previousOpenState;
+    private boolean openingWarned;
+    private boolean closingWarned;
 
     public BankManager(XZHEconomySystem plugin) {
         this.plugin = plugin;
@@ -36,6 +39,8 @@ public final class BankManager implements Listener {
         actionKey = new NamespacedKey(plugin, "bank_action");
         amountKey = new NamespacedKey(plugin, "bank_amount");
         Bukkit.getPluginManager().registerEvents(this, plugin);
+        previousOpenState = isOpenNow();
+        Bukkit.getScheduler().runTaskTimer(plugin, this::announceSchedule, 20L, 20L);
     }
 
     public double getBalance(UUID id) {
@@ -57,6 +62,53 @@ public final class BankManager implements Listener {
         long openTick = Math.floorMod((openHour - 6L) * 1000L, 24000L);
         long closeTick = Math.floorMod((closeHour - 6L) * 1000L, 24000L);
         return openTick < closeTick ? time >= openTick && time < closeTick : time >= openTick || time < closeTick;
+    }
+
+    private void announceSchedule() {
+        if (!plugin.getConfig().getBoolean("announcements.bank.enabled", true)) return;
+        World world = getClockWorld();
+        if (world == null) return;
+        boolean open = isOpenNow();
+        if (previousOpenState != null && previousOpenState != open) {
+            Bukkit.broadcastMessage(open
+                    ? ChatColor.GOLD + "[XZH BANK] " + ChatColor.GREEN + "The bank is now OPEN."
+                    : ChatColor.GOLD + "[XZH BANK] " + ChatColor.RED + "The bank is now CLOSED.");
+            if (open) { openingWarned = false; closingWarned = false; }
+        }
+        previousOpenState = open;
+        long now = Math.floorMod(world.getTime(), 24000L);
+        long openTick = Math.floorMod((plugin.getConfig().getInt("bank.open-hour", 9) - 6L) * 1000L, 24000L);
+        long closeTick = Math.floorMod((plugin.getConfig().getInt("bank.close-hour", 20) - 6L) * 1000L, 24000L);
+        if (open) {
+            double seconds = secondsUntil(now, closeTick);
+            if (!closingWarned && seconds > 0 && seconds <= 300) {
+                closingWarned = true;
+                Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH BANK] " + ChatColor.YELLOW + "The bank will close in about 5 minutes.");
+            }
+        } else {
+            double seconds = secondsUntil(now, openTick);
+            if (!openingWarned && seconds > 0 && seconds <= 300) {
+                openingWarned = true;
+                Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH BANK] " + ChatColor.YELLOW + "The bank will open in about 5 minutes.");
+            }
+        }
+    }
+
+    private double secondsUntil(long from, long target) {
+        long distance = Math.floorMod(target - from, 24000L);
+        double seconds = 0.0;
+        long cursor = from;
+        while (distance > 0) {
+            boolean day = cursor < 12000L;
+            long boundary = day ? 12000L : 24000L;
+            long span = Math.min(distance, boundary - cursor);
+            int minutes = Math.max(1, plugin.getConfig().getInt(day ? "time-control.daylength-minutes" : "time-control.nightlength-minutes", 30));
+            seconds += span * (minutes * 60.0 / 12000.0);
+            distance -= span;
+            cursor += span;
+            if (cursor >= 24000L) cursor = 0L;
+        }
+        return seconds;
     }
 
     public String hoursMessage() {
