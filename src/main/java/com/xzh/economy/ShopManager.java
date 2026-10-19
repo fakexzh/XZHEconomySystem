@@ -466,12 +466,22 @@ public final class ShopManager implements Listener {
         inv.setItem(slot, item);
     }
 
+    private void add(Inventory inv, int slot, Material material, String title, String action, String value, List<String> lore) {
+        add(inv, slot, material, title, action, value);
+        ItemStack item = inv.getItem(slot);
+        if (item == null) return;
+        ItemMeta meta = item.getItemMeta();
+        meta.setLore(lore);
+        item.setItemMeta(meta);
+    }
+
     @EventHandler
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
         if (title == null || !title.startsWith("XZH SHOP")
-                && !title.equals("Choose quantity") && !title.equals("Confirm transaction")) return;
+                && !title.equals("Choose quantity") && !title.equals("Confirm transaction")
+                && !title.equals("Confirm XP transaction") && !title.equals("Confirm Sell Hand")) return;
         event.setCancelled(true);
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || !clicked.hasItemMeta()) return;
