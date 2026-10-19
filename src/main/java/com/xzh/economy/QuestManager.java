@@ -374,11 +374,20 @@ public final class QuestManager implements Listener {
 
     @EventHandler
     public void onFeed(PlayerInteractEntityEvent event) {
-        if (!(event.getRightClicked() instanceof Animals animal)) return;
+        if (event.isCancelled() || event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) return;
+        if (!(event.getRightClicked() instanceof Animals animal) || animal.getAge() != 0) return;
         Player player = event.getPlayer();
-        ItemStack held = player.getInventory().getItem(event.getHand());
-        if (held == null || !held.getType().isEdible()) return;
-        incrementTarget(player, "feed:" + animal.getType().name(), 1);
+        ItemStack held = player.getInventory().getItemInMainHand();
+        if (held == null) return;
+        Material food = held.getType();
+        boolean validFeed = switch (animal.getType()) {
+            case COW, SHEEP, GOAT -> food == Material.WHEAT;
+            case PIG -> food == Material.CARROT || food == Material.POTATO || food == Material.BEETROOT;
+            case CHICKEN -> food == Material.WHEAT_SEEDS || food == Material.BEETROOT_SEEDS || food == Material.MELON_SEEDS || food == Material.PUMPKIN_SEEDS || food == Material.TORCHFLOWER_SEEDS;
+            case RABBIT -> food == Material.CARROT || food == Material.GOLDEN_CARROT || food == Material.DANDELION;
+            default -> false;
+        };
+        if (validFeed) incrementTarget(player, "feed:" + animal.getType().name(), 1);
     }
 
     private void incrementTarget(Player player, String target, int amount) {
