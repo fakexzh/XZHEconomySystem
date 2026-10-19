@@ -600,7 +600,8 @@ public final class ShopManager implements Listener {
                 if (p == null && !action.equals("buy") && material != null)
                     p = new Product("misc", material, 0.0, action.equals("sell-hand-confirm") ? handUnitPrice : defaultSellPrice());
                 if (p == null || quantity < 1) return;
-                if (!action.equals("buy") && isUnsellableExploitItem(material)) {
+                if (!action.equals("buy") && isUnsellableExploitItem(material)
+                        && material != Material.ELYTRA && material != Material.TRIDENT && material != Material.TOTEM_OF_UNDYING) {
                     plugin.tellPublic(player, "This item cannot be sold to the XZH shop because it is exploit-prone or intended to remain rare.");
                     player.closeInventory();
                     return;
@@ -697,7 +698,9 @@ public final class ShopManager implements Listener {
                     plugin.tellPublic(player, "Hold an item first.");
                     return;
                 }
-                if (isUnsellableExploitItem(hand.getType())) {
+                if (isUnsellableExploitItem(hand.getType())
+                        && hand.getType() != Material.ELYTRA && hand.getType() != Material.TRIDENT
+                        && hand.getType() != Material.TOTEM_OF_UNDYING) {
                     plugin.tellPublic(player, "This item cannot be sold to the XZH shop because it is exploit-prone or intended to remain rare.");
                     return;
                 }
@@ -949,7 +952,7 @@ public final class ShopManager implements Listener {
                 || n.endsWith("_FROGLIGHT") || n.endsWith("_CAMPFIRE")) return true;
         return switch (n) {
             case "LEAD", "TORCH", "SOUL_TORCH", "REDSTONE_TORCH", "LANTERN", "SOUL_LANTERN",
-                 "END_ROD", "GLOWSTONE", "SEA_LANTERN", "SHROOMLIGHT", "BEACON",
+                 "END_ROD", "GLOWSTONE", "SEA_LANTERN", "SHROOMLIGHT", "REDSTONE_LAMP", "JACK_O_LANTERN", "BEACON",
                  "ANVIL", "CHIPPED_ANVIL", "DAMAGED_ANVIL", "CRAFTING_TABLE",
                  "FLETCHING_TABLE", "SMITHING_TABLE", "CARTOGRAPHY_TABLE", "LOOM",
                  "STONECUTTER", "GRINDSTONE", "ENCHANTING_TABLE", "BREWING_STAND",
