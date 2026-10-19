@@ -172,7 +172,7 @@ public final class ShopManager implements Listener {
         // Existing curated products keep their configured prices; newly added farmable
         // blocks use conservative buy values and earn only 1 coin per full stack at most.
         for (Material material : Material.values()) {
-            if (material.isBlock() && material != Material.AIR
+            if (material.isBlock() && material.isItem() && !material.isAir()
                     && products.stream().noneMatch(p -> p.material() == material && p.potionType() == null)) {
                 double buy = blockBuyPrice(material);
                 double sell = isFarmableCommonBlock(material) ? (1.0 / 64.0) : 0.0;
