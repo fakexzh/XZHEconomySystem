@@ -25,6 +25,16 @@ jobs:
         with:
           name: XZHEconomySystem-1.0.0
           path: build/libs/XZHEconomySystem-1.0.0.jar
+      - name: Package coin resource pack
+        run: |
+          mkdir -p build
+          cd resource-pack
+          zip -r ../build/XZH-Coin-Resource-Pack.zip .
+      - name: Upload coin resource pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: XZH-Coin-Resource-Pack
+          path: build/XZH-Coin-Resource-Pack.zip
       - name: Upload source archive
         uses: actions/upload-artifact@v4
         with:
