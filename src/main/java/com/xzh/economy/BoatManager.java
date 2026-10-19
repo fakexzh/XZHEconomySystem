@@ -7,6 +7,8 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Boat;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityBreedEvent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -28,7 +30,7 @@ import java.util.Map;
  * not inferred from a mutable display name.
  */
 public final class BoatManager implements Listener {
-    private static final String GUI = "XZH PREMIUM BOATS";
+    private static final String GUI = "XZH TRAVEL";
     private final XZHEconomySystem plugin;
     private final NamespacedKey tierKey;
     private final NamespacedKey chestKey;
@@ -76,13 +78,40 @@ public final class BoatManager implements Listener {
             icon.setItemMeta(meta);
             inv.setItem(slots[i], icon);
         }
+        inv.setItem(11, travelEgg(Material.HORSE_SPAWN_EGG, "horse", "Horse Spawn Egg"));
+        inv.setItem(15, travelEgg(Material.DONKEY_SPAWN_EGG, "donkey", "Donkey Spawn Egg"));
         ItemStack info = new ItemStack(Material.BOOK);
         ItemMeta im = info.getItemMeta();
-        im.setDisplayName(ChatColor.WHITE + "Only 3 XZH boat tiers");
-        im.setLore(List.of(ChatColor.GRAY + "Boat crafting is disabled.", ChatColor.GRAY + "Choose a tier, then a chest version."));
+        im.setDisplayName(ChatColor.WHITE + "Travel");
+        im.setLore(List.of(
+            ChatColor.GRAY + "Premium boats and land companions.",
+            ChatColor.GRAY + "Horse and donkey spawn eggs: " + ChatColor.YELLOW + "2,500 coins each",
+            ChatColor.GRAY + "Natural horse/donkey spawning and breeding are disabled."
+        ));
         info.setItemMeta(im);
         inv.setItem(22, info);
         player.openInventory(inv);
+    }
+
+    @EventHandler
+    public void blockNaturalHorseDonkeySpawn(CreatureSpawnEvent event) {
+        if (!plugin.getConfig().getBoolean("travel.disable-natural-horse-donkey-spawning", true)) return;
+        EntityType type = event.getEntityType();
+        if ((type == EntityType.HORSE || type == EntityType.DONKEY)
+                && event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.NATURAL) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void blockHorseDonkeyBreeding(EntityBreedEvent event) {
+        if (!plugin.getConfig().getBoolean("travel.disable-horse-donkey-breeding", true)) return;
+        EntityType mother = event.getMother().getType();
+        EntityType father = event.getFather().getType();
+        if (mother == EntityType.HORSE || mother == EntityType.DONKEY
+                || father == EntityType.HORSE || father == EntityType.DONKEY) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler
@@ -101,24 +130,29 @@ public final class BoatManager implements Listener {
         if (clicked == null || !clicked.hasItemMeta()) return;
         String tier = clicked.getItemMeta().getPersistentDataContainer().get(tierKey, PersistentDataType.STRING);
         if (tier == null) return;
+        if ("horse".equals(tier) || "donkey".equals(tier)) {
+            Inventory confirm = Bukkit.createInventory(null, 27, "Confirm Travel Item");
+            Material egg = "horse".equals(tier) ? Material.HORSE_SPAWN_EGG : Material.DONKEY_SPAWN_EGG;
+            String name = ("horse".equals(tier) ? "Horse" : "Donkey") + " Spawn Egg";
+            confirm.setItem(13, travelEgg(egg, tier, name));
+            confirm.setItem(26, backItem());
+            player.openInventory(confirm);
+            return;
+        }
         BoatOffer offer = find(tier);
         if (offer == null) return;
         Inventory confirm = Bukkit.createInventory(null, 27, "Confirm XZH Boat");
         confirm.setItem(11, choiceItem(offer, false));
         confirm.setItem(13, choiceItem(offer, true));
-        ItemStack back = new ItemStack(Material.ARROW);
-        ItemMeta bm = back.getItemMeta();
-        bm.setDisplayName(ChatColor.GRAY + "Back");
-        bm.getPersistentDataContainer().set(tierKey, PersistentDataType.STRING, "back");
-        back.setItemMeta(bm);
-        confirm.setItem(26, back);
+        confirm.setItem(26, backItem());
         player.openInventory(confirm);
     }
 
     @EventHandler
     public void onConfirmClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (!"Confirm XZH Boat".equals(ChatColor.stripColor(event.getView().getTitle()))) return;
+        String title = ChatColor.stripColor(event.getView().getTitle());
+        if (!"Confirm XZH Boat".equals(title) && !"Confirm Travel Item".equals(title)) return;
         event.setCancelled(true);
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || !clicked.hasItemMeta()) return;
@@ -126,6 +160,10 @@ public final class BoatManager implements Listener {
         String tier = meta.getPersistentDataContainer().get(tierKey, PersistentDataType.STRING);
         if ("back".equals(tier)) { open(player); return; }
         if (tier == null) return;
+        if ("horse".equals(tier) || "donkey".equals(tier)) {
+            purchaseTravelEgg(player, tier);
+            return;
+        }
         BoatOffer offer = find(tier);
         if (offer == null) return;
         Byte chestByte = meta.getPersistentDataContainer().get(chestKey, PersistentDataType.BYTE);
@@ -189,6 +227,54 @@ public final class BoatManager implements Listener {
                 }
             }
         }
+    }
+
+    private ItemStack travelEgg(Material material, String tier, String name) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(ChatColor.GOLD + name);
+        meta.setLore(List.of(
+            ChatColor.WHITE + "Price: " + ChatColor.YELLOW + "2,500 coins",
+            ChatColor.GRAY + "Feeding and taming are allowed; breeding is disabled.",
+            ChatColor.GREEN + "Click to review purchase"
+        ));
+        meta.getPersistentDataContainer().set(tierKey, PersistentDataType.STRING, tier);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private ItemStack backItem() {
+        ItemStack back = new ItemStack(Material.ARROW);
+        ItemMeta meta = back.getItemMeta();
+        meta.setDisplayName(ChatColor.GRAY + "Back");
+        meta.getPersistentDataContainer().set(tierKey, PersistentDataType.STRING, "back");
+        back.setItemMeta(meta);
+        return back;
+    }
+
+    private void purchaseTravelEgg(Player player, String tier) {
+        double price = 2500.0;
+        if (plugin.getLoanManager() != null && plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) {
+            plugin.tellPublic(player, "Your loan is overdue. Shop purchases are locked until you repay it.");
+            player.closeInventory();
+            return;
+        }
+        if (plugin.getCombinedBalance(player.getUniqueId()) + 1e-9 < price
+                || !plugin.spendAvailableFunds(player.getUniqueId(), price)) {
+            plugin.tellPublic(player, "Not enough coins for this spawn egg.");
+            player.closeInventory();
+            return;
+        }
+        Material material = "horse".equals(tier) ? Material.HORSE_SPAWN_EGG : Material.DONKEY_SPAWN_EGG;
+        String name = ("horse".equals(tier) ? "Horse" : "Donkey") + " Spawn Egg";
+        Map<Integer, ItemStack> leftovers = player.getInventory().addItem(travelEgg(material, tier, name));
+        if (!leftovers.isEmpty()) {
+            plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + price);
+            plugin.tellPublic(player, "Inventory full; purchase cancelled and refunded.");
+        } else {
+            plugin.tellPublic(player, "Purchased " + name + " for " + money(price) + " coins.");
+        }
+        player.closeInventory();
     }
 
     private ItemStack choiceItem(BoatOffer offer, boolean chest) {
