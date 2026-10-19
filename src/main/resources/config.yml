@@ -250,3 +250,12 @@ kits:
       - STONE_PICKAXE:1
       - BREAD:8
       - TORCH:16
+
+# XZH premium boats. Prices are defined by the curated BoatManager offers.
+premium-boats:
+  enabled: true
+  disable-crafting: true
+  speed-cap:
+    basic: 0.25
+    aura: 0.34
+    super: 0.46
