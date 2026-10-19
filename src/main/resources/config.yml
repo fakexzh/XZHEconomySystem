@@ -35,6 +35,8 @@ announcements:
   loan:
     borrowing: true
     full-repayment: true
+  bank:
+    enabled: true
 
 time-control:
   enabled: true
