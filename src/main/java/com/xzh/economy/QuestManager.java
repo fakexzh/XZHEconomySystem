@@ -271,8 +271,7 @@ public final class QuestManager implements Listener {
         data.set("single-shop.quest-sequence", data.getInt("single-shop.quest-sequence", 0) + 1);
         startQuest(player, "single:" + System.currentTimeMillis(), questName, cost, reward, List.of(objective));
         data.set(id + ".profit-margin", margin);
-        if (secret) refreshSecretQuestNow();
-        else data.set("single-shop.offers." + offerSlot, random.nextInt(randomPool.size()));
+        if (!secret) data.set("single-shop.offers." + offerSlot, random.nextInt(randomPool.size()));
         save();
         plugin.tellPublic(player, "Started " + questName + ": " + objective.description() + ". Cost " + cost + "; reward " + reward + " coins. " + (isTimedSingle(template) ? "Time limit: 30 minutes." : "No timer."));
         player.closeInventory();
