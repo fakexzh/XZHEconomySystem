@@ -36,14 +36,16 @@ public final class ShopManager implements Listener {
     private final NamespacedKey materialKey;
     private final NamespacedKey quantityKey;
     private final NamespacedKey potionTypeKey;
+    private final NamespacedKey fireworkPowerKey;
     private final NamespacedKey xpBottleKey;
     private final NamespacedKey xpPointsKey;
     private final NamespacedKey sellUnitPriceKey;
     private final File stockFile;
     private final YamlConfiguration stockData;
 
-    private record Product(String category, Material material, double buy, double sell, PotionType potionType) {
-        Product(String category, Material material, double buy, double sell) { this(category, material, buy, sell, null); }
+    private record Product(String category, Material material, double buy, double sell, PotionType potionType, int fireworkPower) {
+        Product(String category, Material material, double buy, double sell) { this(category, material, buy, sell, null, 0); }
+        Product(String category, Material material, double buy, double sell, PotionType potionType) { this(category, material, buy, sell, potionType, 0); }
     }
 
     private final List<Product> products = new ArrayList<>(List.of(
@@ -162,6 +164,7 @@ public final class ShopManager implements Listener {
         this.materialKey = new NamespacedKey(plugin, "shop_material");
         this.quantityKey = new NamespacedKey(plugin, "shop_quantity");
         this.potionTypeKey = new NamespacedKey(plugin, "shop_potion_type");
+        this.fireworkPowerKey = new NamespacedKey(plugin, "shop_firework_power");
         this.xpBottleKey = new NamespacedKey(plugin, "xzh_xp_bottle");
         this.xpPointsKey = new NamespacedKey(plugin, "xzh_xp_points");
         this.sellUnitPriceKey = new NamespacedKey(plugin, "xzh_sell_unit_price");
@@ -218,10 +221,14 @@ public final class ShopManager implements Listener {
         products.add(new Product("essentials", Material.TNT, 90.0, 0.0));
         // Utility, lighting, crafting stations and bookshelves live in Essentials, not Blocks.
         for (Material material : Material.values()) {
-            if (isEssentialsMaterial(material) && material.isItem()
+            if (material != Material.FIREWORK_ROCKET && isEssentialsMaterial(material) && material.isItem()
                     && products.stream().noneMatch(p -> p.material() == material && p.potionType() == null)) {
                 products.add(new Product("essentials", material, essentialsBuyPrice(material), 0.0));
             }
+        }
+        for (int power = 1; power <= 3; power++) {
+            double price = switch (power) { case 1 -> 8.0; case 2 -> 18.0; default -> 35.0; };
+            products.add(new Product("essentials", Material.FIREWORK_ROCKET, price, 0.0, null, power));
         }
         this.stockFile = new File(plugin.getDataFolder(), "shop-stock.yml");
         this.stockData = YamlConfiguration.loadConfiguration(stockFile);
@@ -278,7 +285,7 @@ public final class ShopManager implements Listener {
             int slot = index - start;
             ItemStack item = createStack(p, 1);
             ItemMeta meta = item.getItemMeta();
-            meta.setDisplayName(ChatColor.YELLOW + pretty(p.material()) + (p.potionType() == null ? "" : " - " + prettyPotion(p.potionType())));
+            meta.setDisplayName(ChatColor.YELLOW + pretty(p.material()) + (p.potionType() != null ? " - " + prettyPotion(p.potionType()) : (p.fireworkPower() > 0 ? " (Power " + p.fireworkPower() + ")" : "")));
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.WHITE + "Buy: " + ChatColor.YELLOW + money(buyPrice(p)) + " coins each");
             lore.add(ChatColor.WHITE + "Sell: " + ChatColor.RED + money(sellPrice(p)) + " coins each");
@@ -289,6 +296,7 @@ public final class ShopManager implements Listener {
             meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "product");
             meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, p.material().name());
             if (p.potionType() != null) meta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
+            if (p.fireworkPower() > 0) meta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
             item.setItemMeta(meta);
             inv.setItem(slot, item);
         }
@@ -435,6 +443,7 @@ public final class ShopManager implements Listener {
             meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "confirm-buy");
             meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, material.name());
             if (p.potionType() != null) meta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
+            if (p.fireworkPower() > 0) meta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
             meta.getPersistentDataContainer().set(quantityKey, PersistentDataType.INTEGER, quantities[i]);
             item.setItemMeta(meta);
             inv.setItem(slots[i], item);
@@ -447,6 +456,7 @@ public final class ShopManager implements Listener {
         sm.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "confirm-sell");
         sm.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, material.name());
         if (p.potionType() != null) sm.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
+        if (p.fireworkPower() > 0) sm.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
         sell.setItemMeta(sm);
         inv.setItem(15, sell);
         add(inv, 26, Material.ARROW, "Back", "category-back", p.category());
@@ -482,10 +492,11 @@ public final class ShopManager implements Listener {
         sm.setLore(List.of(ChatColor.WHITE + "Total: " + (buying ? ChatColor.YELLOW : ChatColor.RED) + money(total) + " coins"));
         summary.setItemMeta(sm);
         inv.setItem(13, summary);
-        String txValue = material.name() + ":" + (p.potionType() == null ? "-" : p.potionType().name()) + ":" + quantity;
+        String txValue = material.name() + ":" + (p.potionType() != null ? p.potionType().name() : (p.fireworkPower() > 0 ? "POWER_" + p.fireworkPower() : "-")) + ":" + quantity;
         add(inv, 11, Material.BLUE_CONCRETE, "Confirm", buying ? "buy" : (handOnly ? "sell-hand-confirm" : "sell"), txValue);
         ItemMeta confirmMeta = inv.getItem(11).getItemMeta();
         if (p.potionType() != null) confirmMeta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
+        if (p.fireworkPower() > 0) confirmMeta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
         inv.getItem(11).setItemMeta(confirmMeta);
         add(inv, 15, Material.RED_CONCRETE, "Cancel", "category-back", handOnly ? "main" : p.category());
         player.openInventory(inv);
@@ -605,7 +616,9 @@ public final class ShopManager implements Listener {
                 String potionTypeName = bits.length == 3 ? bits[1] : "-";
                 int quantity;
                 try { quantity = Integer.parseInt(bits[bits.length - 1]); } catch (NumberFormatException ex) { return; }
-                Product p = material == null ? null : (potionTypeName.equals("-") ? product(material) : potionProduct(material, potionTypeName));
+                Product p = material == null ? null : (potionTypeName.startsWith("POWER_")
+                        ? products.stream().filter(candidate -> candidate.material() == material && candidate.fireworkPower() == Integer.parseInt(potionTypeName.substring(6))).findFirst().orElse(null)
+                        : (potionTypeName.equals("-") ? product(material) : potionProduct(material, potionTypeName)));
                 double handUnitPrice = meta.getPersistentDataContainer().getOrDefault(sellUnitPriceKey, PersistentDataType.DOUBLE, defaultSellPrice());
                 if (p == null && !action.equals("buy") && material != null)
                     p = new Product("misc", material, 0.0, action.equals("sell-hand-confirm") ? handUnitPrice : defaultSellPrice());
@@ -804,6 +817,10 @@ public final class ShopManager implements Listener {
             try { meta.setBasePotionType(product.potionType()); } catch (IllegalArgumentException ignored) { }
             stack.setItemMeta(meta);
         }
+        if (product.fireworkPower() > 0 && stack.getItemMeta() instanceof org.bukkit.inventory.meta.FireworkMeta meta) {
+            meta.setPower(product.fireworkPower());
+            stack.setItemMeta(meta);
+        }
         return stack;
     }
 
@@ -812,7 +829,10 @@ public final class ShopManager implements Listener {
         Material material = materialName == null ? null : parseMaterial(materialName);
         if (material == null) return null;
         String typeName = meta.getPersistentDataContainer().get(potionTypeKey, PersistentDataType.STRING);
-        return typeName == null ? product(material) : potionProduct(material, typeName);
+        if (typeName != null) return potionProduct(material, typeName);
+        Integer power = meta.getPersistentDataContainer().get(fireworkPowerKey, PersistentDataType.INTEGER);
+        if (power != null) return products.stream().filter(p -> p.material() == material && p.fireworkPower() == power).findFirst().orElse(null);
+        return product(material);
     }
 
     private Product potionProduct(Material material, String typeName) {
@@ -876,6 +896,7 @@ public final class ShopManager implements Listener {
         if (name.equals("ELYTRA")) return Math.floor(buyPrice(p) * 0.30);
         if (name.equals("TRIDENT") || name.equals("TOTEM_OF_UNDYING")) return 200.0;
         if (name.equals("MILK_BUCKET")) return 10.0;
+        if (p.material() == Material.FIREWORK_ROCKET || p.material() == Material.TNT) return 0.0;
         if (List.of("WHEAT", "CARROT", "POTATO", "BEETROOT", "MELON_SLICE", "PUMPKIN", "SUGAR_CANE", "NETHER_WART", "COCOA_BEANS").contains(name)) return 5.0 / 64.0;
         if (name.equals("COD")) return 4.0;
         if (name.equals("SALMON")) return 5.0;
