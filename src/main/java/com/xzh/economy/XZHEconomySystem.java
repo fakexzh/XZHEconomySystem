@@ -36,6 +36,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     private BookShopManager bookShopManager;
     private File transactionsFile;
     private MoneyRequestManager moneyRequestManager;
+    private BoatManager boatManager;
 
     @Override
     public void onEnable() {
@@ -59,6 +60,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         hudManager = new HudManager(this);
         hudManager.start();
         shopManager = new ShopManager(this);
+        boatManager = new BoatManager(this);
         bookShopManager = new BookShopManager(this);
         loanManager = new LoanManager(this);
         getServer().getPluginManager().registerEvents(new LibrarianTradeListener(this), this);
@@ -92,6 +94,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     }
 
     public HudManager getHudManager() { return hudManager; }
+    public BoatManager getBoatManager() { return boatManager; }
     private void migrateEconomyConfig() {
         boolean changed = false;
         // Existing server config.yml files are not overwritten by saveDefaultConfig().

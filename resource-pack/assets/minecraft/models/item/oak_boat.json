@@ -1,0 +1,26 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "minecraft:item/oak_boat"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "custom_model_data": 1001
+      },
+      "model": "xzh:item/boat/basic"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 1002
+      },
+      "model": "xzh:item/boat/aura"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 1003
+      },
+      "model": "xzh:item/boat/super"
+    }
+  ]
+}

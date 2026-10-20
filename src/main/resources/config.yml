@@ -73,6 +73,9 @@ death-recovery:
 shop:
   default-sell-price: 0.015625
   prices:
+    tnt:
+      buy: 70
+      sell: 20
     elytra:
       buy: 5000
       sell: 1500
@@ -85,6 +88,18 @@ shop:
     cooked_beef:
       buy: 14
       sell: 4.2
+    cod:
+      buy: 5
+      sell: 4
+    salmon:
+      buy: 6
+      sell: 5
+    cooked_cod:
+      buy: 10
+      sell: 6
+    cooked_salmon:
+      buy: 12
+      sell: 7.5
   stock-limits:
     coal: 2000
     iron_ingot: 1000
@@ -103,6 +118,8 @@ shop:
     end_stone: 500
     iron_block: 100
     diamond_block: 10
+    tnt: 128
+    firework_rocket: 256
     bread: 1000
     cooked_beef: 1000
     iron_pickaxe: 100
@@ -223,9 +240,29 @@ utilities:
 
 # Enchantment book shop rules.
 book-shop:
-  cooldown-hours: 24
-  rare-daily-stock: 3
+  cooldown-hours: 12
+  max-books-per-player-per-day: 2 # legacy/global setting; current limit is per enchantment
+  rare-daily-stock: 4
   normal-daily-stock: 100
+  stock:
+    mending: 3
+    unbreaking: 6
+    efficiency: 6
+    fortune: 6
+    silk_touch: 3
+    looting: 6
+    sharpness: 6
+    protection: 6
+    feather_falling: 6
+    wind_burst: 3
+    swift_sneak: 3
+    soul_speed: 3
+    frost_walker: 4
+    riptide: 4
+    channeling: 4
+    thorns: 4
+    sweeping_edge: 4
+    infinity: 4
   prices:
     mending: 1200
     wind_burst: 1500
@@ -250,3 +287,17 @@ kits:
       - STONE_PICKAXE:1
       - BREAD:8
       - TORCH:16
+
+# Travel shop restrictions. Spawn eggs can still be purchased from the Travel menu.
+travel:
+  disable-natural-horse-donkey-spawning: true
+  disable-horse-donkey-breeding: true
+
+# XZH premium boats. Prices are defined by the curated BoatManager offers.
+premium-boats:
+  enabled: true
+  disable-crafting: true
+  speed-cap:
+    basic: 0.25
+    aura: 0.34
+    super: 0.46
