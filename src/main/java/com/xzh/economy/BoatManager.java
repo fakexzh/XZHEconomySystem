@@ -5,7 +5,6 @@ import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Boat;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityBreedEvent;
@@ -20,7 +19,6 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.util.Vector;
 
 import java.util.List;
 import java.util.Map;
@@ -34,28 +32,23 @@ public final class BoatManager implements Listener {
     private final XZHEconomySystem plugin;
     private final NamespacedKey tierKey;
     private final NamespacedKey chestKey;
-    private final NamespacedKey entityTierKey;
 
-    private record BoatOffer(String tier, String name, Material material, Material chestMaterial,
-                             double price, double chestPrice, String finish, String branding, String speed) { }
+    private record BoatOffer(String tier, String name, Material material, Material chestMaterial, double price, double chestPrice, String finish, String branding) { }
 
     private final List<BoatOffer> offers = List.of(
-        new BoatOffer("basic", "Basic Boat", Material.OAK_BOAT, Material.OAK_CHEST_BOAT,
-            200, 300, "Natural wooden raft", "Black XZH", "Vanilla speed (1x)"),
-        new BoatOffer("aura", "Aura Boat", Material.BIRCH_BOAT, Material.BIRCH_CHEST_BOAT,
-            700, 999, "Premium white finish", "Black XZH", "2x vanilla speed"),
-        new BoatOffer("super", "Super Boat", Material.DARK_OAK_BOAT, Material.DARK_OAK_CHEST_BOAT,
-            1500, 2100, "Sleek black speedboat", "White XZH", "3x vanilla speed")
+        new BoatOffer("basic", "Basic Bamboo Raft", Material.BAMBOO_RAFT, Material.BAMBOO_CHEST_RAFT,
+            300, 200, "Classic bamboo raft", "XZH Travel"),
+        new BoatOffer("aura", "Aura Pale Oak Boat", Material.PALE_OAK_BOAT, Material.PALE_OAK_CHEST_BOAT,
+            700, 500, "Pale oak boat", "XZH Travel"),
+        new BoatOffer("super", "Super Spruce Boat", Material.SPRUCE_BOAT, Material.SPRUCE_CHEST_BOAT,
+            1600, 1300, "Spruce boat", "XZH Travel")
     );
 
     public BoatManager(XZHEconomySystem plugin) {
         this.plugin = plugin;
         tierKey = new NamespacedKey(plugin, "xzh_boat_tier");
         chestKey = new NamespacedKey(plugin, "xzh_boat_chest");
-        entityTierKey = new NamespacedKey(plugin, "xzh_boat_entity_tier");
         Bukkit.getPluginManager().registerEvents(this, plugin);
-        // Re-apply settings periodically so the selected speed survives entity updates/reloads.
-        Bukkit.getScheduler().runTaskTimer(plugin, this::applyBoatSpeeds, 1L, 1L);
     }
 
     public void open(Player player) {
@@ -69,7 +62,6 @@ public final class BoatManager implements Listener {
             meta.setLore(List.of(
                 ChatColor.WHITE + offer.finish(),
                 ChatColor.WHITE + "Branding: " + ChatColor.YELLOW + offer.branding(),
-                ChatColor.AQUA + offer.speed(),
                 ChatColor.GRAY + "Normal: " + ChatColor.YELLOW + money(offer.price()) + " coins",
                 ChatColor.GRAY + "With chest: " + ChatColor.YELLOW + money(offer.chestPrice()) + " coins",
                 ChatColor.GREEN + "Click to choose version"
@@ -209,73 +201,6 @@ public final class BoatManager implements Listener {
         player.closeInventory();
     }
 
-    @EventHandler
-    public void onPlace(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
-        ItemStack item = event.getItem();
-        if (item == null || !item.hasItemMeta()) return;
-        String tier = item.getItemMeta().getPersistentDataContainer().get(tierKey, PersistentDataType.STRING);
-        if (tier == null || find(tier) == null) return;
-        Player player = event.getPlayer();
-        // Boat placement happens as part of the interaction; inspect the nearby entity next tick.
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            Boat candidate = null;
-            double nearest = Double.MAX_VALUE;
-            for (Entity entity : player.getNearbyEntities(5, 4, 5)) {
-                if (!(entity instanceof Boat boat) || boat.getPersistentDataContainer().has(entityTierKey, PersistentDataType.STRING)) continue;
-                if (!matchesBoatMaterial(boat, item.getType())) continue;
-                double distance = boat.getLocation().distanceSquared(player.getLocation());
-                if (distance < nearest) {
-                    nearest = distance;
-                    candidate = boat;
-                }
-            }
-            if (candidate != null) {
-                candidate.getPersistentDataContainer().set(entityTierKey, PersistentDataType.STRING, tier);
-                candidate.addScoreboardTag("xzh_boat_" + tier);
-                applyBoatSpeed(candidate, tier);
-            }
-        });
-    }
-
-    private boolean matchesBoatMaterial(Boat boat, Material itemMaterial) {
-        String materialName = itemMaterial.name();
-        String wood = materialName.replace("_CHEST_BOAT", "").replace("_BOAT", "");
-        return boat.getBoatType().name().equals(wood);
-    }
-
-    private void applyBoatSpeeds() {
-        for (var world : Bukkit.getWorlds()) {
-            for (Entity entity : world.getEntities()) {
-                if (!(entity instanceof Boat boat)) continue;
-                String tier = boat.getPersistentDataContainer().get(entityTierKey, PersistentDataType.STRING);
-                if (tier != null) applyBoatSpeed(boat, tier);
-            }
-        }
-    }
-
-    private void applyBoatSpeed(Boat boat, String tier) {
-        // setMaxSpeed alone does not make vanilla boats move faster on Paper.
-        // Keep the vanilla cap for Basic and actively boost horizontal velocity
-        // for premium tiers while a player is riding the boat in water.
-        double maxSpeed = switch (tier) {
-            case "aura" -> 0.80;
-            case "super" -> 1.20;
-            default -> 0.40;
-        };
-        boat.setMaxSpeed(maxSpeed);
-        if (tier.equals("basic") || boat.getPassengers().isEmpty() || !boat.isInWater()) return;
-
-        Vector velocity = boat.getVelocity();
-        double horizontal = Math.sqrt(velocity.getX() * velocity.getX() + velocity.getZ() * velocity.getZ());
-        if (horizontal < 0.015) return;
-
-        double multiplier = tier.equals("super") ? 1.22 : 1.10;
-        double boosted = Math.min(maxSpeed, horizontal * multiplier);
-        double scale = boosted / horizontal;
-        boat.setVelocity(new Vector(velocity.getX() * scale, velocity.getY(), velocity.getZ() * scale));
-    }
-
     private ItemStack travelEgg(Material material, String tier, String name) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
@@ -328,8 +253,7 @@ public final class BoatManager implements Listener {
         ItemStack item = createBoatItem(offer, chest);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName((chest ? ChatColor.AQUA : ChatColor.GREEN) + offer.name() + (chest ? " + Chest" : ""));
-        meta.setLore(List.of(ChatColor.WHITE + "Price: " + ChatColor.YELLOW + money(chest ? offer.chestPrice() : offer.price()) + " coins",
-            ChatColor.GRAY + offer.speed(), ChatColor.YELLOW + "Click to purchase"));
+        meta.setLore(List.of(ChatColor.WHITE + "Price: " + ChatColor.YELLOW + money(chest ? offer.chestPrice() : offer.price()) + " coins", ChatColor.YELLOW + "Click to purchase"));
         meta.getPersistentDataContainer().set(tierKey, PersistentDataType.STRING, offer.tier());
         meta.getPersistentDataContainer().set(chestKey, PersistentDataType.BYTE, (byte) (chest ? 1 : 0));
         item.setItemMeta(meta);
@@ -339,7 +263,7 @@ public final class BoatManager implements Listener {
     private ItemStack createBoatItem(BoatOffer offer, boolean chest) {
         ItemStack item = new ItemStack(chest ? offer.chestMaterial() : offer.material());
         ItemMeta meta = item.getItemMeta();
-        // CustomModelData selects the matching premium model in the optional XZH resource pack.
+        // CustomModelData selects the matching XZH boat style in the optional resource pack.
         meta.setCustomModelData(switch (offer.tier()) {
             case "aura" -> 1002;
             case "super" -> 1003;
@@ -348,7 +272,7 @@ public final class BoatManager implements Listener {
         meta.getPersistentDataContainer().set(tierKey, PersistentDataType.STRING, offer.tier());
         meta.getPersistentDataContainer().set(chestKey, PersistentDataType.BYTE, (byte) (chest ? 1 : 0));
         meta.setDisplayName(ChatColor.WHITE + "XZH " + offer.name() + (chest ? " with Chest" : ""));
-        meta.setLore(List.of(ChatColor.GRAY + offer.finish(), ChatColor.GRAY + offer.branding(), ChatColor.GRAY + offer.speed()));
+        meta.setLore(List.of(ChatColor.GRAY + offer.finish(), ChatColor.GRAY + offer.branding()));
         item.setItemMeta(meta);
         return item;
     }
