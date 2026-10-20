@@ -713,6 +713,12 @@ public final class ShopManager implements Listener {
                         return;
                     }
                     plugin.tellPublic(player, "Bought " + delivered + " × " + prettyProduct(p) + " for " + money(charged) + " coins.");
+                    if (p.category().equals("bounty-maps")) {
+                        plugin.tellPublic(player, "§d§lXZH BOUNTY HUNT §8» §fYour map is in your hotbar. Right-click it to start the contract.");
+                        plugin.tellPublic(player, "§e➤ Hold your Tracking Arrow and right-click to locate your bounty target. The arrow is provided when you activate the map.");
+                        plugin.tellPublic(player, "§e➤ You can use the special Hunter's Bow to fight and defeat your target. The bow is provided when you activate the map.");
+                        plugin.tellPublic(player, "§7➤ Keep the map and mission equipment in your hotbar; equipment is removed when the contract ends.");
+                    }
                     plugin.announceSpecialPurchase(player, material, delivered, charged);
                 } else {
                     if (sellPrice(p) * quantity < 1) {
