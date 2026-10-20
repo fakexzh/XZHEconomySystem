@@ -947,7 +947,7 @@ public final class ShopManager implements Listener {
     private void startBountyCooldown(Player player, Product product) {
         String tier = switch ((product.fireworkPower() - 1) % 3) { case 0 -> "common"; case 1 -> "rare"; default -> "legendary"; };
         String dimension = product.fireworkPower() >= 4 ? "nether" : "overworld";
-        bountyCooldownData.set("players." + player.getUniqueId() + "." + dimension + "." + tier,
+        bountyCooldownData.set("players." + player.getUniqueId() + "." + tier,
                 System.currentTimeMillis() + 12L * 60L * 60L * 1000L);
         try { bountyCooldownData.save(bountyCooldownFile); }
         catch (IOException ex) { plugin.getLogger().warning("Could not save bounty cooldowns: " + ex.getMessage()); }
