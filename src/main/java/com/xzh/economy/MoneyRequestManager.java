@@ -115,6 +115,45 @@ public final class MoneyRequestManager implements Listener {
         inv.setItem(slot, item);
     }
 
+    public boolean handleResponse(Player recipient, String[] args) {
+        if (args.length != 1 || !(args[0].equalsIgnoreCase("accept") || args[0].equalsIgnoreCase("decline"))) {
+            plugin.tellPublic(recipient, "Usage: /moneyresponse <accept|decline>");
+            return true;
+        }
+        Pending pending = pendingByRecipient.get(recipient.getUniqueId());
+        if (pending == null || pending.expiresAt() <= System.currentTimeMillis()) {
+            pendingByRecipient.remove(recipient.getUniqueId());
+            plugin.tellPublic(recipient, "There is no active money request; it may have expired.");
+            return true;
+        }
+        pendingByRecipient.remove(recipient.getUniqueId());
+        Player requester = Bukkit.getPlayer(pending.requester());
+        Player target = Bukkit.getPlayer(pending.target());
+        if (args[0].equalsIgnoreCase("decline")) {
+            if (requester != null) plugin.tellPublic(requester, recipient.getName() + " declined the money request.");
+            plugin.tellPublic(recipient, "Money request declined.");
+            return true;
+        }
+        if (requester == null || target == null) {
+            plugin.tellPublic(recipient, "The other player must remain online. No money was transferred.");
+            if (requester != null) plugin.tellPublic(requester, "The request could not be completed because a player went offline.");
+            return true;
+        }
+        Player payer = pending.kind() == Kind.SEND ? requester : target;
+        Player payee = pending.kind() == Kind.SEND ? target : requester;
+        long amount = pending.amount();
+        if (plugin.getCombinedBalance(payer.getUniqueId()) < amount
+                || !plugin.spendAvailableFunds(payer.getUniqueId(), amount)) {
+            plugin.tellPublic(recipient, "The payer no longer has enough available funds. Nothing was transferred.");
+            plugin.tellPublic(payer, "Transfer failed: not enough available funds.");
+            return true;
+        }
+        plugin.setBalance(payee.getUniqueId(), plugin.getBalance(payee.getUniqueId()) + amount);
+        plugin.tellPublic(payer, "Transferred " + amount + " coins to " + payee.getName() + ".");
+        plugin.tellPublic(payee, "Received " + amount + " coins from " + payer.getName() + ".");
+        return true;
+    }
+
     @EventHandler
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player recipient)) return;
