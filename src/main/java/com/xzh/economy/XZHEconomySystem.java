@@ -532,7 +532,8 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         List<String> suggestions = new ArrayList<>();
         if (command.getName().equalsIgnoreCase("eco") && args.length == 1 && sender.hasPermission("xzh.admin")) {
             suggestions.add("set"); suggestions.add("add");
-        } else if ((command.getName().equalsIgnoreCase("pay") && args.length == 1)
+        } else if ((command.getName().equalsIgnoreCase("tpa") && args.length == 1)
+                || (command.getName().equalsIgnoreCase("pay") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("sendmoney") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("askmoney") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("balance") && args.length == 1)
