@@ -967,6 +967,8 @@ public final class ShopManager implements Listener {
     }
 
     private double buyPrice(Product p) {
+        // Each bounty map tier has its own price; never let legacy filled_map config flatten them.
+        if (p.category().equals("bounty-maps")) return Math.ceil(p.buy());
         String materialPath = "shop.prices." + p.material().name().toLowerCase(Locale.ROOT) + ".buy";
         String variantPath = p.potionType() == null ? "" : "shop.potion-prices." + p.potionType().name().toLowerCase(Locale.ROOT) + "." + p.material().name().toLowerCase(Locale.ROOT) + ".buy";
         double fallback = p.buy();
