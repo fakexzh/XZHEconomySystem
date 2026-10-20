@@ -662,7 +662,16 @@ public final class QuestManager implements Listener {
         int goal = Math.max(1, data.getInt("event.goal", configuredEventGoal()));
         int percent = Math.min(100, (int) Math.floor(progress * 100.0 / goal));
         long remaining = Math.max(0L, data.getLong("event.ends-at", System.currentTimeMillis()) - System.currentTimeMillis());
-        return "§6Global: §f" + progress + "/" + goal + " §8(" + percent + "%, " + formatGlobalTime(remaining) + ")";
+        String target = data.getString("event.target", "ore");
+        String objective = switch (target.toLowerCase(Locale.ROOT)) {
+            case "ore" -> "Mine " + progress + "/" + goal + " Ores";
+            case "mob" -> "Defeat " + progress + "/" + goal + " Mobs";
+            case "fish" -> "Catch " + progress + "/" + goal + " Fish";
+            case "wood" -> "Chop " + progress + "/" + goal + " Logs";
+            case "crop" -> "Harvest " + progress + "/" + goal + " Crops";
+            default -> data.getString("event.description", "Complete the community objective") + " (" + progress + "/" + goal + ")";
+        };
+        return "§6Global Quest: §f" + objective + " §8(" + percent + "%, " + formatGlobalTime(remaining) + ")";
     }
 
     private void broadcastGlobalProgress() {
