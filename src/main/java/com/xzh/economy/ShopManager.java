@@ -40,7 +40,6 @@ import java.util.Locale;
  */
 public final class ShopManager implements Listener {
     private final XZHEconomySystem plugin;
-    private final MapView treasureMapView;
     private final NamespacedKey actionKey;
     private final NamespacedKey materialKey;
     private final NamespacedKey quantityKey;
@@ -53,6 +52,8 @@ public final class ShopManager implements Listener {
     private final YamlConfiguration stockData;
     private final File historyFile;
     private final YamlConfiguration historyData;
+    private final File bountyCooldownFile;
+    private final YamlConfiguration bountyCooldownData;
 
     private record Product(String category, Material material, double buy, double sell, PotionType potionType, int fireworkPower) {
         Product(String category, Material material, double buy, double sell) { this(category, material, buy, sell, null, 0); }
@@ -170,14 +171,13 @@ public final class ShopManager implements Listener {
         new Product("bounty-maps", Material.FILLED_MAP, 100, 0, null, 1),
         new Product("bounty-maps", Material.FILLED_MAP, 300, 0, null, 2),
         new Product("bounty-maps", Material.FILLED_MAP, 600, 0, null, 3),
-        new Product("treasure-maps", Material.FILLED_MAP, 250, 0, null, 4),
-        new Product("treasure-maps", Material.FILLED_MAP, 450, 0, null, 5),
-        new Product("treasure-maps", Material.FILLED_MAP, 800, 0, null, 6)
+        new Product("bounty-maps", Material.FILLED_MAP, 150, 0, null, 4),
+        new Product("bounty-maps", Material.FILLED_MAP, 450, 0, null, 5),
+        new Product("bounty-maps", Material.FILLED_MAP, 900, 0, null, 6)
     ));
 
     public ShopManager(XZHEconomySystem plugin) {
         this.plugin = plugin;
-        this.treasureMapView = createTreasureMapView();
         this.actionKey = new NamespacedKey(plugin, "shop_action");
         this.materialKey = new NamespacedKey(plugin, "shop_material");
         this.quantityKey = new NamespacedKey(plugin, "shop_quantity");
@@ -262,6 +262,8 @@ public final class ShopManager implements Listener {
         this.stockData = YamlConfiguration.loadConfiguration(stockFile);
         this.historyFile = new File(plugin.getDataFolder(), "shop-purchase-history.yml");
         this.historyData = YamlConfiguration.loadConfiguration(historyFile);
+        this.bountyCooldownFile = new File(plugin.getDataFolder(), "bounty-cooldowns.yml");
+        this.bountyCooldownData = YamlConfiguration.loadConfiguration(bountyCooldownFile);
         initializeStock();
         Bukkit.getPluginManager().registerEvents(this, plugin);
         Bukkit.getScheduler().runTaskTimer(plugin, this::restockIfDue, 20L * 60L, 20L * 60L);
@@ -284,13 +286,12 @@ public final class ShopManager implements Listener {
         add(inv, 23, Material.BEE_SPAWN_EGG, "Eggs & Heads", "category", "eggs-heads");
         add(inv, 25, Material.BAMBOO_RAFT, "Travel", "category", "travel");
 
-        // Row 3: books, XP and potions stay together; quest and treasure activities are adjacent.
+        // Row 3: books, XP, potions, quests and bounty hunting.
         add(inv, 28, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
         add(inv, 29, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
         add(inv, 30, Material.POTION, "Potions", "category", "potions");
         add(inv, 32, Material.NETHER_STAR, "Quest Packs", "quests", "quests");
         add(inv, 33, Material.NETHERITE_SWORD, "Bounty Hunt", "category", "bounty-maps");
-        add(inv, 34, Material.FILLED_MAP, "Treasure Hunt", "category", "treasure-maps");
         add(inv, 41, Material.CHEST, "Death Inventory", "deathinventory", "deathinventory");
 
         // Keep banking and recent purchase history side by side. Icons are intentionally swapped.
@@ -369,7 +370,7 @@ public final class ShopManager implements Listener {
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.WHITE + "Buy: " + ChatColor.YELLOW + money(buyPrice(p)) + " coins each");
             lore.add(ChatColor.WHITE + "Sell: " + ChatColor.RED + money(sellPrice(p)) + " coins each");
-            if (!p.category().equals("bounty-maps") && !p.category().equals("treasure-maps")) lore.add(ChatColor.WHITE + "Global stock: " + ChatColor.AQUA + getStock(p.material()) + "/" + stockLimit(p.material()));
+            if (!p.category().equals("bounty-maps")) lore.add(ChatColor.WHITE + "Global stock: " + ChatColor.AQUA + getStock(p.material()) + "/" + stockLimit(p.material()));
             if (p.material() == Material.ELYTRA) lore.add(ChatColor.LIGHT_PURPLE + "Unlock: Visit the End first");
             lore.add(ChatColor.GRAY + "Click to choose quantity");
             meta.setLore(lore);
@@ -377,15 +378,14 @@ public final class ShopManager implements Listener {
             meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, p.material().name());
             if (p.potionType() != null) meta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
             if (p.fireworkPower() > 0) meta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
-            if (p.category().equals("bounty-maps") || p.category().equals("treasure-maps")) {
-                String tier = p.fireworkPower() == 1 || p.fireworkPower() == 4 ? "common" : p.fireworkPower() == 2 || p.fireworkPower() == 5 ? "rare" : "legendary";
-                if (p.category().equals("treasure-maps")) {
-                    meta.setDisplayName(ChatColor.GOLD + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + " Treasure Map");
-                    lore.add(ChatColor.GRAY + "Travel to the destination marked X; no Eye of Ender.");
-                } else {
-                    meta.setDisplayName(ChatColor.LIGHT_PURPLE + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + " Bounty Map");
-                    lore.add(ChatColor.GRAY + "Bow, arrows and tracking compass supplied.");
-                }
+            if (p.category().equals("bounty-maps")) {
+                String tier = switch ((p.fireworkPower() - 1) % 3) { case 0 -> "common"; case 1 -> "rare"; default -> "legendary"; };
+                String dimension = p.fireworkPower() >= 4 ? "nether" : "overworld";
+                meta.setDisplayName(ChatColor.LIGHT_PURPLE + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + (dimension.equals("nether") ? " Nether" : "") + " Bounty Map");
+                lore.add(ChatColor.GRAY + "Dimension: " + (dimension.equals("nether") ? "Nether" : "Overworld"));
+                lore.add(ChatColor.GRAY + "Right-click to accept a " + tier + " bounty contract.");
+                lore.add(ChatColor.GRAY + "Bow, arrows and tracking compass supplied.");
+                lore.add(ChatColor.GRAY + "12-hour personal cooldown for this bounty type.");
                 lore.add(ChatColor.GRAY + "Time limit: " + (tier.equals("common") ? "25 minutes" : tier.equals("rare") ? "45 minutes" : "2 hours"));
                 lore.add(ChatColor.GRAY + "Hidden reward; possible profit bonus: 30–60%");
                 meta.setLore(lore);
@@ -795,6 +795,8 @@ public final class ShopManager implements Listener {
                 }
                 if (action.equals("buy")) {
                     if (p.category().equals("bounty-maps")) {
+                        if (quantity != 1) { plugin.tellPublic(player, "Bounty maps are limited to one per purchase so each map has its own 12-hour cooldown."); player.closeInventory(); return; }
+                        if (isBountyOnCooldown(player, p)) { player.closeInventory(); return; }
                         int emptyHotbar = 0;
                         for (int hotbar = 0; hotbar < 9; hotbar++) {
                             ItemStack hotbarItem = player.getInventory().getItem(hotbar);
@@ -806,7 +808,7 @@ public final class ShopManager implements Listener {
                             return;
                         }
                     }
-                    if (!p.category().equals("bounty-maps") && !p.category().equals("treasure-maps") && getStock(material) < quantity) {
+                    if (!p.category().equals("bounty-maps") && getStock(material) < quantity) {
                         plugin.tellPublic(player, "Not enough global stock. Available: " + getStock(material) + ".");
                         player.closeInventory();
                         return;
@@ -822,7 +824,7 @@ public final class ShopManager implements Listener {
                         return;
                     }
                     java.util.Map<Integer, ItemStack> leftovers;
-                    if (p.category().equals("bounty-maps") || p.category().equals("treasure-maps")) {
+                    if (p.category().equals("bounty-maps")) {
                         int emptySlot = -1;
                         for (int hotbar = 0; hotbar < 9; hotbar++) {
                             ItemStack hotbarItem = player.getInventory().getItem(hotbar);
@@ -846,21 +848,23 @@ public final class ShopManager implements Listener {
                         return;
                     }
                     double charged = buyPrice(p) * delivered;
-                    if (!p.category().equals("bounty-maps") && !p.category().equals("treasure-maps")) setStock(material, getStock(material) - delivered);
+                    if (!p.category().equals("bounty-maps")) setStock(material, getStock(material) - delivered);
                     if (!plugin.spendAvailableFunds(player.getUniqueId(), charged)) {
                         // Return the delivered items and stock if a concurrent economy action changed the balance.
                         player.getInventory().removeItem(createStack(p, delivered));
-                        if (!p.category().equals("bounty-maps") && !p.category().equals("treasure-maps")) setStock(material, getStock(material) + delivered);
+                        if (!p.category().equals("bounty-maps")) setStock(material, getStock(material) + delivered);
                         plugin.tellPublic(player, "Purchase cancelled: your available funds changed.");
                         player.closeInventory();
                         return;
                     }
                     recordPurchase(player, prettyProduct(p), delivered, charged);
+                    if (p.category().equals("bounty-maps")) startBountyCooldown(player, p);
                     plugin.tellPublic(player, "Bought " + delivered + " × " + prettyProduct(p) + " for " + money(charged) + " coins.");
-                    if (p.category().equals("treasure-maps")) {
-                        plugin.tellPublic(player, "§6§lXZH TREASURE HUNT §8» §fUse your map and travel to X. No Eye of Ender is used.");
-                    } else if (p.category().equals("bounty-maps")) {
-                        plugin.tellPublic(player, "§d§lXZH BOUNTY HUNT §8» §fRight-click your map to start the contract.");
+                    if (p.category().equals("bounty-maps")) {
+                        String tier = switch ((p.fireworkPower() - 1) % 3) { case 0 -> "Common"; case 1 -> "Rare"; default -> "Legendary"; };
+                        String dimension = p.fireworkPower() >= 4 ? " Nether" : "";
+                        plugin.tellPublic(player, "§d§lXZH BOUNTY HUNT §8» §fRight-click your " + tier + dimension + " map to start the contract.");
+                        plugin.tellPublic(player, "§e➤ This bounty type is now on cooldown for 12 hours.");
                         plugin.tellPublic(player, "§e➤ Bow, arrows and a tracking compass are supplied when the contract starts.");
                     }
                     plugin.announceSpecialPurchase(player, material, delivered, charged);
@@ -934,6 +938,27 @@ public final class ShopManager implements Listener {
     }
 
 
+    private boolean isBountyOnCooldown(Player player, Product product) {
+        String tier = switch ((product.fireworkPower() - 1) % 3) { case 0 -> "common"; case 1 -> "rare"; default -> "legendary"; };
+        String dimension = product.fireworkPower() >= 4 ? "nether" : "overworld";
+        String path = "players." + player.getUniqueId() + "." + dimension + "." + tier;
+        long left = bountyCooldownData.getLong(path, 0L) - System.currentTimeMillis();
+        if (left <= 0L) return false;
+        long hours = left / 3_600_000L;
+        long minutes = (left % 3_600_000L + 59_999L) / 60_000L;
+        plugin.tellPublic(player, "You can buy another " + tier + (dimension.equals("nether") ? " Nether" : "") + " bounty in " + hours + "h " + minutes + "m.");
+        return true;
+    }
+
+    private void startBountyCooldown(Player player, Product product) {
+        String tier = switch ((product.fireworkPower() - 1) % 3) { case 0 -> "common"; case 1 -> "rare"; default -> "legendary"; };
+        String dimension = product.fireworkPower() >= 4 ? "nether" : "overworld";
+        bountyCooldownData.set("players." + player.getUniqueId() + "." + dimension + "." + tier,
+                System.currentTimeMillis() + 12L * 60L * 60L * 1000L);
+        try { bountyCooldownData.save(bountyCooldownFile); }
+        catch (IOException ex) { plugin.getLogger().warning("Could not save bounty cooldowns: " + ex.getMessage()); }
+    }
+
     private void initializeStock() {
         boolean changed = false;
         for (Product p : products) {
@@ -981,90 +1006,17 @@ public final class ShopManager implements Listener {
         restockAll();
     }
 
-    private MapView createTreasureMapView() {
-        org.bukkit.World world = Bukkit.getWorlds().stream()
-                .filter(w -> w.getEnvironment() == org.bukkit.World.Environment.NORMAL)
-                .findFirst().orElse(null);
-        if (world == null) return null;
-        try {
-            MapView view = Bukkit.createMap(world);
-            for (MapRenderer renderer : new ArrayList<>(view.getRenderers())) view.removeRenderer(renderer);
-            view.addRenderer(new MapRenderer() {
-                private boolean rendered;
-                @Override
-                public void render(MapView map, MapCanvas canvas, Player player) {
-                    if (rendered) return;
-                    byte parchment = MapPalette.matchColor(new Color(218, 194, 150));
-                    byte border = MapPalette.matchColor(new Color(103, 69, 39));
-                    byte red = MapPalette.matchColor(new Color(190, 35, 35));
-                    for (int x = 0; x < 128; x++) {
-                        for (int y = 0; y < 128; y++) canvas.setPixel(x, y, parchment);
-                    }
-                    for (int i = 8; i < 120; i++) {
-                        canvas.setPixel(i, 8, border);
-                        canvas.setPixel(i, 119, border);
-                        canvas.setPixel(8, i, border);
-                        canvas.setPixel(119, i, border);
-                    }
-                    for (int i = -10; i <= 10; i++) {
-                        for (int thick = -2; thick <= 2; thick++) {
-                            canvas.setPixel(64 + i, 64 + i + thick, red);
-                            canvas.setPixel(64 + i, 64 - i + thick, red);
-                            canvas.setPixel(64 + i + thick, 64 + i, red);
-                            canvas.setPixel(64 + i + thick, 64 - i, red);
-                        }
-                    }
-                    rendered = true;
-                }
-            });
-            view.setTrackingPosition(false);
-            view.setUnlimitedTracking(false);
-            view.setScale(MapView.Scale.CLOSEST);
-            return view;
-        } catch (RuntimeException ex) {
-            plugin.getLogger().warning("Could not create the custom treasure X map: " + ex.getClass().getSimpleName());
-            return null;
-        }
-    }
-
-    private void saveStock() {
-        try { stockData.save(stockFile); }
-        catch (IOException e) { plugin.getLogger().severe("Could not save shop-stock.yml: " + e.getMessage()); }
-    }
-
-    private boolean hasVisitedEnd(Player player) {
-        org.bukkit.advancement.Advancement advancement = plugin.getServer().getAdvancement(NamespacedKey.minecraft("end/enter_end"));
-        return advancement == null || player.getAdvancementProgress(advancement).isDone();
-    }
-
-    public void setPrice(Material material, String kind, double amount) {
-        if (!kind.equals("buy") && !kind.equals("sell")) throw new IllegalArgumentException("kind must be buy or sell");
-        plugin.getConfig().set("shop.prices." + material.name().toLowerCase(Locale.ROOT) + "." + kind, amount);
-        plugin.saveConfig();
-    }
-
-    private ItemStack createStack(Material material, int amount) {
-        Product p = product(material);
-        return p == null ? new ItemStack(material, amount) : createStack(p, amount);
-    }
-
     private ItemStack createStack(Product product, int amount) {
         ItemStack stack = new ItemStack(product.material(), amount);
-        if (product.category().equals("bounty-maps") || product.category().equals("treasure-maps")) {
+        if (product.category().equals("bounty-maps")) {
             ItemMeta mapMeta = stack.getItemMeta();
-            String tier = product.fireworkPower() == 1 || product.fireworkPower() == 4 ? "common" : product.fireworkPower() == 2 || product.fireworkPower() == 5 ? "rare" : "legendary";
+            String tier = switch ((product.fireworkPower() - 1) % 3) { case 0 -> "common"; case 1 -> "rare"; default -> "legendary"; };
+            String dimension = product.fireworkPower() >= 4 ? "nether" : "overworld";
             mapMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "mission_entry_price"), PersistentDataType.DOUBLE, product.buy());
-            if (product.category().equals("treasure-maps")) {
-                mapMeta.setDisplayName(ChatColor.GOLD + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + " Treasure Map");
-                mapMeta.setLore(List.of(ChatColor.GRAY + "Travel to the map location marked X.", ChatColor.GRAY + "No Eye of Ender is used."));
-                mapMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "treasure_hunt_map"), PersistentDataType.BYTE, (byte) 1);
-                mapMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "treasure_hunt_tier"), PersistentDataType.STRING, tier);
-                if (mapMeta instanceof MapMeta treasureMeta && treasureMapView != null) treasureMeta.setMapView(treasureMapView);
-            } else {
-                mapMeta.setDisplayName(ChatColor.LIGHT_PURPLE + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + " Bounty Map");
-                mapMeta.setLore(List.of(ChatColor.GRAY + "Right-click to accept a " + tier + " bounty contract.", ChatColor.GRAY + "Bow, arrows and tracking compass supplied."));
-                mapMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "bounty_tier"), PersistentDataType.STRING, tier);
-            }
+            mapMeta.setDisplayName(ChatColor.LIGHT_PURPLE + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + (dimension.equals("nether") ? " Nether" : "") + " Bounty Map");
+            mapMeta.setLore(List.of(ChatColor.GRAY + "Right-click to accept a " + tier + " " + dimension + " bounty contract.", ChatColor.GRAY + "Bow, arrows and tracking compass supplied."));
+            mapMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "bounty_tier"), PersistentDataType.STRING, tier);
+            mapMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "bounty_dimension"), PersistentDataType.STRING, dimension);
             stack.setItemMeta(mapMeta);
         }
         if (product.potionType() != null && stack.getItemMeta() instanceof PotionMeta meta) {
