@@ -122,7 +122,14 @@ public final class UtilityManager implements Listener {
                 requestsByTarget.put(target.getUniqueId(), player.getUniqueId());
                 requestExpiry.put(target.getUniqueId(), System.currentTimeMillis() + TPA_TTL);
                 msg(player, "Teleport request sent to " + target.getName() + ".");
-                msg(target, player.getName() + " wants to teleport to you. Use /tpaccept or /tpdeny within 60 seconds.");
+                net.md_5.bungee.api.chat.TextComponent prompt = new net.md_5.bungee.api.chat.TextComponent("§e" + player.getName() + " wants to teleport to you. ");
+                net.md_5.bungee.api.chat.TextComponent accept = new net.md_5.bungee.api.chat.TextComponent("§a[ACCEPT]");
+                accept.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/tpaccept"));
+                net.md_5.bungee.api.chat.TextComponent decline = new net.md_5.bungee.api.chat.TextComponent(" §c[DECLINE]");
+                decline.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/tpdeny"));
+                prompt.addExtra(accept); prompt.addExtra(decline);
+                prompt.addExtra(new net.md_5.bungee.api.chat.TextComponent(" §7(60 seconds)"));
+                target.spigot().sendMessage(prompt);
                 return true;
             }
             case "tpaccept", "tpdeny" -> {
@@ -319,6 +326,12 @@ public final class UtilityManager implements Listener {
                 return true;
             }
             case "rtp" -> {
+                XZHEconomySystem economy = (XZHEconomySystem) plugin;
+                final double fee = 30.0;
+                if (economy.getCombinedBalance(player.getUniqueId()) + 1e-9 < fee) {
+                    msg(player, "Random teleport costs 30 coins. You need more pocket/bank funds.");
+                    return true;
+                }
                 long now = System.currentTimeMillis();
                 long ready = rtpCooldown.getOrDefault(player.getUniqueId(), 0L);
                 if (now < ready) { msg(player, "Random teleport cooldown: " + ((ready - now + 999) / 1000) + " seconds."); return true; }
@@ -326,9 +339,12 @@ public final class UtilityManager implements Listener {
                 Location center = data.getLocation("spawn");
                 if (center == null) center = player.getWorld().getSpawnLocation();
                 World world = center.getWorld();
-                if (world == null) { msg(player, "No valid world for random teleport."); return true; }
+                if (world == null || world.getEnvironment() != player.getWorld().getEnvironment()) {
+                    msg(player, "Random teleport is only available in your current dimension, and no valid center was found.");
+                    return true;
+                }
                 java.util.concurrent.ThreadLocalRandom random = java.util.concurrent.ThreadLocalRandom.current();
-                for (int attempt = 0; attempt < 30; attempt++) {
+                for (int attempt = 0; attempt < 50; attempt++) {
                     int x = center.getBlockX() + random.nextInt(-radius, radius + 1);
                     int z = center.getBlockZ() + random.nextInt(-radius, radius + 1);
                     Block floor = world.getHighestBlockAt(x, z);
@@ -338,14 +354,23 @@ public final class UtilityManager implements Listener {
                     if (!ground.isSolid() || ground == Material.MAGMA_BLOCK || ground == Material.CACTUS
                             || ground == Material.CAMPFIRE || ground == Material.SOUL_CAMPFIRE
                             || ground == Material.FIRE || ground == Material.SOUL_FIRE
-                            || feet != Material.AIR || head != Material.AIR) continue;
-                    player.teleport(new Location(world, x + 0.5, floor.getY() + 1, z + 0.5));
+                            || ground == Material.LAVA || feet != Material.AIR || head != Material.AIR) continue;
+                    Location destination = new Location(world, x + 0.5, floor.getY() + 1, z + 0.5,
+                            player.getLocation().getYaw(), player.getLocation().getPitch());
+                    if (!player.teleport(destination)) {
+                        msg(player, "Teleport failed; no fee was charged.");
+                        return true;
+                    }
+                    if (!economy.spendAvailableFunds(player.getUniqueId(), fee)) {
+                        msg(player, "Teleport succeeded, but payment could not be collected. Contact an admin.");
+                        return true;
+                    }
                     long cooldownSeconds = Math.max(1L, plugin.getConfig().getLong("utilities.rtp-cooldown-seconds", 600));
                     rtpCooldown.put(player.getUniqueId(), now + cooldownSeconds * 1000L);
-                    msg(player, "Randomly teleported. Cooldown: " + Math.max(1L, cooldownSeconds / 60L) + " minutes.");
+                    msg(player, "Randomly teleported safely for 30 coins. Cooldown: " + Math.max(1L, cooldownSeconds / 60L) + " minutes.");
                     return true;
                 }
-                msg(player, "Could not find a safe location. Try again.");
+                msg(player, "Could not find a safe location. No coins were charged; try again.");
                 return true;
             }
             case "top" -> {
