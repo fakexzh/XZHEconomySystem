@@ -458,6 +458,10 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 tell(sender, target.getName() + " — Pocket: §e" + money(getBalance(target.getUniqueId())) + " " + currency() + " §7| Bank: §a" + money(bankManager.getBalance(target.getUniqueId())) + " " + currency());
                 return true;
             }
+            case "moneyresponse" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can respond to money requests."); return true; }
+                return moneyRequestManager.handleResponse(player, args);
+            }
             case "sendmoney", "askmoney" -> {
                 if (!(sender instanceof Player player)) { tell(sender, "Only players can use money requests."); return true; }
                 return moneyRequestManager.handle(player, command.getName(), args);
