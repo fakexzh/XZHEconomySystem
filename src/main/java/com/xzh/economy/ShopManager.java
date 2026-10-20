@@ -13,11 +13,17 @@ import org.bukkit.event.block.Action;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.map.MapCanvas;
+import org.bukkit.map.MapPalette;
+import org.bukkit.map.MapRenderer;
+import org.bukkit.map.MapView;
 import org.bukkit.potion.PotionType;
 import org.bukkit.configuration.file.YamlConfiguration;
 import java.io.File;
 import java.io.IOException;
+import java.awt.Color;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -34,6 +40,7 @@ import java.util.Locale;
  */
 public final class ShopManager implements Listener {
     private final XZHEconomySystem plugin;
+    private final MapView treasureMapView;
     private final NamespacedKey actionKey;
     private final NamespacedKey materialKey;
     private final NamespacedKey quantityKey;
@@ -170,6 +177,7 @@ public final class ShopManager implements Listener {
 
     public ShopManager(XZHEconomySystem plugin) {
         this.plugin = plugin;
+        this.treasureMapView = createTreasureMapView();
         this.actionKey = new NamespacedKey(plugin, "shop_action");
         this.materialKey = new NamespacedKey(plugin, "shop_material");
         this.quantityKey = new NamespacedKey(plugin, "shop_quantity");
@@ -949,6 +957,52 @@ public final class ShopManager implements Listener {
         restockAll();
     }
 
+    private MapView createTreasureMapView() {
+        org.bukkit.World world = Bukkit.getWorlds().stream()
+                .filter(w -> w.getEnvironment() == org.bukkit.World.Environment.NORMAL)
+                .findFirst().orElse(null);
+        if (world == null) return null;
+        try {
+            MapView view = Bukkit.createMap(world);
+            for (MapRenderer renderer : new ArrayList<>(view.getRenderers())) view.removeRenderer(renderer);
+            view.addRenderer(new MapRenderer() {
+                private boolean rendered;
+                @Override
+                public void render(MapView map, MapCanvas canvas, Player player) {
+                    if (rendered) return;
+                    byte parchment = MapPalette.matchColor(new Color(218, 194, 150));
+                    byte border = MapPalette.matchColor(new Color(103, 69, 39));
+                    byte red = MapPalette.matchColor(new Color(190, 35, 35));
+                    for (int x = 0; x < 128; x++) {
+                        for (int y = 0; y < 128; y++) canvas.setPixel(x, y, parchment);
+                    }
+                    for (int i = 8; i < 120; i++) {
+                        canvas.setPixel(i, 8, border);
+                        canvas.setPixel(i, 119, border);
+                        canvas.setPixel(8, i, border);
+                        canvas.setPixel(119, i, border);
+                    }
+                    for (int i = -10; i <= 10; i++) {
+                        for (int thick = -2; thick <= 2; thick++) {
+                            canvas.setPixel(64 + i, 64 + i + thick, red);
+                            canvas.setPixel(64 + i, 64 - i + thick, red);
+                            canvas.setPixel(64 + i + thick, 64 + i, red);
+                            canvas.setPixel(64 + i + thick, 64 - i, red);
+                        }
+                    }
+                    rendered = true;
+                }
+            });
+            view.setTrackingPosition(false);
+            view.setUnlimitedTracking(false);
+            view.setScale(MapView.Scale.CLOSEST);
+            return view;
+        } catch (RuntimeException ex) {
+            plugin.getLogger().warning("Could not create the custom treasure X map: " + ex.getClass().getSimpleName());
+            return null;
+        }
+    }
+
     private void saveStock() {
         try { stockData.save(stockFile); }
         catch (IOException e) { plugin.getLogger().severe("Could not save shop-stock.yml: " + e.getMessage()); }
@@ -981,6 +1035,7 @@ public final class ShopManager implements Listener {
                 mapMeta.setLore(List.of(ChatColor.GRAY + "Travel to the map location marked X.", ChatColor.GRAY + "No Eye of Ender is used."));
                 mapMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "treasure_hunt_map"), PersistentDataType.BYTE, (byte) 1);
                 mapMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "treasure_hunt_tier"), PersistentDataType.STRING, tier);
+                if (mapMeta instanceof MapMeta treasureMeta && treasureMapView != null) treasureMeta.setMapView(treasureMapView);
             } else {
                 mapMeta.setDisplayName(ChatColor.LIGHT_PURPLE + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + " Bounty Map");
                 mapMeta.setLore(List.of(ChatColor.GRAY + "Right-click to accept a " + tier + " bounty contract.", ChatColor.GRAY + "Bow, arrows and tracking compass supplied."));
