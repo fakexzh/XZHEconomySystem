@@ -379,7 +379,7 @@ public final class ShopManager implements Listener {
                 lore.add(ChatColor.GRAY + "Dimension: " + (dimension.equals("nether") ? "Nether" : "Overworld"));
                 lore.add(ChatColor.GRAY + "Right-click to accept a " + tier + " bounty contract.");
                 lore.add(ChatColor.GRAY + "Bow, arrows and tracking compass supplied.");
-                lore.add(ChatColor.GRAY + "12-hour personal cooldown for this bounty type.");
+                lore.add(ChatColor.GRAY + "12-hour personal cooldown for this tier across both dimensions.");
                 lore.add(ChatColor.GRAY + "Time limit: " + (tier.equals("common") ? "25 minutes" : tier.equals("rare") ? "45 minutes" : "2 hours"));
                 lore.add(ChatColor.GRAY + "Hidden reward; possible profit bonus: 30–60%");
                 meta.setLore(lore);
@@ -858,7 +858,7 @@ public final class ShopManager implements Listener {
                         String tier = switch ((p.fireworkPower() - 1) % 3) { case 0 -> "Common"; case 1 -> "Rare"; default -> "Legendary"; };
                         String dimension = p.fireworkPower() >= 4 ? " Nether" : "";
                         plugin.tellPublic(player, "§d§lXZH BOUNTY HUNT §8» §fRight-click your " + tier + dimension + " map to start the contract.");
-                        plugin.tellPublic(player, "§e➤ This bounty type is now on cooldown for 12 hours.");
+                        plugin.tellPublic(player, "§e➤ This tier is now on cooldown for 12 hours in both dimensions.");
                         plugin.tellPublic(player, "§e➤ Bow, arrows and a tracking compass are supplied when the contract starts.");
                     }
                     plugin.announceSpecialPurchase(player, material, delivered, charged);
@@ -935,12 +935,12 @@ public final class ShopManager implements Listener {
     private boolean isBountyOnCooldown(Player player, Product product) {
         String tier = switch ((product.fireworkPower() - 1) % 3) { case 0 -> "common"; case 1 -> "rare"; default -> "legendary"; };
         String dimension = product.fireworkPower() >= 4 ? "nether" : "overworld";
-        String path = "players." + player.getUniqueId() + "." + dimension + "." + tier;
+        String path = "players." + player.getUniqueId() + "." + tier;
         long left = bountyCooldownData.getLong(path, 0L) - System.currentTimeMillis();
         if (left <= 0L) return false;
         long hours = left / 3_600_000L;
         long minutes = (left % 3_600_000L + 59_999L) / 60_000L;
-        plugin.tellPublic(player, "You can buy another " + tier + (dimension.equals("nether") ? " Nether" : "") + " bounty in " + hours + "h " + minutes + "m.");
+        plugin.tellPublic(player, "You can buy another " + tier + " bounty in " + hours + "h " + minutes + "m. This cooldown applies in both dimensions.");
         return true;
     }
 
