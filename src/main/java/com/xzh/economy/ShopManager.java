@@ -1117,6 +1117,7 @@ public final class ShopManager implements Listener {
     }
 
     private double sellPrice(Product p) {
+        if (p.category().equals("bounty-maps")) return 0.0;
         if (p.category().equals("misc")) return p.sell();
         String name = p.material().name();
         String lower = name.toLowerCase(Locale.ROOT);
