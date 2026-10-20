@@ -26,6 +26,7 @@ import java.util.UUID;
 /** Enchantment book catalogue with confirmation, per-player 24-hour cooldowns, and daily global stock. */
 public final class BookShopManager implements Listener {
     
+    private static final int MAX_BOOKS_PER_DAY = 2;
     private static final List<String> KEYS = List.of(
             "aqua_affinity", "bane_of_arthropods", "binding_curse", "blast_protection",
             "breach", "channeling", "density", "depth_strider", "efficiency", "feather_falling",
@@ -113,6 +114,20 @@ public final class BookShopManager implements Listener {
         Enchantment enchant = enchantment(key);
         if (enchant == null) return;
         long now = System.currentTimeMillis();
+        String playerId = player.getUniqueId().toString();
+        String today = java.time.LocalDate.now().toString();
+        String dailyDatePath = "daily." + playerId + ".date";
+        String dailyCountPath = "daily." + playerId + ".count";
+        if (!today.equals(data.getString(dailyDatePath, ""))) {
+            data.set(dailyDatePath, today);
+            data.set(dailyCountPath, 0);
+        }
+        int boughtToday = data.getInt(dailyCountPath, 0);
+        if (boughtToday >= MAX_BOOKS_PER_DAY) {
+            plugin.tellPublic(player, "You have reached today's limit of 2 enchantment books. You can buy again tomorrow.");
+            save();
+            return;
+        }
         String cooldownPath = "cooldowns." + player.getUniqueId() + "." + key;
         long until = data.getLong(cooldownPath, 0L);
         if (until > now) {
@@ -137,6 +152,7 @@ public final class BookShopManager implements Listener {
         // Persist the cooldown and stock decrement before delivery to avoid duplicate purchases after a crash.
         data.set(cooldownPath, now + plugin.getConfig().getLong("book-shop.cooldown-hours", 24) * 60L * 60L * 1000L);
         data.set("stock." + key, stock(key) - 1);
+        data.set(dailyCountPath, boughtToday + 1);
         save();
         plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) - cost);
         player.getInventory().addItem(book);
@@ -175,9 +191,10 @@ public final class BookShopManager implements Listener {
 
     private void resetStockIfNeeded() {
         String today = java.time.LocalDate.now().toString();
-        if (today.equals(data.getString("stock-date", ""))) return;
+        if (today.equals(data.getString("stock-date", "")) && data.getInt("stock-config-version", 0) >= 2) return;
         data.set("stock", null);
         data.set("stock-date", today);
+        data.set("stock-config-version", 2);
         for (String key : KEYS) data.set("stock." + key, stockLimit(key));
         save();
     }
@@ -195,8 +212,12 @@ public final class BookShopManager implements Listener {
     }
 
     private int stockLimit(String key) {
-        return Math.max(0, plugin.getConfig().getInt(isLimited(key)
-                ? "book-shop.rare-daily-stock" : "book-shop.normal-daily-stock", isLimited(key) ? 3 : 100));
+        int fallback = isLimited(key) ? switch (key) {
+            case "mending", "silk_touch", "wind_burst", "swift_sneak", "soul_speed" -> 3;
+            case "unbreaking", "efficiency", "fortune", "looting", "sharpness", "protection", "feather_falling" -> 6;
+            default -> 4;
+        } : plugin.getConfig().getInt("book-shop.normal-daily-stock", 100);
+        return Math.max(0, plugin.getConfig().getInt("book-shop.stock." + key, fallback));
     }
 
     private double price(String key) {
