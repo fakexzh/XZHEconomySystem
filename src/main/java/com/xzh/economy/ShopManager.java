@@ -155,7 +155,10 @@ public final class ShopManager implements Listener {
         new Product("special", Material.FLOW_ARMOR_TRIM_SMITHING_TEMPLATE, 1200, 0),
         new Product("special", Material.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE, 1200, 0),
         new Product("special", Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE, 2000, 0),
-        new Product("special", Material.ELYTRA, 5000, 0)
+        new Product("special", Material.ELYTRA, 5000, 0),
+        new Product("bounty-maps", Material.FILLED_MAP, 350, 0),
+        new Product("bounty-maps", Material.MAP, 900, 0),
+        new Product("bounty-maps", Material.COMPASS, 2500, 0)
     ));
 
     public ShopManager(XZHEconomySystem plugin) {
@@ -257,6 +260,7 @@ public final class ShopManager implements Listener {
         add(inv, 31, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
         add(inv, 32, Material.NETHER_STAR, "Quest Packs", "quests", "quests");
         add(inv, 33, Material.CHEST, "Death Inventory", "deathinventory", "deathinventory");
+        add(inv, 34, Material.FILLED_MAP, "Treasure & Bounty", "category", "bounty-maps");
 
         add(inv, 39, Material.BOOK, "Help", "help", "help");
         add(inv, 40, Material.BUNDLE, "Balance", "balance", "balance");
@@ -285,7 +289,7 @@ public final class ShopManager implements Listener {
             int slot = index - start;
             ItemStack item = createStack(p, 1);
             ItemMeta meta = item.getItemMeta();
-            meta.setDisplayName(ChatColor.YELLOW + pretty(p.material()) + (p.potionType() != null ? " - " + prettyPotion(p.potionType()) : (p.fireworkPower() > 0 ? " (Power " + p.fireworkPower() + ")" : "")));
+            meta.setDisplayName(ChatColor.YELLOW + prettyProduct(p));
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.WHITE + "Buy: " + ChatColor.YELLOW + money(buyPrice(p)) + " coins each");
             lore.add(ChatColor.WHITE + "Sell: " + ChatColor.RED + money(sellPrice(p)) + " coins each");
@@ -297,6 +301,13 @@ public final class ShopManager implements Listener {
             meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, p.material().name());
             if (p.potionType() != null) meta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
             if (p.fireworkPower() > 0) meta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
+            if (p.category().equals("bounty-maps")) {
+                String tier = p.material() == Material.FILLED_MAP ? "common" : p.material() == Material.MAP ? "rare" : "legendary";
+                meta.setDisplayName(ChatColor.LIGHT_PURPLE + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + " Bounty Map");
+                lore.add(ChatColor.GRAY + "Right-click to accept a " + tier + " bounty contract.");
+                lore.add(ChatColor.GRAY + "Mission equipment requires hotbar space.");
+                meta.setLore(lore);
+            }
             item.setItemMeta(meta);
             inv.setItem(slot, item);
         }
@@ -638,6 +649,18 @@ public final class ShopManager implements Listener {
                     return;
                 }
                 if (action.equals("buy")) {
+                    if (p.category().equals("bounty-maps")) {
+                        int emptyHotbar = 0;
+                        for (int hotbar = 0; hotbar < 9; hotbar++) {
+                            ItemStack hotbarItem = player.getInventory().getItem(hotbar);
+                            if (hotbarItem == null || hotbarItem.getType().isAir()) emptyHotbar++;
+                        }
+                        if (quantity != 1 || emptyHotbar < 3) {
+                            plugin.tellPublic(player, "Bounty map purchase blocked: keep at least 3 empty hotbar slots for the map and mission equipment.");
+                            player.closeInventory();
+                            return;
+                        }
+                    }
                     if (getStock(material) < quantity) {
                         plugin.tellPublic(player, "Not enough global stock. Available: " + getStock(material) + ".");
                         player.closeInventory();
@@ -653,7 +676,23 @@ public final class ShopManager implements Listener {
                         player.closeInventory();
                         return;
                     }
-                    java.util.Map<Integer, ItemStack> leftovers = player.getInventory().addItem(createStack(p, quantity));
+                    java.util.Map<Integer, ItemStack> leftovers;
+                    if (p.category().equals("bounty-maps")) {
+                        int emptySlot = -1;
+                        for (int hotbar = 0; hotbar < 9; hotbar++) {
+                            ItemStack hotbarItem = player.getInventory().getItem(hotbar);
+                            if (hotbarItem == null || hotbarItem.getType().isAir()) { emptySlot = hotbar; break; }
+                        }
+                        if (emptySlot < 0) {
+                            plugin.tellPublic(player, "Bounty map purchase blocked: no empty hotbar slot.");
+                            player.closeInventory();
+                            return;
+                        }
+                        player.getInventory().setItem(emptySlot, createStack(p, 1));
+                        leftovers = java.util.Map.of();
+                    } else {
+                        leftovers = player.getInventory().addItem(createStack(p, quantity));
+                    }
                     int notGiven = leftovers.values().stream().mapToInt(ItemStack::getAmount).sum();
                     int delivered = quantity - notGiven;
                     if (delivered <= 0) {
@@ -813,6 +852,15 @@ public final class ShopManager implements Listener {
 
     private ItemStack createStack(Product product, int amount) {
         ItemStack stack = new ItemStack(product.material(), amount);
+        if (product.category().equals("bounty-maps")) {
+            ItemMeta bountyMeta = stack.getItemMeta();
+            String tier = product.material() == Material.FILLED_MAP ? "common" : product.material() == Material.MAP ? "rare" : "legendary";
+            bountyMeta.setDisplayName(ChatColor.LIGHT_PURPLE + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + " Bounty Map");
+            bountyMeta.setLore(List.of(ChatColor.GRAY + "Right-click to accept a " + tier + " bounty contract.",
+                    ChatColor.GRAY + "Requires hotbar space for mission equipment."));
+            bountyMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "bounty_tier"), PersistentDataType.STRING, tier);
+            stack.setItemMeta(bountyMeta);
+        }
         if (product.potionType() != null && stack.getItemMeta() instanceof PotionMeta meta) {
             try { meta.setBasePotionType(product.potionType()); } catch (IllegalArgumentException ignored) { }
             stack.setItemMeta(meta);
@@ -870,6 +918,10 @@ public final class ShopManager implements Listener {
     }
 
     private String prettyProduct(Product product) {
+        if (product.category().equals("bounty-maps")) {
+            String tier = product.material() == Material.FILLED_MAP ? "Common" : product.material() == Material.MAP ? "Rare" : "Legendary";
+            return "XZH " + tier + " Bounty Map";
+        }
         return pretty(product.material()) + (product.potionType() == null ? "" : " - " + prettyPotion(product.potionType()));
     }
 
