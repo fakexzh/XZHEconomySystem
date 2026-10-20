@@ -218,7 +218,7 @@ public final class ShopManager implements Listener {
         for (Material drop : List.of(Material.ROTTEN_FLESH, Material.BONE, Material.STRING, Material.FEATHER, Material.GUNPOWDER, Material.SPIDER_EYE, Material.LEATHER, Material.RABBIT_HIDE, Material.INK_SAC, Material.GLOW_INK_SAC, Material.PRISMARINE_SHARD, Material.PRISMARINE_CRYSTALS, Material.SLIME_BALL, Material.MAGMA_CREAM, Material.BLAZE_ROD, Material.GHAST_TEAR)) {
             if (products.stream().noneMatch(p -> p.material() == drop && p.potionType() == null)) products.add(new Product("essentials", drop, mobDropBuyPrice(drop), mobDropSellPrice(drop)));
         }
-        products.add(new Product("essentials", Material.TNT, 90.0, 0.0));
+        products.add(new Product("essentials", Material.TNT, 70.0, 20.0));
         // Utility, lighting, crafting stations and bookshelves live in Essentials, not Blocks.
         for (Material material : Material.values()) {
             if (material != Material.FIREWORK_ROCKET && isEssentialsMaterial(material) && material.isItem()
@@ -896,7 +896,8 @@ public final class ShopManager implements Listener {
         if (name.equals("ELYTRA")) return Math.floor(buyPrice(p) * 0.30);
         if (name.equals("TRIDENT") || name.equals("TOTEM_OF_UNDYING")) return 200.0;
         if (name.equals("MILK_BUCKET")) return 10.0;
-        if (p.material() == Material.FIREWORK_ROCKET || p.material() == Material.TNT) return 0.0;
+        if (p.material() == Material.FIREWORK_ROCKET) return 0.0;
+        if (p.material() == Material.TNT) return Math.max(0.0, plugin.getConfig().getDouble("shop.prices.tnt.sell", 20.0));
         if (List.of("WHEAT", "CARROT", "POTATO", "BEETROOT", "MELON_SLICE", "PUMPKIN", "SUGAR_CANE", "NETHER_WART", "COCOA_BEANS").contains(name)) return 5.0 / 64.0;
         if (name.equals("COD")) return 4.0;
         if (name.equals("SALMON")) return 5.0;
