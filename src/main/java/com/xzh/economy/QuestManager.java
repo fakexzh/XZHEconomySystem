@@ -39,6 +39,14 @@ public final class QuestManager implements Listener {
     private record Objective(String target, int goal, String description) {}
     private record Pack(String id, String name, Material icon, int cost, int reward, String advancement, List<Objective> objectives) {}
     private record RandomQuest(String name, Material icon, int cost, int reward, Objective objective) {}
+    private record GlobalQuest(String name, Material icon, String target, int goal, String description) {}
+    private final List<GlobalQuest> globalQuestPool = List.of(
+        new GlobalQuest("Community Ore Rush", Material.IRON_PICKAXE, "ore", 250, "Mine 250 ores together"),
+        new GlobalQuest("Monster Patrol", Material.IRON_SWORD, "mob", 100, "Defeat 100 mobs together"),
+        new GlobalQuest("Fishing Fleet", Material.FISHING_ROD, "fish", 40, "Catch 40 fish together"),
+        new GlobalQuest("Forest Cleanup", Material.OAK_LOG, "wood", 180, "Chop 180 logs together"),
+        new GlobalQuest("Harvest Festival", Material.CARROT, "crop", 128, "Harvest 128 crops together")
+    );
 
     private final XZHEconomySystem plugin;
     private final File file;
@@ -202,12 +210,7 @@ public final class QuestManager implements Listener {
 
     public void adminResetEvent() {
         data.set("event", null);
-        data.set("event.date", LocalDate.now().toString());
-        data.set("event.progress", 0);
-        data.set("event.goal", configuredEventGoal());
-        data.set("event.reward", configuredEventReward());
-        data.set("event.claims-remaining", configuredEventClaims());
-        save();
+        startNewGlobalQuest(System.currentTimeMillis(), true);
     }
 
     public boolean setPackStock(String packId, int amount) {
@@ -394,7 +397,14 @@ public final class QuestManager implements Listener {
         incrementTarget(p, "break:" + id, 1);
         if (material.name().endsWith("_ORE") || material == Material.ANCIENT_DEBRIS) {
             incrementTarget(p, "break:ANY_ORE", 1);
-            recordEventOre(p);
+            recordGlobalProgress(p, "ore", 1);
+        }
+        if (material.name().endsWith("_LOG") || material.name().endsWith("_STEM")) {
+            recordGlobalProgress(p, "wood", 1);
+        }
+        if (material == Material.WHEAT || material == Material.CARROTS || material == Material.POTATOES
+                || material == Material.BEETROOTS || material == Material.MELON || material == Material.PUMPKIN) {
+            recordGlobalProgress(p, "crop", 1);
         }
     }
 
@@ -403,6 +413,7 @@ public final class QuestManager implements Listener {
         Player p = event.getEntity().getKiller();
         if (p == null || p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         incrementTarget(p, "kill:" + event.getEntityType().name(), 1);
+        recordGlobalProgress(p, "mob", 1);
     }
 
     @EventHandler
@@ -432,6 +443,7 @@ public final class QuestManager implements Listener {
         Player player = event.getPlayer();
         if (player.getGameMode() == org.bukkit.GameMode.CREATIVE || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         incrementTarget(player, "fish:" + caught.getItemStack().getType().name(), 1);
+        recordGlobalProgress(player, "fish", 1);
     }
 
     @EventHandler
@@ -565,36 +577,69 @@ public final class QuestManager implements Listener {
         int progress = data.getInt("event.progress", 0);
         int goal = data.getInt("event.goal", configuredEventGoal());
         int contribution = data.getInt("event.contribution." + id, 0);
-        boolean claimed = LocalDate.now().toString().equals(data.getString("event.claimed." + id, ""));
+        long remaining = Math.max(0L, data.getLong("event.ends-at", System.currentTimeMillis()) - System.currentTimeMillis());
+        boolean completed = data.getBoolean("event.completed", false);
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Global Quest");
-        add(inv, 13, Material.NETHER_STAR, ChatColor.GOLD + "Community Ore Rush", "global-info", "global",
-            List.of(ChatColor.WHITE + "Shared progress: " + progress + "/" + goal + " ores",
+        add(inv, 13, Material.NETHER_STAR, ChatColor.GOLD + data.getString("event.name", "Global Quest"), "global-info", "global",
+            List.of(ChatColor.WHITE + data.getString("event.description", "Work together to complete the objective."),
+                    ChatColor.WHITE + "Shared progress: " + progress + "/" + goal,
                     ChatColor.WHITE + "Your contribution: " + contribution,
-                    ChatColor.WHITE + "Reward: " + data.getInt("event.reward", configuredEventReward()) + " coins",
-                    ChatColor.GRAY + "Everyone can contribute; mine ores to help the server."));
-        add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "Claim reward", "global-claim", "global",
-            List.of(ChatColor.WHITE + "Requires event completion and 10 personal ores",
-                    ChatColor.GRAY + (claimed ? "Already claimed today" : "One reward per player per day")));
+                    ChatColor.WHITE + "Reward: " + data.getInt("event.reward", configuredEventReward()) + " coins each",
+                    ChatColor.WHITE + "Time left: " + formatGlobalTime(remaining),
+                    completed ? ChatColor.GREEN + "Completed! Rewards have been paid." : ChatColor.GRAY + "Contribute before the deadline to earn the reward."));
+        add(inv, 11, Material.GOLD_INGOT, ChatColor.GREEN + "Contributor rewards", "global-info", "global",
+            List.of(ChatColor.WHITE + "Rewards are paid automatically when",
+                    ChatColor.WHITE + "the community completes the objective.",
+                    ChatColor.GRAY + "Only players who contributed receive a reward."));
         add(inv, 15, Material.ARROW, ChatColor.WHITE + "Back", "back", "");
         player.openInventory(inv);
     }
 
-    private void claimGlobal(Player player) {
-        resetEventIfNeeded();
-        UUID id = player.getUniqueId();
-        String today = LocalDate.now().toString();
-        if (today.equals(data.getString("event.claimed." + id, ""))) { plugin.tellPublic(player, "You already claimed today's global quest reward."); return; }
-        if (data.getInt("event.progress", 0) < data.getInt("event.goal", configuredEventGoal())) { plugin.tellPublic(player, "The global quest is not complete yet."); return; }
-        if (data.getInt("event.contribution." + id, 0) < 10) { plugin.tellPublic(player, "Contribute at least 10 ores before claiming."); return; }
-        int remaining = data.getInt("event.claims-remaining", configuredEventClaims());
-        if (remaining <= 0) { plugin.tellPublic(player, "All global quest rewards have been claimed."); return; }
-        int reward = data.getInt("event.reward", configuredEventReward());
-        data.set("event.claimed." + id, today);
-        data.set("event.claims-remaining", remaining - 1);
+    private void recordGlobalProgress(Player player, String target, int amount) {
+        if (amount <= 0 || data.getBoolean("event.completed", false)) return;
+        if (data.getLong("event.ends-at", 0L) <= System.currentTimeMillis()) {
+            resetEventIfNeeded();
+            if (data.getBoolean("event.completed", false)) return;
+        }
+        if (!target.equals(data.getString("event.target", "ore"))) return;
+        int goal = Math.max(1, data.getInt("event.goal", configuredEventGoal()));
+        int progress = Math.min(goal, data.getInt("event.progress", 0) + amount);
+        data.set("event.progress", progress);
+        String contributionPath = "event.contribution." + player.getUniqueId();
+        data.set(contributionPath, data.getInt(contributionPath, 0) + amount);
         save();
-        plugin.setBalance(id, plugin.getBalance(id) + reward);
-        plugin.tellPublic(player, "Global quest reward claimed: " + reward + " coins.");
-        openGlobal(player);
+        if (progress >= goal) completeGlobalQuest();
+    }
+
+    private void completeGlobalQuest() {
+        if (data.getBoolean("event.completed", false)) return;
+        data.set("event.completed", true);
+        save();
+        int reward = data.getInt("event.reward", configuredEventReward());
+        org.bukkit.configuration.ConfigurationSection contributors = data.getConfigurationSection("event.contribution");
+        int paid = 0;
+        if (contributors != null) {
+            for (String rawId : contributors.getKeys(false)) {
+                try {
+                    UUID id = UUID.fromString(rawId);
+                    int contribution = data.getInt("event.contribution." + rawId, 0);
+                    if (contribution <= 0) continue;
+                    plugin.setBalance(id, plugin.getBalance(id) + reward);
+                    Player online = Bukkit.getPlayer(id);
+                    if (online != null) plugin.tellPublic(online, "§aGlobal quest reward received: " + reward + " coins for contributing to " + data.getString("event.name", "the global quest") + ".");
+                    paid++;
+                } catch (IllegalArgumentException ignored) { }
+            }
+        }
+        Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Global Quest] " + ChatColor.GREEN
+                + data.getString("event.name", "Global Quest") + " completed! " + paid
+                + " contributor(s) received " + reward + " coins each.");
+        save();
+    }
+
+    private String formatGlobalTime(long millis) {
+        long minutes = Math.max(0L, millis) / 60000L;
+        return (minutes / 60L) + "h " + (minutes % 60L) + "m";
     }
 
     private void recordEventOre(Player player) {
@@ -614,15 +659,18 @@ public final class QuestManager implements Listener {
         int progress = Math.max(0, data.getInt("event.progress", 0));
         int goal = Math.max(1, data.getInt("event.goal", configuredEventGoal()));
         int percent = Math.min(100, (int) Math.floor(progress * 100.0 / goal));
-        return "§6Global Quest: §f" + progress + "/" + goal + " ores §8(§a" + percent + "%§8)";
+        long remaining = Math.max(0L, data.getLong("event.ends-at", System.currentTimeMillis()) - System.currentTimeMillis());
+        return "§6Global: §f" + progress + "/" + goal + " §8(" + percent + "%, " + formatGlobalTime(remaining) + ")";
     }
 
     private void broadcastGlobalProgress() {
         resetEventIfNeeded();
-        if (data.getInt("event.progress", 0) >= data.getInt("event.goal", configuredEventGoal())) return;
+        if (data.getBoolean("event.completed", false)) return;
         String message = ChatColor.GOLD + "[XZH Global Quest] " + ChatColor.YELLOW
-            + "Community Ore Rush: " + data.getInt("event.progress", 0) + "/"
-            + data.getInt("event.goal", configuredEventGoal()) + " ores mined. Everyone can contribute!";
+            + data.getString("event.name", "Global Quest") + ": " + data.getInt("event.progress", 0) + "/"
+            + data.getInt("event.goal", configuredEventGoal()) + " — "
+            + data.getString("event.description", "Help complete the community objective.")
+            + " Time left: " + formatGlobalTime(Math.max(0L, data.getLong("event.ends-at", 0L) - System.currentTimeMillis())) + ".";
         Bukkit.broadcastMessage(message);
     }
 
@@ -694,19 +742,35 @@ public final class QuestManager implements Listener {
     }
 
     private void resetEventIfNeeded() {
-        String today = LocalDate.now().toString();
-        if (!today.equals(data.getString("event.date", ""))) {
-            data.set("event", null);
-            data.set("event.date", today);
-            data.set("event.progress", 0);
-            data.set("event.goal", configuredEventGoal());
-            data.set("event.reward", configuredEventReward());
-            data.set("event.claims-remaining", configuredEventClaims());
-            save();
-        } else {
-            if (!data.contains("event.goal")) data.set("event.goal", configuredEventGoal());
-            if (!data.contains("event.reward")) data.set("event.reward", configuredEventReward());
-            if (!data.contains("event.claims-remaining")) data.set("event.claims-remaining", configuredEventClaims());
+        long now = System.currentTimeMillis();
+        long endAt = data.getLong("event.ends-at", 0L);
+        if (data.getString("event.name", "").isBlank() || endAt <= now) {
+            startNewGlobalQuest(now, true);
+            return;
+        }
+        if (!data.contains("event.progress")) data.set("event.progress", 0);
+        if (!data.contains("event.reward")) data.set("event.reward", configuredEventReward());
+        if (!data.contains("event.completed")) data.set("event.completed", false);
+    }
+
+    private void startNewGlobalQuest(long now, boolean announce) {
+        GlobalQuest selected = globalQuestPool.get(random.nextInt(globalQuestPool.size()));
+        data.set("event", null);
+        data.set("event.name", selected.name());
+        data.set("event.icon", selected.icon().name());
+        data.set("event.target", selected.target());
+        data.set("event.description", selected.description());
+        data.set("event.progress", 0);
+        data.set("event.goal", selected.goal());
+        data.set("event.reward", configuredEventReward());
+        data.set("event.ends-at", now + 4L * 60L * 60L * 1000L);
+        data.set("event.completed", false);
+        data.set("event.started-at", now);
+        save();
+        if (announce) {
+            Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Global Quest] " + ChatColor.YELLOW
+                    + "New 4-hour community quest: " + selected.name() + " — " + selected.description()
+                    + ". Reward: " + configuredEventReward() + " coins for each contributor. Work together before the deadline!");
         }
     }
 
