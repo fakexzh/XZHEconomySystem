@@ -238,6 +238,16 @@ public final class ShopManager implements Listener {
             double price = switch (power) { case 1 -> 8.0; case 2 -> 18.0; default -> 35.0; };
             products.add(new Product("essentials", Material.FIREWORK_ROCKET, price, 0.0, null, power));
         }
+        // Split the former combined equipment category into clear Armor and Tools menus.
+        for (int i = 0; i < products.size(); i++) {
+            Product product = products.get(i);
+            if (!product.category().equals("equipment")) continue;
+            String name = product.material().name();
+            boolean armor = name.endsWith("_HELMET") || name.endsWith("_CHESTPLATE")
+                    || name.endsWith("_LEGGINGS") || name.endsWith("_BOOTS");
+            products.set(i, new Product(armor ? "armor" : "tools", product.material(),
+                    product.buy(), product.sell(), product.potionType(), product.fireworkPower()));
+        }
         this.stockFile = new File(plugin.getDataFolder(), "shop-stock.yml");
         this.stockData = YamlConfiguration.loadConfiguration(stockFile);
         this.historyFile = new File(plugin.getDataFolder(), "shop-purchase-history.yml");
@@ -252,8 +262,8 @@ public final class ShopManager implements Listener {
         // Row 1: mining/building on the left, equipment in the middle, food/farming on the right.
         add(inv, 10, Material.IRON_INGOT, "Ores", "category", "ores");
         add(inv, 11, Material.BRICKS, "Blocks", "category", "blocks");
-        add(inv, 13, Material.IRON_CHESTPLATE, "Armor", "category", "equipment");
-        add(inv, 14, Material.DIAMOND_PICKAXE, "Tools", "category", "equipment");
+        add(inv, 13, Material.IRON_CHESTPLATE, "Armor", "category", "armor");
+        add(inv, 14, Material.DIAMOND_PICKAXE, "Tools", "category", "tools");
         add(inv, 16, Material.COOKED_BEEF, "Food", "category", "food");
         add(inv, 17, Material.WHEAT_SEEDS, "Seeds & Farming", "category", "seeds");
 
