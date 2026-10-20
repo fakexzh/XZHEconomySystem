@@ -614,7 +614,7 @@ public final class QuestManager implements Listener {
         int progress = Math.max(0, data.getInt("event.progress", 0));
         int goal = Math.max(1, data.getInt("event.goal", configuredEventGoal()));
         int percent = Math.min(100, (int) Math.floor(progress * 100.0 / goal));
-        return "§6Global Quest: §f" + progress + "/" + goal + " ores §8(" + percent + "%)";
+        return "§6Global Quest: §f" + progress + "/" + goal + " ores §8(§a" + percent + "%§8)";
     }
 
     private void broadcastGlobalProgress() {
