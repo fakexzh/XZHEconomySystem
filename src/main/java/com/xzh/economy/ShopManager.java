@@ -1078,7 +1078,7 @@ public final class ShopManager implements Listener {
 
     private boolean isSeedOrPlantingMaterial(Material m) {
         String n = m.name();
-        return n.endsWith("_SEEDS") || n.equals("WHEAT_SEEDS") || n.equals("NETHER_WART")
+        return n.endsWith("_SEEDS") || n.equals("WHEAT_SEEDS") || n.equals("WHEAT") || n.equals("NETHER_WART")
                 || n.equals("COCOA_BEANS") || n.equals("CARROT") || n.equals("POTATO")
                 || n.equals("BEETROOT") || n.equals("SWEET_BERRIES") || n.equals("GLOW_BERRIES")
                 || n.equals("PITCHER_POD") || n.equals("TORCHFLOWER_SEEDS") || n.equals("SUGAR_CANE")
