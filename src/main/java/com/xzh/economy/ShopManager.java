@@ -369,17 +369,17 @@ public final class ShopManager implements Listener {
             meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, p.material().name());
             if (p.potionType() != null) meta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
             if (p.fireworkPower() > 0) meta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
-            if (p.category().equals("bounty-maps")) {
-                if (p.fireworkPower() == 4) {
-                    meta.setDisplayName(ChatColor.GOLD + "XZH Treasure Hunt Map");
-                    lore.add(ChatColor.GRAY + "Right-click to start a treasure hunt.");
-                    lore.add(ChatColor.GRAY + "Follow the Eye of Ender and compass to buried treasure.");
+            if (p.category().equals("bounty-maps") || p.category().equals("treasure-maps")) {
+                String tier = p.fireworkPower() == 1 || p.fireworkPower() == 4 ? "common" : p.fireworkPower() == 2 || p.fireworkPower() == 5 ? "rare" : "legendary";
+                if (p.category().equals("treasure-maps")) {
+                    meta.setDisplayName(ChatColor.GOLD + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + " Treasure Map");
+                    lore.add(ChatColor.GRAY + "Travel to the destination marked X; no Eye of Ender.");
                 } else {
-                    String tier = p.fireworkPower() == 1 ? "common" : p.fireworkPower() == 2 ? "rare" : "legendary";
                     meta.setDisplayName(ChatColor.LIGHT_PURPLE + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + " Bounty Map");
-                    lore.add(ChatColor.GRAY + "Right-click to accept a " + tier + " bounty contract.");
-                    lore.add(ChatColor.GRAY + "Mission equipment requires hotbar space.");
+                    lore.add(ChatColor.GRAY + "Bow, arrows and tracking compass supplied.");
                 }
+                lore.add(ChatColor.GRAY + "Time limit: " + (tier.equals("common") ? "25 minutes" : tier.equals("rare") ? "45 minutes" : "2 hours"));
+                lore.add(ChatColor.GRAY + "Hidden reward; possible profit bonus: 30–60%");
                 meta.setLore(lore);
             }
             item.setItemMeta(meta);
@@ -825,15 +825,11 @@ public final class ShopManager implements Listener {
                     }
                     recordPurchase(player, prettyProduct(p), delivered, charged);
                     plugin.tellPublic(player, "Bought " + delivered + " × " + prettyProduct(p) + " for " + money(charged) + " coins.");
-                    if (p.category().equals("bounty-maps")) {
-                        if (p.fireworkPower() == 4) {
-                            plugin.tellPublic(player, "§6§lXZH TREASURE HUNT §8» §fYour map is in your hotbar. Right-click it to begin the hunt.");
-                        } else {
-                            plugin.tellPublic(player, "§d§lXZH BOUNTY HUNT §8» §fYour map is in your hotbar. Right-click it to start the contract.");
-                            plugin.tellPublic(player, "§e➤ Hold your Tracking Arrow and right-click to locate your bounty target. The arrow is provided when you activate the map.");
-                            plugin.tellPublic(player, "§e➤ You can use the special Hunter's Bow to fight and defeat your target. The bow is provided when you activate the map.");
-                            plugin.tellPublic(player, "§7➤ Keep the map and mission equipment in your hotbar; equipment is removed when the contract ends.");
-                        }
+                    if (p.category().equals("treasure-maps")) {
+                        plugin.tellPublic(player, "§6§lXZH TREASURE HUNT §8» §fUse your map and travel to X. No Eye of Ender is used.");
+                    } else if (p.category().equals("bounty-maps")) {
+                        plugin.tellPublic(player, "§d§lXZH BOUNTY HUNT §8» §fRight-click your map to start the contract.");
+                        plugin.tellPublic(player, "§e➤ Bow, arrows and a tracking compass are supplied when the contract starts.");
                     }
                     plugin.announceSpecialPurchase(player, material, delivered, charged);
                 } else {
@@ -1058,7 +1054,7 @@ public final class ShopManager implements Listener {
 
     private double buyPrice(Product p) {
         // Each bounty map tier has its own price; never let legacy filled_map config flatten them.
-        if (p.category().equals("bounty-maps")) return Math.ceil(p.buy());
+        if (p.category().equals("bounty-maps") || p.category().equals("treasure-maps")) return Math.ceil(p.buy());
         String materialPath = "shop.prices." + p.material().name().toLowerCase(Locale.ROOT) + ".buy";
         String variantPath = p.potionType() == null ? "" : "shop.potion-prices." + p.potionType().name().toLowerCase(Locale.ROOT) + "." + p.material().name().toLowerCase(Locale.ROOT) + ".buy";
         double fallback = p.buy();
@@ -1136,8 +1132,8 @@ public final class ShopManager implements Listener {
         return switch (m) { case GHAST_TEAR -> 8; case BLAZE_ROD, MAGMA_CREAM -> 4; case SLIME_BALL, PRISMARINE_SHARD, PRISMARINE_CRYSTALS -> 2; case GUNPOWDER -> 1.5; case LEATHER, FEATHER -> 1; default -> 0.5; };
     }
     private int productOrder(Product p) {
-        if (p.category().equals("bounty-maps")) {
-            return p.fireworkPower() - 1;
+        if (p.category().equals("bounty-maps") || p.category().equals("treasure-maps")) {
+            return p.fireworkPower() <= 3 ? p.fireworkPower() - 1 : p.fireworkPower() - 4;
         }
         if (p.category().equals("potions")) {
             String n = p.potionType() == null ? "" : p.potionType().name();
