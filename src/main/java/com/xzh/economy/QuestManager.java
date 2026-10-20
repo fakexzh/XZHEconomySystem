@@ -635,6 +635,8 @@ public final class QuestManager implements Listener {
                 + data.getString("event.name", "Global Quest") + " completed! " + paid
                 + " contributor(s) received " + reward + " coins each.");
         save();
+        // A successful early completion immediately opens the next four-hour community challenge.
+        startNewGlobalQuest(System.currentTimeMillis(), true);
     }
 
     private String formatGlobalTime(long millis) {
