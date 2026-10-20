@@ -227,24 +227,25 @@ public final class ShopManager implements Listener {
 
     public void openMain(Player player) {
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP");
+        // Category icons are centered into evenly spaced rows for a tidy shop layout.
         add(inv, 10, Material.IRON_INGOT, "Ores", "category", "ores");
         add(inv, 12, Material.BRICKS, "Blocks", "category", "blocks");
-        add(inv, 15, Material.ANVIL, "Essentials", "category", "essentials");
-        add(inv, 24, Material.POPPY, "Flowers & Dyes", "category", "flowers-dyes");
-        add(inv, 13, Material.WHEAT_SEEDS, "Seeds & Farming", "category", "seeds");
-        add(inv, 14, Material.COOKED_BEEF, "Food", "category", "food");
-        add(inv, 16, Material.DIAMOND_PICKAXE, "Armor & Tools", "category", "equipment");
-        add(inv, 17, Material.OAK_BOAT, "Travel", "category", "travel");
-        add(inv, 19, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
-        add(inv, 21, Material.POTION, "Potions", "category", "potions");
-        add(inv, 23, Material.ZOMBIE_HEAD, "Eggs & Heads", "category", "eggs-heads");
-        add(inv, 25, Material.ELYTRA, "Special Items", "category", "special");
-        add(inv, 28, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
-        add(inv, 30, Material.WRITABLE_BOOK, "Quest Packs", "quests", "quests");
-        add(inv, 32, Material.CHEST, "Death Inventory", "deathinventory", "deathinventory");
-        add(inv, 34, Material.GOLD_INGOT, "Balance", "balance", "balance");
-        add(inv, 36, Material.BOOK, "Help", "help", "help");
-        add(inv, 38, Material.CLOCK, "XZH BANK", "bank", "bank");
+        add(inv, 14, Material.ANVIL, "Essentials", "category", "essentials");
+        add(inv, 16, Material.POPPY, "Flowers & Dyes", "category", "flowers-dyes");
+        add(inv, 19, Material.WHEAT_SEEDS, "Seeds & Farming", "category", "seeds");
+        add(inv, 21, Material.COOKED_BEEF, "Food", "category", "food");
+        add(inv, 23, Material.DIAMOND_PICKAXE, "Armor & Tools", "category", "equipment");
+        add(inv, 25, Material.OAK_BOAT, "Travel", "category", "travel");
+        add(inv, 28, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
+        add(inv, 30, Material.POTION, "Potions", "category", "potions");
+        add(inv, 32, Material.BEE_SPAWN_EGG, "Eggs & Heads", "category", "eggs-heads");
+        add(inv, 34, Material.ELYTRA, "Special Items", "category", "special");
+        add(inv, 37, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
+        add(inv, 39, Material.NETHER_STAR, "Quest Packs", "quests", "quests");
+        add(inv, 41, Material.CHEST, "Death Inventory", "deathinventory", "deathinventory");
+        add(inv, 43, Material.BUNDLE, "Balance", "balance", "balance");
+        add(inv, 46, Material.BOOK, "Help", "help", "help");
+        add(inv, 48, Material.PAPER, "XZH BANK", "bank", "bank");
         add(inv, 49, Material.GOLD_INGOT, "Sell Hand (held item)", "sell-hand", "hand", List.of(ChatColor.WHITE + "Hold an item to preview its sale.", ChatColor.GRAY + "Shows item, quantity, unit price, and total payout.", ChatColor.YELLOW + "Click to review; confirmation required."));
         player.openInventory(inv);
     }
@@ -301,7 +302,7 @@ public final class ShopManager implements Listener {
                 ChatColor.GRAY + "Hover to inspect the item; confirm to sell."));
         summary.setItemMeta(meta);
         inv.setItem(13, summary);
-        add(inv, 11, Material.LIME_CONCRETE, "Confirm sale", "sell-hand-confirm", hand.getType().name() + ":-:" + hand.getAmount());
+        add(inv, 11, Material.BLUE_CONCRETE, "Confirm sale", "sell-hand-confirm", hand.getType().name() + ":-:" + hand.getAmount());
         ItemStack confirm = inv.getItem(11);
         ItemMeta confirmMeta = confirm.getItemMeta();
         confirmMeta.getPersistentDataContainer().set(sellUnitPriceKey, PersistentDataType.DOUBLE, unitSell);
@@ -368,7 +369,7 @@ public final class ShopManager implements Listener {
                 ChatColor.GRAY + (selling ? "Your current XP will be set to zero." : "Bottle is unstackable and consumed by right-click.")));
         summary.setItemMeta(meta);
         inv.setItem(13, summary);
-        add(inv, 11, Material.LIME_CONCRETE, "Confirm", selling ? "xp-sell-confirm" : "xp-buy-confirm", points + ":" + price);
+        add(inv, 11, Material.BLUE_CONCRETE, "Confirm", selling ? "xp-sell-confirm" : "xp-buy-confirm", points + ":" + price);
         add(inv, 15, Material.RED_CONCRETE, "Cancel", "category-back", "xp");
         player.openInventory(inv);
     }
@@ -473,7 +474,7 @@ public final class ShopManager implements Listener {
         summary.setItemMeta(sm);
         inv.setItem(13, summary);
         String txValue = material.name() + ":" + (p.potionType() == null ? "-" : p.potionType().name()) + ":" + quantity;
-        add(inv, 11, Material.LIME_CONCRETE, "Confirm", buying ? "buy" : (handOnly ? "sell-hand-confirm" : "sell"), txValue);
+        add(inv, 11, Material.BLUE_CONCRETE, "Confirm", buying ? "buy" : (handOnly ? "sell-hand-confirm" : "sell"), txValue);
         ItemMeta confirmMeta = inv.getItem(11).getItemMeta();
         if (p.potionType() != null) confirmMeta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
         inv.getItem(11).setItemMeta(confirmMeta);
