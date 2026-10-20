@@ -259,7 +259,7 @@ public final class DeathRecoveryManager implements Listener {
 
     private double safeFeeMultiplier() {
         double configured = plugin.getConfig().getDouble("death-recovery.fee-multiplier", 1.5);
-        return Double.isFinite(configured) && configured >= 1.0 ? Math.min(configured, 10.0) : 1.5;
+        return Double.isFinite(configured) && configured >= 0.01 ? Math.min(configured, 1.0) : 0.10;
     }
 
     private double recoveryValue(String base) {
