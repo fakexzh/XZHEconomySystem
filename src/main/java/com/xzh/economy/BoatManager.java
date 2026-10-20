@@ -32,6 +32,8 @@ public final class BoatManager implements Listener {
     private final XZHEconomySystem plugin;
     private final NamespacedKey tierKey;
     private final NamespacedKey chestKey;
+    private final NamespacedKey actionKey;
+    private final NamespacedKey quantityKey;
 
     private record BoatOffer(String tier, String name, Material material, Material chestMaterial, double price, double chestPrice, String finish, String branding) { }
 
@@ -48,6 +50,8 @@ public final class BoatManager implements Listener {
         this.plugin = plugin;
         tierKey = new NamespacedKey(plugin, "xzh_boat_tier");
         chestKey = new NamespacedKey(plugin, "xzh_boat_chest");
+        actionKey = new NamespacedKey(plugin, "xzh_boat_action");
+        quantityKey = new NamespacedKey(plugin, "xzh_boat_quantity");
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -83,6 +87,7 @@ public final class BoatManager implements Listener {
         ));
         info.setItemMeta(im);
         inv.setItem(22, info);
+        inv.setItem(26, backItem());
         player.openInventory(inv);
     }
 
@@ -123,33 +128,16 @@ public final class BoatManager implements Listener {
         if (clicked == null || !clicked.hasItemMeta()) return;
         String tier = clicked.getItemMeta().getPersistentDataContainer().get(tierKey, PersistentDataType.STRING);
         if (tier == null) return;
+        if ("back".equals(tier)) { plugin.getShopManager().openMain(player); return; }
         if ("horse".equals(tier) || "donkey".equals(tier)) {
-            Inventory confirm = Bukkit.createInventory(null, 27, "Confirm Travel Item");
-            Material egg = "horse".equals(tier) ? Material.HORSE_SPAWN_EGG : Material.DONKEY_SPAWN_EGG;
-            String name = ("horse".equals(tier) ? "Horse" : "Donkey") + " Spawn Egg";
-            ItemStack preview = travelEgg(egg, "preview", name);
-            ItemMeta previewMeta = preview.getItemMeta();
-            previewMeta.setLore(List.of(ChatColor.WHITE + "Price: " + ChatColor.YELLOW + "2,500 coins"));
-            preview.setItemMeta(previewMeta);
-            confirm.setItem(13, preview);
-            ItemStack yes = new ItemStack(Material.BLUE_CONCRETE);
-            ItemMeta yesMeta = yes.getItemMeta();
-            yesMeta.setDisplayName(ChatColor.GREEN + "Confirm purchase");
-            yesMeta.setLore(List.of(ChatColor.WHITE + "Price: " + ChatColor.YELLOW + "2,500 coins"));
-            yesMeta.getPersistentDataContainer().set(tierKey, PersistentDataType.STRING, tier);
-            yes.setItemMeta(yesMeta);
-            confirm.setItem(11, yes);
-            ItemStack no = new ItemStack(Material.RED_CONCRETE);
-            ItemMeta noMeta = no.getItemMeta();
-            noMeta.setDisplayName(ChatColor.RED + "Cancel");
-            noMeta.getPersistentDataContainer().set(tierKey, PersistentDataType.STRING, "back");
-            no.setItemMeta(noMeta);
-            confirm.setItem(15, no);
-            player.openInventory(confirm);
+            openTravelQuantity(player, tier, 1);
             return;
         }
         BoatOffer offer = find(tier);
-        if (offer == null) return;
+        if (offer != null) openBoatOptions(player, offer);
+    }
+
+    private void openBoatOptions(Player player, BoatOffer offer) {
         Inventory confirm = Bukkit.createInventory(null, 27, "Confirm XZH Boat");
         confirm.setItem(11, choiceItem(offer, false));
         confirm.setItem(13, choiceItem(offer, true));
@@ -161,43 +149,155 @@ public final class BoatManager implements Listener {
     public void onConfirmClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (!"Confirm XZH Boat".equals(title) && !"Confirm Travel Item".equals(title)) return;
+        if (!"Confirm XZH Boat".equals(title) && !"Confirm Travel Item".equals(title)
+                && !"Choose boat quantity".equals(title) && !"Choose travel quantity".equals(title)) return;
         event.setCancelled(true);
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || !clicked.hasItemMeta()) return;
         ItemMeta meta = clicked.getItemMeta();
         String tier = meta.getPersistentDataContainer().get(tierKey, PersistentDataType.STRING);
-        if ("back".equals(tier)) { open(player); return; }
         if (tier == null) return;
-        if ("horse".equals(tier) || "donkey".equals(tier)) {
-            purchaseTravelEgg(player, tier);
+
+        if (title.equals("Confirm Travel Item")) {
+            if ("back".equals(tier)) { open(player); return; }
+            if ("horse".equals(tier) || "donkey".equals(tier)) openTravelQuantity(player, tier, 1);
             return;
         }
-        BoatOffer offer = find(tier);
-        if (offer == null) return;
-        Byte chestByte = meta.getPersistentDataContainer().get(chestKey, PersistentDataType.BYTE);
-        boolean chest = chestByte != null && chestByte == (byte) 1;
-        double price = chest ? offer.chestPrice() : offer.price();
+        if (title.equals("Confirm XZH Boat")) {
+            if ("back".equals(tier)) { open(player); return; }
+            BoatOffer offer = find(tier);
+            if (offer == null) return;
+            Byte chestByte = meta.getPersistentDataContainer().get(chestKey, PersistentDataType.BYTE);
+            openBoatQuantity(player, offer, chestByte != null && chestByte == (byte) 1, 1);
+            return;
+        }
+
+        String action = meta.getPersistentDataContainer().get(actionKey, PersistentDataType.STRING);
+        Integer quantity = meta.getPersistentDataContainer().get(quantityKey, PersistentDataType.INTEGER);
+        if (action == null || quantity == null) return;
+        boolean boatPage = title.equals("Choose boat quantity");
+        if (action.equals("quantity-back")) {
+            if (boatPage) {
+                BoatOffer offer = find(tier);
+                if (offer != null) openBoatOptions(player, offer);
+            } else open(player);
+            return;
+        }
+        if (action.equals("quantity-minus") || action.equals("quantity-plus")) {
+            int next = Math.max(1, Math.min(64, quantity + (action.equals("quantity-plus") ? 1 : -1)));
+            if (boatPage) {
+                BoatOffer offer = find(tier);
+                if (offer != null) {
+                    Byte chestByte = meta.getPersistentDataContainer().get(chestKey, PersistentDataType.BYTE);
+                    openBoatQuantity(player, offer, chestByte != null && chestByte == (byte) 1, next);
+                }
+            } else openTravelQuantity(player, tier, next);
+            return;
+        }
+        if (!action.equals("quantity-buy")) return;
+        if (boatPage) {
+            BoatOffer offer = find(tier);
+            if (offer != null) {
+                Byte chestByte = meta.getPersistentDataContainer().get(chestKey, PersistentDataType.BYTE);
+                purchaseBoats(player, offer, chestByte != null && chestByte == (byte) 1, quantity);
+            }
+        } else purchaseTravelEgg(player, tier, quantity);
+    }
+
+    private void openBoatQuantity(Player player, BoatOffer offer, boolean chest, int requestedQuantity) {
+        int quantity = Math.max(1, Math.min(64, requestedQuantity));
+        double unitPrice = chest ? offer.chestPrice() : offer.price();
+        Inventory inv = Bukkit.createInventory(null, 27, "Choose boat quantity");
+        ItemStack summary = createBoatItem(offer, chest);
+        summary.setAmount(Math.min(quantity, summary.getMaxStackSize()));
+        ItemMeta sm = summary.getItemMeta();
+        sm.setDisplayName(ChatColor.YELLOW + "Selected: " + quantity + " × " + offer.name() + (chest ? " + Chest" : ""));
+        sm.setLore(List.of(ChatColor.WHITE + "Unit price: " + ChatColor.YELLOW + money(unitPrice) + " coins",
+                ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(unitPrice * quantity) + " coins"));
+        summary.setItemMeta(sm);
+        inv.setItem(13, summary);
+        inv.setItem(10, quantityButton(Material.RED_CONCRETE, "−1", offer.tier(), chest, quantity, "quantity-minus"));
+        inv.setItem(16, quantityButton(Material.LIME_CONCRETE, "+1", offer.tier(), chest, quantity, "quantity-plus"));
+        inv.setItem(22, quantityButton(Material.EMERALD, "Buy " + quantity, offer.tier(), chest, quantity, "quantity-buy",
+                List.of(ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(unitPrice * quantity) + " coins")));
+        inv.setItem(26, quantityButton(Material.ARROW, "Back", offer.tier(), chest, quantity, "quantity-back"));
+        player.openInventory(inv);
+    }
+
+    private void openTravelQuantity(Player player, String tier, int requestedQuantity) {
+        int quantity = Math.max(1, Math.min(64, requestedQuantity));
+        String name = ("horse".equals(tier) ? "Horse" : "Donkey") + " Spawn Egg";
+        Material material = "horse".equals(tier) ? Material.HORSE_SPAWN_EGG : Material.DONKEY_SPAWN_EGG;
+        Inventory inv = Bukkit.createInventory(null, 27, "Choose travel quantity");
+        ItemStack summary = travelEgg(material, tier, name);
+        summary.setAmount(Math.min(quantity, summary.getMaxStackSize()));
+        ItemMeta sm = summary.getItemMeta();
+        sm.setDisplayName(ChatColor.YELLOW + "Selected: " + quantity + " × " + name);
+        sm.setLore(List.of(ChatColor.WHITE + "Unit price: " + ChatColor.YELLOW + "2,500 coins",
+                ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(2500.0 * quantity) + " coins"));
+        summary.setItemMeta(sm);
+        inv.setItem(13, summary);
+        inv.setItem(10, quantityButton(Material.RED_CONCRETE, "−1", tier, false, quantity, "quantity-minus"));
+        inv.setItem(16, quantityButton(Material.LIME_CONCRETE, "+1", tier, false, quantity, "quantity-plus"));
+        inv.setItem(22, quantityButton(Material.EMERALD, "Buy " + quantity, tier, false, quantity, "quantity-buy",
+                List.of(ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(2500.0 * quantity) + " coins")));
+        inv.setItem(26, quantityButton(Material.ARROW, "Back", tier, false, quantity, "quantity-back"));
+        player.openInventory(inv);
+    }
+
+    private ItemStack quantityButton(Material material, String name, String tier, boolean chest, int quantity, String action) {
+        return quantityButton(material, name, tier, chest, quantity, action, List.of(ChatColor.GRAY + "Selected quantity: " + quantity));
+    }
+
+    private ItemStack quantityButton(Material material, String name, String tier, boolean chest, int quantity, String action, List<String> lore) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(ChatColor.WHITE + name);
+        meta.setLore(lore);
+        meta.getPersistentDataContainer().set(tierKey, PersistentDataType.STRING, tier);
+        meta.getPersistentDataContainer().set(chestKey, PersistentDataType.BYTE, (byte) (chest ? 1 : 0));
+        meta.getPersistentDataContainer().set(quantityKey, PersistentDataType.INTEGER, quantity);
+        meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private void purchaseBoats(Player player, BoatOffer offer, boolean chest, int quantity) {
+        quantity = Math.max(1, Math.min(64, quantity));
+        double unitPrice = chest ? offer.chestPrice() : offer.price();
+        double total = unitPrice * quantity;
         if (plugin.getLoanManager() != null && plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) {
             plugin.tellPublic(player, "Your loan is overdue. Shop purchases are locked until you repay it.");
             player.closeInventory();
             return;
         }
-        if (plugin.getCombinedBalance(player.getUniqueId()) + 1e-9 < price
-                || !plugin.spendAvailableFunds(player.getUniqueId(), price)) {
-            plugin.tellPublic(player, "Not enough coins for this boat.");
-            player.closeInventory();
+        if (plugin.getCombinedBalance(player.getUniqueId()) + 1e-9 < total) {
+            plugin.tellPublic(player, "Not enough coins for this purchase.");
             return;
         }
         ItemStack boat = createBoatItem(offer, chest);
+        boat.setAmount(quantity);
         Map<Integer, ItemStack> leftovers = player.getInventory().addItem(boat);
-        if (!leftovers.isEmpty()) {
-            plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + price);
-            plugin.tellPublic(player, "Inventory full; purchase cancelled and refunded.");
-        } else {
-            plugin.tellPublic(player, "Purchased " + offer.name() + (chest ? " with chest" : "")
-                + " for " + money(price) + " coins.");
+        int notGiven = leftovers.values().stream().mapToInt(ItemStack::getAmount).sum();
+        if (notGiven > 0) {
+            int delivered = quantity - notGiven;
+            if (delivered > 0) {
+                ItemStack rollback = createBoatItem(offer, chest);
+                rollback.setAmount(delivered);
+                player.getInventory().removeItem(rollback);
+            }
+            plugin.tellPublic(player, "Inventory full; purchase cancelled. Make room and try again.");
+            return;
         }
+        if (!plugin.spendAvailableFunds(player.getUniqueId(), total)) {
+            ItemStack rollback = createBoatItem(offer, chest);
+            rollback.setAmount(quantity);
+            player.getInventory().removeItem(rollback);
+            plugin.tellPublic(player, "Purchase cancelled because your available funds changed.");
+            return;
+        }
+        plugin.tellPublic(player, "Purchased " + quantity + " × " + offer.name() + (chest ? " with chest" : "")
+                + " for " + money(total) + " coins.");
         player.closeInventory();
     }
 
@@ -224,28 +324,42 @@ public final class BoatManager implements Listener {
         return back;
     }
 
-    private void purchaseTravelEgg(Player player, String tier) {
-        double price = 2500.0;
+    private void purchaseTravelEgg(Player player, String tier, int requestedQuantity) {
+        int quantity = Math.max(1, Math.min(64, requestedQuantity));
+        double total = 2500.0 * quantity;
         if (plugin.getLoanManager() != null && plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) {
             plugin.tellPublic(player, "Your loan is overdue. Shop purchases are locked until you repay it.");
             player.closeInventory();
             return;
         }
-        if (plugin.getCombinedBalance(player.getUniqueId()) + 1e-9 < price
-                || !plugin.spendAvailableFunds(player.getUniqueId(), price)) {
-            plugin.tellPublic(player, "Not enough coins for this spawn egg.");
-            player.closeInventory();
+        if (plugin.getCombinedBalance(player.getUniqueId()) + 1e-9 < total) {
+            plugin.tellPublic(player, "Not enough coins for these spawn eggs.");
             return;
         }
         Material material = "horse".equals(tier) ? Material.HORSE_SPAWN_EGG : Material.DONKEY_SPAWN_EGG;
         String name = ("horse".equals(tier) ? "Horse" : "Donkey") + " Spawn Egg";
-        Map<Integer, ItemStack> leftovers = player.getInventory().addItem(travelEgg(material, tier, name));
-        if (!leftovers.isEmpty()) {
-            plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + price);
-            plugin.tellPublic(player, "Inventory full; purchase cancelled and refunded.");
-        } else {
-            plugin.tellPublic(player, "Purchased " + name + " for " + money(price) + " coins.");
+        ItemStack egg = travelEgg(material, tier, name);
+        egg.setAmount(quantity);
+        Map<Integer, ItemStack> leftovers = player.getInventory().addItem(egg);
+        int notGiven = leftovers.values().stream().mapToInt(ItemStack::getAmount).sum();
+        if (notGiven > 0) {
+            int delivered = quantity - notGiven;
+            if (delivered > 0) {
+                ItemStack rollback = travelEgg(material, tier, name);
+                rollback.setAmount(delivered);
+                player.getInventory().removeItem(rollback);
+            }
+            plugin.tellPublic(player, "Inventory full; purchase cancelled. Make room and try again.");
+            return;
         }
+        if (!plugin.spendAvailableFunds(player.getUniqueId(), total)) {
+            ItemStack rollback = travelEgg(material, tier, name);
+            rollback.setAmount(quantity);
+            player.getInventory().removeItem(rollback);
+            plugin.tellPublic(player, "Purchase cancelled because your available funds changed.");
+            return;
+        }
+        plugin.tellPublic(player, "Purchased " + quantity + " × " + name + " for " + money(total) + " coins.");
         player.closeInventory();
     }
 
