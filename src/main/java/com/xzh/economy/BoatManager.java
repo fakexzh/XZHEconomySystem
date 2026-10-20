@@ -77,13 +77,15 @@ public final class BoatManager implements Listener {
         }
         inv.setItem(11, travelEgg(Material.HORSE_SPAWN_EGG, "horse", "Horse Spawn Egg"));
         inv.setItem(15, travelEgg(Material.DONKEY_SPAWN_EGG, "donkey", "Donkey Spawn Egg"));
+        inv.setItem(17, travelEgg(Material.NAUTILUS_SPAWN_EGG, "nautilus", "Nautilus Spawn Egg"));
         ItemStack info = new ItemStack(Material.BOOK);
         ItemMeta im = info.getItemMeta();
         im.setDisplayName(ChatColor.WHITE + "Travel");
         im.setLore(List.of(
             ChatColor.GRAY + "Premium boats and land companions.",
             ChatColor.GRAY + "Horse and donkey spawn eggs: " + ChatColor.YELLOW + "2,500 coins each",
-            ChatColor.GRAY + "Natural horse/donkey spawning and breeding are disabled."
+            ChatColor.GRAY + "Nautilus Spawn Egg: " + ChatColor.YELLOW + "2,000 coins",
+            ChatColor.GRAY + "Natural horse/donkey and nautilus spawning are disabled."
         ));
         info.setItemMeta(im);
         inv.setItem(22, info);
@@ -99,6 +101,13 @@ public final class BoatManager implements Listener {
                 && event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.NATURAL) {
             event.setCancelled(true);
         }
+    }
+
+    @EventHandler
+    public void blockNaturalNautilusSpawn(CreatureSpawnEvent event) {
+        if (event.getEntityType() != EntityType.NAUTILUS) return;
+        CreatureSpawnEvent.SpawnReason reason = event.getSpawnReason();
+        if (reason == CreatureSpawnEvent.SpawnReason.NATURAL || reason == CreatureSpawnEvent.SpawnReason.CHUNK_GEN) event.setCancelled(true);
     }
 
     @EventHandler
@@ -129,7 +138,7 @@ public final class BoatManager implements Listener {
         String tier = clicked.getItemMeta().getPersistentDataContainer().get(tierKey, PersistentDataType.STRING);
         if (tier == null) return;
         if ("back".equals(tier)) { plugin.getShopManager().openMain(player); return; }
-        if ("horse".equals(tier) || "donkey".equals(tier)) {
+        if ("horse".equals(tier) || "donkey".equals(tier) || "nautilus".equals(tier)) {
             openTravelQuantity(player, tier, 1);
             return;
         }
@@ -160,7 +169,7 @@ public final class BoatManager implements Listener {
 
         if (title.equals("Confirm Travel Item")) {
             if ("back".equals(tier)) { open(player); return; }
-            if ("horse".equals(tier) || "donkey".equals(tier)) openTravelQuantity(player, tier, 1);
+            if ("horse".equals(tier) || "donkey".equals(tier) || "nautilus".equals(tier)) openTravelQuantity(player, tier, 1);
             return;
         }
         if (title.equals("Confirm XZH Boat")) {
@@ -226,21 +235,22 @@ public final class BoatManager implements Listener {
 
     private void openTravelQuantity(Player player, String tier, int requestedQuantity) {
         int quantity = Math.max(1, Math.min(64, requestedQuantity));
-        String name = ("horse".equals(tier) ? "Horse" : "Donkey") + " Spawn Egg";
-        Material material = "horse".equals(tier) ? Material.HORSE_SPAWN_EGG : Material.DONKEY_SPAWN_EGG;
+        String name = travelName(tier);
+        Material material = travelMaterial(tier);
+        double unitPrice = travelPrice(tier);
         Inventory inv = Bukkit.createInventory(null, 27, "Choose travel quantity");
         ItemStack summary = travelEgg(material, tier, name);
         summary.setAmount(Math.min(quantity, summary.getMaxStackSize()));
         ItemMeta sm = summary.getItemMeta();
         sm.setDisplayName(ChatColor.YELLOW + "Selected: " + quantity + " × " + name);
-        sm.setLore(List.of(ChatColor.WHITE + "Unit price: " + ChatColor.YELLOW + "2,500 coins",
-                ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(2500.0 * quantity) + " coins"));
+        sm.setLore(List.of(ChatColor.WHITE + "Unit price: " + ChatColor.YELLOW + money(unitPrice) + " coins",
+                ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(unitPrice * quantity) + " coins"));
         summary.setItemMeta(sm);
         inv.setItem(13, summary);
         inv.setItem(10, quantityButton(Material.RED_CONCRETE, "−1", tier, false, quantity, "quantity-minus"));
         inv.setItem(16, quantityButton(Material.LIME_CONCRETE, "+1", tier, false, quantity, "quantity-plus"));
         inv.setItem(22, quantityButton(Material.EMERALD, "Buy " + quantity, tier, false, quantity, "quantity-buy",
-                List.of(ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(2500.0 * quantity) + " coins")));
+                List.of(ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(unitPrice * quantity) + " coins")));
         inv.setItem(26, quantityButton(Material.ARROW, "Back", tier, false, quantity, "quantity-back"));
         player.openInventory(inv);
     }
@@ -306,13 +316,33 @@ public final class BoatManager implements Listener {
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.GOLD + name);
         meta.setLore(List.of(
-            ChatColor.WHITE + "Price: " + ChatColor.YELLOW + "2,500 coins",
-            ChatColor.GRAY + "Feeding and taming are allowed; breeding is disabled.",
+            ChatColor.WHITE + "Price: " + ChatColor.YELLOW + money(travelPrice(tier)) + " coins",
+            ChatColor.GRAY + ("nautilus".equals(tier) ? "Only available from the XZH Travel shop." : "Feeding and taming are allowed; breeding is disabled."),
             ChatColor.GREEN + "Click to review purchase"
         ));
         meta.getPersistentDataContainer().set(tierKey, PersistentDataType.STRING, tier);
         item.setItemMeta(meta);
         return item;
+    }
+
+    private double travelPrice(String tier) { return "nautilus".equals(tier) ? 2000.0 : 2500.0; }
+
+    private Material travelMaterial(String tier) {
+        return switch (tier) {
+            case "horse" -> Material.HORSE_SPAWN_EGG;
+            case "donkey" -> Material.DONKEY_SPAWN_EGG;
+            case "nautilus" -> Material.NAUTILUS_SPAWN_EGG;
+            default -> Material.AIR;
+        };
+    }
+
+    private String travelName(String tier) {
+        return switch (tier) {
+            case "horse" -> "Horse Spawn Egg";
+            case "donkey" -> "Donkey Spawn Egg";
+            case "nautilus" -> "Nautilus Spawn Egg";
+            default -> "Travel Spawn Egg";
+        };
     }
 
     private ItemStack backItem() {
@@ -326,7 +356,7 @@ public final class BoatManager implements Listener {
 
     private void purchaseTravelEgg(Player player, String tier, int requestedQuantity) {
         int quantity = Math.max(1, Math.min(64, requestedQuantity));
-        double total = 2500.0 * quantity;
+        double total = travelPrice(tier) * quantity;
         if (plugin.getLoanManager() != null && plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) {
             plugin.tellPublic(player, "Your loan is overdue. Shop purchases are locked until you repay it.");
             player.closeInventory();
@@ -336,8 +366,8 @@ public final class BoatManager implements Listener {
             plugin.tellPublic(player, "Not enough coins for these spawn eggs.");
             return;
         }
-        Material material = "horse".equals(tier) ? Material.HORSE_SPAWN_EGG : Material.DONKEY_SPAWN_EGG;
-        String name = ("horse".equals(tier) ? "Horse" : "Donkey") + " Spawn Egg";
+        Material material = travelMaterial(tier);
+        String name = travelName(tier);
         ItemStack egg = travelEgg(material, tier, name);
         egg.setAmount(quantity);
         Map<Integer, ItemStack> leftovers = player.getInventory().addItem(egg);
