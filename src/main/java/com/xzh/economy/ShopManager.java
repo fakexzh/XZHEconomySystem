@@ -497,6 +497,30 @@ public final class ShopManager implements Listener {
         return 9 * level - 158;
     }
 
+    /** Open the shop when an official XZH physical coin is right-clicked. */
+    @EventHandler
+    public void onRightClickCoin(PlayerInteractEvent event) {
+        if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+
+        ItemStack held = event.getItem();
+        if (!plugin.getPocketCoinManager().isCoin(held)) return;
+
+        // Only accept the four denominations minted by PocketCoinManager.
+        ItemMeta meta = held.getItemMeta();
+        Integer denomination = meta.getPersistentDataContainer().get(
+                new NamespacedKey(plugin, "coin_denomination"), PersistentDataType.INTEGER);
+        if (denomination == null || (denomination != 1 && denomination != 10
+                && denomination != 100 && denomination != 1000)) return;
+
+        // Bukkit fires an interaction event for each hand. If both hands hold coins,
+        // let the main-hand event open the GUI once rather than reopening it from offhand.
+        if (event.getHand() == org.bukkit.inventory.EquipmentSlot.OFF_HAND
+                && plugin.getPocketCoinManager().isCoin(event.getPlayer().getInventory().getItemInMainHand())) return;
+
+        event.setCancelled(true);
+        openMain(event.getPlayer());
+    }
+
     @EventHandler
     public void onUseXpBottle(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
