@@ -156,9 +156,9 @@ public final class ShopManager implements Listener {
         new Product("special", Material.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE, 1200, 0),
         new Product("special", Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE, 2000, 0),
         new Product("special", Material.ELYTRA, 5000, 0),
-        new Product("bounty-maps", Material.FILLED_MAP, 350, 0),
-        new Product("bounty-maps", Material.MAP, 900, 0),
-        new Product("bounty-maps", Material.COMPASS, 2500, 0)
+        new Product("bounty-maps", Material.FILLED_MAP, 350, 0, null, 1),
+        new Product("bounty-maps", Material.FILLED_MAP, 900, 0, null, 2),
+        new Product("bounty-maps", Material.FILLED_MAP, 2500, 0, null, 3)
     ));
 
     public ShopManager(XZHEconomySystem plugin) {
@@ -302,7 +302,7 @@ public final class ShopManager implements Listener {
             if (p.potionType() != null) meta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
             if (p.fireworkPower() > 0) meta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
             if (p.category().equals("bounty-maps")) {
-                String tier = p.material() == Material.FILLED_MAP ? "common" : p.material() == Material.MAP ? "rare" : "legendary";
+                String tier = p.fireworkPower() == 1 ? "common" : p.fireworkPower() == 2 ? "rare" : "legendary";
                 meta.setDisplayName(ChatColor.LIGHT_PURPLE + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + " Bounty Map");
                 lore.add(ChatColor.GRAY + "Right-click to accept a " + tier + " bounty contract.");
                 lore.add(ChatColor.GRAY + "Mission equipment requires hotbar space.");
@@ -862,7 +862,7 @@ public final class ShopManager implements Listener {
         ItemStack stack = new ItemStack(product.material(), amount);
         if (product.category().equals("bounty-maps")) {
             ItemMeta bountyMeta = stack.getItemMeta();
-            String tier = product.material() == Material.FILLED_MAP ? "common" : product.material() == Material.MAP ? "rare" : "legendary";
+            String tier = product.fireworkPower() == 1 ? "common" : product.fireworkPower() == 2 ? "rare" : "legendary";
             bountyMeta.setDisplayName(ChatColor.LIGHT_PURPLE + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + " Bounty Map");
             bountyMeta.setLore(List.of(ChatColor.GRAY + "Right-click to accept a " + tier + " bounty contract.",
                     ChatColor.GRAY + "Requires hotbar space for mission equipment."));
@@ -927,7 +927,7 @@ public final class ShopManager implements Listener {
 
     private String prettyProduct(Product product) {
         if (product.category().equals("bounty-maps")) {
-            String tier = product.material() == Material.FILLED_MAP ? "Common" : product.material() == Material.MAP ? "Rare" : "Legendary";
+            String tier = product.fireworkPower() == 1 ? "Common" : product.fireworkPower() == 2 ? "Rare" : "Legendary";
             return "XZH " + tier + " Bounty Map";
         }
         return pretty(product.material()) + (product.potionType() == null ? "" : " - " + prettyPotion(product.potionType()));
@@ -1012,7 +1012,7 @@ public final class ShopManager implements Listener {
     }
     private int productOrder(Product p) {
         if (p.category().equals("bounty-maps")) {
-            return p.material() == Material.FILLED_MAP ? 0 : p.material() == Material.MAP ? 1 : 2;
+            return p.fireworkPower() - 1;
         }
         if (p.category().equals("potions")) {
             String n = p.potionType() == null ? "" : p.potionType().name();
