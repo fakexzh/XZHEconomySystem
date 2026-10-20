@@ -55,7 +55,7 @@ public final class BoatManager implements Listener {
         entityTierKey = new NamespacedKey(plugin, "xzh_boat_entity_tier");
         Bukkit.getPluginManager().registerEvents(this, plugin);
         // Re-apply settings periodically so the selected speed survives entity updates/reloads.
-        Bukkit.getScheduler().runTaskTimer(plugin, this::applyBoatSpeeds, 1L, 20L);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::applyBoatSpeeds, 1L, 1L);
     }
 
     public void open(Player player) {
@@ -255,15 +255,25 @@ public final class BoatManager implements Listener {
     }
 
     private void applyBoatSpeed(Boat boat, String tier) {
-        // Bukkit's default boat max speed is 0.4 blocks/tick. Keep Basic at vanilla
-        // speed, then scale the cap to 2x and 3x for Aura and Super.
-        // Leave deceleration settings at their vanilla defaults.
+        // setMaxSpeed alone does not make vanilla boats move faster on Paper.
+        // Keep the vanilla cap for Basic and actively boost horizontal velocity
+        // for premium tiers while a player is riding the boat in water.
         double maxSpeed = switch (tier) {
             case "aura" -> 0.80;
             case "super" -> 1.20;
             default -> 0.40;
         };
         boat.setMaxSpeed(maxSpeed);
+        if (tier.equals("basic") || boat.getPassengers().isEmpty() || !boat.isInWater()) return;
+
+        Vector velocity = boat.getVelocity();
+        double horizontal = Math.sqrt(velocity.getX() * velocity.getX() + velocity.getZ() * velocity.getZ());
+        if (horizontal < 0.015) return;
+
+        double multiplier = tier.equals("super") ? 1.22 : 1.10;
+        double boosted = Math.min(maxSpeed, horizontal * multiplier);
+        double scale = boosted / horizontal;
+        boat.setVelocity(new Vector(velocity.getX() * scale, velocity.getY(), velocity.getZ() * scale));
     }
 
     private ItemStack travelEgg(Material material, String tier, String name) {
