@@ -156,9 +156,9 @@ public final class ShopManager implements Listener {
         new Product("special", Material.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE, 1200, 0),
         new Product("special", Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE, 2000, 0),
         new Product("special", Material.ELYTRA, 5000, 0),
-        new Product("bounty-maps", Material.FILLED_MAP, 350, 0, null, 1),
-        new Product("bounty-maps", Material.FILLED_MAP, 900, 0, null, 2),
-        new Product("bounty-maps", Material.FILLED_MAP, 2500, 0, null, 3)
+        new Product("bounty-maps", Material.FILLED_MAP, 100, 0, null, 1),
+        new Product("bounty-maps", Material.FILLED_MAP, 300, 0, null, 2),
+        new Product("bounty-maps", Material.FILLED_MAP, 600, 0, null, 3)
     ));
 
     public ShopManager(XZHEconomySystem plugin) {
@@ -441,24 +441,32 @@ public final class ShopManager implements Listener {
     }
 
     private void openQuantity(Player player, Product p) {
-        Material material = p.material();
+        openQuantity(player, p, 1);
+    }
+
+    private void openQuantity(Player player, Product p, int requestedQuantity) {
+        int max = Math.max(1, Math.min(64, getStock(p.material())));
+        int quantity = Math.max(1, Math.min(max, requestedQuantity));
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "Choose quantity");
-        int[] quantities = p.category().equals("bounty-maps") ? new int[]{1} : new int[]{1, 10, 32, 64};
-        int[] slots = {10, 11, 19, 20};
-        for (int i = 0; i < quantities.length; i++) {
-            ItemStack item = createStack(p, Math.min(64, quantities[i]));
-            ItemMeta meta = item.getItemMeta();
-            meta.setDisplayName(ChatColor.YELLOW + "Buy " + quantities[i]);
-            meta.setLore(List.of(ChatColor.WHITE + "Total: " + ChatColor.YELLOW + money(buyPrice(p) * quantities[i]) + " coins",
-                    ChatColor.WHITE + "Global stock: " + ChatColor.AQUA + getStock(material)));
-            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "confirm-buy");
-            meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, material.name());
-            if (p.potionType() != null) meta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
-            if (p.fireworkPower() > 0) meta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
-            meta.getPersistentDataContainer().set(quantityKey, PersistentDataType.INTEGER, quantities[i]);
-            item.setItemMeta(meta);
-            inv.setItem(slots[i], item);
-        }
+        ItemStack minus = quantityControl(p, quantity, Material.RED_CONCRETE, "−1", "quantity-minus");
+        ItemStack plus = quantityControl(p, quantity, Material.LIME_CONCRETE, "+1", "quantity-plus");
+        ItemStack summary = createStack(p, quantity);
+        ItemMeta summaryMeta = summary.getItemMeta();
+        summaryMeta.setDisplayName(ChatColor.YELLOW + "Selected: " + quantity + " × " + prettyProduct(p));
+        summaryMeta.setLore(List.of(
+                ChatColor.WHITE + "Unit price: " + ChatColor.YELLOW + money(buyPrice(p)) + " coins",
+                ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(buyPrice(p) * quantity) + " coins",
+                ChatColor.WHITE + "Available stock: " + ChatColor.AQUA + getStock(p.material())));
+        summary.setItemMeta(summaryMeta);
+        inv.setItem(10, minus);
+        inv.setItem(13, summary);
+        inv.setItem(16, plus);
+        ItemStack buy = quantityControl(p, quantity, Material.EMERALD, "Buy " + quantity, "quantity-buy");
+        ItemMeta buyMeta = buy.getItemMeta();
+        buyMeta.setLore(List.of(ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(buyPrice(p) * quantity) + " coins",
+                ChatColor.GRAY + "Confirm your purchase on the next screen."));
+        buy.setItemMeta(buyMeta);
+        inv.setItem(22, buy);
         if (!p.category().equals("bounty-maps")) {
             ItemStack sell = createStack(p, 1);
             ItemMeta sm = sell.getItemMeta();
@@ -466,14 +474,28 @@ public final class ShopManager implements Listener {
             sm.setLore(List.of(ChatColor.WHITE + "Value: " + ChatColor.RED + money(sellPrice(p)) + " coins each",
                     ChatColor.GRAY + "You will confirm before selling."));
             sm.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "confirm-sell");
-            sm.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, material.name());
+            sm.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, p.material().name());
             if (p.potionType() != null) sm.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
             if (p.fireworkPower() > 0) sm.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
             sell.setItemMeta(sm);
-            inv.setItem(15, sell);
+            inv.setItem(4, sell);
         }
         add(inv, 26, Material.ARROW, "Back", "category-back", p.category());
         player.openInventory(inv);
+    }
+
+    private ItemStack quantityControl(Product p, int quantity, Material icon, String title, String action) {
+        ItemStack item = new ItemStack(icon);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(ChatColor.WHITE + title);
+        meta.setLore(List.of(ChatColor.GRAY + "Selected quantity: " + quantity));
+        meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
+        meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, p.material().name());
+        meta.getPersistentDataContainer().set(quantityKey, PersistentDataType.INTEGER, quantity);
+        if (p.potionType() != null) meta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
+        if (p.fireworkPower() > 0) meta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
+        item.setItemMeta(meta);
+        return item;
     }
 
     private void openConfirm(Player player, Material material, int quantity, boolean buying) {
@@ -597,6 +619,17 @@ public final class ShopManager implements Listener {
                 Product selected = productFromMeta(meta);
                 if (selected != null) openQuantity(player, selected);
             }
+            case "quantity-minus", "quantity-plus", "quantity-buy" -> {
+                Product selected = productFromMeta(meta);
+                Integer selectedQuantity = meta.getPersistentDataContainer().get(quantityKey, PersistentDataType.INTEGER);
+                if (selected == null || selectedQuantity == null) return;
+                if (action.equals("quantity-buy")) {
+                    openConfirm(player, selected, selectedQuantity, true);
+                } else {
+                    int next = selectedQuantity + (action.equals("quantity-plus") ? 1 : -1);
+                    openQuantity(player, selected, next);
+                }
+            }
             case "back" -> openMain(player);
             case "category-back" -> {
                 if (value.equals("main")) openMain(player);
@@ -657,7 +690,7 @@ public final class ShopManager implements Listener {
                             ItemStack hotbarItem = player.getInventory().getItem(hotbar);
                             if (hotbarItem == null || hotbarItem.getType().isAir()) emptyHotbar++;
                         }
-                        if (quantity != 1 || emptyHotbar < 3) {
+                        if (emptyHotbar < 3) {
                             plugin.tellPublic(player, "Bounty map purchase blocked: keep at least 3 empty hotbar slots for the map and mission equipment.");
                             player.closeInventory();
                             return;
@@ -690,7 +723,7 @@ public final class ShopManager implements Listener {
                             player.closeInventory();
                             return;
                         }
-                        player.getInventory().setItem(emptySlot, createStack(p, 1));
+                        player.getInventory().setItem(emptySlot, createStack(p, quantity));
                         leftovers = java.util.Map.of();
                     } else {
                         leftovers = player.getInventory().addItem(createStack(p, quantity));
