@@ -140,7 +140,7 @@ public final class BoatManager implements Listener {
             previewMeta.setLore(List.of(ChatColor.WHITE + "Price: " + ChatColor.YELLOW + "2,500 coins"));
             preview.setItemMeta(previewMeta);
             confirm.setItem(13, preview);
-            ItemStack yes = new ItemStack(Material.LIME_CONCRETE);
+            ItemStack yes = new ItemStack(Material.BLUE_CONCRETE);
             ItemMeta yesMeta = yes.getItemMeta();
             yesMeta.setDisplayName(ChatColor.GREEN + "Confirm purchase");
             yesMeta.setLore(List.of(ChatColor.WHITE + "Price: " + ChatColor.YELLOW + "2,500 coins"));
