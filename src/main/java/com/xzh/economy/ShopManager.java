@@ -13,17 +13,11 @@ import org.bukkit.event.block.Action;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.inventory.meta.PotionMeta;
-import org.bukkit.map.MapCanvas;
-import org.bukkit.map.MapPalette;
-import org.bukkit.map.MapRenderer;
-import org.bukkit.map.MapView;
 import org.bukkit.potion.PotionType;
 import org.bukkit.configuration.file.YamlConfiguration;
 import java.io.File;
 import java.io.IOException;
-import java.awt.Color;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -1006,6 +1000,27 @@ public final class ShopManager implements Listener {
         restockAll();
     }
 
+    private void saveStock() {
+        try { stockData.save(stockFile); }
+        catch (IOException e) { plugin.getLogger().severe("Could not save shop-stock.yml: " + e.getMessage()); }
+    }
+
+    private boolean hasVisitedEnd(Player player) {
+        org.bukkit.advancement.Advancement advancement = plugin.getServer().getAdvancement(NamespacedKey.minecraft("end/enter_end"));
+        return advancement == null || player.getAdvancementProgress(advancement).isDone();
+    }
+
+    public void setPrice(Material material, String kind, double amount) {
+        if (!kind.equals("buy") && !kind.equals("sell")) throw new IllegalArgumentException("kind must be buy or sell");
+        plugin.getConfig().set("shop.prices." + material.name().toLowerCase(Locale.ROOT) + "." + kind, amount);
+        plugin.saveConfig();
+    }
+
+    private ItemStack createStack(Material material, int amount) {
+        Product p = product(material);
+        return p == null ? new ItemStack(material, amount) : createStack(p, amount);
+    }
+
     private ItemStack createStack(Product product, int amount) {
         ItemStack stack = new ItemStack(product.material(), amount);
         if (product.category().equals("bounty-maps")) {
@@ -1076,16 +1091,16 @@ public final class ShopManager implements Listener {
     }
 
     private String prettyProduct(Product product) {
-        if (product.category().equals("bounty-maps") || product.category().equals("treasure-maps")) {
-            String tier = product.fireworkPower() == 1 || product.fireworkPower() == 4 ? "Common" : product.fireworkPower() == 2 || product.fireworkPower() == 5 ? "Rare" : "Legendary";
-            return "XZH " + tier + (product.category().equals("treasure-maps") ? " Treasure Map" : " Bounty Map");
+        if (product.category().equals("bounty-maps")) {
+            String tier = switch ((product.fireworkPower() - 1) % 3) { case 0 -> "Common"; case 1 -> "Rare"; default -> "Legendary"; };
+            return "XZH " + tier + (product.fireworkPower() >= 4 ? " Nether" : "") + " Bounty Map";
         }
         return pretty(product.material()) + (product.potionType() == null ? "" : " - " + prettyPotion(product.potionType()));
     }
 
     private double buyPrice(Product p) {
         // Each bounty map tier has its own price; never let legacy filled_map config flatten them.
-        if (p.category().equals("bounty-maps") || p.category().equals("treasure-maps")) return Math.ceil(p.buy());
+        if (p.category().equals("bounty-maps")) return Math.ceil(p.buy());
         String materialPath = "shop.prices." + p.material().name().toLowerCase(Locale.ROOT) + ".buy";
         String variantPath = p.potionType() == null ? "" : "shop.potion-prices." + p.potionType().name().toLowerCase(Locale.ROOT) + "." + p.material().name().toLowerCase(Locale.ROOT) + ".buy";
         double fallback = p.buy();
@@ -1163,8 +1178,8 @@ public final class ShopManager implements Listener {
         return switch (m) { case GHAST_TEAR -> 8; case BLAZE_ROD, MAGMA_CREAM -> 4; case SLIME_BALL, PRISMARINE_SHARD, PRISMARINE_CRYSTALS -> 2; case GUNPOWDER -> 1.5; case LEATHER, FEATHER -> 1; default -> 0.5; };
     }
     private int productOrder(Product p) {
-        if (p.category().equals("bounty-maps") || p.category().equals("treasure-maps")) {
-            return p.fireworkPower() <= 3 ? p.fireworkPower() - 1 : p.fireworkPower() - 4;
+        if (p.category().equals("bounty-maps")) {
+            return p.fireworkPower() - 1;
         }
         if (p.category().equals("potions")) {
             String n = p.potionType() == null ? "" : p.potionType().name();
