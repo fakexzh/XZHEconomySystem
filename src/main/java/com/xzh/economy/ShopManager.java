@@ -443,7 +443,7 @@ public final class ShopManager implements Listener {
     private void openQuantity(Player player, Product p) {
         Material material = p.material();
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "Choose quantity");
-        int[] quantities = {1, 10, 32, 64};
+        int[] quantities = p.category().equals("bounty-maps") ? new int[]{1} : new int[]{1, 10, 32, 64};
         int[] slots = {10, 11, 19, 20};
         for (int i = 0; i < quantities.length; i++) {
             ItemStack item = createStack(p, Math.min(64, quantities[i]));
@@ -459,17 +459,19 @@ public final class ShopManager implements Listener {
             item.setItemMeta(meta);
             inv.setItem(slots[i], item);
         }
-        ItemStack sell = createStack(p, 1);
-        ItemMeta sm = sell.getItemMeta();
-        sm.setDisplayName(ChatColor.RED + "Sell all of this item in inventory");
-        sm.setLore(List.of(ChatColor.WHITE + "Value: " + ChatColor.RED + money(sellPrice(p)) + " coins each",
-                ChatColor.GRAY + "You will confirm before selling."));
-        sm.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "confirm-sell");
-        sm.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, material.name());
-        if (p.potionType() != null) sm.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
-        if (p.fireworkPower() > 0) sm.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
-        sell.setItemMeta(sm);
-        inv.setItem(15, sell);
+        if (!p.category().equals("bounty-maps")) {
+            ItemStack sell = createStack(p, 1);
+            ItemMeta sm = sell.getItemMeta();
+            sm.setDisplayName(ChatColor.RED + "Sell all of this item in inventory");
+            sm.setLore(List.of(ChatColor.WHITE + "Value: " + ChatColor.RED + money(sellPrice(p)) + " coins each",
+                    ChatColor.GRAY + "You will confirm before selling."));
+            sm.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "confirm-sell");
+            sm.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, material.name());
+            if (p.potionType() != null) sm.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
+            if (p.fireworkPower() > 0) sm.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
+            sell.setItemMeta(sm);
+            inv.setItem(15, sell);
+        }
         add(inv, 26, Material.ARROW, "Back", "category-back", p.category());
         player.openInventory(inv);
     }
@@ -1003,6 +1005,9 @@ public final class ShopManager implements Listener {
         return switch (m) { case GHAST_TEAR -> 8; case BLAZE_ROD, MAGMA_CREAM -> 4; case SLIME_BALL, PRISMARINE_SHARD, PRISMARINE_CRYSTALS -> 2; case GUNPOWDER -> 1.5; case LEATHER, FEATHER -> 1; default -> 0.5; };
     }
     private int productOrder(Product p) {
+        if (p.category().equals("bounty-maps")) {
+            return p.material() == Material.FILLED_MAP ? 0 : p.material() == Material.MAP ? 1 : 2;
+        }
         if (p.category().equals("potions")) {
             String n = p.potionType() == null ? "" : p.potionType().name();
             List<String> common = List.of("HEALING", "STRONG_HEALING", "REGENERATION", "LONG_REGENERATION", "STRENGTH", "LONG_STRENGTH", "SWIFTNESS", "LONG_SWIFTNESS", "STRONG_SWIFTNESS", "FIRE_RESISTANCE", "LONG_FIRE_RESISTANCE", "NIGHT_VISION", "LONG_NIGHT_VISION", "WATER_BREATHING", "LONG_WATER_BREATHING", "SLOW_FALLING", "LONG_SLOW_FALLING", "INVISIBILITY", "LONG_INVISIBILITY", "POISON", "LONG_POISON", "WEAKNESS", "LONG_WEAKNESS", "HARMING", "STRONG_HARMING", "TURTLE_MASTER", "LONG_TURTLE_MASTER", "WATER", "AWKWARD", "MUNDANE", "THICK");
