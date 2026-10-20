@@ -73,6 +73,9 @@ death-recovery:
 shop:
   default-sell-price: 0.015625
   prices:
+    tnt:
+      buy: 70
+      sell: 20
     elytra:
       buy: 5000
       sell: 1500
@@ -237,8 +240,8 @@ utilities:
 
 # Enchantment book shop rules.
 book-shop:
-  cooldown-hours: 24
-  max-books-per-player-per-day: 2
+  cooldown-hours: 12
+  max-books-per-player-per-day: 2 # legacy/global setting; current limit is per enchantment
   rare-daily-stock: 4
   normal-daily-stock: 100
   stock:
