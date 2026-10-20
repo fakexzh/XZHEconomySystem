@@ -158,7 +158,8 @@ public final class ShopManager implements Listener {
         new Product("special", Material.ELYTRA, 5000, 0),
         new Product("bounty-maps", Material.FILLED_MAP, 100, 0, null, 1),
         new Product("bounty-maps", Material.FILLED_MAP, 300, 0, null, 2),
-        new Product("bounty-maps", Material.FILLED_MAP, 600, 0, null, 3)
+        new Product("bounty-maps", Material.FILLED_MAP, 600, 0, null, 3),
+        new Product("bounty-maps", Material.FILLED_MAP, 250, 0, null, 4)
     ));
 
     public ShopManager(XZHEconomySystem plugin) {
@@ -302,10 +303,16 @@ public final class ShopManager implements Listener {
             if (p.potionType() != null) meta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
             if (p.fireworkPower() > 0) meta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
             if (p.category().equals("bounty-maps")) {
-                String tier = p.fireworkPower() == 1 ? "common" : p.fireworkPower() == 2 ? "rare" : "legendary";
-                meta.setDisplayName(ChatColor.LIGHT_PURPLE + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + " Bounty Map");
-                lore.add(ChatColor.GRAY + "Right-click to accept a " + tier + " bounty contract.");
-                lore.add(ChatColor.GRAY + "Mission equipment requires hotbar space.");
+                if (p.fireworkPower() == 4) {
+                    meta.setDisplayName(ChatColor.GOLD + "XZH Treasure Hunt Map");
+                    lore.add(ChatColor.GRAY + "Right-click to start a treasure hunt.");
+                    lore.add(ChatColor.GRAY + "Follow the Eye of Ender and compass to buried treasure.");
+                } else {
+                    String tier = p.fireworkPower() == 1 ? "common" : p.fireworkPower() == 2 ? "rare" : "legendary";
+                    meta.setDisplayName(ChatColor.LIGHT_PURPLE + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + " Bounty Map");
+                    lore.add(ChatColor.GRAY + "Right-click to accept a " + tier + " bounty contract.");
+                    lore.add(ChatColor.GRAY + "Mission equipment requires hotbar space.");
+                }
                 meta.setLore(lore);
             }
             item.setItemMeta(meta);
@@ -684,7 +691,7 @@ public final class ShopManager implements Listener {
                     return;
                 }
                 if (action.equals("buy")) {
-                    if (p.category().equals("bounty-maps")) {
+                    if (p.category().equals("bounty-maps") && p.fireworkPower() != 4) {
                         int emptyHotbar = 0;
                         for (int hotbar = 0; hotbar < 9; hotbar++) {
                             ItemStack hotbarItem = player.getInventory().getItem(hotbar);
@@ -747,10 +754,14 @@ public final class ShopManager implements Listener {
                     }
                     plugin.tellPublic(player, "Bought " + delivered + " × " + prettyProduct(p) + " for " + money(charged) + " coins.");
                     if (p.category().equals("bounty-maps")) {
-                        plugin.tellPublic(player, "§d§lXZH BOUNTY HUNT §8» §fYour map is in your hotbar. Right-click it to start the contract.");
-                        plugin.tellPublic(player, "§e➤ Hold your Tracking Arrow and right-click to locate your bounty target. The arrow is provided when you activate the map.");
-                        plugin.tellPublic(player, "§e➤ You can use the special Hunter's Bow to fight and defeat your target. The bow is provided when you activate the map.");
-                        plugin.tellPublic(player, "§7➤ Keep the map and mission equipment in your hotbar; equipment is removed when the contract ends.");
+                        if (p.fireworkPower() == 4) {
+                            plugin.tellPublic(player, "§6§lXZH TREASURE HUNT §8» §fYour map is in your hotbar. Right-click it to begin the hunt.");
+                        } else {
+                            plugin.tellPublic(player, "§d§lXZH BOUNTY HUNT §8» §fYour map is in your hotbar. Right-click it to start the contract.");
+                            plugin.tellPublic(player, "§e➤ Hold your Tracking Arrow and right-click to locate your bounty target. The arrow is provided when you activate the map.");
+                            plugin.tellPublic(player, "§e➤ You can use the special Hunter's Bow to fight and defeat your target. The bow is provided when you activate the map.");
+                            plugin.tellPublic(player, "§7➤ Keep the map and mission equipment in your hotbar; equipment is removed when the contract ends.");
+                        }
                     }
                     plugin.announceSpecialPurchase(player, material, delivered, charged);
                 } else {
@@ -894,13 +905,20 @@ public final class ShopManager implements Listener {
     private ItemStack createStack(Product product, int amount) {
         ItemStack stack = new ItemStack(product.material(), amount);
         if (product.category().equals("bounty-maps")) {
-            ItemMeta bountyMeta = stack.getItemMeta();
-            String tier = product.fireworkPower() == 1 ? "common" : product.fireworkPower() == 2 ? "rare" : "legendary";
-            bountyMeta.setDisplayName(ChatColor.LIGHT_PURPLE + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + " Bounty Map");
-            bountyMeta.setLore(List.of(ChatColor.GRAY + "Right-click to accept a " + tier + " bounty contract.",
-                    ChatColor.GRAY + "Requires hotbar space for mission equipment."));
-            bountyMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "bounty_tier"), PersistentDataType.STRING, tier);
-            stack.setItemMeta(bountyMeta);
+            ItemMeta mapMeta = stack.getItemMeta();
+            if (product.fireworkPower() == 4) {
+                mapMeta.setDisplayName(ChatColor.GOLD + "XZH Treasure Hunt Map");
+                mapMeta.setLore(List.of(ChatColor.GRAY + "Right-click to start a treasure hunt.",
+                        ChatColor.GRAY + "Follow the Eye of Ender and compass to buried treasure."));
+                mapMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "treasure_hunt_map"), PersistentDataType.BYTE, (byte) 1);
+            } else {
+                String tier = product.fireworkPower() == 1 ? "common" : product.fireworkPower() == 2 ? "rare" : "legendary";
+                mapMeta.setDisplayName(ChatColor.LIGHT_PURPLE + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + " Bounty Map");
+                mapMeta.setLore(List.of(ChatColor.GRAY + "Right-click to accept a " + tier + " bounty contract.",
+                        ChatColor.GRAY + "Requires hotbar space for mission equipment."));
+                mapMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "bounty_tier"), PersistentDataType.STRING, tier);
+            }
+            stack.setItemMeta(mapMeta);
         }
         if (product.potionType() != null && stack.getItemMeta() instanceof PotionMeta meta) {
             try { meta.setBasePotionType(product.potionType()); } catch (IllegalArgumentException ignored) { }
