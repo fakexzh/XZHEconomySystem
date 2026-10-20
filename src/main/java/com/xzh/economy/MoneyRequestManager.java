@@ -91,24 +91,19 @@ public final class MoneyRequestManager implements Listener {
     }
 
     private void openPrompt(Player recipient, Player requester, Pending pending) {
-        String title = pending.kind() == Kind.SEND ? "XZH Transfer Request" : "XZH Money Request";
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + title);
-        ItemStack summary = new ItemStack(pending.kind() == Kind.SEND ? Material.GOLD_INGOT : Material.PAPER);
-        ItemMeta meta = summary.getItemMeta();
         String actionText = pending.kind() == Kind.SEND ? "wants to send you" : "asks you to send";
-        meta.setDisplayName(ChatColor.YELLOW + requester.getName() + " " + actionText + " " + pending.amount() + " coins");
-        meta.setLore(List.of(
-                ChatColor.WHITE + "Amount: " + ChatColor.GOLD + pending.amount() + " coins",
-                ChatColor.GRAY + "Request expires in 60 seconds.",
-                ChatColor.GRAY + (pending.kind() == Kind.SEND
-                        ? "Accept to receive the coins."
-                        : "Accept to pay the requester from pocket/bank funds.")
-        ));
-        summary.setItemMeta(meta);
-        inv.setItem(13, summary);
-        add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "Accept", "accept");
-        add(inv, 15, Material.RED_CONCRETE, ChatColor.RED + "Decline", "decline");
-        recipient.openInventory(inv);
+        net.md_5.bungee.api.chat.TextComponent prompt = new net.md_5.bungee.api.chat.TextComponent(
+                "§6[XZH] §e" + requester.getName() + " " + actionText + " " + pending.amount() + " coins. ");
+        net.md_5.bungee.api.chat.TextComponent accept = new net.md_5.bungee.api.chat.TextComponent("§a[ACCEPT]");
+        accept.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/moneyresponse accept"));
+        net.md_5.bungee.api.chat.TextComponent decline = new net.md_5.bungee.api.chat.TextComponent(" §c[DECLINE]");
+        decline.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/moneyresponse decline"));
+        prompt.addExtra(accept);
+        prompt.addExtra(decline);
+        prompt.addExtra(new net.md_5.bungee.api.chat.TextComponent(" §7(expires in 60 seconds)"));
+        recipient.spigot().sendMessage(prompt);
     }
 
     private void add(Inventory inv, int slot, Material material, String name, String action) {
