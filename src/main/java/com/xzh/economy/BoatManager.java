@@ -329,6 +329,12 @@ public final class BoatManager implements Listener {
     private ItemStack createBoatItem(BoatOffer offer, boolean chest) {
         ItemStack item = new ItemStack(chest ? offer.chestMaterial() : offer.material());
         ItemMeta meta = item.getItemMeta();
+        // CustomModelData selects the matching premium model in the optional XZH resource pack.
+        meta.setCustomModelData(switch (offer.tier()) {
+            case "aura" -> 1002;
+            case "super" -> 1003;
+            default -> 1001;
+        });
         meta.getPersistentDataContainer().set(tierKey, PersistentDataType.STRING, offer.tier());
         meta.getPersistentDataContainer().set(chestKey, PersistentDataType.BYTE, (byte) (chest ? 1 : 0));
         meta.setDisplayName(ChatColor.WHITE + "XZH " + offer.name() + (chest ? " with Chest" : ""));
