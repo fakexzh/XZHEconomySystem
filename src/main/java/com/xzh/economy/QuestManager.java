@@ -608,6 +608,15 @@ public final class QuestManager implements Listener {
         save();
     }
 
+    /** Compact shared quest status for the Survival plugin's TAB footer. */
+    public String getGlobalQuestTabText() {
+        resetEventIfNeeded();
+        int progress = Math.max(0, data.getInt("event.progress", 0));
+        int goal = Math.max(1, data.getInt("event.goal", configuredEventGoal()));
+        int percent = Math.min(100, (int) Math.floor(progress * 100.0 / goal));
+        return "§6Global Quest: §f" + progress + "/" + goal + " ores §8(" + percent + "%)";
+    }
+
     private void broadcastGlobalProgress() {
         resetEventIfNeeded();
         if (data.getInt("event.progress", 0) >= data.getInt("event.goal", configuredEventGoal())) return;
