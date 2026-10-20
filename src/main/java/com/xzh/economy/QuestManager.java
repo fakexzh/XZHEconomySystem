@@ -799,7 +799,7 @@ public final class QuestManager implements Listener {
             case "pack-page" -> { try { openPacks(player, Integer.parseInt(value)); } catch (NumberFormatException ignored) { } }
             case "pack-select" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> confirmPack(player, p));
             case "pack-buy" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> buyPack(player, p));
-            case "global-claim" -> claimGlobal(player);
+            case "global-claim" -> plugin.tellPublic(player, "Global quest rewards are paid automatically to contributors when the community completes the objective.");
             case "back" -> open(player);
             case "back-packs" -> openPacks(player);
             default -> { }
@@ -823,7 +823,7 @@ public final class QuestManager implements Listener {
     }
 
     private int configuredEventGoal() { return Math.max(1, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.goal", 500))); }
-    private int configuredEventReward() { return Math.max(0, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.reward", 100))); }
+    private int configuredEventReward() { return Math.max(200, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.reward", 200))); }
     private int configuredEventClaims() { return Math.max(0, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.claims-per-day", 25))); }
 
     private void save() {
