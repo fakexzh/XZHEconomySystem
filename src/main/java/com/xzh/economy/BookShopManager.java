@@ -23,10 +23,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
-/** Enchantment book catalogue with confirmation, per-player 24-hour cooldowns, and daily global stock. */
+/** Enchantment book catalogue with confirmation, per-player 12-hour cooldowns, and daily global stock. */
 public final class BookShopManager implements Listener {
     
-    private static final int MAX_BOOKS_PER_DAY = 2;
     private static final List<String> KEYS = List.of(
             "aqua_affinity", "bane_of_arthropods", "binding_curse", "blast_protection",
             "breach", "channeling", "density", "depth_strider", "efficiency", "feather_falling",
@@ -98,7 +97,7 @@ public final class BookShopManager implements Listener {
         meta.setDisplayName(ChatColor.YELLOW + displayName(key) + " " + roman(enchant.getMaxLevel()));
         meta.setLore(List.of(ChatColor.WHITE + "Price: " + ChatColor.GOLD + price(key) + " coins",
                 ChatColor.WHITE + "Global stock today: " + stock(key),
-                ChatColor.GRAY + "One book per purchase. 24-hour personal cooldown."));
+                ChatColor.GRAY + "Per-enchantment daily limit: " + dailyLimit(key) + ". 12-hour personal cooldown."));
         book.setItemMeta(meta);
         inv.setItem(13, book);
         add(inv, 11, Material.LIME_CONCRETE, "Confirm purchase", "buy", key);
@@ -116,15 +115,16 @@ public final class BookShopManager implements Listener {
         long now = System.currentTimeMillis();
         String playerId = player.getUniqueId().toString();
         String today = java.time.LocalDate.now().toString();
-        String dailyDatePath = "daily." + playerId + ".date";
-        String dailyCountPath = "daily." + playerId + ".count";
+        String dailyDatePath = "daily." + playerId + "." + key + ".date";
+        String dailyCountPath = "daily." + playerId + "." + key + ".count";
         if (!today.equals(data.getString(dailyDatePath, ""))) {
             data.set(dailyDatePath, today);
             data.set(dailyCountPath, 0);
         }
         int boughtToday = data.getInt(dailyCountPath, 0);
-        if (boughtToday >= MAX_BOOKS_PER_DAY) {
-            plugin.tellPublic(player, "You have reached today's limit of 2 enchantment books. You can buy again tomorrow.");
+        int limit = dailyLimit(key);
+        if (boughtToday >= limit) {
+            plugin.tellPublic(player, "You have reached today's limit of " + limit + " " + displayName(key) + " books. You can buy this enchantment again tomorrow.");
             save();
             return;
         }
@@ -150,7 +150,7 @@ public final class BookShopManager implements Listener {
             return;
         }
         // Persist the cooldown and stock decrement before delivery to avoid duplicate purchases after a crash.
-        data.set(cooldownPath, now + plugin.getConfig().getLong("book-shop.cooldown-hours", 24) * 60L * 60L * 1000L);
+        data.set(cooldownPath, now + plugin.getConfig().getLong("book-shop.cooldown-hours", 12) * 60L * 60L * 1000L);
         data.set("stock." + key, stock(key) - 1);
         data.set(dailyCountPath, boughtToday + 1);
         save();
@@ -202,6 +202,26 @@ public final class BookShopManager implements Listener {
     private int stock(String key) {
         resetStockIfNeeded();
         return data.getInt("stock." + key, stockLimit(key));
+    }
+
+    private int dailyLimit(String key) {
+        return switch (key) {
+            // Highly valuable books are tightly limited.
+            case "mending", "unbreaking", "fortune", "silk_touch", "looting",
+                 "sharpness", "protection", "feather_falling", "infinity",
+                 "riptide", "channeling", "thorns", "sweeping_edge" -> 2;
+            // Powerful general-use enchantments are a little more available.
+            case "efficiency", "power", "flame", "fire_aspect", "respiration",
+                 "depth_strider", "aqua_affinity", "luck_of_the_sea", "lure",
+                 "multishot", "quick_charge", "piercing", "loyalty", "impaling",
+                 "smite", "bane_of_arthropods", "blast_protection", "fire_protection",
+                 "projectile_protection", "knockback", "punch", "breach", "density",
+                 "lunge", "frost_walker" -> 3;
+            // Very rare exploration / trial enchantments are most restricted.
+            case "wind_burst", "swift_sneak", "soul_speed", "binding_curse",
+                 "vanishing_curse" -> 1;
+            default -> 3;
+        };
     }
 
     private boolean isLimited(String key) {
