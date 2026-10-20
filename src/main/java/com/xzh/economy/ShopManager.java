@@ -19,6 +19,8 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -42,6 +44,8 @@ public final class ShopManager implements Listener {
     private final NamespacedKey sellUnitPriceKey;
     private final File stockFile;
     private final YamlConfiguration stockData;
+    private final File historyFile;
+    private final YamlConfiguration historyData;
 
     private record Product(String category, Material material, double buy, double sell, PotionType potionType, int fireworkPower) {
         Product(String category, Material material, double buy, double sell) { this(category, material, buy, sell, null, 0); }
@@ -236,6 +240,8 @@ public final class ShopManager implements Listener {
         }
         this.stockFile = new File(plugin.getDataFolder(), "shop-stock.yml");
         this.stockData = YamlConfiguration.loadConfiguration(stockFile);
+        this.historyFile = new File(plugin.getDataFolder(), "shop-purchase-history.yml");
+        this.historyData = YamlConfiguration.loadConfiguration(historyFile);
         initializeStock();
         Bukkit.getPluginManager().registerEvents(this, plugin);
         Bukkit.getScheduler().runTaskTimer(plugin, this::restockIfDue, 20L * 60L, 20L * 60L);
@@ -243,32 +249,79 @@ public final class ShopManager implements Listener {
 
     public void openMain(Player player) {
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP");
-        // Related categories are grouped together. The bottom row is reserved for Sell Hand only.
-        add(inv, 11, Material.IRON_INGOT, "Ores", "category", "ores");
-        add(inv, 12, Material.BRICKS, "Blocks", "category", "blocks");
-        add(inv, 13, Material.ANVIL, "Essentials", "category", "essentials");
-        add(inv, 14, Material.POPPY, "Flowers & Dyes", "category", "flowers-dyes");
-        add(inv, 15, Material.BEE_SPAWN_EGG, "Eggs & Heads", "category", "eggs-heads");
+        // Row 1: mining/building on the left, equipment in the middle, food/farming on the right.
+        add(inv, 10, Material.IRON_INGOT, "Ores", "category", "ores");
+        add(inv, 11, Material.BRICKS, "Blocks", "category", "blocks");
+        add(inv, 13, Material.IRON_CHESTPLATE, "Armor", "category", "equipment");
+        add(inv, 14, Material.DIAMOND_PICKAXE, "Tools", "category", "equipment");
+        add(inv, 16, Material.COOKED_BEEF, "Food", "category", "food");
+        add(inv, 17, Material.WHEAT_SEEDS, "Seeds & Farming", "category", "seeds");
 
-        add(inv, 20, Material.WHEAT_SEEDS, "Seeds & Farming", "category", "seeds");
-        add(inv, 21, Material.COOKED_BEEF, "Food", "category", "food");
-        add(inv, 22, Material.DIAMOND_PICKAXE, "Armor & Tools", "category", "equipment");
-        add(inv, 23, Material.BAMBOO_RAFT, "Travel", "category", "travel");
-        add(inv, 24, Material.ELYTRA, "Special Items", "category", "special");
+        // Row 2: practical items and other collectible categories.
+        add(inv, 19, Material.CRAFTING_TABLE, "Essentials", "category", "essentials");
+        add(inv, 20, Material.ELYTRA, "Special Items", "category", "special");
+        add(inv, 22, Material.POPPY, "Flowers & Dyes", "category", "flowers-dyes");
+        add(inv, 23, Material.BEE_SPAWN_EGG, "Eggs & Heads", "category", "eggs-heads");
+        add(inv, 25, Material.BAMBOO_RAFT, "Travel", "category", "travel");
 
+        // Row 3: books, XP and potions stay together; quest and treasure activities are adjacent.
+        add(inv, 28, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
         add(inv, 29, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
         add(inv, 30, Material.POTION, "Potions", "category", "potions");
-        add(inv, 31, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
         add(inv, 32, Material.NETHER_STAR, "Quest Packs", "quests", "quests");
-        add(inv, 33, Material.CHEST, "Death Inventory", "deathinventory", "deathinventory");
-        add(inv, 34, Material.FILLED_MAP, "Treasure & Bounty", "category", "bounty-maps");
+        add(inv, 33, Material.FILLED_MAP, "Treasure & Bounty", "category", "bounty-maps");
+        add(inv, 34, Material.CHEST, "Death Inventory", "deathinventory", "deathinventory");
 
-        add(inv, 39, Material.BOOK, "Help", "help", "help");
-        add(inv, 40, Material.BUNDLE, "Balance", "balance", "balance");
-        add(inv, 41, Material.PAPER, "XZH BANK", "bank", "bank");
+        // Keep banking and recent purchase history side by side. Icons are intentionally swapped.
+        add(inv, 39, Material.BUNDLE, "XZH BANK", "bank", "bank");
+        add(inv, 40, Material.PAPER, "Transition", "transition", "history");
+        add(inv, 42, Material.BOOK, "Help", "help", "help");
 
         add(inv, 49, Material.BUCKET, "Sell Hand (held item)", "sell-hand", "hand", List.of(ChatColor.WHITE + "Hold an item to preview its sale.", ChatColor.GRAY + "Shows item, quantity, unit price, and total payout.", ChatColor.YELLOW + "Click to review; confirmation required."));
         player.openInventory(inv);
+    }
+
+    private void openPurchaseHistory(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "XZH SHOP: Transition");
+        List<String> entries = historyData.getStringList("players." + player.getUniqueId() + ".purchases");
+        int[] slots = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21};
+        int shown = Math.min(entries.size(), slots.length);
+        for (int i = 0; i < shown; i++) {
+            String[] parts = entries.get(i).split("\\|", 4);
+            if (parts.length != 4) continue;
+            ItemStack entry = new ItemStack(Material.PAPER);
+            ItemMeta meta = entry.getItemMeta();
+            meta.setDisplayName(ChatColor.GOLD + parts[1]);
+            meta.setLore(List.of(ChatColor.GRAY + "Quantity: " + parts[2],
+                    ChatColor.YELLOW + "Spent: " + parts[3] + " coins",
+                    ChatColor.DARK_GRAY + parts[0]));
+            entry.setItemMeta(meta);
+            inv.setItem(slots[i], entry);
+        }
+        if (shown == 0) {
+            ItemStack empty = new ItemStack(Material.BOOK);
+            ItemMeta meta = empty.getItemMeta();
+            meta.setDisplayName(ChatColor.GRAY + "No purchases yet");
+            meta.setLore(List.of(ChatColor.DARK_GRAY + "Your recent shop purchases will appear here."));
+            empty.setItemMeta(meta);
+            inv.setItem(13, empty);
+        }
+        add(inv, 22, Material.ARROW, "Back to Shop", "back", "main");
+        player.openInventory(inv);
+    }
+
+    private void recordPurchase(Player player, String itemName, int quantity, double spent) {
+        String path = "players." + player.getUniqueId() + ".purchases";
+        List<String> entries = new ArrayList<>(historyData.getStringList(path));
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        entries.add(0, timestamp + "|" + itemName.replace("|", "/") + "|" + quantity + "|" + money(spent));
+        if (entries.size() > 10) entries = new ArrayList<>(entries.subList(0, 10));
+        historyData.set(path, entries);
+        try {
+            historyData.save(historyFile);
+        } catch (IOException ex) {
+            plugin.getLogger().warning("Could not save shop purchase history: " + ex.getMessage());
+        }
     }
 
     private void openCategory(Player player, String category) {
@@ -582,6 +635,7 @@ public final class ShopManager implements Listener {
             case "books" -> plugin.getBookShopManager().open(player);
             case "quests" -> plugin.getQuestManager().open(player);
             case "deathinventory" -> plugin.getDeathRecoveryManager().open(player);
+            case "transition" -> openPurchaseHistory(player);
             case "balance" -> plugin.tellPublic(player, "Pocket: " + money(plugin.getBalance(player.getUniqueId())) + " coins; Bank: " + money(plugin.getBankManager().getBalance(player.getUniqueId())) + " coins.");
             case "bank" -> plugin.getBankManager().open(player);
             case "help" -> {
@@ -611,7 +665,10 @@ public final class ShopManager implements Listener {
                     if (plugin.getCombinedBalance(player.getUniqueId()) < price || !plugin.spendAvailableFunds(player.getUniqueId(), price)) { plugin.tellPublic(player, "Not enough coins."); return; }
                     java.util.Map<Integer, ItemStack> leftovers = player.getInventory().addItem(customXpBottle(points));
                     if (!leftovers.isEmpty()) { plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + price); plugin.tellPublic(player, "Inventory full; purchase cancelled and refunded."); }
-                    else plugin.tellPublic(player, "Bought an XP bottle containing " + points + " XP for " + price + " coins.");
+                    else {
+                        recordPurchase(player, "XP Bottle (" + points + " XP)", 1, price);
+                        plugin.tellPublic(player, "Bought an XP bottle containing " + points + " XP for " + price + " coins.");
+                    }
                 } else {
                     int actual = totalExperience(player);
                     if (actual <= 0 || actual != points) { plugin.tellPublic(player, "Your XP changed; reopen the XP menu and confirm again."); openXpMenu(player); return; }
@@ -752,6 +809,7 @@ public final class ShopManager implements Listener {
                         player.closeInventory();
                         return;
                     }
+                    recordPurchase(player, prettyProduct(p), delivered, charged);
                     plugin.tellPublic(player, "Bought " + delivered + " × " + prettyProduct(p) + " for " + money(charged) + " coins.");
                     if (p.category().equals("bounty-maps")) {
                         if (p.fireworkPower() == 4) {
