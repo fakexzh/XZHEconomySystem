@@ -227,26 +227,30 @@ public final class ShopManager implements Listener {
 
     public void openMain(Player player) {
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP");
-        // Category icons are centered into evenly spaced rows for a tidy shop layout.
-        add(inv, 10, Material.IRON_INGOT, "Ores", "category", "ores");
+        // Related categories are grouped together. The bottom row is reserved for Sell Hand only.
+        add(inv, 11, Material.IRON_INGOT, "Ores", "category", "ores");
         add(inv, 12, Material.BRICKS, "Blocks", "category", "blocks");
-        add(inv, 14, Material.ANVIL, "Essentials", "category", "essentials");
-        add(inv, 16, Material.POPPY, "Flowers & Dyes", "category", "flowers-dyes");
-        add(inv, 19, Material.WHEAT_SEEDS, "Seeds & Farming", "category", "seeds");
+        add(inv, 13, Material.ANVIL, "Essentials", "category", "essentials");
+        add(inv, 14, Material.POPPY, "Flowers & Dyes", "category", "flowers-dyes");
+        add(inv, 15, Material.BEE_SPAWN_EGG, "Eggs & Heads", "category", "eggs-heads");
+
+        add(inv, 20, Material.WHEAT_SEEDS, "Seeds & Farming", "category", "seeds");
         add(inv, 21, Material.COOKED_BEEF, "Food", "category", "food");
-        add(inv, 23, Material.DIAMOND_PICKAXE, "Armor & Tools", "category", "equipment");
-        add(inv, 25, Material.OAK_BOAT, "Travel", "category", "travel");
-        add(inv, 28, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
+        add(inv, 22, Material.DIAMOND_PICKAXE, "Armor & Tools", "category", "equipment");
+        add(inv, 23, Material.BAMBOO_RAFT, "Travel", "category", "travel");
+        add(inv, 24, Material.ELYTRA, "Special Items", "category", "special");
+
+        add(inv, 29, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
         add(inv, 30, Material.POTION, "Potions", "category", "potions");
-        add(inv, 32, Material.BEE_SPAWN_EGG, "Eggs & Heads", "category", "eggs-heads");
-        add(inv, 34, Material.ELYTRA, "Special Items", "category", "special");
-        add(inv, 37, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
-        add(inv, 39, Material.NETHER_STAR, "Quest Packs", "quests", "quests");
-        add(inv, 41, Material.CHEST, "Death Inventory", "deathinventory", "deathinventory");
-        add(inv, 43, Material.BUNDLE, "Balance", "balance", "balance");
-        add(inv, 46, Material.BOOK, "Help", "help", "help");
-        add(inv, 48, Material.PAPER, "XZH BANK", "bank", "bank");
-        add(inv, 49, Material.GOLD_INGOT, "Sell Hand (held item)", "sell-hand", "hand", List.of(ChatColor.WHITE + "Hold an item to preview its sale.", ChatColor.GRAY + "Shows item, quantity, unit price, and total payout.", ChatColor.YELLOW + "Click to review; confirmation required."));
+        add(inv, 31, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
+        add(inv, 32, Material.NETHER_STAR, "Quest Packs", "quests", "quests");
+        add(inv, 33, Material.CHEST, "Death Inventory", "deathinventory", "deathinventory");
+
+        add(inv, 39, Material.BOOK, "Help", "help", "help");
+        add(inv, 40, Material.BUNDLE, "Balance", "balance", "balance");
+        add(inv, 41, Material.PAPER, "XZH BANK", "bank", "bank");
+
+        add(inv, 49, Material.BUCKET, "Sell Hand (held item)", "sell-hand", "hand", List.of(ChatColor.WHITE + "Hold an item to preview its sale.", ChatColor.GRAY + "Shows item, quantity, unit price, and total payout.", ChatColor.YELLOW + "Click to review; confirmation required."));
         player.openInventory(inv);
     }
 
