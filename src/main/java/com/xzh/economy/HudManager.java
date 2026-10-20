@@ -96,7 +96,7 @@ public final class HudManager {
         Objective objective = board.getObjective("xzhhud");
         if (objective == null) {
             objective = board.registerNewObjective("xzhhud", Criteria.DUMMY,
-                    ChatColor.GOLD + "" + ChatColor.BOLD + "XZH ECONOMY");
+                    ChatColor.GOLD + "" + ChatColor.BOLD + "eco");
         }
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         // Hide the vanilla red score numbers on the right of each sidebar line.
