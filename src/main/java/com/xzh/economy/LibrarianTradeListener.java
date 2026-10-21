@@ -1,7 +1,7 @@
 package com.xzh.economy;
 
 import org.bukkit.Material;
-import org.bukkit.entity.Merchant;
+import org.bukkit.inventory.Merchant;
 import org.bukkit.entity.Villager;
 import org.bukkit.entity.WanderingTrader;
 import org.bukkit.event.EventHandler;
