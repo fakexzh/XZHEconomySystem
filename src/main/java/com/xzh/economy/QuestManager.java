@@ -205,7 +205,7 @@ public final class QuestManager implements Listener {
         Bukkit.getScheduler().runTaskTimer(plugin, this::refreshSecretQuestIfDue, 20L * 60L, 20L * 60L);
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) updateHud(player);
-        }, 20L, 20L * 5L);
+        }, 20L, 20L);
         // Shared global reminder and progress broadcast every 15 minutes while the event is active.
         Bukkit.getScheduler().runTaskTimer(plugin, this::broadcastGlobalProgress, 20L * 60L * 15L, 20L * 60L * 15L);
         if (!data.contains("single-shop.next-refresh")) {
@@ -398,6 +398,8 @@ public final class QuestManager implements Listener {
             data.set(uuid + ".objectives." + i + ".progress", 0);
         }
         data.set(uuid + ".started-at", System.currentTimeMillis());
+        data.set(uuid + ".warned-5m", false);
+        data.set(uuid + ".warned-1m", false);
         save();
         updateHud(player);
     }
@@ -574,11 +576,24 @@ public final class QuestManager implements Listener {
         long limit = timerLimitSeconds(id, active);
         if (limit <= 0) return;
         long started = data.getLong(id + ".started-at", System.currentTimeMillis());
-        if (System.currentTimeMillis() - started <= limit * 1000L) return;
-        data.set(id.toString(), null);
-        save();
-        plugin.getHudManager().hideActiveQuest(player);
-        plugin.tellPublic(player, "Quest timer expired. The quest was forfeited; choose another challenge.");
+        long remaining = limit - Math.max(0L, (System.currentTimeMillis() - started) / 1000L);
+        if (remaining <= 0L) {
+            data.set(id.toString(), null);
+            save();
+            plugin.getHudManager().hideActiveQuest(player);
+            plugin.tellPublic(player, "Quest timer expired. The quest was forfeited; choose another challenge.");
+            return;
+        }
+        if (remaining <= 5L * 60L && !data.getBoolean(id + ".warned-5m", false)) {
+            data.set(id + ".warned-5m", true);
+            save();
+            plugin.tellPublic(player, "Quest warning: 5 minutes or less remain on your timed quest!");
+        }
+        if (remaining <= 60L && !data.getBoolean(id + ".warned-1m", false)) {
+            data.set(id + ".warned-1m", true);
+            save();
+            plugin.tellPublic(player, "Quest warning: 1 minute or less remains on your timed quest!");
+        }
     }
 
     private void updateHud(Player player) {
@@ -598,6 +613,14 @@ public final class QuestManager implements Listener {
             descriptions.add(data.getString(base + ".description", "Objective") + " " + progress + "/" + goal);
         }
         String display = String.join(" | ", descriptions);
+        long limit = timerLimitSeconds(id, active);
+        if (limit > 0) {
+            long started = data.getLong(id + ".started-at", System.currentTimeMillis());
+            long remaining = Math.max(0L, limit - Math.max(0L, (System.currentTimeMillis() - started) / 1000L));
+            long minutes = remaining / 60L;
+            long seconds = remaining % 60L;
+            display += " | " + ChatColor.YELLOW + "Time " + String.format(Locale.ROOT, "%02d:%02d", minutes, seconds) + " left";
+        }
         plugin.getHudManager().showActiveQuest(player, data.getString(id + ".name", "Active quest"),
                 display, total <= 0 ? 0 : Math.min(1.0, (double) done / total));
     }
