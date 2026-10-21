@@ -309,7 +309,7 @@ public final class QuestManager implements Listener {
         int end = Math.min(packs.size(), start + pageSize);
         for (int index = start; index < end; index++) {
             Pack pack = packs.get(index);
-            boolean completed = data.getBoolean(player.getUniqueId() + ".completed-packs." + pack.id(), false);
+            boolean completed = data.getBoolean("completed-packs." + player.getUniqueId() + "." + pack.id(), false);
             boolean unlocked = hasAdvancement(player, pack.advancement());
             List<String> lore = new ArrayList<>();
             if (completed) {
@@ -385,7 +385,7 @@ public final class QuestManager implements Listener {
 
     private void buyPack(Player player, Pack pack) {
         UUID id = player.getUniqueId();
-        if (data.getBoolean(id + ".completed-packs." + pack.id(), false)) {
+        if (data.getBoolean("completed-packs." + id + "." + pack.id(), false)) {
             plugin.tellPublic(player, "You have already completed this achievement pack. It can only be completed once.");
             openPacks(player);
             return;
@@ -551,7 +551,7 @@ public final class QuestManager implements Listener {
             String activeQuestId = data.getString(id + ".active", "");
             if (activeQuestId.startsWith("pack:")) {
                 String packId = activeQuestId.substring("pack:".length());
-                data.set(id + ".completed-packs." + packId, true);
+                data.set("completed-packs." + id + "." + packId, true);
                 plugin.tellPublic(player, "§6Achievement pack permanently completed: §e" + packId + "§6. It is now marked with black stained glass and cannot be repeated.");
             }
             plugin.setBalance(id, plugin.getBalance(id) + reward);
