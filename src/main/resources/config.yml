@@ -72,9 +72,9 @@ death-recovery:
 # Shop buy-stock caps are shared by every player and refill daily.\n# Resale values are deliberately item-specific in code; legacy 30% sell defaults are not used.
 shop:
   default-sell-price: 0.015625
-  # Personal sell quotas for renewable/farmable items; each player's quota refills every 12 hours.
+  # Personal sell quotas for renewable/farmable items; each player's quota refills every 6 real-world hours.
   # Every configured personal sell-stock limit has a hard minimum of 200 items.
-  sell-stock-restock-hours: 12
+  sell-stock-restock-hours: 6
   sell-stock-limits:
     dried_kelp: 200
     dried_kelp_block: 200
