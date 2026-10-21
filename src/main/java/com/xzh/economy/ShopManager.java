@@ -8,6 +8,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.block.Action;
 import org.bukkit.inventory.Inventory;
@@ -25,6 +27,8 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Locale;
 
@@ -297,7 +301,7 @@ public final class ShopManager implements Listener {
         add(inv, 40, Material.PAPER, "Transition", "transition", "history");
         add(inv, 42, Material.BOOK, "Help", "help", "help");
 
-        add(inv, 49, Material.BUCKET, "Sell Hand (held item)", "sell-hand", "hand", List.of(ChatColor.WHITE + "Hold an item to preview its sale.", ChatColor.GRAY + "Shows item, quantity, unit price, and total payout.", ChatColor.YELLOW + "Click to review; confirmation required."));
+        add(inv, 49, Material.CHEST, "Hand Sell (multiple items)", "sell-hand", "hand", List.of(ChatColor.WHITE + "Place multiple item stacks into the sell slots.", ChatColor.GRAY + "The menu totals eligible items and respects your personal sell stock.", ChatColor.YELLOW + "Confirm to sell; unsellable items return to you."));
         player.openInventory(inv);
     }
 
@@ -665,7 +669,12 @@ public final class ShopManager implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (title == null || !title.startsWith("XZH SHOP")
+        if (title == null) return;
+        if (title.equals("XZH Hand Sell")) {
+            handleHandSellClick(event, player);
+            return;
+        }
+        if (!title.startsWith("XZH SHOP")
                 && !title.equals("Choose quantity") && !title.equals("Confirm transaction")
                 && !title.equals("Confirm XP transaction") && !title.equals("Confirm Sell Hand")) return;
         event.setCancelled(true);
@@ -918,34 +927,7 @@ public final class ShopManager implements Listener {
                 }
                 player.closeInventory();
             }
-            case "sell-hand" -> {
-                ItemStack hand = player.getInventory().getItemInMainHand();
-                if (plugin.getPocketCoinManager().isCoin(hand)) {
-                    plugin.tellPublic(player, "Physical pocket coins cannot be sold as shop items.");
-                    return;
-                }
-                if (hand.getType() == Material.AIR) {
-                    plugin.tellPublic(player, "Hold an item first.");
-                    return;
-                }
-                if (isUnsellableExploitItem(hand.getType())
-                        && hand.getType() != Material.ELYTRA && hand.getType() != Material.TRIDENT
-                        && hand.getType() != Material.TOTEM_OF_UNDYING) {
-                    plugin.tellPublic(player, "This item cannot be sold to the XZH shop because it is exploit-prone or intended to remain rare.");
-                    return;
-                }
-                Product p = productForStack(hand);
-                double configuredSell = plugin.getConfig().getDouble(
-                        "shop.prices." + hand.getType().name().toLowerCase(Locale.ROOT) + ".sell", defaultSellPrice());
-                double unitSell = p == null
-                        ? (validPrice(configuredSell) ? configuredSell : defaultSellPrice())
-                        : sellPrice(p);
-                if (unitSell * hand.getAmount() < 1) {
-                    plugin.tellPublic(player, "The held stack is worth less than 1 coin and cannot be sold.");
-                    return;
-                }
-                openHandSellConfirm(player, hand, unitSell);
-            }
+            case "sell-hand" -> openHandSell(player);
         }
     }
 
@@ -970,6 +952,163 @@ public final class ShopManager implements Listener {
         try { bountyCooldownData.save(bountyCooldownFile); }
         catch (IOException ex) { plugin.getLogger().warning("Could not save bounty cooldowns: " + ex.getMessage()); }
     }
+
+    private void openHandSell(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH Hand Sell");
+        ItemStack filler = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
+        ItemMeta fillerMeta = filler.getItemMeta();
+        fillerMeta.setDisplayName(ChatColor.DARK_GRAY + "Place items in the slots above");
+        filler.setItemMeta(fillerMeta);
+        for (int slot = 45; slot < 54; slot++) inv.setItem(slot, filler.clone());
+        add(inv, 45, Material.RED_CONCRETE, "Cancel / Return Items", "hand-sell-cancel", "cancel",
+                List.of(ChatColor.GRAY + "Close and return all placed items."));
+        add(inv, 49, Material.GOLD_INGOT, "Total: 0 coins", "hand-sell-total", "total",
+                List.of(ChatColor.GRAY + "Eligible items are counted automatically."));
+        add(inv, 53, Material.LIME_CONCRETE, "Confirm Sell", "hand-sell-confirm", "confirm",
+                List.of(ChatColor.GRAY + "Sell eligible items and return everything else."));
+        player.openInventory(inv);
+        updateHandSellMenu(player);
+    }
+
+    private void handleHandSellClick(InventoryClickEvent event, Player player) {
+        Inventory top = event.getView().getTopInventory();
+        int raw = event.getRawSlot();
+        if (raw < 0) return;
+        if (raw < top.getSize() && raw >= 45) {
+            event.setCancelled(true);
+            ItemStack clicked = event.getCurrentItem();
+            if (clicked == null || !clicked.hasItemMeta()) return;
+            String action = clicked.getItemMeta().getPersistentDataContainer()
+                    .get(actionKey, PersistentDataType.STRING);
+            if ("hand-sell-cancel".equals(action)) {
+                player.closeInventory();
+            } else if ("hand-sell-confirm".equals(action)) {
+                confirmHandSell(player, top);
+            }
+            return;
+        }
+        event.setCancelled(false);
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (player.isOnline() && "XZH Hand Sell".equals(ChatColor.stripColor(player.getOpenInventory().getTitle()))
+                    && player.getOpenInventory().getTopInventory() == top) updateHandSellMenu(player);
+        });
+    }
+
+    @EventHandler
+    public void onHandSellDrag(InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!"XZH Hand Sell".equals(ChatColor.stripColor(event.getView().getTitle()))) return;
+        for (int raw : event.getRawSlots()) {
+            if (raw >= 45 && raw < event.getView().getTopInventory().getSize()) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (player.isOnline() && "XZH Hand Sell".equals(ChatColor.stripColor(player.getOpenInventory().getTitle()))) {
+                updateHandSellMenu(player);
+            }
+        });
+    }
+
+    @EventHandler
+    public void onHandSellClose(InventoryCloseEvent event) {
+        if (!(event.getPlayer() instanceof Player player)) return;
+        if (!"XZH Hand Sell".equals(ChatColor.stripColor(event.getView().getTitle()))) return;
+        Inventory inv = event.getInventory();
+        for (int slot = 0; slot < 45; slot++) {
+            ItemStack item = inv.getItem(slot);
+            if (item == null || item.getType().isAir()) continue;
+            inv.setItem(slot, null);
+            Map<Integer, ItemStack> leftovers = player.getInventory().addItem(item);
+            for (ItemStack leftover : leftovers.values()) player.getWorld().dropItemNaturally(player.getLocation(), leftover);
+        }
+    }
+
+    private void updateHandSellMenu(Player player) {
+        if (!"XZH Hand Sell".equals(ChatColor.stripColor(player.getOpenInventory().getTitle()))) return;
+        Inventory inv = player.getOpenInventory().getTopInventory();
+        Map<Integer, Integer> sellAmounts = handSellableAmounts(player, inv);
+        double total = 0.0;
+        int count = 0;
+        for (Map.Entry<Integer, Integer> entry : sellAmounts.entrySet()) {
+            ItemStack stack = inv.getItem(entry.getKey());
+            if (stack == null) continue;
+            total += handSellUnitPrice(stack) * entry.getValue();
+            count += entry.getValue();
+        }
+        ItemStack display = new ItemStack(Material.GOLD_INGOT);
+        ItemMeta meta = display.getItemMeta();
+        meta.setDisplayName(ChatColor.GOLD + "Total: " + money(total) + " coins");
+        meta.setLore(List.of(ChatColor.WHITE + "Eligible quantity: " + count,
+                ChatColor.GRAY + "Items with no sell price or exhausted stock are returned.",
+                ChatColor.GRAY + "Nothing sells until you confirm."));
+        display.setItemMeta(meta);
+        inv.setItem(49, display);
+    }
+
+    private Map<Integer, Integer> handSellableAmounts(Player player, Inventory inv) {
+        Map<Integer, Integer> amounts = new HashMap<>();
+        Map<Material, Integer> reservedStock = new HashMap<>();
+        for (int slot = 0; slot < 45; slot++) {
+            ItemStack stack = inv.getItem(slot);
+            if (stack == null || stack.getType().isAir() || plugin.getPocketCoinManager().isCoin(stack)) continue;
+            Material material = stack.getType();
+            if (isUnsellableExploitItem(material) && material != Material.ELYTRA
+                    && material != Material.TRIDENT && material != Material.TOTEM_OF_UNDYING) continue;
+            double unitPrice = handSellUnitPrice(stack);
+            if (unitPrice <= 0.0) continue;
+            int allowed = stack.getAmount();
+            if (isFarmableSellItem(material)) {
+                int alreadyReserved = reservedStock.getOrDefault(material, 0);
+                int available = Math.max(0, getSellStock(player, material) - alreadyReserved);
+                allowed = Math.min(allowed, available);
+                if (allowed <= 0) continue;
+                reservedStock.put(material, alreadyReserved + allowed);
+            }
+            amounts.put(slot, allowed);
+        }
+        return amounts;
+    }
+
+    private double handSellUnitPrice(ItemStack stack) {
+        if (stack == null || stack.getType().isAir()) return 0.0;
+        Product p = productForStack(stack);
+        if (p != null) return sellPrice(p);
+        double configured = plugin.getConfig().getDouble(
+                "shop.prices." + stack.getType().name().toLowerCase(Locale.ROOT) + ".sell", defaultSellPrice());
+        return validPrice(configured) ? configured : defaultSellPrice();
+    }
+
+    private void confirmHandSell(Player player, Inventory inv) {
+        Map<Integer, Integer> sellAmounts = handSellableAmounts(player, inv);
+        double total = 0.0;
+        int count = 0;
+        for (Map.Entry<Integer, Integer> entry : sellAmounts.entrySet()) {
+            ItemStack stack = inv.getItem(entry.getKey());
+            if (stack == null) continue;
+            total += handSellUnitPrice(stack) * entry.getValue();
+            count += entry.getValue();
+        }
+        if (count <= 0 || total < 1.0) {
+            plugin.tellPublic(player, "No eligible items worth at least 1 coin are available to sell. Your items will be returned.");
+            player.closeInventory();
+            return;
+        }
+        for (Map.Entry<Integer, Integer> entry : sellAmounts.entrySet()) {
+            ItemStack stack = inv.getItem(entry.getKey());
+            if (stack == null) continue;
+            int sold = entry.getValue();
+            if (isFarmableSellItem(stack.getType())) consumeSellStock(player, stack.getType(), sold);
+            int remaining = stack.getAmount() - sold;
+            if (remaining <= 0) inv.setItem(entry.getKey(), null);
+            else stack.setAmount(remaining);
+        }
+        plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + total);
+        plugin.tellPublic(player, "Sold " + count + " eligible item(s) for " + money(total) + " coins. Unsellable items were returned to your inventory.");
+        player.closeInventory();
+    }
+
 
     private void initializeStock() {
         boolean changed = false;
