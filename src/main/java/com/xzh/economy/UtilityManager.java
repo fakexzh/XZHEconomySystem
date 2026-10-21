@@ -16,6 +16,8 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.inventory.ItemStack;
 
@@ -37,6 +39,8 @@ public final class UtilityManager implements Listener {
     private final Map<UUID, UUID> replies = new HashMap<>();
     private final Map<UUID, Boolean> afk = new HashMap<>();
     private final Map<UUID, Long> rtpCooldown = new HashMap<>();
+    private final Map<UUID, BukkitRunnable> homeCountdowns = new HashMap<>();
+    private final Map<UUID, Location> homeCountdownStarts = new HashMap<>();
 
     public UtilityManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -85,12 +89,11 @@ public final class UtilityManager implements Listener {
                     return true;
                 }
                 Location bed = bedHome(player.getUniqueId());
-                if (bed != null) {
-                    player.teleport(bed);
-                    msg(player, "Teleported to your bed home.");
-                } else {
+                if (bed == null) {
                     msg(player, "Your bed home has no safe landing spot nearby. Clear space beside your bed and try again.");
+                    return true;
                 }
+                startHomeCountdown(player);
                 return true;
             }
             case "setwarp" -> {
@@ -340,6 +343,57 @@ public final class UtilityManager implements Listener {
             }
             default -> { return false; }
         }
+    }
+
+    private void startHomeCountdown(Player player) {
+        UUID id = player.getUniqueId();
+        BukkitRunnable previous = homeCountdowns.remove(id);
+        if (previous != null) previous.cancel();
+        Location start = player.getLocation().clone();
+        homeCountdownStarts.put(id, start);
+        msg(player, "Home teleport in §e4 seconds§f. Don't move.");
+        BukkitRunnable task = new BukkitRunnable() {
+            private int seconds = 4;
+            @Override public void run() {
+                if (!player.isOnline()) {
+                    homeCountdowns.remove(id);
+                    homeCountdownStarts.remove(id);
+                    cancel();
+                    return;
+                }
+                if (seconds > 1) {
+                    seconds--;
+                    player.sendMessage("§8[§6XZH§8] §bHOME §8» §fTeleporting in §e" + seconds + "§f...");
+                    return;
+                }
+                Location destination = bedHome(id);
+                if (destination == null) {
+                    msg(player, "Your bed home is no longer available. Place a bed to set a new home.");
+                } else {
+                    player.teleport(destination);
+                    msg(player, "Teleported to your bed home.");
+                }
+                homeCountdowns.remove(id);
+                homeCountdownStarts.remove(id);
+                cancel();
+            }
+        };
+        homeCountdowns.put(id, task);
+        task.runTaskTimer(plugin, 20L, 20L);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onHomeCountdownMove(PlayerMoveEvent event) {
+        UUID id = event.getPlayer().getUniqueId();
+        if (!homeCountdowns.containsKey(id) || event.getTo() == null) return;
+        Location from = event.getFrom();
+        Location to = event.getTo();
+        if (from.getBlockX() == to.getBlockX() && from.getBlockY() == to.getBlockY()
+                && from.getBlockZ() == to.getBlockZ()) return;
+        BukkitRunnable task = homeCountdowns.remove(id);
+        homeCountdownStarts.remove(id);
+        if (task != null) task.cancel();
+        msg(event.getPlayer(), "Home teleport cancelled because you moved.");
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
