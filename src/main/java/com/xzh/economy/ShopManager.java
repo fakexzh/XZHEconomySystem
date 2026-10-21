@@ -294,14 +294,40 @@ public final class ShopManager implements Listener {
         add(inv, 30, Material.POTION, "Potions", "category", "potions");
         add(inv, 32, Material.NETHER_STAR, "Quest Packs", "quests", "quests");
         add(inv, 33, Material.NETHERITE_SWORD, "Bounty Hunt", "category", "bounty-maps");
-        add(inv, 41, Material.CHEST, "Death Inventory", "deathinventory", "deathinventory");
-
-        // Keep banking and recent purchase history side by side. Icons are intentionally swapped.
-        add(inv, 39, Material.BUNDLE, "XZH BANK", "bank", "bank");
-        add(inv, 40, Material.PAPER, "Transition", "transition", "history");
+        // Row 5: align bank, transaction history, and online players' money.
+        add(inv, 38, Material.BUNDLE, "XZH BANK", "bank", "bank");
+        add(inv, 39, Material.PAPER, "Transition", "transition", "history");
+        add(inv, 40, Material.PLAYER_HEAD, "Other Players' Money", "players-money", "players-money");
         add(inv, 42, Material.BOOK, "Help", "help", "help");
+        add(inv, 43, Material.CHEST, "Death Inventory", "deathinventory", "deathinventory");
 
         add(inv, 49, Material.CHEST, "Hand Sell (multiple items)", "sell-hand", "hand", List.of(ChatColor.WHITE + "Place multiple item stacks into the sell slots.", ChatColor.GRAY + "The menu totals eligible items and respects your personal sell stock.", ChatColor.YELLOW + "Confirm to sell; unsellable items return to you."));
+        player.openInventory(inv);
+    }
+
+    private void openOtherPlayersMoney(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP: Players' Money");
+        int slot = 0;
+        for (Player target : Bukkit.getOnlinePlayers().stream()
+                .sorted(java.util.Comparator.comparing(Player::getName, String.CASE_INSENSITIVE_ORDER)).toList()) {
+            if (slot >= 45) break;
+            ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+            org.bukkit.inventory.meta.SkullMeta meta = (org.bukkit.inventory.meta.SkullMeta) head.getItemMeta();
+            meta.setOwningPlayer(target);
+            meta.setDisplayName(ChatColor.YELLOW + target.getName());
+            meta.setLore(List.of(
+                    ChatColor.WHITE + "Pocket: " + ChatColor.YELLOW + money(plugin.getBalance(target.getUniqueId())) + " coins",
+                    ChatColor.WHITE + "Bank: " + ChatColor.GREEN + money(plugin.getBankManager().getBalance(target.getUniqueId())) + " coins",
+                    ChatColor.GRAY + "Hover to view current balances."
+            ));
+            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "player-money-view");
+            meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, target.getUniqueId().toString());
+            head.setItemMeta(meta);
+            inv.setItem(slot++, head);
+        }
+        if (slot == 0) add(inv, 22, Material.BARRIER, "No players online", "player-money-view", "none",
+                List.of(ChatColor.GRAY + "There are currently no online players."));
+        add(inv, 49, Material.ARROW, "Back to Shop", "back", "main");
         player.openInventory(inv);
     }
 
@@ -690,6 +716,8 @@ public final class ShopManager implements Listener {
             case "quests" -> plugin.getQuestManager().open(player);
             case "deathinventory" -> plugin.getDeathRecoveryManager().open(player);
             case "transition" -> openPurchaseHistory(player);
+            case "players-money" -> openOtherPlayersMoney(player);
+            case "player-money-view" -> { /* view-only player balance head */ }
             case "balance" -> plugin.tellPublic(player, "Pocket: " + money(plugin.getBalance(player.getUniqueId())) + " coins; Bank: " + money(plugin.getBankManager().getBalance(player.getUniqueId())) + " coins.");
             case "bank" -> plugin.getBankManager().open(player);
             case "help" -> {
