@@ -102,8 +102,8 @@ public final class BankManager implements Listener {
             boolean day = cursor < 12000L;
             long boundary = day ? 12000L : 24000L;
             long span = Math.min(distance, boundary - cursor);
-            int minutes = Math.max(1, plugin.getConfig().getInt(day ? "time-control.daylength-minutes" : "time-control.nightlength-minutes", 30));
-            seconds += span * (minutes * 60.0 / 12000.0);
+            // Vanilla daylight cycling: each 12,000-tick half-day lasts 10 real minutes.
+            seconds += span * (600.0 / 12000.0);
             distance -= span;
             cursor += span;
             if (cursor >= 24000L) cursor = 0L;
