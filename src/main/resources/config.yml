@@ -38,12 +38,6 @@ announcements:
   bank:
     enabled: true
 
-time-control:
-  enabled: true
-  daylength-minutes: 30
-  nightlength-minutes: 30
-  paused: false
-
 # HUD settings
 hud:
   clock:
