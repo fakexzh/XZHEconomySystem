@@ -44,6 +44,8 @@ public final class ShopManager implements Listener {
     private final NamespacedKey sellUnitPriceKey;
     private final File stockFile;
     private final YamlConfiguration stockData;
+    private final File playerSellStockFile;
+    private final YamlConfiguration playerSellStockData;
     private final File historyFile;
     private final YamlConfiguration historyData;
     private final File bountyCooldownFile;
@@ -254,6 +256,8 @@ public final class ShopManager implements Listener {
         }
         this.stockFile = new File(plugin.getDataFolder(), "shop-stock.yml");
         this.stockData = YamlConfiguration.loadConfiguration(stockFile);
+        this.playerSellStockFile = new File(plugin.getDataFolder(), "player-sell-stock.yml");
+        this.playerSellStockData = YamlConfiguration.loadConfiguration(playerSellStockFile);
         this.historyFile = new File(plugin.getDataFolder(), "shop-purchase-history.yml");
         this.historyData = YamlConfiguration.loadConfiguration(historyFile);
         this.bountyCooldownFile = new File(plugin.getDataFolder(), "bounty-cooldowns.yml");
@@ -364,7 +368,7 @@ public final class ShopManager implements Listener {
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.WHITE + "Buy: " + ChatColor.YELLOW + money(buyPrice(p)) + " coins each");
             lore.add(ChatColor.WHITE + "Sell: " + ChatColor.RED + money(sellPrice(p)) + " coins each");
-            if (isFarmableSellItem(p.material())) lore.add(ChatColor.WHITE + "Global sell stock: " + ChatColor.AQUA + getSellStock(p.material()) + "/" + sellStockLimit(p.material()) + ChatColor.GRAY + " (restocks every 12h)");
+            if (isFarmableSellItem(p.material())) lore.add(ChatColor.WHITE + "Your sell stock: " + ChatColor.AQUA + getSellStock(player, p.material()) + "/" + sellStockLimit(p.material()) + ChatColor.GRAY + " (personal 12h restock)");
             if (!p.category().equals("bounty-maps")) lore.add(ChatColor.WHITE + "Global buy stock: " + ChatColor.AQUA + getStock(p.material()) + "/" + stockLimit(p.material()));
             if (p.material() == Material.ELYTRA) lore.add(ChatColor.LIGHT_PURPLE + "Unlock: Visit the End first");
             lore.add(ChatColor.GRAY + "Click to choose quantity");
@@ -865,15 +869,15 @@ public final class ShopManager implements Listener {
                     plugin.announceSpecialPurchase(player, material, delivered, charged);
                 } else {
                     if (isFarmableSellItem(material)) {
-                        int availableSellStock = getSellStock(material);
+                        int availableSellStock = getSellStock(player, material);
                         if (availableSellStock <= 0) {
-                            plugin.tellPublic(player, "The shop has no sell stock left for " + pretty(material) + ". It restocks every 12 hours.");
+                            plugin.tellPublic(player, "You have used all your sell stock for " + pretty(material) + ". Your personal stock refills every 12 hours.");
                             player.closeInventory();
                             return;
                         }
                         if (quantity > availableSellStock) {
                             quantity = availableSellStock;
-                            plugin.tellPublic(player, "Sell stock limit reached for this transaction. Selling only " + quantity + " item(s); global stock is shared and restocks every 12 hours.");
+                            plugin.tellPublic(player, "Your personal sell limit applies. Selling only " + quantity + " item(s); your remaining stock refills every 12 hours.");
                         }
                     }
                     if (sellPrice(p) * quantity < 1) {
@@ -908,7 +912,7 @@ public final class ShopManager implements Listener {
                         return;
                     }
                     double earned = sellPrice(p) * sold;
-                    consumeSellStock(material, sold);
+                    consumeSellStock(player, material, sold);
                     plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + earned);
                     plugin.tellPublic(player, "Sold " + sold + " × " + prettyProduct(p) + " for " + money(earned) + " coins.");
                 }
@@ -980,21 +984,8 @@ public final class ShopManager implements Listener {
             stockData.set("last-restock-date", LocalDate.now().toString());
             changed = true;
         }
-        if (!stockData.contains("last-sell-restock-ms")) {
-            stockData.set("last-sell-restock-ms", System.currentTimeMillis());
-            changed = true;
-        }
-        for (Product p : products) {
-            if (!isFarmableSellItem(p.material())) continue;
-            String key = "sell-items." + p.material().name().toLowerCase(Locale.ROOT);
-            if (!stockData.contains(key)) {
-                stockData.set(key, sellStockLimit(p.material()));
-                changed = true;
-            }
-        }
         if (changed) saveStock();
         restockIfDue();
-        restockSellIfDue();
     }
 
     private int stockLimit(Material material) {
@@ -1026,7 +1017,16 @@ public final class ShopManager implements Listener {
                 || n.equals("NETHER_WART") || n.equals("COCOA_BEANS")
                 || n.equals("KELP") || n.equals("SEAGRASS")
                 || n.equals("COD") || n.equals("SALMON") || n.equals("TROPICAL_FISH") || n.equals("PUFFERFISH")
-                || n.equals("COOKED_COD") || n.equals("COOKED_SALMON");
+                || n.equals("COOKED_COD") || n.equals("COOKED_SALMON")
+                // Renewable resources commonly produced by mob, iron, gold and witch farms.
+                || n.equals("COAL") || n.equals("CHARCOAL") || n.equals("IRON_INGOT") || n.equals("GOLD_INGOT")
+                || n.equals("COPPER_INGOT") || n.equals("REDSTONE") || n.equals("GLOWSTONE_DUST")
+                || n.equals("ARROW") || n.equals("BONE_MEAL") || n.equals("PHANTOM_MEMBRANE")
+                || n.equals("STRING") || n.equals("GUNPOWDER") || n.equals("ROTTEN_FLESH")
+                || n.equals("BONE") || n.equals("FEATHER") || n.equals("LEATHER") || n.equals("RABBIT_HIDE")
+                || n.equals("INK_SAC") || n.equals("GLOW_INK_SAC") || n.equals("PRISMARINE_SHARD")
+                || n.equals("PRISMARINE_CRYSTALS") || n.equals("SLIME_BALL") || n.equals("MAGMA_CREAM")
+                || n.equals("BLAZE_ROD") || n.equals("GHAST_TEAR");
     }
 
     private int sellStockLimit(Material material) {
@@ -1043,31 +1043,48 @@ public final class ShopManager implements Listener {
         return 256;
     }
 
-    private int getSellStock(Material material) {
+    private int getSellStock(Player player, Material material) {
         if (!isFarmableSellItem(material)) return Integer.MAX_VALUE;
-        restockSellIfDue();
-        return Math.max(0, stockData.getInt("sell-items." + material.name().toLowerCase(Locale.ROOT), sellStockLimit(material)));
+        restockSellIfDue(player);
+        String key = "players." + player.getUniqueId() + ".items." + material.name().toLowerCase(Locale.ROOT);
+        if (!playerSellStockData.contains(key)) {
+            playerSellStockData.set(key, sellStockLimit(material));
+            savePlayerSellStock();
+        }
+        return Math.max(0, playerSellStockData.getInt(key, sellStockLimit(material)));
     }
 
-    private void consumeSellStock(Material material, int amount) {
+    private void consumeSellStock(Player player, Material material, int amount) {
         if (!isFarmableSellItem(material) || amount <= 0) return;
-        String key = "sell-items." + material.name().toLowerCase(Locale.ROOT);
-        stockData.set(key, Math.max(0, getSellStock(material) - amount));
-        saveStock();
+        String key = "players." + player.getUniqueId() + ".items." + material.name().toLowerCase(Locale.ROOT);
+        playerSellStockData.set(key, Math.max(0, getSellStock(player, material) - amount));
+        savePlayerSellStock();
     }
 
-    private void restockSellIfDue() {
+    private void restockSellIfDue(Player player) {
+        String base = "players." + player.getUniqueId();
         long now = System.currentTimeMillis();
         long interval = Math.max(1, plugin.getConfig().getLong("shop.sell-stock-restock-hours", 12)) * 60L * 60L * 1000L;
-        long last = stockData.getLong("last-sell-restock-ms", now);
+        String lastKey = base + ".last-restock-ms";
+        if (!playerSellStockData.contains(lastKey)) {
+            playerSellStockData.set(lastKey, now);
+            savePlayerSellStock();
+            return;
+        }
+        long last = playerSellStockData.getLong(lastKey, now);
         if (now - last < interval) return;
         for (Product p : products) {
             if (isFarmableSellItem(p.material())) {
-                stockData.set("sell-items." + p.material().name().toLowerCase(Locale.ROOT), sellStockLimit(p.material()));
+                playerSellStockData.set(base + ".items." + p.material().name().toLowerCase(Locale.ROOT), sellStockLimit(p.material()));
             }
         }
-        stockData.set("last-sell-restock-ms", now);
-        saveStock();
+        playerSellStockData.set(lastKey, now);
+        savePlayerSellStock();
+    }
+
+    private void savePlayerSellStock() {
+        try { playerSellStockData.save(playerSellStockFile); }
+        catch (IOException e) { plugin.getLogger().severe("Could not save player-sell-stock.yml: " + e.getMessage()); }
     }
 
     public void setStock(Material material, int amount) {
@@ -1076,14 +1093,9 @@ public final class ShopManager implements Listener {
     }
 
     public void restockAll() {
+        // Admin restock affects shop BUY inventory only; player sell quotas remain personal.
         for (Product p : products) stockData.set("items." + p.material().name().toLowerCase(Locale.ROOT), stockLimit(p.material()));
         stockData.set("last-restock-date", LocalDate.now().toString());
-        for (Product p : products) {
-            if (isFarmableSellItem(p.material())) {
-                stockData.set("sell-items." + p.material().name().toLowerCase(Locale.ROOT), sellStockLimit(p.material()));
-            }
-        }
-        stockData.set("last-sell-restock-ms", System.currentTimeMillis());
         saveStock();
     }
 
@@ -1094,7 +1106,6 @@ public final class ShopManager implements Listener {
             stockData.set("last-restock-date", today);
             saveStock();
         }
-        restockSellIfDue();
     }
 
     private void saveStock() {
