@@ -46,11 +46,25 @@ public final class QuestManager implements Listener {
     private record RandomQuest(String name, Material icon, int cost, int reward, Objective objective) {}
     private record GlobalQuest(String name, Material icon, String target, int goal, String description) {}
     private final List<GlobalQuest> globalQuestPool = List.of(
-        new GlobalQuest("Community Ore Rush", Material.IRON_PICKAXE, "ore", 250, "Mine 250 ores together"),
-        new GlobalQuest("Monster Patrol", Material.IRON_SWORD, "mob", 100, "Defeat 100 mobs together"),
-        new GlobalQuest("Fishing Fleet", Material.FISHING_ROD, "fish", 40, "Catch 40 fish together"),
-        new GlobalQuest("Forest Cleanup", Material.OAK_LOG, "wood", 180, "Chop 180 logs together"),
-        new GlobalQuest("Harvest Festival", Material.CARROT, "crop", 128, "Harvest 128 crops together")
+        new GlobalQuest("Community Ore Rush", Material.IRON_PICKAXE, "ore", 160, "Mine ores together"),
+        new GlobalQuest("Deep Mining Expedition", Material.DEEPSLATE_DIAMOND_ORE, "ore", 320, "Mine deep ores together"),
+        new GlobalQuest("Stoneworker Union", Material.STONE_PICKAXE, "ore", 500, "Keep the mining crews busy"),
+        new GlobalQuest("Monster Patrol", Material.IRON_SWORD, "mob", 80, "Defeat monsters together"),
+        new GlobalQuest("Night Watch", Material.SHIELD, "mob", 180, "Protect the settlement from monsters"),
+        new GlobalQuest("Dangerous Hunt", Material.DIAMOND_SWORD, "mob", 300, "Complete a demanding monster hunt"),
+        new GlobalQuest("Fishing Fleet", Material.FISHING_ROD, "fish", 30, "Catch fish together"),
+        new GlobalQuest("Deepwater Haul", Material.COD, "fish", 75, "Bring in a major fishing haul"),
+        new GlobalQuest("Anglers Marathon", Material.SALMON, "fish", 120, "Keep fishing until the goal is met"),
+        new GlobalQuest("Forest Cleanup", Material.OAK_LOG, "wood", 128, "Chop logs together"),
+        new GlobalQuest("Lumber Guild", Material.SPRUCE_LOG, "wood", 300, "Supply the community with timber"),
+        new GlobalQuest("Great Reforestation", Material.BIRCH_LOG, "wood", 450, "Gather a huge amount of wood"),
+        new GlobalQuest("Harvest Festival", Material.CARROT, "crop", 96, "Harvest crops together"),
+        new GlobalQuest("Farmers Market", Material.WHEAT, "crop", 220, "Collect a crop surplus"),
+        new GlobalQuest("Grand Harvest", Material.PUMPKIN, "crop", 400, "Complete a demanding farming drive"),
+        new GlobalQuest("Community Food Drive", Material.POTATO, "crop", 180, "Stock the community food supply"),
+        new GlobalQuest("Carrot Cartel", Material.CARROT, "crop", 260, "Gather carrots for the community"),
+        new GlobalQuest("Wheat Supply Run", Material.WHEAT, "crop", 320, "Harvest wheat for a large order"),
+        new GlobalQuest("Woodland Supply Run", Material.JUNGLE_LOG, "wood", 220, "Gather timber for building")
     );
 
     private final XZHEconomySystem plugin;
@@ -878,14 +892,16 @@ public final class QuestManager implements Listener {
 
     private void startNewGlobalQuest(long now, boolean announce) {
         GlobalQuest selected = globalQuestPool.get(random.nextInt(globalQuestPool.size()));
+        int goal = Math.max(1, (int) Math.round(selected.goal() * (0.80 + random.nextDouble() * 0.40)));
+        int reward = rewardForGlobalQuest(selected, goal);
         data.set("event", null);
         data.set("event.name", selected.name());
         data.set("event.icon", selected.icon().name());
         data.set("event.target", selected.target());
         data.set("event.description", selected.description());
         data.set("event.progress", 0);
-        data.set("event.goal", selected.goal());
-        data.set("event.reward", configuredEventReward());
+        data.set("event.goal", goal);
+        data.set("event.reward", reward);
         data.set("event.ends-at", now + 4L * 60L * 60L * 1000L);
         data.set("event.completed", false);
         data.set("event.started-at", now);
@@ -893,7 +909,7 @@ public final class QuestManager implements Listener {
         if (announce) {
             Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Global Quest] " + ChatColor.YELLOW
                     + "New 4-hour community quest: " + selected.name() + " — " + selected.description()
-                    + ". Reward: " + configuredEventReward() + " coins for each contributor. Work together before the deadline!");
+                    + ". Reward: " + reward + " coins for each contributor. Work together before the deadline!");
         }
     }
 
@@ -946,7 +962,21 @@ public final class QuestManager implements Listener {
     }
 
     private int configuredEventGoal() { return Math.max(1, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.goal", 500))); }
-    private int configuredEventReward() { return Math.max(200, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.reward", 200))); }
+    private int rewardForGlobalQuest(GlobalQuest quest, int goal) {
+        double effort = switch (quest.target()) {
+            case "mob" -> 1.35;
+            case "ore" -> 1.25;
+            case "fish" -> 1.55;
+            case "wood" -> 0.80;
+            case "crop" -> 0.75;
+            default -> 1.0;
+        };
+        double base = Math.max(100.0, Math.min(5000.0, goal * effort * 2.0));
+        double varied = base * (0.80 + random.nextDouble() * 0.40);
+        int ceiling = Math.max(100, Math.min(10000, plugin.getConfig().getInt("quests.global-event.reward-ceiling", 5000)));
+        return Math.max(100, Math.min(ceiling, (int) Math.round(varied)));
+    }
+    private int configuredEventReward() { return Math.max(100, Math.min(10000, plugin.getConfig().getInt("quests.global-event.reward", 200))); }
     private int configuredEventClaims() { return Math.max(0, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.claims-per-day", 25))); }
 
     private void save() {
