@@ -10,10 +10,12 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.inventory.ItemStack;
 
@@ -35,14 +37,16 @@ public final class UtilityManager implements Listener {
     private final Map<UUID, UUID> replies = new HashMap<>();
     private final Map<UUID, Boolean> afk = new HashMap<>();
     private final Map<UUID, Long> rtpCooldown = new HashMap<>();
-    private final Map<UUID, Double> fractionalTimeTicks = new HashMap<>();
 
     public UtilityManager(JavaPlugin plugin) {
         this.plugin = plugin;
         file = new File(plugin.getDataFolder(), "locations.yml");
         data = YamlConfiguration.loadConfiguration(file);
+        if (data.contains("homes")) { data.set("homes", null); save(); }
+        for (World world : Bukkit.getWorlds()) {
+            world.setGameRule(org.bukkit.GameRule.DO_DAYLIGHT_CYCLE, true);
+        }
         Bukkit.getPluginManager().registerEvents(this, plugin);
-        Bukkit.getScheduler().runTaskTimer(plugin, this::advanceServerTime, 20L, 20L);
     }
 
     public boolean handle(CommandSender sender, String command, String[] args) {
@@ -63,37 +67,31 @@ public final class UtilityManager implements Listener {
                 if (loc == null) loc = player.getWorld().getSpawnLocation();
                 player.teleport(loc); msg(player, "Teleported to spawn."); return true;
             }
-            case "sethome" -> {
-                String name = homeName(args);
-                if (name == null) { msg(player, "Usage: /sethome [name]"); return true; }
-                String base = "homes." + player.getUniqueId();
-                int max = Math.max(1, plugin.getConfig().getInt("utilities.max-homes", 3));
-                if (!data.contains(base + "." + name) && data.getConfigurationSection(base) != null
-                        && data.getConfigurationSection(base).getKeys(false).size() >= max) {
-                    msg(player, "You have reached your home limit (" + max + ")."); return true;
-                }
-                data.set(base + "." + name, player.getLocation()); save();
-                msg(player, "Home '" + name + "' saved."); return true;
-            }
             case "home" -> {
-                if (args.length == 0 && data.contains("bedhomes." + player.getUniqueId())) {
-                    Location bed = bedHome(player.getUniqueId());
-                    if (bed != null) { player.teleport(bed); msg(player, "Teleported to your bed home."); }
-                    else msg(player, "Your bed home has no safe landing spot nearby. Clear space beside your bed and try again.");
+                if (args.length != 0) {
+                    msg(player, "Only /home is available. Place a bed to set your home.");
                     return true;
                 }
-                String name = homeName(args);
-                if (name == null) { msg(player, "Usage: /home [name]"); return true; }
-                Location loc = data.getLocation("homes." + player.getUniqueId() + "." + name);
-                if (loc == null) { msg(player, "Home not found."); return true; }
-                player.teleport(loc); msg(player, "Teleported home."); return true;
-            }
-            case "delhome" -> {
-                String name = homeName(args);
-                if (name == null) { msg(player, "Usage: /delhome [name]"); return true; }
-                String path = "homes." + player.getUniqueId() + "." + name;
-                if (!data.contains(path)) { msg(player, "Home not found."); return true; }
-                data.set(path, null); save(); msg(player, "Home deleted."); return true;
+                String path = "bedhomes." + player.getUniqueId();
+                Location storedBed = data.getLocation(path);
+                if (storedBed == null) {
+                    msg(player, "You don't have a home yet. Place a bed to set one.");
+                    return true;
+                }
+                if (storedBed.getWorld() == null || !storedBed.getBlock().getType().name().endsWith("_BED")) {
+                    data.set(path, null);
+                    save();
+                    msg(player, "Your bed home no longer exists. Place a new bed to set a home.");
+                    return true;
+                }
+                Location bed = bedHome(player.getUniqueId());
+                if (bed != null) {
+                    player.teleport(bed);
+                    msg(player, "Teleported to your bed home.");
+                } else {
+                    msg(player, "Your bed home has no safe landing spot nearby. Clear space beside your bed and try again.");
+                }
+                return true;
             }
             case "setwarp" -> {
                 if (!player.hasPermission("xzh.admin")) { msg(player, "No permission."); return true; }
@@ -227,45 +225,6 @@ public final class UtilityManager implements Listener {
                 Bukkit.broadcastMessage(ChatColor.GRAY + player.getName() + (value ? " is now AFK." : " is no longer AFK."));
                 return true;
             }
-            case "xzh" -> {
-                if (args.length == 0 || !args[0].equalsIgnoreCase("time")) {
-                    msg(player, "Usage: /xzh time <daylength|nightlength <minutes>|set <day|night>|pause|resume|info>");
-                    return true;
-                }
-                if (!player.hasPermission("xzh.admin")) { msg(player, "No permission."); return true; }
-                if (args.length == 2 && args[1].equalsIgnoreCase("pause")) {
-                    plugin.getConfig().set("time-control.paused", true); saveConfig();
-                    msg(player, "Custom day/night cycle paused."); return true;
-                }
-                if (args.length == 2 && args[1].equalsIgnoreCase("resume")) {
-                    plugin.getConfig().set("time-control.paused", false); saveConfig();
-                    msg(player, "Custom day/night cycle resumed."); return true;
-                }
-                if (args.length == 2 && args[1].equalsIgnoreCase("info")) {
-                    msg(player, "Day: " + plugin.getConfig().getInt("time-control.daylength-minutes", 30)
-                        + " minutes; night: " + plugin.getConfig().getInt("time-control.nightlength-minutes", 30)
-                        + " minutes; paused: " + plugin.getConfig().getBoolean("time-control.paused", false) + ".");
-                    return true;
-                }
-                if (args.length == 3 && args[1].equalsIgnoreCase("set")) {
-                    if (args[2].equalsIgnoreCase("day")) {
-                        for (World world : Bukkit.getWorlds()) if (world.getEnvironment() == World.Environment.NORMAL) world.setTime(1000L);
-                    } else if (args[2].equalsIgnoreCase("night")) {
-                        for (World world : Bukkit.getWorlds()) if (world.getEnvironment() == World.Environment.NORMAL) world.setTime(13000L);
-                    } else { msg(player, "Use /xzh time set <day|night>."); return true; }
-                    msg(player, "Server world time updated."); return true;
-                }
-                if (args.length == 3 && (args[1].equalsIgnoreCase("daylength") || args[1].equalsIgnoreCase("nightlength"))) {
-                    int minutes;
-                    try { minutes = Integer.parseInt(args[2]); } catch (NumberFormatException ex) { msg(player, "Minutes must be a number from 1 to 240."); return true; }
-                    if (minutes < 1 || minutes > 240) { msg(player, "Minutes must be between 1 and 240."); return true; }
-                    plugin.getConfig().set("time-control." + (args[1].equalsIgnoreCase("daylength") ? "daylength-minutes" : "nightlength-minutes"), minutes);
-                    saveConfig();
-                    msg(player, "Custom " + args[1].replace("length", "") + " length set to " + minutes + " minutes."); return true;
-                }
-                msg(player, "Usage: /xzh time <daylength|nightlength <minutes>|set <day|night>|pause|resume|info>");
-                return true;
-            }
             case "helpxzh" -> {
                 net.md_5.bungee.api.chat.TextComponent link = new net.md_5.bungee.api.chat.TextComponent("§6[XZH] §eClick here to open the XZH server guide");
                 link.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
@@ -280,7 +239,7 @@ public final class UtilityManager implements Listener {
             case "help" -> {
                 sender.sendMessage(ChatColor.GOLD + "XZHEconomySystem commands:");
                 sender.sendMessage(ChatColor.WHITE + "/balance, /pay, /shop, /books, /loan, /quests, /deathinventory");
-                sender.sendMessage(ChatColor.WHITE + "/spawn, /home, /sethome, /delhome, /warp, /tpa, /tpaccept, /tpdeny, /back, /rtp");
+                sender.sendMessage(ChatColor.WHITE + "/spawn, /home, /warp, /tpa, /tpaccept, /tpdeny, /back, /rtp");
                 sender.sendMessage(ChatColor.WHITE + "/msg, /reply, /ignore, /afk, /near, /list, /top, /kit");
                 if (sender.hasPermission("xzh.admin")) sender.sendMessage(ChatColor.WHITE + "/xzhadmin, /eco, /shopadmin, /setspawn, /setwarp, /delwarp");
                 return true;
@@ -456,37 +415,10 @@ public final class UtilityManager implements Listener {
         });
     }
 
-    private void advanceServerTime() {
-        if (!plugin.getConfig().getBoolean("time-control.enabled", true)) return;
-        for (World world : Bukkit.getWorlds()) {
-            if (world.getEnvironment() != World.Environment.NORMAL) continue;
-            world.setGameRule(org.bukkit.GameRule.DO_DAYLIGHT_CYCLE, false);
-            if (plugin.getConfig().getBoolean("time-control.paused", false)) continue;
-            long time = Math.floorMod(world.getTime(), 24000L);
-            boolean day = time < 12000L;
-            int minutes = Math.max(1, plugin.getConfig().getInt(day ? "time-control.daylength-minutes" : "time-control.nightlength-minutes", 30));
-            double ticksPerSecond = 12000.0 / (minutes * 60.0);
-            UUID worldId = world.getUID();
-            double accumulated = fractionalTimeTicks.getOrDefault(worldId, 0.0) + ticksPerSecond;
-            long advance = (long) accumulated;
-            fractionalTimeTicks.put(worldId, accumulated - advance);
-            if (advance > 0) world.setTime(Math.floorMod(time + advance, 24000L));
-        }
-    }
-
-    private void saveConfig() {
-        try { plugin.getConfig().save(new File(plugin.getDataFolder(), "config.yml")); }
-        catch (IOException e) { plugin.getLogger().severe("Could not save time-control settings: " + e.getMessage()); }
-    }
-
     private String money(double amount) {
         return String.format(Locale.US, "%.2f", amount).replaceAll("\\.00$", "");
     }
 
-    private String homeName(String[] args) {
-        if (args.length > 1) return null;
-        return args.length == 0 ? "home" : named(args);
-    }
     private String named(String[] args) {
         if (args.length != 1 || !args[0].matches("[A-Za-z0-9_-]{1,24}")) return null;
         return args[0].toLowerCase(Locale.ROOT);
