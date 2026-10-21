@@ -69,8 +69,8 @@ commands:
     usage: /setspawn
     permission: xzh.admin
   home:
-    description: Teleport to a saved home.
-    usage: /home [name]
+    description: Teleport to your bed home.
+    usage: /home
   warp:
     description: Teleport to a named warp.
     usage: /warp <name>
