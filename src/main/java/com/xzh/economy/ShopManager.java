@@ -1211,13 +1211,18 @@ public final class ShopManager implements Listener {
             return;
         }
         long last = playerSellStockData.getLong(lastKey, now);
-        if (now - last < interval) return;
+        long elapsed = now - last;
+        if (elapsed < interval) return;
+        // Persisted wall-clock milliseconds keep counting while the server is offline.
+        // Advance by complete 12-hour periods instead of resetting the clock to startup time.
+        long completedPeriods = elapsed / interval;
+        long nextRestockTime = last + completedPeriods * interval;
         for (Product p : products) {
             if (isFarmableSellItem(p.material())) {
                 playerSellStockData.set(base + ".items." + p.material().name().toLowerCase(Locale.ROOT), sellStockLimit(p.material()));
             }
         }
-        playerSellStockData.set(lastKey, now);
+        playerSellStockData.set(lastKey, nextRestockTime);
         savePlayerSellStock();
     }
 
