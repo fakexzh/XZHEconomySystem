@@ -71,12 +71,6 @@ commands:
   home:
     description: Teleport to a saved home.
     usage: /home [name]
-  sethome:
-    description: Save a home.
-    usage: /sethome [name]
-  delhome:
-    description: Delete a saved home.
-    usage: /delhome [name]
   warp:
     description: Teleport to a named warp.
     usage: /warp <name>
