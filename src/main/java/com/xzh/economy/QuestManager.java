@@ -169,7 +169,7 @@ public final class QuestManager implements Listener {
         new RandomQuest("Quartz Shipment", Material.QUARTZ, 160, 224, new Objective("collect:QUARTZ", 96, "Collect 96 Nether Quartz")),
         new RandomQuest("Tropical Catch", Material.TROPICAL_FISH, 150, 225, new Objective("fish:TROPICAL_FISH", 8, "Catch 8 Tropical Fish")),
         new RandomQuest("Pufferfish Watch", Material.PUFFERFISH, 135, 203, new Objective("fish:PUFFERFISH", 10, "Catch 10 Pufferfish")),
-        new RandomQuest("River Fishing Run", Material.FISHING_ROD, 120, 180, new Objective("fish:COD", 16, "Catch 16 fish in a river")),
+        new RandomQuest("Cod Fishing Run", Material.FISHING_ROD, 120, 180, new Objective("fish:COD", 16, "Catch 16 Cod")),
         new RandomQuest("Potato Harvest", Material.POTATO, 100, 150, new Objective("collect:POTATO", 128, "Collect 128 Potatoes")),
         new RandomQuest("Pumpkin Season", Material.PUMPKIN, 125, 188, new Objective("collect:PUMPKIN", 64, "Collect 64 Pumpkins")),
         new RandomQuest("Melon Shipment", Material.MELON_SLICE, 110, 165, new Objective("collect:MELON_SLICE", 192, "Collect 192 Melon Slices")),
@@ -251,6 +251,7 @@ public final class QuestManager implements Listener {
 
     private void openSingle(Player player) {
         refreshSingleShopIfDue();
+        ensureSingleOfferDiversity();
         refreshSecretQuestIfDue();
         long next = data.getLong("single-shop.next-refresh", nextRefresh(System.currentTimeMillis()));
         long mins = Math.max(0, (next - System.currentTimeMillis()) / 60000L);
@@ -340,7 +341,7 @@ public final class QuestManager implements Listener {
         int goal = Math.max(1, (int) Math.ceil(template.objective().goal() * difficultyScale / 100.0));
         Objective objective = new Objective(template.objective().target(), goal, template.objective().description().replaceFirst("\\d+", Integer.toString(goal)));
         int cost = secret ? data.getInt("single-shop.secret.cost", 250) : Math.max(50, (int) Math.round(template.cost() * (0.90 + random.nextDouble() * 0.21)));
-        int margin = secret ? data.getInt("single-shop.secret.margin", 40) : 30 + random.nextInt(21);
+        int margin = secret ? data.getInt("single-shop.secret.margin", 40) : 40 + random.nextInt(21);
         int reward = (int) Math.ceil(cost * (1.0 + margin / 100.0));
         if (plugin.getCombinedBalance(id) < cost || !plugin.spendAvailableFunds(id, cost)) { plugin.tellPublic(player, "You need " + cost + " coins to buy this random quest."); return; }
         String questName = template.name() + " #" + (data.getInt("single-shop.quest-sequence", 0) + 1);
@@ -734,6 +735,27 @@ public final class QuestManager implements Listener {
             save();
             Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Quests] Five new random single-quest offers are available!");
         }
+    }
+
+    private void ensureSingleOfferDiversity() {
+        Set<String> categories = new HashSet<>();
+        boolean diverse = true;
+        for (int i = 0; i < 5; i++) {
+            int index = Math.floorMod(data.getInt("single-shop.offers." + i, i), randomPool.size());
+            if (!categories.add(questCategory(randomPool.get(index)))) diverse = false;
+        }
+        if (diverse) return;
+        List<Integer> candidates = new ArrayList<>();
+        for (int i = 0; i < randomPool.size(); i++) candidates.add(i);
+        Collections.shuffle(candidates, random);
+        List<Integer> choices = new ArrayList<>();
+        Set<String> used = new HashSet<>();
+        for (int candidate : candidates) {
+            if (used.add(questCategory(randomPool.get(candidate)))) choices.add(candidate);
+            if (choices.size() == 5) break;
+        }
+        for (int i = 0; i < choices.size(); i++) data.set("single-shop.offers." + i, choices.get(i));
+        save();
     }
 
     private int nextOfferForSlot(int slot) {
