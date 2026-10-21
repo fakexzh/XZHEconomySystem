@@ -146,8 +146,6 @@ public final class BankManager implements Listener {
                 List.of(ChatColor.GRAY + "Move 10 bank coins into your pocket."));
         add(inv, 15, Material.GOLD_INGOT, ChatColor.AQUA + "Withdraw 100", "withdraw", 100,
                 List.of(ChatColor.GRAY + "Move 100 bank coins into your pocket."));
-        add(inv, 16, Material.GOLD_BLOCK, ChatColor.AQUA + "Withdraw 500", "withdraw", 500,
-                List.of(ChatColor.GRAY + "Move 500 bank coins into your pocket."));
         add(inv, 17, Material.CHEST_MINECART, ChatColor.AQUA + "Withdraw all", "withdraw-all", 0,
                 List.of(ChatColor.GRAY + "Withdraw your entire bank balance."));
 
