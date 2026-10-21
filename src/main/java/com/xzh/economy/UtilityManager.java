@@ -342,6 +342,33 @@ public final class UtilityManager implements Listener {
         }
     }
 
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onHomeCommandPreprocess(PlayerCommandPreprocessEvent event) {
+        String raw = event.getMessage();
+        if (raw == null || !raw.startsWith("/")) return;
+        String[] parts = raw.substring(1).trim().split("\\s+");
+        if (parts.length == 0 || parts[0].isBlank()) return;
+
+        String root = parts[0].toLowerCase(Locale.ROOT);
+        int namespace = root.indexOf(':');
+        if (namespace >= 0) root = root.substring(namespace + 1);
+
+        if (root.equals("home")) {
+            event.setCancelled(true);
+            if (parts.length == 1) {
+                handle(event.getPlayer(), "home", new String[0]);
+            } else {
+                msg(event.getPlayer(), "Only /home is available. Place a bed to set your home.");
+            }
+            return;
+        }
+        if (root.equals("sethome") || root.equals("delhome") || root.equals("homes")
+                || root.equals("deletehome") || root.equals("removehome")) {
+            event.setCancelled(true);
+            msg(event.getPlayer(), "That command has been removed. Place a bed and use /home.");
+        }
+    }
+
     @EventHandler(ignoreCancelled = true)
     public void onBedPlace(BlockPlaceEvent event) {
         if (!event.getBlockPlaced().getType().name().endsWith("_BED")) return;
