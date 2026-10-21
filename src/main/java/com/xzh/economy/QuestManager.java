@@ -410,6 +410,10 @@ public final class QuestManager implements Listener {
         Material material = event.getBlock().getType();
         String id = material.name();
         incrementTarget(p, "break:" + id, 1);
+        // Deepslate ore variants count toward the matching ore contracts too.
+        if (id.startsWith("DEEPSLATE_") && id.endsWith("_ORE")) {
+            incrementTarget(p, "break:" + id.substring("DEEPSLATE_".length()), 1);
+        }
         if (material.name().endsWith("_ORE") || material == Material.ANCIENT_DEBRIS) {
             incrementTarget(p, "break:ANY_ORE", 1);
             recordGlobalProgress(p, "ore", 1);
