@@ -450,7 +450,14 @@ public final class UtilityManager implements Listener {
         if (args.length != 1 || !args[0].matches("[A-Za-z0-9_-]{1,24}")) return null;
         return args[0].toLowerCase(Locale.ROOT);
     }
-    private void msg(Player player, String text) { player.sendMessage("§8[§6XZH§8] §r" + text); }
+    private void msg(Player player, String text) {
+        String lower = text.toLowerCase(Locale.ROOT);
+        String color = lower.contains("death") || lower.contains("died") ? "§c"
+                : lower.contains("back") || lower.contains("returned") ? "§6"
+                : lower.contains("teleport") || lower.contains("tpa") || lower.contains("tp request") ? "§b"
+                : "§f";
+        player.sendMessage("§8[§6XZH§8] " + color + text);
+    }
     private void save() {
         try { data.save(file); }
         catch (IOException e) { plugin.getLogger().severe("Could not save locations.yml: " + e.getMessage()); }
