@@ -309,18 +309,27 @@ public final class QuestManager implements Listener {
         int end = Math.min(packs.size(), start + pageSize);
         for (int index = start; index < end; index++) {
             Pack pack = packs.get(index);
+            boolean completed = data.getBoolean(player.getUniqueId() + ".completed-packs." + pack.id(), false);
             boolean unlocked = hasAdvancement(player, pack.advancement());
             List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.WHITE + "Cost: " + ChatColor.YELLOW + pack.cost() + " coins");
-            lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + pack.reward() + " coins");
-            lore.add(ChatColor.WHITE + "Objectives:");
-            for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + "• " + objective.description());
-            lore.add(unlocked ? ChatColor.GREEN + "UNLOCKED" : ChatColor.RED + "Unlock requirement: " + unlockDescription(pack.id()));
-            int timerMinutes = packTimerLimitMinutes(pack.id());
-            lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
-            lore.add(ChatColor.GRAY + "Achievement-unlocked challenge pack");
-            add(inv, index - start, unlocked ? pack.icon() : Material.BARRIER,
-                (unlocked ? ChatColor.YELLOW : ChatColor.RED) + pack.name(), unlocked ? "pack-select" : "locked", pack.id(), lore);
+            if (completed) {
+                lore.add(ChatColor.DARK_GRAY + "COMPLETED");
+                lore.add(ChatColor.RED + "Permanently unavailable");
+                lore.add(ChatColor.GRAY + "This achievement pack can only be completed once.");
+            } else {
+                lore.add(ChatColor.WHITE + "Cost: " + ChatColor.YELLOW + pack.cost() + " coins");
+                lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + rewardForPack(pack) + " coins");
+                lore.add(ChatColor.WHITE + "Objectives:");
+                for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + "• " + objective.description());
+                lore.add(unlocked ? ChatColor.GREEN + "UNLOCKED" : ChatColor.RED + "Unlock requirement: " + unlockDescription(pack.id()));
+                int timerMinutes = packTimerLimitMinutes(pack.id());
+                lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
+                lore.add(ChatColor.GRAY + "One-time achievement challenge");
+            }
+            Material icon = completed ? Material.BLACK_STAINED_GLASS_PANE : unlocked ? pack.icon() : Material.BARRIER;
+            String action = completed ? "pack-completed" : unlocked ? "pack-select" : "locked";
+            String title = (completed ? ChatColor.DARK_GRAY : unlocked ? ChatColor.YELLOW : ChatColor.RED) + pack.name();
+            add(inv, index - start, icon, title, action, pack.id(), lore);
         }
         if (page > 0) add(inv, 45, Material.ARROW, ChatColor.WHITE + "Previous page", "pack-page", Integer.toString(page - 1));
         add(inv, 49, Material.ARROW, ChatColor.WHITE + "Back", "back", "");
@@ -332,7 +341,7 @@ public final class QuestManager implements Listener {
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Confirm quest pack");
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.WHITE + "Cost: " + pack.cost() + " coins");
-        lore.add(ChatColor.WHITE + "Reward: " + pack.reward() + " coins");
+        lore.add(ChatColor.WHITE + "Reward: " + rewardForPack(pack) + " coins");
         for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + objective.description());
         int timerMinutes = packTimerLimitMinutes(pack.id());
         lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
@@ -376,6 +385,11 @@ public final class QuestManager implements Listener {
 
     private void buyPack(Player player, Pack pack) {
         UUID id = player.getUniqueId();
+        if (data.getBoolean(id + ".completed-packs." + pack.id(), false)) {
+            plugin.tellPublic(player, "You have already completed this achievement pack. It can only be completed once.");
+            openPacks(player);
+            return;
+        }
         if (plugin.getLoanManager().isShopPurchaseRestricted(id)) {
             plugin.tellPublic(player, "Your loan is overdue. Quest-pack purchases are locked until full repayment.");
             return;
@@ -392,7 +406,7 @@ public final class QuestManager implements Listener {
             plugin.tellPublic(player, "Not enough coins for this quest pack.");
             return;
         }
-        startQuest(player, "pack:" + pack.id(), pack.name(), pack.cost(), pack.reward(), pack.objectives());
+        startQuest(player, "pack:" + pack.id(), pack.name(), pack.cost(), rewardForPack(pack), pack.objectives());
         player.closeInventory();
         plugin.tellPublic(player, "Quest pack started: " + pack.name() + ". Complete every objective to earn " + pack.reward() + " coins.");
     }
@@ -534,6 +548,12 @@ public final class QuestManager implements Listener {
         if (!changed) return;
         if (allComplete(id)) {
             int reward = data.getInt(id + ".reward", 0);
+            String activeQuestId = data.getString(id + ".active", "");
+            if (activeQuestId.startsWith("pack:")) {
+                String packId = activeQuestId.substring("pack:".length());
+                data.set(id + ".completed-packs." + packId, true);
+                plugin.tellPublic(player, "§6Achievement pack permanently completed: §e" + packId + "§6. It is now marked with black stained glass and cannot be repeated.");
+            }
             plugin.setBalance(id, plugin.getBalance(id) + reward);
             plugin.tellPublic(player, "Quest completed! Reward: " + reward + " coins.");
             data.set(id.toString(), null);
@@ -556,6 +576,21 @@ public final class QuestManager implements Listener {
             if (data.getInt(base + ".progress", 0) < data.getInt(base + ".goal", 1)) return false;
         }
         return true;
+    }
+
+    private int rewardForPack(Pack pack) {
+        String id = pack.id();
+        double multiplier = 2.0;
+        if (List.of("dragon_slayer", "wither_siege", "debris_hunter", "end_expedition",
+                "nether_blaze", "nether_hunter", "raid_supply", "shulker_sweep",
+                "end_city_scout", "guardian_patrol", "deep_sea").contains(id)) {
+            multiplier = 3.5;
+        } else if (pack.objectives().size() > 1 || packTimerLimitMinutes(id) > 0) {
+            multiplier = 2.75;
+        } else if (pack.cost() >= 500) {
+            multiplier = 2.5;
+        }
+        return Math.max(pack.reward(), (int) Math.ceil(pack.cost() * multiplier));
     }
 
     private int packTimerLimitMinutes(String packId) {
