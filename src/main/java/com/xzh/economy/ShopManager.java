@@ -372,7 +372,7 @@ public final class ShopManager implements Listener {
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.WHITE + "Buy: " + ChatColor.YELLOW + money(buyPrice(p)) + " coins each");
             lore.add(ChatColor.WHITE + "Sell: " + ChatColor.RED + money(sellPrice(p)) + " coins each");
-            if (isFarmableSellItem(p.material())) lore.add(ChatColor.WHITE + "Your sell stock: " + ChatColor.AQUA + getSellStock(player, p.material()) + "/" + sellStockLimit(p.material()) + ChatColor.GRAY + " (personal 12h restock)");
+            if (isFarmableSellItem(p.material())) lore.add(ChatColor.WHITE + "Your sell stock: " + ChatColor.AQUA + getSellStock(player, p.material()) + "/" + sellStockLimit(p.material()) + ChatColor.GRAY + " (personal 6h restock)");
             if (!p.category().equals("bounty-maps")) lore.add(ChatColor.WHITE + "Global buy stock: " + ChatColor.AQUA + getStock(p.material()) + "/" + stockLimit(p.material()));
             if (p.material() == Material.ELYTRA) lore.add(ChatColor.LIGHT_PURPLE + "Unlock: Visit the End first");
             lore.add(ChatColor.GRAY + "Click to choose quantity");
@@ -1203,7 +1203,7 @@ public final class ShopManager implements Listener {
     private void restockSellIfDue(Player player) {
         String base = "players." + player.getUniqueId();
         long now = System.currentTimeMillis();
-        long interval = Math.max(1, plugin.getConfig().getLong("shop.sell-stock-restock-hours", 12)) * 60L * 60L * 1000L;
+        long interval = Math.max(1, plugin.getConfig().getLong("shop.sell-stock-restock-hours", 6)) * 60L * 60L * 1000L;
         String lastKey = base + ".last-restock-ms";
         if (!playerSellStockData.contains(lastKey)) {
             playerSellStockData.set(lastKey, now);
@@ -1214,7 +1214,7 @@ public final class ShopManager implements Listener {
         long elapsed = now - last;
         if (elapsed < interval) return;
         // Persisted wall-clock milliseconds keep counting while the server is offline.
-        // Advance by complete 12-hour periods instead of resetting the clock to startup time.
+        // Advance by complete 6-hour periods instead of resetting the clock to startup time.
         long completedPeriods = elapsed / interval;
         long nextRestockTime = last + completedPeriods * interval;
         for (Product p : products) {
@@ -1369,6 +1369,7 @@ public final class ShopManager implements Listener {
     }
 
     private double sellPrice(Product p) {
+        if (p.material() == Material.ENCHANTED_BOOK) return Math.floor(buyPrice(p) * 0.30);
         if (p.category().equals("bounty-maps")) return 0.0;
         if (p.category().equals("misc")) return p.sell();
         String name = p.material().name();
