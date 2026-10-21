@@ -29,9 +29,14 @@ import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 /** Random single quests, achievement-unlocked multi-objective packs, and shared global quests. */
@@ -54,7 +59,7 @@ public final class QuestManager implements Listener {
     private final NamespacedKey actionKey;
     private final NamespacedKey valueKey;
     private final Random random = new Random();
-    private final List<Double> travelRemainders = new ArrayList<>();
+    private final Map<UUID, Double> travelRemainders = new HashMap<>();
 
     private final List<Pack> packs = List.of(
         new Pack("stone_survey", "Stone Survey", Material.IRON_PICKAXE, 80, 112, "minecraft:story/iron_tools", List.of(new Objective("break:STONE", 256, "Mine 256 Stone"))),
@@ -161,7 +166,16 @@ public final class QuestManager implements Listener {
         new RandomQuest("Sand Quarry", Material.SAND, 75, 105, new Objective("break:SAND", 256, "Mine 256 Sand")),
         new RandomQuest("Monster Cleanup", Material.IRON_SWORD, 140, 196, new Objective("kill:SKELETON", 30, "Kill 30 Skeletons")),
         new RandomQuest("Food Pantry", Material.BREAD, 90, 126, new Objective("collect:BREAD", 64, "Collect 64 Bread")),
-        new RandomQuest("Quartz Shipment", Material.QUARTZ, 160, 224, new Objective("collect:QUARTZ", 96, "Collect 96 Nether Quartz"))
+        new RandomQuest("Quartz Shipment", Material.QUARTZ, 160, 224, new Objective("collect:QUARTZ", 96, "Collect 96 Nether Quartz")),
+        new RandomQuest("Tropical Catch", Material.TROPICAL_FISH, 150, 225, new Objective("fish:TROPICAL_FISH", 8, "Catch 8 Tropical Fish")),
+        new RandomQuest("Pufferfish Watch", Material.PUFFERFISH, 135, 203, new Objective("fish:PUFFERFISH", 10, "Catch 10 Pufferfish")),
+        new RandomQuest("River Fishing Run", Material.FISHING_ROD, 120, 180, new Objective("fish:COD", 16, "Catch 16 fish in a river")),
+        new RandomQuest("Potato Harvest", Material.POTATO, 100, 150, new Objective("collect:POTATO", 128, "Collect 128 Potatoes")),
+        new RandomQuest("Pumpkin Season", Material.PUMPKIN, 125, 188, new Objective("collect:PUMPKIN", 64, "Collect 64 Pumpkins")),
+        new RandomQuest("Melon Shipment", Material.MELON_SLICE, 110, 165, new Objective("collect:MELON_SLICE", 192, "Collect 192 Melon Slices")),
+        new RandomQuest("Copper Ore Contract", Material.RAW_COPPER, 145, 218, new Objective("break:COPPER_ORE", 64, "Mine 64 Copper Ore")),
+        new RandomQuest("Lapis Prospecting", Material.LAPIS_LAZULI, 175, 263, new Objective("break:LAPIS_ORE", 32, "Mine 32 Lapis Lazuli Ore")),
+        new RandomQuest("Redstone Extraction", Material.REDSTONE, 165, 248, new Objective("break:REDSTONE_ORE", 48, "Mine 48 Redstone Ore"))
     );
 
     public QuestManager(XZHEconomySystem plugin) {
@@ -333,7 +347,7 @@ public final class QuestManager implements Listener {
         data.set("single-shop.quest-sequence", data.getInt("single-shop.quest-sequence", 0) + 1);
         startQuest(player, "single:" + System.currentTimeMillis(), questName, cost, reward, List.of(objective));
         data.set(id + ".profit-margin", margin);
-        if (!secret) data.set("single-shop.offers." + offerSlot, random.nextInt(randomPool.size()));
+        if (!secret) data.set("single-shop.offers." + offerSlot, nextOfferForSlot(offerSlot));
         save();
         plugin.tellPublic(player, "Started " + questName + ": " + objective.description() + ". Cost " + cost + "; reward " + reward + " coins. " + (isTimedSingle(template) ? "Time limit: 30 minutes." : "No timer."));
         player.closeInventory();
@@ -427,14 +441,26 @@ public final class QuestManager implements Listener {
 
     @EventHandler
     public void onMove(PlayerMoveEvent event) {
-        if (event.isCancelled() || event.getTo() == null || event.getFrom().getWorld() != event.getTo().getWorld()) return;
         Player p = event.getPlayer();
-        if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         UUID id = p.getUniqueId();
-        if (data.getString(id + ".active", "").isBlank()) return;
+        if (event.isCancelled() || event.getTo() == null || event.getFrom().getWorld() != event.getTo().getWorld()) {
+            travelRemainders.remove(id);
+            return;
+        }
+        if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR
+                || data.getString(id + ".active", "").isBlank() || !matchesTarget(id, "travel")) {
+            travelRemainders.remove(id);
+            return;
+        }
         double step = event.getFrom().distance(event.getTo());
-        if (step > 10) return;
-        if (matchesTarget(id, "travel")) incrementTarget(p, "travel", (int) Math.floor(step));
+        if (step > 10) {
+            travelRemainders.remove(id);
+            return;
+        }
+        double accumulated = travelRemainders.getOrDefault(id, 0.0) + step;
+        int wholeBlocks = (int) Math.floor(accumulated);
+        travelRemainders.put(id, accumulated - wholeBlocks);
+        if (wholeBlocks > 0) incrementTarget(p, "travel", wholeBlocks);
     }
 
     @EventHandler
@@ -691,15 +717,52 @@ public final class QuestManager implements Listener {
         if (next <= 0 || now >= next) {
             data.set("single-shop.next-refresh", nextRefresh(now));
             data.set("single-shop.refresh-id", data.getInt("single-shop.refresh-id", 0) + 1);
+            List<Integer> candidates = new ArrayList<>();
+            for (int i = 0; i < randomPool.size(); i++) candidates.add(i);
+            Collections.shuffle(candidates, random);
             List<Integer> choices = new ArrayList<>();
-            while (choices.size() < 5) {
-                int candidate = random.nextInt(randomPool.size());
+            Set<String> categories = new HashSet<>();
+            for (int candidate : candidates) {
+                if (categories.add(questCategory(randomPool.get(candidate)))) choices.add(candidate);
+                if (choices.size() == 5) break;
+            }
+            for (int candidate : candidates) {
+                if (choices.size() == 5) break;
                 if (!choices.contains(candidate)) choices.add(candidate);
             }
             for (int i = 0; i < choices.size(); i++) data.set("single-shop.offers." + i, choices.get(i));
             save();
             Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Quests] Five new random single-quest offers are available!");
         }
+    }
+
+    private int nextOfferForSlot(int slot) {
+        Set<String> usedCategories = new HashSet<>();
+        for (int i = 0; i < 5; i++) {
+            if (i == slot) continue;
+            int index = Math.floorMod(data.getInt("single-shop.offers." + i, i), randomPool.size());
+            usedCategories.add(questCategory(randomPool.get(index)));
+        }
+        List<Integer> eligible = new ArrayList<>();
+        for (int i = 0; i < randomPool.size(); i++) {
+            if (!usedCategories.contains(questCategory(randomPool.get(i)))) eligible.add(i);
+        }
+        return eligible.isEmpty() ? random.nextInt(randomPool.size()) : eligible.get(random.nextInt(eligible.size()));
+    }
+
+    private String questCategory(RandomQuest quest) {
+        String target = quest.objective().target();
+        String material = target.contains(":") ? target.substring(target.indexOf(':') + 1) : target;
+        if (target.startsWith("fish:")) return "fishing";
+        if (target.equals("travel")) return "travel";
+        if (target.startsWith("feed:") || target.startsWith("breed:")) return "farming";
+        if (target.startsWith("break:") && (material.endsWith("_LOG") || material.endsWith("_STEM") || material.equals("BAMBOO"))) return "woodcutting";
+        if (target.startsWith("break:")) return "mining";
+        if (target.startsWith("kill:") || material.equals("BLAZE_ROD") || material.equals("ENDER_PEARL") || material.equals("WITHER_SKELETON_SKULL")) return "combat";
+        if (List.of("WHEAT", "CARROT", "POTATO", "BEETROOT", "MELON_SLICE", "PUMPKIN", "SUGAR_CANE", "NETHER_WART", "COCOA_BEANS", "WHEAT_SEEDS", "BEETROOT_SEEDS").contains(material)) return "farming";
+        if (List.of("BREAD", "COOKED_BEEF", "PORKCHOP", "CHICKEN", "RAW_RABBIT").contains(material)) return "food";
+        if (material.equals("QUARTZ") || material.equals("RAW_IRON") || material.equals("RAW_COPPER") || material.equals("LAPIS_LAZULI") || material.equals("REDSTONE")) return "mining";
+        return "gathering";
     }
 
     private long nextRefresh(long now) { return ((now / (2L * 60L * 60L * 1000L)) + 1L) * (2L * 60L * 60L * 1000L); }
