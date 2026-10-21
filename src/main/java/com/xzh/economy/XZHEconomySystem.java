@@ -77,7 +77,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
-        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "sethome", "delhome", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit", "gmc", "gms", "gma", "gmsp", "day", "night", "gamemode", "heal", "feed", "fly", "weather", "helpxzh")) {
+        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit", "gmc", "gms", "gma", "gmsp", "day", "night", "gamemode", "heal", "feed", "fly", "weather", "helpxzh")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
@@ -423,7 +423,6 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 return true;
             }
             case "xzh" -> {
-                if (args.length > 0 && args[0].equalsIgnoreCase("time")) return utilityManager.handle(sender, "xzh", args);
                 tell(sender, "§eXZHEconomySystem §7v" + getPluginMeta().getVersion());
                 tell(sender, "§f/balance §7- check your coins");
                 tell(sender, "§f/pay <player> <amount> §7- send coins");
@@ -437,7 +436,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 tell(sender, "§f/deathinventory §7- recover your last death inventory");
                 tell(sender, "§f/books §7- enchantment book shop");
                 tell(sender, "§f/kit starter §7- claim starter kit");
-                tell(sender, "§f/home, /sethome, /warp, /tpa, /back, /rtp §7- utilities");
+                tell(sender, "§f/home, /warp, /tpa, /back, /rtp §7- utilities");
                 if (sender.hasPermission("xzh.admin")) tell(sender, "§f/eco <set|add> <player> <amount> §7- admin economy");
                 return true;
             }
