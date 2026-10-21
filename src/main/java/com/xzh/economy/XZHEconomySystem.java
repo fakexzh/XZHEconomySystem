@@ -113,10 +113,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         }
         if (!getConfig().contains("utilities.tpa-cost")) { getConfig().set("utilities.tpa-cost", 10.0); changed = true; }
         if (!getConfig().contains("utilities.back-cost")) { getConfig().set("utilities.back-cost", 30.0); changed = true; }
-        if (!getConfig().contains("time-control.enabled")) { getConfig().set("time-control.enabled", true); changed = true; }
-        if (!getConfig().contains("time-control.daylength-minutes")) { getConfig().set("time-control.daylength-minutes", 30); changed = true; }
-        if (!getConfig().contains("time-control.nightlength-minutes")) { getConfig().set("time-control.nightlength-minutes", 30); changed = true; }
-        if (!getConfig().contains("time-control.paused")) { getConfig().set("time-control.paused", false); changed = true; }
+        if (getConfig().contains("time-control")) { getConfig().set("time-control", null); changed = true; }
         if (!getConfig().contains("announcements.bank.enabled")) { getConfig().set("announcements.bank.enabled", true); changed = true; }
         if (changed) {
             saveConfig();
