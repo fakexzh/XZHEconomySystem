@@ -376,7 +376,7 @@ public final class QuestManager implements Listener {
     }
 
     private void openPacks(Player player, String tier, int page) {
-        if (!List.of("easy", "hard", "master").contains(tier) || !tierUnlocked(player, tier)) {
+        if (!List.of("easy", "hard", "master").contains(tier)) {
             openPacks(player);
             return;
         }
@@ -396,6 +396,7 @@ public final class QuestManager implements Listener {
             lore.add(ChatColor.WHITE + "Objectives:");
             for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + "• " + objective.description());
             lore.add(done ? ChatColor.DARK_GRAY + "COMPLETED FOR LIFE — reward already claimed"
+                    : !tierUnlocked(player, tierOf(pack)) ? ChatColor.RED + tierUnlockDescription(tierOf(pack))
                     : unlocked ? ChatColor.GREEN + "UNLOCKED"
                     : ChatColor.RED + "Complete the pack's progression achievement");
             int timerMinutes = packTimerLimitMinutes(pack.id());
@@ -1110,7 +1111,10 @@ public final class QuestManager implements Listener {
             case "single-secret-buy" -> buyRandom(player, 5);
             case "single-info" -> plugin.tellPublic(player, "Five random quests are available; each purchase replaces its offer slot.");
             case "pack-tier" -> openPacks(player, value, 0);
-            case "tier-locked" -> plugin.tellPublic(player, tierUnlockDescription(value));
+            case "tier-locked" -> {
+                plugin.tellPublic(player, tierUnlockDescription(value));
+                openPacks(player, value, 0);
+            }
             case "pack-page" -> {
                 String[] parts = value.split(":");
                 try { openPacks(player, parts[0], Integer.parseInt(parts[1])); }
