@@ -5,6 +5,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.block.data.Ageable;
 import org.bukkit.advancement.Advancement;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
@@ -95,8 +96,8 @@ public final class QuestManager implements Listener {
         new Pack("ocean_fisher", "Ocean Fishing", Material.FISHING_ROD, 180, 252, "minecraft:husbandry/tactical_fishing", List.of(new Objective("fish:COD", 16, "Catch 16 Cod while fishing"))),
         new Pack("salmon_run", "Salmon Run", Material.SALMON, 200, 280, "minecraft:husbandry/fishy_business", List.of(new Objective("fish:SALMON", 16, "Catch 16 Salmon while fishing"))),
         new Pack("deep_sea", "Deep Sea Haul", Material.TROPICAL_FISH, 420, 588, "minecraft:husbandry/fishy_business", List.of(new Objective("fish:TROPICAL_FISH", 8, "Catch 8 Tropical Fish"))),
-        new Pack("farm_starter", "Farm Starter", Material.WHEAT, 70, 98, "minecraft:husbandry/plant_seed", List.of(new Objective("collect:WHEAT", 64, "Harvest or collect 64 Wheat"))),
-        new Pack("root_vegetables", "Root Vegetable Run", Material.CARROT, 100, 140, "minecraft:husbandry/plant_seed", List.of(new Objective("collect:CARROT", 128, "Collect 128 Carrots"))),
+        new Pack("farm_starter", "Farm Starter", Material.WHEAT, 70, 98, "minecraft:husbandry/plant_seed", List.of(new Objective("harvest:WHEAT", 64, "Harvest 64 fully grown Wheat crops"))),
+        new Pack("root_vegetables", "Root Vegetable Run", Material.CARROT, 100, 140, "minecraft:husbandry/plant_seed", List.of(new Objective("harvest:CARROT", 128, "Harvest 128 fully grown Carrot crops"))),
         new Pack("baked_goods", "Baker's Order", Material.BREAD, 120, 168, "minecraft:husbandry/balanced_diet", List.of(new Objective("collect:BREAD", 64, "Collect 64 Bread"))),
         new Pack("meat_supply", "Meat Supply", Material.COOKED_BEEF, 180, 252, "minecraft:husbandry/balanced_diet", List.of(new Objective("collect:COOKED_BEEF", 64, "Collect 64 Cooked Beef"))),
         new Pack("animal_breeder", "Animal Breeder", Material.WHEAT, 150, 210, "minecraft:husbandry/breed_an_animal", List.of(new Objective("breed:ANY", 12, "Breed 12 animals"))),
@@ -230,7 +231,7 @@ public final class QuestManager implements Listener {
         new RandomQuest("Animal Breeding", Material.PORKCHOP, 120, 168, new Objective("breed:ANY", 10, "Breed 10 animals")),
         new RandomQuest("Travel Contract", Material.COMPASS, 100, 140, new Objective("travel", 2500, "Travel 2,500 blocks")),
         new RandomQuest("Woodcutting Contract", Material.OAK_LOG, 100, 140, new Objective("break:OAK_LOG", 128, "Chop 128 Oak Logs")),
-        new RandomQuest("Crop Delivery", Material.CARROT, 85, 119, new Objective("collect:CARROT", 96, "Collect 96 Carrots")),
+        new RandomQuest("Crop Delivery", Material.CARROT, 85, 119, new Objective("harvest:CARROT", 96, "Harvest 96 fully grown Carrot crops")),
         new RandomQuest("Blaze Rod Shipment", Material.BLAZE_ROD, 190, 266, new Objective("collect:BLAZE_ROD", 32, "Collect 32 Blaze Rods")),
         new RandomQuest("Sand Quarry", Material.SAND, 75, 105, new Objective("break:SAND", 256, "Mine 256 Sand")),
         new RandomQuest("Monster Cleanup", Material.IRON_SWORD, 140, 196, new Objective("kill:SKELETON", 30, "Kill 30 Skeletons")),
@@ -523,10 +524,32 @@ public final class QuestManager implements Listener {
         if (material.name().endsWith("_LOG") || material.name().endsWith("_STEM")) {
             recordGlobalProgress(p, "wood", 1);
         }
-        if (material == Material.WHEAT || material == Material.CARROTS || material == Material.POTATOES
-                || material == Material.BEETROOTS || material == Material.MELON || material == Material.PUMPKIN) {
-            recordGlobalProgress(p, "crop", 1);
+        boolean matureCrop = false;
+        if (event.getBlock().getBlockData() instanceof Ageable ageable
+                && ageable.getAge() >= ageable.getMaximumAge()) {
+            Material harvested = switch (material) {
+                case WHEAT -> Material.WHEAT;
+                case CARROTS -> Material.CARROT;
+                case POTATOES -> Material.POTATO;
+                case BEETROOTS -> Material.BEETROOT;
+                case NETHER_WART -> Material.NETHER_WART;
+                case COCOA -> Material.COCOA_BEANS;
+                default -> null;
+            };
+            if (harvested != null) {
+                incrementTarget(p, "harvest:" + harvested.name(), 1);
+                matureCrop = true;
+            }
         }
+        // Melons and pumpkins are harvestable blocks rather than Ageable crops.
+        if (material == Material.MELON) {
+            incrementTarget(p, "harvest:MELON_SLICE", 1);
+            matureCrop = true;
+        } else if (material == Material.PUMPKIN) {
+            incrementTarget(p, "harvest:PUMPKIN", 1);
+            matureCrop = true;
+        }
+        if (matureCrop) recordGlobalProgress(p, "crop", 1);
     }
 
     @EventHandler
