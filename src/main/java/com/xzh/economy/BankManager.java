@@ -49,8 +49,12 @@ public final class BankManager implements Listener {
 
     public void setBalance(UUID id, double amount) {
         if (!Double.isFinite(amount) || amount < 0) return;
-        data.set(id.toString(), Math.round(amount));
+        double oldAmount = getBalance(id);
+        double newAmount = Math.round(amount);
+        data.set(id.toString(), newAmount);
         save();
+        Player online = Bukkit.getPlayer(id);
+        if (online != null && newAmount > oldAmount) online.playSound(online.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_CHIME, 0.45f, 1.3f);
     }
 
     public boolean isOpenNow() {
@@ -214,7 +218,6 @@ public final class BankManager implements Listener {
                         plugin.setBalance(id, pocket - requested);
                         setBalance(id, bank + requested);
                         plugin.tellPublic(player, "Deposited " + money(requested) + " coins into your bank.");
-                        player.playSound(player.getLocation(),org.bukkit.Sound.BLOCK_NOTE_BLOCK_CHIME,.5f,1.25f);
                     }
                 } else {
                     if (bank + 1e-9 < requested) {

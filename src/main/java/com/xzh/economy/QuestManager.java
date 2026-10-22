@@ -444,7 +444,7 @@ public final class QuestManager implements Listener {
             plugin.setBalance(id,plugin.getBalance(id)+reward);plugin.tellPublic(player,"Quest completed! Reward: "+reward+" coins.");
             if(activeId.startsWith("pack:"))data.set("completed-packs."+id+"."+activeId.substring("pack:".length()),true);
             Bukkit.broadcastMessage(ChatColor.GOLD+"[XZH QUESTS] "+ChatColor.YELLOW+player.getName()+ChatColor.WHITE+" completed "+ChatColor.AQUA+completedName+ChatColor.WHITE+" and earned "+ChatColor.GREEN+reward+" coins!");
-            player.playSound(player.getLocation(),org.bukkit.Sound.ENTITY_EXPERIENCE_ORB_PICKUP,.65f,1.15f);data.set(id.toString(),null);plugin.getHudManager().hideActiveQuest(player);
+data.set(id.toString(),null);plugin.getHudManager().hideActiveQuest(player);
         }else updateHud(player);
         save();
     }
