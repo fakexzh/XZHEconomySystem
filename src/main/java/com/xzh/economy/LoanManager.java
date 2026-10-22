@@ -23,7 +23,7 @@ import java.util.UUID;
 
 /** Persistent single-active-loan system with a confirmation GUI and a 12-hour grace period. */
 public final class LoanManager implements Listener {
-    private static final int[] AMOUNTS = {50, 100, 300, 500, 1000};
+    private static final int[] AMOUNTS = {500, 1000, 5000, 10000};
     private static final int[] TERMS = {2, 5, 7, 10};
     private final XZHEconomySystem plugin;
     private final File file;
@@ -65,7 +65,7 @@ public final class LoanManager implements Listener {
             add(inv, 15, Material.GOLD_INGOT, ChatColor.GREEN + "Repay now", "repay", 0, 0, List.of(ChatColor.WHITE + "Repay available funds; full repayment clears the loan"));
             add(inv, 22, Material.ARROW, ChatColor.WHITE + "Close", "close", 0, 0, List.of());
         } else {
-            int[] slots = {10, 11, 12, 13, 14};
+            int[] slots = {10, 12, 14, 16};
             for (int i = 0; i < AMOUNTS.length; i++) {
                 add(inv, slots[i], Material.GOLD_INGOT, ChatColor.YELLOW + "Borrow " + AMOUNTS[i],
                         "amount", AMOUNTS[i], 0,
