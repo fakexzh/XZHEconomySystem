@@ -247,19 +247,21 @@ public final class BookShopManager implements Listener {
 
     private double defaultPrice(String key) {
         return switch (key) {
-            case "mending" -> 3000;
-            case "wind_burst" -> 3500;
-            case "lunge", "breach", "density" -> 1800;
-            case "swift_sneak" -> 1600;
-            case "soul_speed" -> 1500;
-            case "frost_walker", "fortune", "silk_touch" -> 1400;
-            case "unbreaking", "efficiency", "looting", "channeling" -> 1300;
-            case "sharpness", "protection", "feather_falling", "power", "infinity", "riptide" -> 1100;
-            case "thorns", "sweeping_edge", "depth_strider", "fire_aspect", "smite", "loyalty", "impaling" -> 1000;
-            case "aqua_affinity", "respiration", "fire_protection", "blast_protection", "projectile_protection", "flame", "multishot", "luck_of_the_sea" -> 850;
-            case "bane_of_arthropods", "knockback", "punch", "piercing", "quick_charge", "lure" -> 750;
-            case "binding_curse", "vanishing_curse" -> 500;
-            default -> 600;
+            case "mending" -> 2500;
+            case "wind_burst" -> 7300;
+            case "lunge", "breach", "density" -> 3750;
+            case "swift_sneak" -> 3350;
+            case "soul_speed" -> 3100;
+            case "frost_walker", "fortune", "silk_touch" -> 2900;
+            case "unbreaking", "efficiency", "looting", "channeling" -> 2700;
+            case "infinity", "riptide" -> 2500;
+            case "sharpness", "protection" -> 2300;
+            case "feather_falling", "power", "thorns", "sweeping_edge", "depth_strider", "fire_aspect" -> 2100;
+            case "smite", "loyalty", "impaling", "respiration", "luck_of_the_sea", "multishot" -> 1900;
+            case "aqua_affinity", "fire_protection", "blast_protection", "projectile_protection", "flame", "piercing", "quick_charge" -> 1700;
+            case "bane_of_arthropods", "knockback", "punch" -> 1500;
+            case "binding_curse", "vanishing_curse" -> 1000;
+            default -> 1000;
         };
     }
 

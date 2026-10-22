@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
@@ -131,6 +132,7 @@ public final class UtilityManager implements Listener {
                 prompt.addExtra(accept); prompt.addExtra(decline);
                 prompt.addExtra(new net.md_5.bungee.api.chat.TextComponent(" §7(60 seconds)"));
                 target.spigot().sendMessage(prompt);
+                target.playSound(target.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.25f);
                 return true;
             }
             case "tpaccept", "tpdeny" -> {
@@ -143,6 +145,8 @@ public final class UtilityManager implements Listener {
                 if (requester == null) { msg(player, "That player is no longer online."); return true; }
                 if (cmd.equals("tpdeny")) {
                     msg(player, "Teleport request denied."); msg(requester, player.getName() + " denied your teleport request.");
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.9f, 0.8f);
+                    requester.playSound(requester.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.9f, 0.8f);
                 } else {
                     XZHEconomySystem economy = (XZHEconomySystem) plugin;
                     double fee = Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-cost", 10.0));
@@ -164,6 +168,8 @@ public final class UtilityManager implements Listener {
                     }
                     msg(player, "Teleport request accepted.");
                     msg(requester, "Teleported to " + player.getName() + " for " + money(fee) + " coins.");
+                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.9f, 1.2f);
+                    requester.playSound(requester.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.9f, 1.2f);
                 }
                 return true;
             }

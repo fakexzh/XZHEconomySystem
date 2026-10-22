@@ -77,7 +77,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
-        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit", "gmc", "gms", "gma", "gmsp", "day", "night", "gamemode", "heal", "feed", "fly", "weather", "helpxzh")) {
+        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quest", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit", "gmc", "gms", "gma", "gmsp", "day", "night", "gamemode", "heal", "feed", "fly", "weather", "helpxzh")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
@@ -368,8 +368,13 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 deathRecoveryManager.open(player);
                 return true;
             }
-            case "quests" -> {
-                if (!(sender instanceof Player player)) { tell(sender, "Only players can view quests."); return true; }
+            case "quest", "quests" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can use quests."); return true; }
+                if (args.length == 1 && args[0].equalsIgnoreCase("cancel")) {
+                    questManager.cancelActiveQuest(player);
+                    return true;
+                }
+                if (args.length != 0) { tell(sender, "Usage: /quest cancel or /quests"); return true; }
                 questManager.open(player);
                 return true;
             }
@@ -431,6 +436,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 if (sender.hasPermission("xzh.admin")) tell(sender, "§f/shopadmin <restock|stock> §7- manage global shop stock");
                 tell(sender, "§f/loan repay §7- repay an active loan (also available in /bank)");
                 tell(sender, "§f/quests §7- buy quest packs and track progress");
+                tell(sender, "§f/quest cancel §7- cancel an active paid quest for a 50% purchase-price refund");
                 tell(sender, "§f/deathinventory §7- recover your last death inventory");
                 tell(sender, "§f/books §7- enchantment book shop");
                 tell(sender, "§f/kit starter §7- claim starter kit");
@@ -533,6 +539,8 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         List<String> suggestions = new ArrayList<>();
         if (command.getName().equalsIgnoreCase("eco") && args.length == 1 && sender.hasPermission("xzh.admin")) {
             suggestions.add("set"); suggestions.add("add");
+        } else if (command.getName().equalsIgnoreCase("quest") && args.length == 1) {
+            suggestions.add("cancel");
         } else if ((command.getName().equalsIgnoreCase("tpa") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("pay") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("sendmoney") && args.length == 1)

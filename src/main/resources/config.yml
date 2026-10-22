@@ -94,8 +94,35 @@ shop:
       buy: 70
       sell: 20
     elytra:
-      buy: 5000
-      sell: 1500
+      buy: 10000
+      sell: 0
+    netherite_ingot:
+      buy: 1800
+      sell: 360
+    netherite_helmet:
+      buy: 6000
+      sell: 300
+    netherite_chestplate:
+      buy: 6000
+      sell: 300
+    netherite_leggings:
+      buy: 6000
+      sell: 300
+    netherite_boots:
+      buy: 6000
+      sell: 300
+    mace:
+      buy: 4500
+      sell: 900
+    ender_chest:
+      buy: 500
+      sell: 105
+    enchanted_golden_apple:
+      buy: 2000
+      sell: 750
+    netherite_upgrade_smithing_template:
+      buy: 1500
+      sell: 500
     diamond:
       buy: 100
       sell: 5
@@ -281,49 +308,49 @@ book-shop:
     sweeping_edge: 4
     infinity: 4
   prices:
-    mending: 3000
-    wind_burst: 3500
-    lunge: 1800
-    swift_sneak: 1600
-    soul_speed: 1500
-    frost_walker: 1400
-    fortune: 1400
-    silk_touch: 1400
-    unbreaking: 1300
-    efficiency: 1300
-    looting: 1300
-    sharpness: 1100
-    protection: 1100
-    feather_falling: 1000
-    power: 1000
-    breach: 1800
-    density: 1800
-    infinity: 1200
-    riptide: 1200
-    channeling: 1300
-    thorns: 1000
-    sweeping_edge: 1000
-    respiration: 900
-    depth_strider: 1000
-    aqua_affinity: 800
-    fire_aspect: 1000
-    fire_protection: 800
-    blast_protection: 800
-    projectile_protection: 800
-    smite: 900
-    bane_of_arthropods: 700
-    knockback: 700
-    punch: 700
-    flame: 800
-    loyalty: 900
-    impaling: 900
-    multishot: 900
-    piercing: 800
-    quick_charge: 800
-    lure: 800
-    luck_of_the_sea: 900
-    binding_curse: 500
-    vanishing_curse: 500
+    aqua_affinity: 1700
+    bane_of_arthropods: 1500
+    binding_curse: 1000
+    blast_protection: 1700
+    breach: 3750
+    channeling: 2700
+    density: 3750
+    depth_strider: 2100
+    efficiency: 2700
+    feather_falling: 2100
+    fire_aspect: 2100
+    fire_protection: 1700
+    flame: 1700
+    fortune: 2900
+    frost_walker: 2900
+    impaling: 1900
+    infinity: 2500
+    knockback: 1500
+    looting: 2700
+    loyalty: 1900
+    luck_of_the_sea: 1900
+    lure: 1700
+    mending: 2500
+    multishot: 1900
+    piercing: 1700
+    power: 2100
+    projectile_protection: 1700
+    protection: 2300
+    punch: 1500
+    quick_charge: 1700
+    respiration: 1900
+    riptide: 2500
+    sharpness: 2300
+    silk_touch: 2900
+    smite: 1900
+    soul_speed: 3100
+    sweeping_edge: 2100
+    swift_sneak: 3350
+    thorns: 2100
+    unbreaking: 2700
+    vanishing_curse: 1000
+    wind_burst: 7300
+    lunge: 3750
 
 # Configurable starter kit; items use MATERIAL:AMOUNT syntax.
 kits:

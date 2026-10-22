@@ -327,6 +327,12 @@ public final class QuestManager implements Listener {
         long next = data.getLong("single-shop.next-refresh", nextRefresh(System.currentTimeMillis()));
         long mins = Math.max(0, (next - System.currentTimeMillis()) / 60000L);
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "XZH Single Quests");
+        // Secret Quest is intentionally the first item in the menu; its 30-minute cycle is unchanged.
+        add(inv, 10, Material.ENDER_EYE, ChatColor.LIGHT_PURPLE + "??? Secret Quest", "single-secret-buy", "secret",
+            List.of(ChatColor.WHITE + "Purchase price: " + ChatColor.YELLOW + data.getInt("single-shop.secret.cost", 250) + " coins",
+                    ChatColor.WHITE + "Profit: " + ChatColor.GREEN + "+" + data.getInt("single-shop.secret.margin", 40) + "%",
+                    ChatColor.GRAY + "Objective and reward details are hidden.",
+                    ChatColor.GRAY + "Refresh in " + Math.max(0, (data.getLong("single-shop.secret.next-refresh", System.currentTimeMillis()) - System.currentTimeMillis()) / 60000L) + " minute(s)"));
         for (int i = 0; i < 5; i++) {
             int poolIndex = data.getInt("single-shop.offers." + i, i % randomPool.size());
             RandomQuest offer = randomPool.get(Math.floorMod(poolIndex, randomPool.size()));
@@ -340,13 +346,8 @@ public final class QuestManager implements Listener {
             lore.add(ChatColor.WHITE + "Completion reward: " + ChatColor.GREEN + reward + " coins");
             lore.add(isTimedSingle(offer) ? ChatColor.RED + "Time limit: 30 minutes" : ChatColor.GRAY + "No time limit");
             lore.add(ChatColor.GRAY + "Refresh in " + (mins / 60) + "h " + (mins % 60) + "m");
-            add(inv, 10 + i, offer.icon(), ChatColor.YELLOW + offer.name(), "single-buy", Integer.toString(i), lore);
+            add(inv, 11 + i, offer.icon(), ChatColor.YELLOW + offer.name(), "single-buy", Integer.toString(i), lore);
         }
-        add(inv, 22, Material.ENDER_EYE, ChatColor.LIGHT_PURPLE + "??? Secret Quest", "single-secret-buy", "secret",
-            List.of(ChatColor.WHITE + "Purchase price: " + ChatColor.YELLOW + data.getInt("single-shop.secret.cost", 250) + " coins",
-                    ChatColor.WHITE + "Profit: " + ChatColor.GREEN + "+" + data.getInt("single-shop.secret.margin", 40) + "%",
-                    ChatColor.GRAY + "Objective and reward details are hidden.",
-                    ChatColor.GRAY + "Refresh in " + Math.max(0, (data.getLong("single-shop.secret.next-refresh", System.currentTimeMillis()) - System.currentTimeMillis()) / 60000L) + " minute(s)"));
         add(inv, 31, Material.CLOCK, ChatColor.AQUA + "Offer refresh", "single-info", "",
             List.of(ChatColor.WHITE + "Five regular offers refresh every 2 hours.",
                     ChatColor.WHITE + "The secret quest refreshes every 30 minutes.",
@@ -359,9 +360,8 @@ public final class QuestManager implements Listener {
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Pack Tiers");
         for (String tier : List.of("easy", "hard", "master")) {
             boolean unlocked = tierUnlocked(player, tier);
-            Material icon = tier.equals("easy") ? Material.LIME_STAINED_GLASS_PANE
-                    : tier.equals("hard") ? Material.YELLOW_STAINED_GLASS_PANE : Material.PURPLE_STAINED_GLASS_PANE;
-            if (!unlocked) icon = Material.BARRIER;
+            Material icon = tier.equals("easy") ? Material.OAK_SAPLING
+                    : tier.equals("hard") ? Material.IRON_SWORD : Material.GOLDEN_HELMET;
             String label = tier.equals("easy") ? "Easy Packs" : tier.equals("hard") ? "Hard Packs" : "Master Packs";
             long done = packs.stream().filter(pack -> tierOf(pack).equals(tier)
                     && completedPack(player.getUniqueId(), pack.id())).count();
@@ -388,7 +388,7 @@ public final class QuestManager implements Listener {
         for (int i = pg * 45; i < Math.min(list.size(), pg * 45 + 45); i++) {
             Pack pack = list.get(i);
             boolean done = completedPack(player.getUniqueId(), pack.id());
-            boolean unlocked = hasAdvancement(player, pack.advancement());
+            boolean unlocked = tierUnlocked(player, tierOf(pack)) && hasAdvancement(player, pack.advancement());
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.WHITE + "Cost: " + ChatColor.YELLOW + pack.cost() + " coins");
             lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + rewardForPack(pack) + " coins");
@@ -423,6 +423,29 @@ public final class QuestManager implements Listener {
         add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "Confirm purchase", "pack-buy", pack.id());
         add(inv, 15, Material.RED_CONCRETE, ChatColor.RED + "Cancel", "back-packs", "");
         player.openInventory(inv);
+    }
+
+    public boolean cancelActiveQuest(Player player) {
+        UUID id = player.getUniqueId();
+        String activeId = data.getString(id + ".active", "");
+        if (activeId.isBlank()) {
+            plugin.tellPublic(player, "You do not have an active quest or mission to cancel.");
+            return false;
+        }
+        int originalCost = Math.max(0, data.getInt(id + ".cost", 0));
+        int refund = originalCost / 2;
+        // Clear the active record before refunding so this purchase can never be refunded twice.
+        data.set(id.toString(), null);
+        save();
+        plugin.getHudManager().hideActiveQuest(player);
+        if (refund > 0) plugin.setBalance(id, plugin.getBalance(id) + refund);
+        if (originalCost > 0) {
+            plugin.tellPublic(player, "Quest cancelled. Refunded 50% of its purchase price: " + refund
+                    + " coins (original price " + originalCost + "). No completion reward was paid.");
+        } else {
+            plugin.tellPublic(player, "Quest cancelled. It had no purchase price, so no refund or completion reward was paid.");
+        }
+        return true;
     }
 
     private void buyRandom(Player player, int offerSlot) {

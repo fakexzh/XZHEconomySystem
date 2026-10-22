@@ -10,6 +10,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.block.Action;
 import org.bukkit.inventory.Inventory;
@@ -71,7 +72,7 @@ public final class ShopManager implements Listener {
         new Product("ores", Material.AMETHYST_SHARD, 20, 6),
         new Product("ores", Material.QUARTZ, 12, 3.6),
         new Product("ores", Material.NETHERITE_SCRAP, 300, 90),
-        new Product("ores", Material.NETHERITE_INGOT, 1200, 360),
+        new Product("ores", Material.NETHERITE_INGOT, 1800, 360),
         new Product("ores", Material.DIAMOND, 250, 75),
         new Product("blocks", Material.OBSIDIAN, 30, 9),
         new Product("blocks", Material.GLASS, 10, 3),
@@ -112,21 +113,21 @@ public final class ShopManager implements Listener {
         new Product("equipment", Material.DIAMOND_CHESTPLATE, 900, 270),
         new Product("equipment", Material.DIAMOND_LEGGINGS, 800, 240),
         new Product("equipment", Material.DIAMOND_BOOTS, 400, 120),
-        new Product("equipment", Material.NETHERITE_HELMET, 1800, 540),
-        new Product("equipment", Material.NETHERITE_CHESTPLATE, 3600, 1080),
-        new Product("equipment", Material.NETHERITE_LEGGINGS, 3200, 960),
-        new Product("equipment", Material.NETHERITE_BOOTS, 1700, 510),
+        new Product("equipment", Material.NETHERITE_HELMET, 6000, 300),
+        new Product("equipment", Material.NETHERITE_CHESTPLATE, 6000, 300),
+        new Product("equipment", Material.NETHERITE_LEGGINGS, 6000, 300),
+        new Product("equipment", Material.NETHERITE_BOOTS, 6000, 300),
         new Product("equipment", Material.BOW, 180, 54),
         new Product("equipment", Material.CROSSBOW, 220, 66),
         new Product("equipment", Material.SHIELD, 100, 30),
         new Product("equipment", Material.TRIDENT, 1800, 540),
-        new Product("equipment", Material.MACE, 3000, 900),
+        new Product("equipment", Material.MACE, 4500, 900),
         new Product("equipment", Material.TOTEM_OF_UNDYING, 2500, 750),
-        new Product("equipment", Material.ENDER_CHEST, 350, 105),
+        new Product("equipment", Material.ENDER_CHEST, 500, 105),
         new Product("food-cooked", Material.GOLDEN_CARROT, 10, 3),
         new Product("food-cooked", Material.PUMPKIN_PIE, 12, 3.6),
         new Product("food-cooked", Material.GOLDEN_APPLE, 180, 54),
-        new Product("food-cooked", Material.ENCHANTED_GOLDEN_APPLE, 2500, 750),
+        new Product("food-cooked", Material.ENCHANTED_GOLDEN_APPLE, 2000, 750),
         new Product("food-cooked", Material.COOKED_MUTTON, 10, 3),
         new Product("eggs-heads", Material.CREEPER_HEAD, 500, 150),
         new Product("eggs-heads", Material.SKELETON_SKULL, 350, 105),
@@ -166,8 +167,8 @@ public final class ShopManager implements Listener {
         new Product("special", Material.HOST_ARMOR_TRIM_SMITHING_TEMPLATE, 900, 0),
         new Product("special", Material.FLOW_ARMOR_TRIM_SMITHING_TEMPLATE, 1200, 0),
         new Product("special", Material.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE, 1200, 0),
-        new Product("special", Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE, 2000, 0),
-        new Product("special", Material.ELYTRA, 5000, 0),
+        new Product("special", Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE, 1500, 500),
+        new Product("special", Material.ELYTRA, 10000, 0),
         new Product("bounty-maps", Material.FILLED_MAP, 100, 0, null, 1),
         new Product("bounty-maps", Material.FILLED_MAP, 300, 0, null, 2),
         new Product("bounty-maps", Material.FILLED_MAP, 600, 0, null, 3),
@@ -528,6 +529,14 @@ public final class ShopManager implements Listener {
 
     /** Open the shop when an official XZH physical coin is right-clicked. */
     @EventHandler
+    public void onPreventNetheriteTemplateDuplication(PrepareItemCraftEvent event) {
+        ItemStack result = event.getInventory().getResult();
+        if (result != null && result.getType() == Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE) {
+            event.getInventory().setResult(new ItemStack(Material.AIR));
+        }
+    }
+
+    @EventHandler
     public void onRightClickCoin(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 
@@ -816,7 +825,9 @@ public final class ShopManager implements Listener {
                     p = new Product("misc", material, 0.0, action.equals("sell-hand-confirm") ? handUnitPrice : defaultSellPrice());
                 if (p == null || quantity < 1) return;
                 if (!action.equals("buy") && isUnsellableExploitItem(material)
-                        && material != Material.ELYTRA && material != Material.TRIDENT && material != Material.TOTEM_OF_UNDYING) {
+                        && material != Material.ENCHANTED_GOLDEN_APPLE
+                        && material != Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE
+                        && material != Material.TRIDENT && material != Material.TOTEM_OF_UNDYING) {
                     plugin.tellPublic(player, "This item cannot be sold to the XZH shop because it is exploit-prone or intended to remain rare.");
                     player.closeInventory();
                     return;
@@ -1402,7 +1413,11 @@ public final class ShopManager implements Listener {
         if (p.category().equals("misc")) return p.sell();
         String name = p.material().name();
         String lower = name.toLowerCase(Locale.ROOT);
-        if (name.equals("ELYTRA")) return Math.floor(buyPrice(p) * 0.30);
+        if (name.equals("ELYTRA")) return 0.0;
+        if (name.equals("ENCHANTED_GOLDEN_APPLE")) return 750.0;
+        if (name.equals("NETHERITE_UPGRADE_SMITHING_TEMPLATE")) return 500.0;
+        if (name.equals("MACE")) return 900.0;
+        if (name.equals("ENDER_CHEST")) return 105.0;
         if (name.equals("TRIDENT") || name.equals("TOTEM_OF_UNDYING")) return 200.0;
         if (name.equals("MILK_BUCKET")) return 10.0;
         if (p.material() == Material.FIREWORK_ROCKET) return 0.0;
@@ -1423,7 +1438,7 @@ public final class ShopManager implements Listener {
         // percentage of buy price. Common renewable blocks earn 1 coin per 64.
         if (name.equals("ANCIENT_DEBRIS")) return 20.0;
         if (name.equals("NETHERITE_SCRAP")) return 35.0;
-        if (name.equals("NETHERITE_INGOT")) return 100.0;
+        if (name.equals("NETHERITE_INGOT")) return 360.0;
         if (p.category().equals("blocks")) return 1.0 / 64.0;
         if (p.category().equals("essentials") && isMobDrop(p.material())) return mobDropSellPrice(p.material());
         if (name.equals("DIAMOND")) return 5.0;
@@ -1434,7 +1449,6 @@ public final class ShopManager implements Listener {
             return Math.max(0.0, Math.floor(buyPrice(p) * 0.05));
         }
         if (p.category().equals("equipment")) {
-            if (name.equals("MACE")) return 0.0;
             return Math.max(0.0, Math.floor(buyPrice(p) * 0.05));
         }
         if (p.category().startsWith("food")) return Math.max(1.0, Math.floor(buyPrice(p) * 0.15));
@@ -1445,7 +1459,7 @@ public final class ShopManager implements Listener {
         }
         if (p.category().equals("xp")) return 0.0;
         if (p.category().equals("seeds")) return seedSellPrice(p.material());
-        if (p.category().equals("special")) return name.equals("ELYTRA") ? Math.floor(buyPrice(p) * 0.30) : 0.0;
+        if (p.category().equals("special")) return 0.0;
         if (p.category().equals("essentials") && p.material() == Material.TNT) return 0.0;
         return Math.max(0.0, Math.floor(buyPrice(p) * 0.02));
     }

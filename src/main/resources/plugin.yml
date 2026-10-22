@@ -34,6 +34,9 @@ commands:
   loan:
     description: Open the bank or repay an active loan.
     usage: /loan [repay]
+  quest:
+    description: Cancel your active quest for a 50% refund of its purchase price.
+    usage: /quest cancel
   quests:
     description: Open the quest packs menu.
     usage: /quests
