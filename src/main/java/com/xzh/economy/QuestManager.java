@@ -601,6 +601,9 @@ public final class QuestManager implements Listener {
         if (event.isCancelled()) return;
         Player p = event.getPlayer();
         if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        // Player-dropped items can be dropped and picked up repeatedly, so they must not
+        // count as newly collected quest items.
+        if (event.getItem().getThrower() != null) return;
         Material material = event.getItem().getItemStack().getType();
         incrementTarget(p, "collect:" + material.name(), event.getItem().getItemStack().getAmount());
     }
