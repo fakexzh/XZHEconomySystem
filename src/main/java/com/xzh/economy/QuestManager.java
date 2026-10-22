@@ -690,6 +690,19 @@ public final class QuestManager implements Listener {
     }
 
     private int packTimerLimitMinutes(String packId) {
+        // A subset of generated packs remain timed, with stricter tiers offering more timed challenges.
+        if (packId.startsWith("easy_") || packId.startsWith("hard_") || packId.startsWith("master_")) {
+            String tier = packId.substring(0, packId.indexOf('_'));
+            int number;
+            try { number = Integer.parseInt(packId.substring(packId.indexOf('_') + 1)); }
+            catch (NumberFormatException ignored) { return 0; }
+            if (tier.equals("easy") && number % 10 == 0) return 30;
+            if (tier.equals("hard") && number % 5 == 0) return 30;
+            if (tier.equals("hard") && number % 5 == 1) return 60;
+            if (tier.equals("master") && number % 4 == 0) return 30;
+            if (tier.equals("master") && number % 4 == 1) return 60;
+            return 0;
+        }
         return switch (packId) {
             case "debris_hunter", "nether_hunter", "nether_blaze", "ocean_fisher", "salmon_run", "deep_sea", "explorer_trail", "monster_patrol", "raid_supply" -> 30;
             case "diamond_miner", "pearl_trader", "animal_breeder", "cattle_feed", "sheep_flock", "woodcutter", "builder_supply" -> 60;
@@ -707,12 +720,7 @@ public final class QuestManager implements Listener {
             };
         }
         if (!activeId.startsWith("pack:")) return 0L;
-        String packId = activeId.substring("pack:".length());
-        return switch (packId) {
-            case "debris_hunter", "nether_hunter", "nether_blaze", "ocean_fisher", "salmon_run", "deep_sea", "explorer_trail", "monster_patrol", "raid_supply" -> 30L * 60L;
-            case "diamond_miner", "pearl_trader", "animal_breeder", "cattle_feed", "sheep_flock", "woodcutter", "builder_supply" -> 60L * 60L;
-            default -> 0L;
-        };
+        return packTimerLimitMinutes(activeId.substring("pack:".length())) * 60L;
     }
 
     private void expireTimedQuestIfNeeded(Player player) {
