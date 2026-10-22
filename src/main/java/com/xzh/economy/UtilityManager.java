@@ -493,13 +493,10 @@ public final class UtilityManager implements Listener {
 
     @EventHandler
     public void onDeath(PlayerDeathEvent event) {
+        // Save the location for /back. The global death announcement is handled once
+        // by XZH Survival so this listener does not send a second death message.
         data.set("back." + event.getEntity().getUniqueId(), event.getEntity().getLocation());
         save();
-        Player player = event.getEntity();
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            if (!player.isOnline()) return;
-            msg(player, "You died. Use /back to return to your death location (30 coins), or /deathinventory to review recovery options.");
-        });
     }
 
     private String money(double amount) {
