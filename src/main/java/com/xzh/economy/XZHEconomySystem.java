@@ -115,6 +115,46 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         if (!getConfig().contains("utilities.back-cost")) { getConfig().set("utilities.back-cost", 30.0); changed = true; }
         if (getConfig().contains("time-control")) { getConfig().set("time-control", null); changed = true; }
         if (!getConfig().contains("announcements.bank.enabled")) { getConfig().set("announcements.bank.enabled", true); changed = true; }
+
+        // One-time migration is necessary because Bukkit does not overwrite an existing config.yml.
+        // Apply the explicitly approved 2026-10-22 shop and enchantment-book prices to existing servers.
+        if (!getConfig().getBoolean("migrations.price-rebalance-20261022", false)) {
+            String[][] shopPrices = {
+                {"elytra", "10000", "0"},
+                {"netherite_ingot", "1800", "360"},
+                {"netherite_helmet", "6000", "300"},
+                {"netherite_chestplate", "6000", "300"},
+                {"netherite_leggings", "6000", "300"},
+                {"netherite_boots", "6000", "300"},
+                {"mace", "4500", "900"},
+                {"ender_chest", "500", "105"},
+                {"enchanted_golden_apple", "2000", "750"},
+                {"netherite_upgrade_smithing_template", "1500", "500"}
+            };
+            for (String[] price : shopPrices) {
+                getConfig().set("shop.prices." + price[0] + ".buy", Integer.parseInt(price[1]));
+                getConfig().set("shop.prices." + price[0] + ".sell", Integer.parseInt(price[2]));
+            }
+            String[][] bookPrices = {
+                {"aqua_affinity","1700"},{"bane_of_arthropods","1500"},{"binding_curse","1000"},
+                {"blast_protection","1700"},{"breach","3750"},{"channeling","2700"},{"density","3750"},
+                {"depth_strider","2100"},{"efficiency","2700"},{"feather_falling","2100"},
+                {"fire_aspect","2100"},{"fire_protection","1700"},{"flame","1700"},{"fortune","2900"},
+                {"frost_walker","2900"},{"impaling","1900"},{"infinity","2500"},{"knockback","1500"},
+                {"looting","2700"},{"loyalty","1900"},{"luck_of_the_sea","1900"},{"lure","1700"},
+                {"mending","2500"},{"multishot","1900"},{"piercing","1700"},{"power","2100"},
+                {"projectile_protection","1700"},{"protection","2300"},{"punch","1500"},
+                {"quick_charge","1700"},{"respiration","1900"},{"riptide","2500"},{"sharpness","2300"},
+                {"silk_touch","2900"},{"smite","1900"},{"soul_speed","3100"},{"sweeping_edge","2100"},
+                {"swift_sneak","3350"},{"thorns","2100"},{"unbreaking","2700"},{"vanishing_curse","1000"},
+                {"wind_burst","7300"},{"lunge","3750"}
+            };
+            for (String[] price : bookPrices) {
+                getConfig().set("book-shop.prices." + price[0], Integer.parseInt(price[1]));
+            }
+            getConfig().set("migrations.price-rebalance-20261022", true);
+            changed = true;
+        }
         if (changed) {
             saveConfig();
             getLogger().info("Migrated legacy config defaults for revised XZH economy rules.");
