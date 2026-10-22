@@ -370,9 +370,19 @@ public final class QuestManager implements Listener {
 
     @EventHandler
     public void onBlockDrop(BlockDropItemEvent event) {
-        if(event.isCancelled())return; Player p=event.getPlayer();
-        if(p.getGameMode()==org.bukkit.GameMode.CREATIVE||p.getGameMode()==org.bukkit.GameMode.SPECTATOR)return;
-        for(org.bukkit.entity.Item item:event.getItems())incrementTarget(p,"collect:"+item.getItemStack().getType().name(),item.getItemStack().getAmount());
+        if (event.isCancelled()) return;
+        Player p = event.getPlayer();
+        if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+
+        // A placed block that drops itself when broken is not a new collection.
+        // Otherwise players could place and break the same block repeatedly to farm
+        // "collect X" objectives (for example, Collect 128 Bricks).
+        Material brokenBlock = event.getBlockState().getType();
+        for (org.bukkit.entity.Item item : event.getItems()) {
+            ItemStack stack = item.getItemStack();
+            if (stack.getType() == brokenBlock) continue;
+            incrementTarget(p, "collect:" + stack.getType().name(), stack.getAmount());
+        }
     }
     @EventHandler
     public void onCraft(CraftItemEvent event) {
