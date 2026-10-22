@@ -294,34 +294,34 @@ book-shop:
     looting: 1300
     sharpness: 1100
     protection: 1100
-    feather_falling: 1100
-    power: 1100
+    feather_falling: 1000
+    power: 1000
     breach: 1800
     density: 1800
-    infinity: 1100
-    riptide: 1100
+    infinity: 1200
+    riptide: 1200
     channeling: 1300
     thorns: 1000
     sweeping_edge: 1000
+    respiration: 900
     depth_strider: 1000
+    aqua_affinity: 800
     fire_aspect: 1000
-    smite: 1000
-    loyalty: 1000
-    impaling: 1000
-    aqua_affinity: 850
-    respiration: 850
-    fire_protection: 850
-    blast_protection: 850
-    projectile_protection: 850
-    flame: 850
-    multishot: 850
-    luck_of_the_sea: 850
-    bane_of_arthropods: 750
-    knockback: 750
-    punch: 750
-    piercing: 750
-    quick_charge: 750
-    lure: 750
+    fire_protection: 800
+    blast_protection: 800
+    projectile_protection: 800
+    smite: 900
+    bane_of_arthropods: 700
+    knockback: 700
+    punch: 700
+    flame: 800
+    loyalty: 900
+    impaling: 900
+    multishot: 900
+    piercing: 800
+    quick_charge: 800
+    lure: 800
+    luck_of_the_sea: 900
     binding_curse: 500
     vanishing_curse: 500
 
