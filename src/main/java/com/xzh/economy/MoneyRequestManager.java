@@ -85,6 +85,8 @@ public final class MoneyRequestManager implements Listener {
                 amount, System.currentTimeMillis() + TIMEOUT_MS);
         pendingByRecipient.put(recipientId, pending);
         openPrompt(target, requester, pending);
+        requester.playSound(requester.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_CHIME, 0.45f, 1.35f);
+        target.playSound(target.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_PLING, 0.45f, 1.45f);
         plugin.tellPublic(requester, (kind == Kind.SEND ? "Transfer request sent to " : "Money request sent to ")
                 + target.getName() + " for " + amount + " coins. It expires in 60 seconds.");
         return true;
