@@ -283,6 +283,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         }
         saveBalances();
         saveWalletStatus();
+        if (online != null && newAmount > oldAmount) online.playSound(online.getLocation(), org.bukkit.Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.55f, 1.25f);
         try {
             getDataFolder().mkdirs();
             java.nio.file.Files.writeString(transactionsFile.toPath(),
