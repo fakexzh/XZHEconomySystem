@@ -75,7 +75,7 @@ public final class QuestManager implements Listener {
     private final Random random = new Random();
     private final Map<UUID, Double> travelRemainders = new HashMap<>();
 
-    private final List<Pack> packs = List.of(
+    private final List<Pack> basePacks = List.of(
         new Pack("stone_survey", "Stone Survey", Material.IRON_PICKAXE, 80, 112, "minecraft:story/iron_tools", List.of(new Objective("break:STONE", 256, "Mine 256 Stone"))),
         new Pack("coal_contract", "Coal Contract", Material.COAL, 100, 140, "minecraft:story/smelt_iron", List.of(new Objective("collect:COAL", 64, "Collect 64 Coal"))),
         new Pack("iron_miner", "Iron Miner", Material.RAW_IRON, 140, 196, "minecraft:story/iron_tools", List.of(new Objective("break:IRON_ORE", 48, "Mine 48 Iron Ore"))),
@@ -159,6 +159,61 @@ public final class QuestManager implements Listener {
         new Pack("melon_delivery", "Melon Delivery", Material.MELON_SLICE, 152, 228, "minecraft:husbandry/plant_seed", List.of(new Objective("collect:MELON_SLICE", 192, "Collect 192 Melon Slices"))),
         new Pack("pumpkin_delivery", "Pumpkin Delivery", Material.PUMPKIN, 199, 279, "minecraft:husbandry/plant_seed", List.of(new Objective("collect:PUMPKIN", 64, "Collect 64 Pumpkins")))
     );
+
+    // Generate 100 one-time packs for each progression tier from the curated objective pool.
+    private final List<Pack> packs = buildPacks();
+
+    private List<Pack> buildPacks() {
+        List<Pack> result = new ArrayList<>(300);
+        String[] tiers = {"easy", "hard", "master"};
+        for (int tier = 0; tier < tiers.length; tier++) {
+            for (int i = 0; i < 100; i++) {
+                Pack template = basePacks.get((i * 7 + tier * 11) % basePacks.size());
+                String id = tiers[tier] + "_" + String.format(Locale.ROOT, "%03d", i + 1);
+                int cost = Math.max(tier == 0 ? 50 : tier == 1 ? 250 : 700,
+                        (int) Math.round(template.cost() * (tier == 0 ? 0.70 : tier == 1 ? 1.20 : 1.80)));
+                int reward = (int) Math.ceil(cost * (tier == 0 ? 1.45 : tier == 1 ? 1.70 : 2.0));
+                double scale = tier == 0 ? 0.80 + (i % 4) * 0.10
+                        : tier == 1 ? 1.10 + (i % 4) * 0.15 : 1.50 + (i % 4) * 0.20;
+                List<Objective> objectives = new ArrayList<>();
+                for (Objective objective : template.objectives()) {
+                    int goal = Math.max(1, (int) Math.ceil(objective.goal() * scale));
+                    objectives.add(new Objective(objective.target(), goal,
+                            objective.description().replaceFirst("\\d+", Integer.toString(goal))));
+                }
+                String advancement = tier == 0 ? template.advancement()
+                        : tier == 1 ? "minecraft:story/mine_diamond" : "minecraft:end/kill_dragon";
+                String label = tiers[tier].substring(0, 1).toUpperCase(Locale.ROOT) + tiers[tier].substring(1);
+                result.add(new Pack(id, label + " Pack " + String.format(Locale.ROOT, "%03d", i + 1)
+                        + " - " + template.name(), template.icon(), cost, reward, advancement, List.copyOf(objectives)));
+            }
+        }
+        return List.copyOf(result);
+    }
+
+    private String tierOf(Pack pack) {
+        return pack.id().startsWith("master_") ? "master" : pack.id().startsWith("hard_") ? "hard" : "easy";
+    }
+
+    private boolean tierUnlocked(Player player, String tier) {
+        return switch (tier) {
+            case "hard" -> hasAdvancement(player, "minecraft:story/mine_diamond");
+            case "master" -> hasAdvancement(player, "minecraft:end/kill_dragon");
+            default -> true;
+        };
+    }
+
+    private String tierUnlockDescription(String tier) {
+        return switch (tier) {
+            case "hard" -> "Unlock Hard packs by obtaining the Diamonds advancement";
+            case "master" -> "Unlock Master packs by defeating the Ender Dragon";
+            default -> "Easy packs are available from the start; individual packs have requirements";
+        };
+    }
+
+    private boolean completedPack(UUID playerId, String packId) {
+        return data.getBoolean("completed-packs." + playerId + "." + packId, false);
+    }
 
     private final List<RandomQuest> randomPool = List.of(
         new RandomQuest("Deep Diamond Expedition", Material.DIAMOND, 180, 252, new Objective("break:DIAMOND_ORE", 12, "Mine 12 Diamond Ore")),
@@ -298,42 +353,59 @@ public final class QuestManager implements Listener {
         player.openInventory(inv);
     }
 
-    private void openPacks(Player player) { openPacks(player, 0); }
+    private void openPacks(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Pack Tiers");
+        for (String tier : List.of("easy", "hard", "master")) {
+            boolean unlocked = tierUnlocked(player, tier);
+            Material icon = tier.equals("easy") ? Material.LIME_STAINED_GLASS_PANE
+                    : tier.equals("hard") ? Material.YELLOW_STAINED_GLASS_PANE : Material.PURPLE_STAINED_GLASS_PANE;
+            if (!unlocked) icon = Material.BARRIER;
+            String label = tier.equals("easy") ? "Easy Packs" : tier.equals("hard") ? "Hard Packs" : "Master Packs";
+            long done = packs.stream().filter(pack -> tierOf(pack).equals(tier)
+                    && completedPack(player.getUniqueId(), pack.id())).count();
+            int slot = tier.equals("easy") ? 11 : tier.equals("hard") ? 13 : 15;
+            add(inv, slot, icon, (unlocked ? ChatColor.GREEN : ChatColor.RED) + label,
+                    unlocked ? "pack-tier" : "tier-locked", tier,
+                    List.of(ChatColor.WHITE + "Packs: 100", ChatColor.WHITE + "Completed: " + done + "/100",
+                            ChatColor.GOLD + tierUnlockDescription(tier)));
+        }
+        add(inv, 22, Material.ARROW, ChatColor.WHITE + "Back", "back", "");
+        player.openInventory(inv);
+    }
 
-    private void openPacks(Player player, int page) {
-        int pageSize = 45;
-        int pageCount = (packs.size() + pageSize - 1) / pageSize;
-        page = Math.max(0, Math.min(page, pageCount - 1));
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "XZH Achievement Packs (" + (page + 1) + "/" + pageCount + ")");
-        int start = page * pageSize;
-        int end = Math.min(packs.size(), start + pageSize);
-        for (int index = start; index < end; index++) {
-            Pack pack = packs.get(index);
-            boolean completed = data.getBoolean("completed-packs." + player.getUniqueId() + "." + pack.id(), false);
+    private void openPacks(Player player, String tier, int page) {
+        if (!List.of("easy", "hard", "master").contains(tier) || !tierUnlocked(player, tier)) {
+            openPacks(player);
+            return;
+        }
+        List<Pack> list = packs.stream().filter(pack -> tierOf(pack).equals(tier)).toList();
+        int pages = Math.max(1, (list.size() + 44) / 45);
+        int pg = Math.max(0, Math.min(page, pages - 1));
+        String label = tier.substring(0, 1).toUpperCase(Locale.ROOT) + tier.substring(1);
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "XZH " + label + " Packs " + (pg + 1));
+        for (int i = pg * 45; i < Math.min(list.size(), pg * 45 + 45); i++) {
+            Pack pack = list.get(i);
+            boolean done = completedPack(player.getUniqueId(), pack.id());
             boolean unlocked = hasAdvancement(player, pack.advancement());
             List<String> lore = new ArrayList<>();
-            if (completed) {
-                lore.add(ChatColor.DARK_GRAY + "COMPLETED");
-                lore.add(ChatColor.RED + "Permanently unavailable");
-                lore.add(ChatColor.GRAY + "This achievement pack can only be completed once.");
-            } else {
-                lore.add(ChatColor.WHITE + "Cost: " + ChatColor.YELLOW + pack.cost() + " coins");
-                lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + rewardForPack(pack) + " coins");
-                lore.add(ChatColor.WHITE + "Objectives:");
-                for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + "• " + objective.description());
-                lore.add(unlocked ? ChatColor.GREEN + "UNLOCKED" : ChatColor.RED + "Unlock requirement: " + unlockDescription(pack.id()));
-                int timerMinutes = packTimerLimitMinutes(pack.id());
-                lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
-                lore.add(ChatColor.GRAY + "One-time achievement challenge");
-            }
-            Material icon = completed ? Material.BLACK_STAINED_GLASS_PANE : unlocked ? pack.icon() : Material.BARRIER;
-            String action = completed ? "pack-completed" : unlocked ? "pack-select" : "locked";
-            String title = (completed ? ChatColor.DARK_GRAY : unlocked ? ChatColor.YELLOW : ChatColor.RED) + pack.name();
-            add(inv, index - start, icon, title, action, pack.id(), lore);
+            lore.add(ChatColor.WHITE + "Cost: " + ChatColor.YELLOW + pack.cost() + " coins");
+            lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + rewardForPack(pack) + " coins");
+            lore.add(ChatColor.WHITE + "Profit: " + ChatColor.GOLD + "+" + (rewardForPack(pack) - pack.cost()) + " coins");
+            lore.add(ChatColor.WHITE + "Objectives:");
+            for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + "• " + objective.description());
+            lore.add(done ? ChatColor.DARK_GRAY + "COMPLETED FOR LIFE — reward already claimed"
+                    : unlocked ? ChatColor.GREEN + "UNLOCKED"
+                    : ChatColor.RED + "Complete the pack's progression achievement");
+            int timerMinutes = packTimerLimitMinutes(pack.id());
+            lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes"
+                    : ChatColor.GRAY + "No time limit");
+            Material icon = done ? Material.BLACK_STAINED_GLASS_PANE : unlocked ? pack.icon() : Material.BARRIER;
+            add(inv, i - pg * 45, icon, (done ? ChatColor.DARK_GRAY : unlocked ? ChatColor.YELLOW : ChatColor.RED)
+                    + pack.name(), done ? "pack-completed" : unlocked ? "pack-select" : "locked", pack.id(), lore);
         }
-        if (page > 0) add(inv, 45, Material.ARROW, ChatColor.WHITE + "Previous page", "pack-page", Integer.toString(page - 1));
-        add(inv, 49, Material.ARROW, ChatColor.WHITE + "Back", "back", "");
-        if (page + 1 < pageCount) add(inv, 53, Material.ARROW, ChatColor.WHITE + "Next page", "pack-page", Integer.toString(page + 1));
+        if (pg > 0) add(inv, 45, Material.ARROW, ChatColor.WHITE + "Previous page", "pack-page", tier + ":" + (pg - 1));
+        add(inv, 49, Material.ARROW, ChatColor.WHITE + "Difficulties", "back-tiers", "");
+        if (pg + 1 < pages) add(inv, 53, Material.ARROW, ChatColor.WHITE + "Next page", "pack-page", tier + ":" + (pg + 1));
         player.openInventory(inv);
     }
 
@@ -394,7 +466,7 @@ public final class QuestManager implements Listener {
             plugin.tellPublic(player, "Your loan is overdue. Quest-pack purchases are locked until full repayment.");
             return;
         }
-        if (!hasAdvancement(player, pack.advancement())) {
+        if (!tierUnlocked(player, tierOf(pack)) || !hasAdvancement(player, pack.advancement())) {
             plugin.tellPublic(player, "Complete the required advancement to unlock this quest pack.");
             return;
         }
@@ -580,6 +652,7 @@ public final class QuestManager implements Listener {
 
     private int rewardForPack(Pack pack) {
         String id = pack.id();
+        if (id.startsWith("easy_") || id.startsWith("hard_") || id.startsWith("master_")) return pack.reward();
         double multiplier = 2.0;
         if (List.of("dragon_slayer", "wither_siege", "debris_hunter", "end_expedition",
                 "nether_blaze", "nether_hunter", "raid_supply", "shulker_sweep",
@@ -953,7 +1026,7 @@ public final class QuestManager implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
         if (title == null || !(title.equals("XZH Quests") || title.equals("XZH Single Quests")
-                || title.startsWith("XZH Achievement Packs") || title.equals("Confirm quest pack")
+                || title.startsWith("XZH Achievement Packs") || title.equals("XZH Pack Tiers") || title.startsWith("XZH Easy Packs") || title.startsWith("XZH Hard Packs") || title.startsWith("XZH Master Packs") || title.equals("Confirm quest pack")
                 || title.equals("XZH Global Quest"))) return;
         event.setCancelled(true);
         ItemStack item = event.getCurrentItem();
@@ -970,12 +1043,20 @@ public final class QuestManager implements Listener {
             case "single-buy" -> { try { buyRandom(player, Integer.parseInt(value)); } catch (NumberFormatException ignored) { } }
             case "single-secret-buy" -> buyRandom(player, 5);
             case "single-info" -> plugin.tellPublic(player, "Five random quests are available; each purchase replaces its offer slot.");
-            case "pack-page" -> { try { openPacks(player, Integer.parseInt(value)); } catch (NumberFormatException ignored) { } }
+            case "pack-tier" -> openPacks(player, value, 0);
+            case "tier-locked" -> plugin.tellPublic(player, tierUnlockDescription(value));
+            case "pack-page" -> {
+                String[] parts = value.split(":");
+                try { openPacks(player, parts[0], Integer.parseInt(parts[1])); }
+                catch (RuntimeException ignored) { openPacks(player); }
+            }
+            case "back-tiers" -> openPacks(player);
+            case "pack-completed" -> plugin.tellPublic(player, "This achievement pack is permanently completed and cannot reward you again.");
             case "pack-select" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> confirmPack(player, p));
             case "pack-buy" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> buyPack(player, p));
             case "global-claim" -> plugin.tellPublic(player, "Global quest rewards are paid automatically to contributors when the community completes the objective.");
             case "back" -> open(player);
-            case "back-packs" -> openPacks(player);
+            case "back-packs" -> { Pack pack = packs.stream().filter(p -> p.id().equals(value)).findFirst().orElse(null); if (pack == null) openPacks(player); else openPacks(player, tierOf(pack), 0); }
             default -> { }
         }
     }
