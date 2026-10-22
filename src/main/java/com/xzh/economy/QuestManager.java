@@ -162,7 +162,7 @@ public final class QuestManager implements Listener {
         new Pack("pumpkin_delivery", "Pumpkin Delivery", Material.PUMPKIN, 199, 279, "minecraft:husbandry/plant_seed", List.of(new Objective("collect:PUMPKIN", 64, "Collect 64 Pumpkins")))
     );
 
-    // Generate 100 one-time packs for each progression tier from the curated objective pool.
+    // Generate 100 one-time packs per progression tier from the expanded curated objective pool.
     private final List<Pack> packs = buildPacks();
 
     private List<Pack> buildPacks() {
