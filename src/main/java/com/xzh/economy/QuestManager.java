@@ -611,7 +611,6 @@ public final class QuestManager implements Listener {
 
     @EventHandler
     public void onFurnaceExtract(FurnaceExtractEvent event) {
-        if (event.isCancelled()) return;
         Player player = event.getPlayer();
         if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
                 || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
