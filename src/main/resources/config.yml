@@ -281,20 +281,49 @@ book-shop:
     sweeping_edge: 4
     infinity: 4
   prices:
-    mending: 1200
-    wind_burst: 1500
-    swift_sneak: 700
-    soul_speed: 700
-    frost_walker: 700
-    fortune: 600
-    silk_touch: 600
-    unbreaking: 600
-    efficiency: 600
-    looting: 600
-    sharpness: 500
-    protection: 500
-    feather_falling: 500
-    power: 500
+    mending: 3000
+    wind_burst: 3500
+    lunge: 1800
+    swift_sneak: 1600
+    soul_speed: 1500
+    frost_walker: 1400
+    fortune: 1400
+    silk_touch: 1400
+    unbreaking: 1300
+    efficiency: 1300
+    looting: 1300
+    sharpness: 1100
+    protection: 1100
+    feather_falling: 1100
+    power: 1100
+    breach: 1800
+    density: 1800
+    infinity: 1100
+    riptide: 1100
+    channeling: 1300
+    thorns: 1000
+    sweeping_edge: 1000
+    depth_strider: 1000
+    fire_aspect: 1000
+    smite: 1000
+    loyalty: 1000
+    impaling: 1000
+    aqua_affinity: 850
+    respiration: 850
+    fire_protection: 850
+    blast_protection: 850
+    projectile_protection: 850
+    flame: 850
+    multishot: 850
+    luck_of_the_sea: 850
+    bane_of_arthropods: 750
+    knockback: 750
+    punch: 750
+    piercing: 750
+    quick_charge: 750
+    lure: 750
+    binding_curse: 500
+    vanishing_curse: 500
 
 # Configurable starter kit; items use MATERIAL:AMOUNT syntax.
 kits:
