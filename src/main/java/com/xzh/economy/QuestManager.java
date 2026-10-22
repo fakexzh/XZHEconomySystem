@@ -16,6 +16,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
+import org.bukkit.event.inventory.FurnaceExtractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -606,6 +607,20 @@ public final class QuestManager implements Listener {
         if (event.getItem().getThrower() != null) return;
         Material material = event.getItem().getItemStack().getType();
         incrementTarget(p, "collect:" + material.name(), event.getItem().getItemStack().getAmount());
+    }
+
+    @EventHandler
+    public void onFurnaceExtract(FurnaceExtractEvent event) {
+        if (event.isCancelled()) return;
+        Player player = event.getPlayer();
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        Material material = event.getItemType();
+        int amount = event.getItemAmount();
+        if (material == null || material == Material.AIR || amount <= 0) return;
+        // Count only the items actually extracted from furnace-family output slots.
+        // FurnaceExtractEvent covers furnaces, blast furnaces, and smokers, including shift-click extraction.
+        incrementTarget(player, "collect:" + material.name(), amount);
     }
 
     @EventHandler
