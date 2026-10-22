@@ -206,14 +206,19 @@ public final class BookShopManager implements Listener {
 
     private double defaultPrice(String key) {
         return switch (key) {
-            case "mending" -> 1200;
-            case "wind_burst" -> 1500;
-            case "lunge" -> 600;
-            case "swift_sneak", "soul_speed", "frost_walker" -> 700;
-            case "fortune", "silk_touch", "unbreaking", "efficiency", "looting" -> 600;
-            case "sharpness", "protection", "feather_falling", "power", "breach", "density" -> 500;
-            case "infinity", "riptide", "channeling", "thorns", "sweeping_edge" -> 450;
-            default -> 250;
+            case "mending" -> 3000;
+            case "wind_burst" -> 3500;
+            case "lunge", "breach", "density" -> 1800;
+            case "swift_sneak" -> 1600;
+            case "soul_speed" -> 1500;
+            case "frost_walker", "fortune", "silk_touch" -> 1400;
+            case "unbreaking", "efficiency", "looting", "channeling" -> 1300;
+            case "sharpness", "protection", "feather_falling", "power", "infinity", "riptide" -> 1100;
+            case "thorns", "sweeping_edge", "depth_strider", "fire_aspect", "smite", "loyalty", "impaling" -> 1000;
+            case "aqua_affinity", "respiration", "fire_protection", "blast_protection", "projectile_protection", "flame", "multishot", "luck_of_the_sea" -> 850;
+            case "bane_of_arthropods", "knockback", "punch", "piercing", "quick_charge", "lure" -> 750;
+            case "binding_curse", "vanishing_curse" -> 500;
+            default -> 600;
         };
     }
 

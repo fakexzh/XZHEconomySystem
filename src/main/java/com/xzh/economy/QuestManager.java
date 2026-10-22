@@ -12,6 +12,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockDropItemEvent;
+import org.bukkit.block.data.Ageable;
+import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -48,7 +51,7 @@ public final class QuestManager implements Listener {
     private final Random random = new Random();
     private final List<Double> travelRemainders = new ArrayList<>();
 
-    private final List<Pack> packs = List.of(
+    private final List<Pack> basePacks = List.of(
         new Pack("stone_survey", "Stone Survey", Material.IRON_PICKAXE, 80, 112, "minecraft:story/iron_tools", List.of(new Objective("break:STONE", 256, "Mine 256 Stone"))),
         new Pack("coal_contract", "Coal Contract", Material.COAL, 100, 140, "minecraft:story/smelt_iron", List.of(new Objective("collect:COAL", 64, "Collect 64 Coal"))),
         new Pack("iron_miner", "Iron Miner", Material.RAW_IRON, 140, 196, "minecraft:story/iron_tools", List.of(new Objective("break:IRON_ORE", 48, "Mine 48 Iron Ore"))),
@@ -68,8 +71,8 @@ public final class QuestManager implements Listener {
         new Pack("ocean_fisher", "Ocean Fishing", Material.FISHING_ROD, 180, 252, "minecraft:husbandry/tactical_fishing", List.of(new Objective("fish:COD", 16, "Catch 16 Cod while fishing"))),
         new Pack("salmon_run", "Salmon Run", Material.SALMON, 200, 280, "minecraft:husbandry/fishy_business", List.of(new Objective("fish:SALMON", 16, "Catch 16 Salmon while fishing"))),
         new Pack("deep_sea", "Deep Sea Haul", Material.TROPICAL_FISH, 420, 588, "minecraft:husbandry/fishy_business", List.of(new Objective("fish:TROPICAL_FISH", 8, "Catch 8 Tropical Fish"))),
-        new Pack("farm_starter", "Farm Starter", Material.WHEAT, 70, 98, "minecraft:husbandry/plant_seed", List.of(new Objective("collect:WHEAT", 64, "Harvest or collect 64 Wheat"))),
-        new Pack("root_vegetables", "Root Vegetable Run", Material.CARROT, 100, 140, "minecraft:husbandry/plant_seed", List.of(new Objective("collect:CARROT", 128, "Collect 128 Carrots"))),
+        new Pack("farm_starter", "Farm Starter", Material.WHEAT, 70, 98, "minecraft:husbandry/plant_seed", List.of(new Objective("harvest:WHEAT", 64, "Harvest 64 fully grown Wheat crops"))),
+        new Pack("root_vegetables", "Root Vegetable Run", Material.CARROT, 100, 140, "minecraft:husbandry/plant_seed", List.of(new Objective("harvest:CARROT", 128, "Harvest 128 fully grown Carrot crops"))),
         new Pack("baked_goods", "Baker's Order", Material.BREAD, 120, 168, "minecraft:husbandry/balanced_diet", List.of(new Objective("collect:BREAD", 64, "Collect 64 Bread"))),
         new Pack("meat_supply", "Meat Supply", Material.COOKED_BEEF, 180, 252, "minecraft:husbandry/balanced_diet", List.of(new Objective("collect:COOKED_BEEF", 64, "Collect 64 Cooked Beef"))),
         new Pack("animal_breeder", "Animal Breeder", Material.WHEAT, 150, 210, "minecraft:husbandry/breed_an_animal", List.of(new Objective("breed:ANY", 12, "Breed 12 animals"))),
@@ -82,6 +85,25 @@ public final class QuestManager implements Listener {
         new Pack("raid_supply", "Raid Supply", Material.CROSSBOW, 380, 532, "minecraft:adventure/ol_betsy", List.of(new Objective("kill:PILLAGER", 25, "Defeat 25 Pillagers"))),
         new Pack("wither_siege", "Wither Siege", Material.NETHER_STAR, 2500, 3750, "minecraft:nether/summon_wither", List.of(new Objective("kill:WITHER", 1, "Defeat the Wither"), new Objective("collect:NETHER_STAR", 1, "Collect a Nether Star")))
     );
+
+    private final List<Pack> packs = buildPacks();
+    private List<Pack> buildPacks() {
+        List<Pack> result = new ArrayList<>(300); String[] tiers = {"easy","hard","master"};
+        for (int tier=0;tier<3;tier++) for (int i=0;i<100;i++) {
+            Pack t=basePacks.get((i*7+tier*11)%basePacks.size()); String id=tiers[tier]+"_"+String.format(Locale.ROOT,"%03d",i+1);
+            int cost=Math.max(tier==0?50:tier==1?250:700,(int)Math.round(t.cost()*(tier==0?.70:tier==1?1.20:1.80)));
+            int reward=(int)Math.ceil(cost*(tier==0?1.45:tier==1?1.70:2.0));
+            double scale=tier==0?.80+(i%4)*.10:tier==1?1.10+(i%4)*.15:1.50+(i%4)*.20;
+            List<Objective> os=new ArrayList<>(); for(Objective o:t.objectives()){int goal=Math.max(1,(int)Math.ceil(o.goal()*scale));os.add(new Objective(o.target(),goal,o.description().replaceFirst("\\d+",Integer.toString(goal))));}
+            String adv=tier==0?t.advancement():tier==1?"minecraft:story/mine_diamond":"minecraft:end/kill_dragon";
+            String label=tiers[tier].substring(0,1).toUpperCase(Locale.ROOT)+tiers[tier].substring(1);
+            result.add(new Pack(id,label+" Pack "+String.format(Locale.ROOT,"%03d",i+1)+" - "+t.name(),t.icon(),cost,reward,adv,List.copyOf(os)));
+        } return List.copyOf(result);
+    }
+    private String tierOf(Pack p){return p.id().startsWith("master_")?"master":p.id().startsWith("hard_")?"hard":"easy";}
+    private boolean tierUnlocked(Player p,String tier){return switch(tier){case "hard"->hasAdvancement(p,"minecraft:story/mine_diamond");case "master"->hasAdvancement(p,"minecraft:end/kill_dragon");default->true;};}
+    private String tierUnlockDescription(String tier){return switch(tier){case "hard"->"Unlock Hard packs by obtaining the Diamonds advancement";case "master"->"Unlock Master packs by defeating the Ender Dragon";default->"Easy packs are available from the start; individual packs have requirements";};}
+    private boolean completedPack(UUID id,String packId){return data.getBoolean("completed-packs."+id+"."+packId,false);}
 
     private final List<RandomQuest> randomPool = List.of(
         new RandomQuest("Deep Diamond Expedition", Material.DIAMOND, 180, 252, new Objective("break:DIAMOND_ORE", 12, "Mine 12 Diamond Ore")),
@@ -98,7 +120,7 @@ public final class QuestManager implements Listener {
         new RandomQuest("Animal Breeding", Material.PORKCHOP, 120, 168, new Objective("breed:ANY", 10, "Breed 10 animals")),
         new RandomQuest("Travel Contract", Material.COMPASS, 100, 140, new Objective("travel", 2500, "Travel 2,500 blocks")),
         new RandomQuest("Woodcutting Contract", Material.OAK_LOG, 100, 140, new Objective("break:OAK_LOG", 128, "Chop 128 Oak Logs")),
-        new RandomQuest("Crop Delivery", Material.CARROT, 85, 119, new Objective("collect:CARROT", 96, "Collect 96 Carrots")),
+        new RandomQuest("Crop Delivery", Material.CARROT, 85, 119, new Objective("harvest:CARROT", 96, "Harvest 96 fully grown Carrot crops")),
         new RandomQuest("Blaze Rod Shipment", Material.BLAZE_ROD, 190, 266, new Objective("collect:BLAZE_ROD", 32, "Collect 32 Blaze Rods")),
         new RandomQuest("Sand Quarry", Material.SAND, 75, 105, new Objective("break:SAND", 256, "Mine 256 Sand")),
         new RandomQuest("Monster Cleanup", Material.IRON_SWORD, 140, 196, new Objective("kill:SKELETON", 30, "Kill 30 Skeletons")),
@@ -188,6 +210,7 @@ public final class QuestManager implements Listener {
         long next = data.getLong("single-shop.next-refresh", nextRefresh(System.currentTimeMillis()));
         long mins = Math.max(0, (next - System.currentTimeMillis()) / 60000L);
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "XZH Single Quests");
+        add(inv,4,Material.ENDER_EYE,ChatColor.LIGHT_PURPLE+"??? Secret Quest","single-secret-buy","secret",List.of(ChatColor.WHITE+"Purchase price: "+ChatColor.YELLOW+data.getInt("single-shop.secret.cost",250)+" coins",ChatColor.WHITE+"Profit: "+ChatColor.GREEN+"+"+data.getInt("single-shop.secret.margin",40)+"%",ChatColor.GRAY+"Objective and reward details are hidden.",ChatColor.GRAY+"Refresh in "+Math.max(0,(data.getLong("single-shop.secret.next-refresh",System.currentTimeMillis())-System.currentTimeMillis())/60000L)+" minute(s)"));
         for (int i = 0; i < 5; i++) {
             int poolIndex = data.getInt("single-shop.offers." + i, i % randomPool.size());
             RandomQuest offer = randomPool.get(Math.floorMod(poolIndex, randomPool.size()));
@@ -201,13 +224,9 @@ public final class QuestManager implements Listener {
             lore.add(ChatColor.WHITE + "Completion reward: " + ChatColor.GREEN + reward + " coins");
             lore.add(isTimedSingle(offer) ? ChatColor.RED + "Time limit: 30 minutes" : ChatColor.GRAY + "No time limit");
             lore.add(ChatColor.GRAY + "Refresh in " + (mins / 60) + "h " + (mins % 60) + "m");
-            add(inv, 10 + i, offer.icon(), ChatColor.YELLOW + offer.name(), "single-buy", Integer.toString(i), lore);
+            add(inv, 19 + i, offer.icon(), ChatColor.YELLOW + offer.name(), "single-buy", Integer.toString(i), lore);
         }
-        add(inv, 22, Material.ENDER_EYE, ChatColor.LIGHT_PURPLE + "??? Secret Quest", "single-secret-buy", "secret",
-            List.of(ChatColor.WHITE + "Purchase price: " + ChatColor.YELLOW + data.getInt("single-shop.secret.cost", 250) + " coins",
-                    ChatColor.WHITE + "Profit: " + ChatColor.GREEN + "+" + data.getInt("single-shop.secret.margin", 40) + "%",
-                    ChatColor.GRAY + "Objective and reward details are hidden.",
-                    ChatColor.GRAY + "Refresh in " + Math.max(0, (data.getLong("single-shop.secret.next-refresh", System.currentTimeMillis()) - System.currentTimeMillis()) / 60000L) + " minute(s)"));
+
         add(inv, 31, Material.CLOCK, ChatColor.AQUA + "Offer refresh", "single-info", "",
             List.of(ChatColor.WHITE + "Five regular offers refresh every 2 hours.",
                     ChatColor.WHITE + "The secret quest refreshes every 30 minutes.",
@@ -217,24 +236,24 @@ public final class QuestManager implements Listener {
     }
 
     private void openPacks(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "XZH Achievement Packs");
-        int slot = 0;
-        for (Pack pack : packs) {
-            boolean unlocked = hasAdvancement(player, pack.advancement());
-            List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.WHITE + "Cost: " + ChatColor.YELLOW + pack.cost() + " coins");
-            lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + pack.reward() + " coins");
-            lore.add(ChatColor.WHITE + "Objectives:");
-            for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + "• " + objective.description());
-            lore.add(unlocked ? ChatColor.GREEN + "UNLOCKED" : ChatColor.RED + "Unlock requirement: " + unlockDescription(pack.id()));
-            int timerMinutes = packTimerLimitMinutes(pack.id());
-            lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
-            lore.add(ChatColor.GRAY + "Fixed handcrafted pack; multi-objective");
-            add(inv, slot++, unlocked ? pack.icon() : Material.BARRIER,
-                (unlocked ? ChatColor.YELLOW : ChatColor.RED) + pack.name(), unlocked ? "pack-select" : "locked", pack.id(), lore);
+        Inventory inv=Bukkit.createInventory(null,27,ChatColor.DARK_PURPLE+"XZH Pack Tiers");
+        for(String tier:List.of("easy","hard","master")){
+            boolean unlocked=tierUnlocked(player,tier); Material icon=tier.equals("easy")?Material.LIME_STAINED_GLASS_PANE:tier.equals("hard")?Material.YELLOW_STAINED_GLASS_PANE:Material.PURPLE_STAINED_GLASS_PANE;
+            if(!unlocked)icon=Material.BARRIER; String label=tier.equals("easy")?"Easy Packs":tier.equals("hard")?"Hard Packs":"Master Packs";
+            long done=packs.stream().filter(p->tierOf(p).equals(tier)&&completedPack(player.getUniqueId(),p.id())).count();
+            add(inv,tier.equals("easy")?11:tier.equals("hard")?13:15,icon,(unlocked?ChatColor.GREEN:ChatColor.RED)+label,unlocked?"pack-tier":"tier-locked",tier,List.of(ChatColor.WHITE+"Packs: 100",ChatColor.WHITE+"Completed: "+done+"/100",ChatColor.GOLD+tierUnlockDescription(tier)));
+        } add(inv,22,Material.ARROW,ChatColor.WHITE+"Back","back","");player.openInventory(inv);
+    }
+    private void openPacks(Player player,String tier,int page){
+        if(!List.of("easy","hard","master").contains(tier)||!tierUnlocked(player,tier)){openPacks(player);return;}
+        List<Pack> list=packs.stream().filter(p->tierOf(p).equals(tier)).toList();int pages=Math.max(1,(list.size()+44)/45),pg=Math.max(0,Math.min(page,pages-1));
+        String label=tier.substring(0,1).toUpperCase(Locale.ROOT)+tier.substring(1);Inventory inv=Bukkit.createInventory(null,54,ChatColor.DARK_PURPLE+"XZH "+label+" Packs "+(pg+1));
+        for(int i=pg*45;i<Math.min(list.size(),pg*45+45);i++){Pack p=list.get(i);boolean done=completedPack(player.getUniqueId(),p.id()),unlocked=hasAdvancement(player,p.advancement());
+            List<String> lore=new ArrayList<>();lore.add(ChatColor.WHITE+"Cost: "+ChatColor.YELLOW+p.cost()+" coins");lore.add(ChatColor.WHITE+"Reward: "+ChatColor.GREEN+p.reward()+" coins");lore.add(ChatColor.WHITE+"Profit: "+ChatColor.GOLD+"+"+(p.reward()-p.cost())+" coins");lore.add(ChatColor.WHITE+"Objectives:");for(Objective o:p.objectives())lore.add(ChatColor.AQUA+"• "+o.description());
+            lore.add(done?ChatColor.DARK_GRAY+"COMPLETED FOR LIFE — reward already claimed":unlocked?ChatColor.GREEN+"UNLOCKED":ChatColor.RED+"Complete the pack's progression achievement");
+            Material icon=done?Material.BLACK_STAINED_GLASS_PANE:unlocked?p.icon():Material.BARRIER;add(inv,i-pg*45,icon,(done?ChatColor.DARK_GRAY:unlocked?ChatColor.YELLOW:ChatColor.RED)+p.name(),done?"pack-completed":unlocked?"pack-select":"locked",p.id(),lore);
         }
-        add(inv, 49, Material.ARROW, ChatColor.WHITE + "Back", "back", "");
-        player.openInventory(inv);
+        if(pg>0)add(inv,45,Material.ARROW,ChatColor.WHITE+"Previous page","pack-page",tier+":"+(pg-1));add(inv,49,Material.ARROW,ChatColor.WHITE+"Difficulties","back-tiers","");if(pg+1<pages)add(inv,53,Material.ARROW,ChatColor.WHITE+"Next page","pack-page",tier+":"+(pg+1));player.openInventory(inv);
     }
 
     private void confirmPack(Player player, Pack pack) {
@@ -289,10 +308,8 @@ public final class QuestManager implements Listener {
             plugin.tellPublic(player, "Your loan is overdue. Quest-pack purchases are locked until full repayment.");
             return;
         }
-        if (!hasAdvancement(player, pack.advancement())) {
-            plugin.tellPublic(player, "Complete the required advancement to unlock this quest pack.");
-            return;
-        }
+        if(completedPack(id,pack.id())){plugin.tellPublic(player,"This achievement pack is already completed for life.");return;}
+        if(!tierUnlocked(player,tierOf(pack))||!hasAdvancement(player,pack.advancement())){plugin.tellPublic(player,"Complete the required progression achievement to unlock this quest pack.");return;}
         if (!data.getString(id + ".active", "").isBlank()) {
             plugin.tellPublic(player, "Finish your active quest before buying another.");
             return;
@@ -333,6 +350,10 @@ public final class QuestManager implements Listener {
         Material material = event.getBlock().getType();
         String id = material.name();
         incrementTarget(p, "break:" + id, 1);
+        if (event.getBlock().getBlockData() instanceof Ageable ageable && ageable.getAge() >= ageable.getMaximumAge()) {
+            Material crop=switch(material){case WHEAT->Material.WHEAT;case CARROTS->Material.CARROT;case POTATOES->Material.POTATO;case BEETROOTS->Material.BEETROOT;case NETHER_WART->Material.NETHER_WART;case COCOA->Material.COCOA_BEANS;default->null;};
+            if(crop!=null)incrementTarget(p,"harvest:"+crop.name(),1);
+        }
         if (material.name().endsWith("_ORE") || material == Material.ANCIENT_DEBRIS) {
             incrementTarget(p, "break:ANY_ORE", 1);
             recordEventOre(p);
@@ -344,15 +365,19 @@ public final class QuestManager implements Listener {
         Player p = event.getEntity().getKiller();
         if (p == null || p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         incrementTarget(p, "kill:" + event.getEntityType().name(), 1);
+        for(ItemStack drop:event.getDrops())incrementTarget(p,"collect:"+drop.getType().name(),drop.getAmount());
     }
 
     @EventHandler
-    public void onPickup(PlayerAttemptPickupItemEvent event) {
-        if (event.isCancelled()) return;
-        Player p = event.getPlayer();
-        if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
-        Material material = event.getItem().getItemStack().getType();
-        incrementTarget(p, "collect:" + material.name(), event.getItem().getItemStack().getAmount());
+    public void onBlockDrop(BlockDropItemEvent event) {
+        if(event.isCancelled())return; Player p=event.getPlayer();
+        if(p.getGameMode()==org.bukkit.GameMode.CREATIVE||p.getGameMode()==org.bukkit.GameMode.SPECTATOR)return;
+        for(org.bukkit.entity.Item item:event.getItems())incrementTarget(p,"collect:"+item.getItemStack().getType().name(),item.getItemStack().getAmount());
+    }
+    @EventHandler
+    public void onCraft(CraftItemEvent event) {
+        if(!(event.getWhoClicked() instanceof Player p)||p.getGameMode()==org.bukkit.GameMode.CREATIVE||p.getGameMode()==org.bukkit.GameMode.SPECTATOR)return;
+        if(event.getCurrentItem()!=null)incrementTarget(p,"collect:"+event.getCurrentItem().getType().name(),event.getCurrentItem().getAmount());
     }
 
     @EventHandler
@@ -414,13 +439,13 @@ public final class QuestManager implements Listener {
             changed = true;
         }
         if (!changed) return;
-        if (allComplete(id)) {
-            int reward = data.getInt(id + ".reward", 0);
-            plugin.setBalance(id, plugin.getBalance(id) + reward);
-            plugin.tellPublic(player, "Quest completed! Reward: " + reward + " coins.");
-            data.set(id.toString(), null);
-            plugin.getHudManager().hideActiveQuest(player);
-        } else updateHud(player);
+        if(allComplete(id)){
+            int reward=data.getInt(id+".reward",0);String completedName=data.getString(id+".name","Quest"),activeId=data.getString(id+".active","");
+            plugin.setBalance(id,plugin.getBalance(id)+reward);plugin.tellPublic(player,"Quest completed! Reward: "+reward+" coins.");
+            if(activeId.startsWith("pack:"))data.set("completed-packs."+id+"."+activeId.substring("pack:".length()),true);
+            Bukkit.broadcastMessage(ChatColor.GOLD+"[XZH QUESTS] "+ChatColor.YELLOW+player.getName()+ChatColor.WHITE+" completed "+ChatColor.AQUA+completedName+ChatColor.WHITE+" and earned "+ChatColor.GREEN+reward+" coins!");
+            player.playSound(player.getLocation(),org.bukkit.Sound.ENTITY_EXPERIENCE_ORB_PICKUP,.65f,1.15f);data.set(id.toString(),null);plugin.getHudManager().hideActiveQuest(player);
+        }else updateHud(player);
         save();
     }
 
@@ -533,8 +558,9 @@ public final class QuestManager implements Listener {
         data.set("event.claimed." + id, today);
         data.set("event.claims-remaining", remaining - 1);
         save();
-        plugin.setBalance(id, plugin.getBalance(id) + reward);
-        plugin.tellPublic(player, "Global quest reward claimed: " + reward + " coins.");
+        plugin.setBalance(id,plugin.getBalance(id)+reward);
+        Bukkit.broadcastMessage(ChatColor.GOLD+"[XZH QUESTS] "+ChatColor.YELLOW+player.getName()+ChatColor.WHITE+" completed their Global Quest claim and earned "+ChatColor.GREEN+reward+" coins!");
+        plugin.tellPublic(player,"Global quest reward claimed: "+reward+" coins.");
         openGlobal(player);
     }
 
@@ -646,9 +672,7 @@ public final class QuestManager implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (title == null || !(title.equals("XZH Quests") || title.equals("XZH Single Quests")
-                || title.equals("XZH Achievement Packs") || title.equals("Confirm quest pack")
-                || title.equals("XZH Global Quest"))) return;
+        if(title==null||!(title.equals("XZH Quests")||title.equals("XZH Single Quests")||title.equals("XZH Pack Tiers")||title.startsWith("XZH Easy Packs ")||title.startsWith("XZH Hard Packs ")||title.startsWith("XZH Master Packs ")||title.equals("Confirm quest pack")||title.equals("XZH Global Quest")))return;
         event.setCancelled(true);
         ItemStack item = event.getCurrentItem();
         if (item == null || !item.hasItemMeta()) return;
@@ -660,6 +684,11 @@ public final class QuestManager implements Listener {
             case "close" -> player.closeInventory();
             case "section-single" -> openSingle(player);
             case "section-packs" -> openPacks(player);
+            case "pack-tier" -> openPacks(player,value,0);
+            case "tier-locked" -> plugin.tellPublic(player,tierUnlockDescription(value));
+            case "pack-page" -> {String[] a=value.split(":");try{openPacks(player,a[0],Integer.parseInt(a[1]));}catch(RuntimeException ignored){openPacks(player);}}
+            case "back-tiers" -> openPacks(player);
+            case "pack-completed" -> plugin.tellPublic(player,"This achievement pack is permanently completed and cannot reward you again.");
             case "section-global" -> openGlobal(player);
             case "single-buy" -> { try { buyRandom(player, Integer.parseInt(value)); } catch (NumberFormatException ignored) { } }
             case "single-secret-buy" -> buyRandom(player, 5);
@@ -668,7 +697,7 @@ public final class QuestManager implements Listener {
             case "pack-buy" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> buyPack(player, p));
             case "global-claim" -> claimGlobal(player);
             case "back" -> open(player);
-            case "back-packs" -> openPacks(player);
+            case "back-packs" -> {Pack p=packs.stream().filter(x->x.id().equals(value)).findFirst().orElse(null);if(p==null)openPacks(player);else openPacks(player,tierOf(p),0);}
             default -> { }
         }
     }

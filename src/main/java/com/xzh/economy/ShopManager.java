@@ -131,8 +131,6 @@ public final class ShopManager implements Listener {
         new Product("eggs-heads", Material.COW_SPAWN_EGG, 1500, 0),
         new Product("eggs-heads", Material.SHEEP_SPAWN_EGG, 1500, 0),
         new Product("eggs-heads", Material.PIG_SPAWN_EGG, 1500, 0),
-        new Product("eggs-heads", Material.HORSE_SPAWN_EGG, 2500, 0),
-        new Product("eggs-heads", Material.DONKEY_SPAWN_EGG, 2500, 0),
         new Product("eggs-heads", Material.RABBIT_SPAWN_EGG, 1800, 0),
         new Product("eggs-heads", Material.TURTLE_SPAWN_EGG, 2200, 0),
         new Product("eggs-heads", Material.AXOLOTL_SPAWN_EGG, 2800, 0),
