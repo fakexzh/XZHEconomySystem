@@ -37,6 +37,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     private File transactionsFile;
     private MoneyRequestManager moneyRequestManager;
     private BoatManager boatManager;
+    private VillagerMarketManager villagerMarketManager;
 
     @Override
     public void onEnable() {
@@ -61,6 +62,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         hudManager.start();
         shopManager = new ShopManager(this);
         boatManager = new BoatManager(this);
+        villagerMarketManager = new VillagerMarketManager(this);
         bookShopManager = new BookShopManager(this);
         loanManager = new LoanManager(this);
         getServer().getPluginManager().registerEvents(new LibrarianTradeListener(this), this);
