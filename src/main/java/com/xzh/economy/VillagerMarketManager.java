@@ -221,7 +221,7 @@ public final class VillagerMarketManager implements Listener {
             int outputAmount = randomAmount(random, output);
             String key = seed + "-" + i;
             if (type == 0) {
-                double base = plugin.getShopManager().getShopSellPrice(input);
+                double base = plugin.getShopManager().getShopBuyPrice(input);
                 if (base <= 0) {
                     // Zero-value shop items can still be used in barter deals rather than being
                     // assigned an invented cash value.
