@@ -8,6 +8,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
@@ -40,30 +41,25 @@ public final class DeathRecoveryManager implements Listener {
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
+        // XZH Survival owns inventory drops, XP loss, and bank penalties. This listener
+        // only snapshots recoverable items; it must never rewrite the death event.
         if (plugin.getConfig().getBoolean("death-recovery.overworld-only", true)
-                && player.getWorld().getEnvironment() != org.bukkit.World.Environment.NORMAL) {
-            event.setKeepInventory(true);
-            event.setKeepLevel(true);
-            event.getDrops().clear();
-            event.setDroppedExp(0);
-            return;
-        }
+                && player.getWorld().getEnvironment() != org.bukkit.World.Environment.NORMAL) return;
         if (event.getKeepInventory()) return;
+
         UUID id = player.getUniqueId();
         List<ItemStack> items = new ArrayList<>();
         for (ItemStack drop : event.getDrops()) {
-            // Physical pocket coins drop normally and must not be duplicated by paid recovery.
+            // Physical pocket coins drop normally and are never duplicated by recovery.
             if (drop != null && !drop.getType().isAir()
                     && !plugin.getPocketCoinManager().isCoin(drop)) items.add(drop.clone());
         }
         int level = player.getLevel();
         float progress = player.getExp();
         int totalXp = Math.max(0, player.getTotalExperience());
-        event.getDrops().clear();
-        event.setDroppedExp(0);
 
         double configuredXpValue = plugin.getConfig().getDouble("death-recovery.xp-value-per-point", 0.25);
         double xpValue = Double.isFinite(configuredXpValue) && configuredXpValue >= 0
@@ -83,25 +79,9 @@ public final class DeathRecoveryManager implements Listener {
             data.set(base + ".value", round(lostValue));
             data.set(base + ".expires-at", System.currentTimeMillis() + WINDOW_MILLIS);
             data.set(base + ".recovered", false);
-            double penalty = Math.ceil(Math.min(1000.0, Math.max(10.0, lostValue * 0.10)));
-            penalty = Math.min(penalty, plugin.getBalance(id));
-            plugin.setBalance(id, plugin.getBalance(id) - penalty);
-            plugin.tellPublic(player, "Death penalty: " + money(penalty) + " coins. Use /deathinventory within 30 minutes to recover your lost items and XP for a fee.");
-        } else {
-            plugin.tellPublic(player, "You lost no recoverable items or XP.");
         }
-        // Preserve the post-penalty physical coin stacks as ordinary death drops. They are
-        // excluded from the recoverable snapshot, so paying for recovery cannot duplicate money.
-        for (ItemStack item : player.getInventory().getStorageContents()) {
-            if (plugin.getPocketCoinManager().isCoin(item)) event.getDrops().add(item.clone());
-        }
-        ItemStack offhand = player.getInventory().getItemInOffHand();
-        if (plugin.getPocketCoinManager().isCoin(offhand)) event.getDrops().add(offhand.clone());
-        ItemStack cursor = player.getOpenInventory().getCursor();
-        if (plugin.getPocketCoinManager().isCoin(cursor)) {
-            event.getDrops().add(cursor.clone());
-            player.getOpenInventory().setCursor(null);
-        }
+
+        // Physical coin stacks are already present in event.getDrops(); do not add copies.
         plugin.setOfflinePocketSnapshot(id.toString(), 0.0);
         save();
     }
@@ -259,7 +239,7 @@ public final class DeathRecoveryManager implements Listener {
 
     private double safeFeeMultiplier() {
         double configured = plugin.getConfig().getDouble("death-recovery.fee-multiplier", 1.5);
-        return Double.isFinite(configured) && configured >= 1.0 ? Math.min(configured, 10.0) : 1.5;
+        return Double.isFinite(configured) && configured >= 0.01 ? Math.min(configured, 1.0) : 0.10;
     }
 
     private double recoveryValue(String base) {
