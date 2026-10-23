@@ -3,13 +3,11 @@ package com.xzh.economy;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -197,9 +195,9 @@ public final class VillagerMarketManager implements Listener {
 
     private void addStatusLore(List<String> lore, Player player, Session session, Offer offer) {
         int limit = stockLimit();
-        int remaining = Math.max(0, limit - data.getInt(stockPath(session.profession, offer), 0));
+        int remaining = Math.max(0, limit - data.getInt(stockPath(session.profession, session.mode, offer), 0));
         long now = System.currentTimeMillis();
-        long cooldownUntil = data.getLong(cooldownPath(player.getUniqueId(), session.profession, offer), 0L);
+        long cooldownUntil = data.getLong(cooldownPath(player.getUniqueId(), session.profession, session.mode, offer), 0L);
         lore.add(ChatColor.GRAY + "Stock available: " + (remaining > 0 ? ChatColor.GREEN : ChatColor.RED)
                 + remaining + ChatColor.GRAY + " / " + limit + " per profession");
         lore.add(ChatColor.GRAY + "Restock in: " + ChatColor.YELLOW + timeUntilRestock(session.profession));
@@ -267,14 +265,14 @@ public final class VillagerMarketManager implements Listener {
         }
 
         long now = System.currentTimeMillis();
-        long cooldownUntil = data.getLong(cooldownPath(player.getUniqueId(), session.profession, offer), 0L);
+        long cooldownUntil = data.getLong(cooldownPath(player.getUniqueId(), session.profession, session.mode, offer), 0L);
         if (cooldownUntil > now) {
             player.sendMessage(ChatColor.RED + "This offer is on cooldown for " + ChatColor.YELLOW
                     + formatDuration((cooldownUntil - now + 999L) / 1000L) + ChatColor.RED + ".");
             openOffers(player, session);
             return;
         }
-        String stockPath = stockPath(session.profession, offer);
+        String stockPath = stockPath(session.profession, session.mode, offer);
         int used = data.getInt(stockPath, 0);
         if (used >= stockLimit()) {
             player.sendMessage(ChatColor.RED + "This offer is out of stock. Restock in "
@@ -315,7 +313,7 @@ public final class VillagerMarketManager implements Listener {
         }
 
         data.set(stockPath, used + 1);
-        data.set(cooldownPath(player.getUniqueId(), session.profession, offer), now + cooldownMillis());
+        data.set(cooldownPath(player.getUniqueId(), session.profession, session.mode, offer), now + cooldownMillis());
         save();
         player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.7f, 1.2f);
         openOffers(player, session);
@@ -470,12 +468,12 @@ public final class VillagerMarketManager implements Listener {
         return profession.name().toLowerCase(Locale.ROOT);
     }
 
-    private String stockPath(Villager.Profession profession, Offer offer) {
-        return "stock." + professionKey(profession) + "." + offer.key();
+    private String stockPath(Villager.Profession profession, Mode mode, Offer offer) {
+        return "stock." + professionKey(profession) + "." + mode.name().toLowerCase(Locale.ROOT) + "-" + offer.key();
     }
 
-    private String cooldownPath(UUID player, Villager.Profession profession, Offer offer) {
-        return "cooldowns." + player + "." + professionKey(profession) + "." + offer.key();
+    private String cooldownPath(UUID player, Villager.Profession profession, Mode mode, Offer offer) {
+        return "cooldowns." + player + "." + professionKey(profession) + "." + mode.name().toLowerCase(Locale.ROOT) + "-" + offer.key();
     }
 
     private int stockLimit() {
