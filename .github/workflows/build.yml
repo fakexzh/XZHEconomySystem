@@ -2,6 +2,8 @@ name: Build plugin
 on:
   workflow_dispatch:
   push:
+    branches: [ main, master, integrated-release, 'feature/**' ]
+  pull_request:
     branches: [ main, master, integrated-release ]
 permissions:
   contents: read
