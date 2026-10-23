@@ -5,6 +5,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.block.data.Ageable;
 import org.bukkit.advancement.Advancement;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
@@ -12,11 +13,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockDropItemEvent;
-import org.bukkit.block.data.Ageable;
-import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.CraftItemEvent;
+import org.bukkit.event.inventory.FurnaceExtractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -32,9 +32,14 @@ import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 /** Random single quests, achievement-unlocked multi-objective packs, and shared global quests. */
@@ -42,6 +47,28 @@ public final class QuestManager implements Listener {
     private record Objective(String target, int goal, String description) {}
     private record Pack(String id, String name, Material icon, int cost, int reward, String advancement, List<Objective> objectives) {}
     private record RandomQuest(String name, Material icon, int cost, int reward, Objective objective) {}
+    private record GlobalQuest(String name, Material icon, String target, int goal, String description) {}
+    private final List<GlobalQuest> globalQuestPool = List.of(
+        new GlobalQuest("Community Ore Rush", Material.IRON_PICKAXE, "ore", 160, "Mine ores together"),
+        new GlobalQuest("Deep Mining Expedition", Material.DEEPSLATE_DIAMOND_ORE, "ore", 320, "Mine deep ores together"),
+        new GlobalQuest("Stoneworker Union", Material.STONE_PICKAXE, "ore", 500, "Keep the mining crews busy"),
+        new GlobalQuest("Monster Patrol", Material.IRON_SWORD, "mob", 80, "Defeat monsters together"),
+        new GlobalQuest("Night Watch", Material.SHIELD, "mob", 180, "Protect the settlement from monsters"),
+        new GlobalQuest("Dangerous Hunt", Material.DIAMOND_SWORD, "mob", 300, "Complete a demanding monster hunt"),
+        new GlobalQuest("Fishing Fleet", Material.FISHING_ROD, "fish", 30, "Catch fish together"),
+        new GlobalQuest("Deepwater Haul", Material.COD, "fish", 75, "Bring in a major fishing haul"),
+        new GlobalQuest("Anglers Marathon", Material.SALMON, "fish", 120, "Keep fishing until the goal is met"),
+        new GlobalQuest("Forest Cleanup", Material.OAK_LOG, "wood", 128, "Chop logs together"),
+        new GlobalQuest("Lumber Guild", Material.SPRUCE_LOG, "wood", 300, "Supply the community with timber"),
+        new GlobalQuest("Great Reforestation", Material.BIRCH_LOG, "wood", 450, "Gather a huge amount of wood"),
+        new GlobalQuest("Harvest Festival", Material.CARROT, "crop", 96, "Harvest crops together"),
+        new GlobalQuest("Farmers Market", Material.WHEAT, "crop", 220, "Collect a crop surplus"),
+        new GlobalQuest("Grand Harvest", Material.PUMPKIN, "crop", 400, "Complete a demanding farming drive"),
+        new GlobalQuest("Community Food Drive", Material.POTATO, "crop", 180, "Stock the community food supply"),
+        new GlobalQuest("Carrot Cartel", Material.CARROT, "crop", 260, "Gather carrots for the community"),
+        new GlobalQuest("Wheat Supply Run", Material.WHEAT, "crop", 320, "Harvest wheat for a large order"),
+        new GlobalQuest("Woodland Supply Run", Material.JUNGLE_LOG, "wood", 220, "Gather timber for building")
+    );
 
     private final XZHEconomySystem plugin;
     private final File file;
@@ -49,7 +76,7 @@ public final class QuestManager implements Listener {
     private final NamespacedKey actionKey;
     private final NamespacedKey valueKey;
     private final Random random = new Random();
-    private final List<Double> travelRemainders = new ArrayList<>();
+    private final Map<UUID, Double> travelRemainders = new HashMap<>();
 
     private final List<Pack> basePacks = List.of(
         new Pack("stone_survey", "Stone Survey", Material.IRON_PICKAXE, 80, 112, "minecraft:story/iron_tools", List.of(new Objective("break:STONE", 256, "Mine 256 Stone"))),
@@ -83,27 +110,113 @@ public final class QuestManager implements Listener {
         new Pack("explorer_trail", "Explorer's Trail", Material.COMPASS, 160, 224, "minecraft:adventure/adventuring_time", List.of(new Objective("travel", 5000, "Travel 5,000 blocks"))),
         new Pack("monster_patrol", "Monster Patrol", Material.IRON_SWORD, 200, 280, "minecraft:adventure/kill_a_mob", List.of(new Objective("kill:ZOMBIE", 30, "Kill 30 Zombies"), new Objective("kill:SKELETON", 20, "Kill 20 Skeletons"))),
         new Pack("raid_supply", "Raid Supply", Material.CROSSBOW, 380, 532, "minecraft:adventure/ol_betsy", List.of(new Objective("kill:PILLAGER", 25, "Defeat 25 Pillagers"))),
-        new Pack("wither_siege", "Wither Siege", Material.NETHER_STAR, 2500, 3750, "minecraft:nether/summon_wither", List.of(new Objective("kill:WITHER", 1, "Defeat the Wither"), new Objective("collect:NETHER_STAR", 1, "Collect a Nether Star")))
+        new Pack("wither_siege", "Wither Siege", Material.NETHER_STAR, 2500, 3750, "minecraft:nether/summon_wither", List.of(new Objective("kill:WITHER", 1, "Defeat the Wither"), new Objective("collect:NETHER_STAR", 1, "Collect a Nether Star"))),
+        new Pack("oak_guardian", "Oak Guardian", Material.OAK_LOG, 100, 150, "minecraft:story/iron_tools", List.of(new Objective("break:OAK_LOG", 96, "Chop 96 Oak Logs"))),
+        new Pack("birch_builder", "Birch Builder", Material.BIRCH_PLANKS, 147, 206, "minecraft:story/iron_tools", List.of(new Objective("collect:BIRCH_PLANKS", 256, "Collect 256 Birch Planks"))),
+        new Pack("spruce_supply", "Spruce Supply", Material.SPRUCE_LOG, 194, 272, "minecraft:story/iron_tools", List.of(new Objective("break:SPRUCE_LOG", 128, "Chop 128 Spruce Logs"))),
+        new Pack("jungle_journey", "Jungle Journey", Material.JUNGLE_LOG, 241, 362, "minecraft:adventure/adventuring_time", List.of(new Objective("break:JUNGLE_LOG", 96, "Chop 96 Jungle Logs"))),
+        new Pack("acacia_order", "Acacia Order", Material.ACACIA_LOG, 288, 404, "minecraft:story/iron_tools", List.of(new Objective("break:ACACIA_LOG", 96, "Chop 96 Acacia Logs"))),
+        new Pack("dark_oak_contract", "Dark Oak Contract", Material.DARK_OAK_LOG, 335, 469, "minecraft:story/iron_tools", List.of(new Objective("break:DARK_OAK_LOG", 96, "Chop 96 Dark Oak Logs"))),
+        new Pack("mangrove_harvest", "Mangrove Harvest", Material.MANGROVE_LOG, 382, 573, "minecraft:story/iron_tools", List.of(new Objective("break:MANGROVE_LOG", 96, "Chop 96 Mangrove Logs"))),
+        new Pack("cherry_grove", "Cherry Grove Supply", Material.CHERRY_LOG, 429, 601, "minecraft:adventure/adventuring_time", List.of(new Objective("break:CHERRY_LOG", 96, "Chop 96 Cherry Logs"))),
+        new Pack("bamboo_crafter", "Bamboo Crafter", Material.BAMBOO, 476, 667, "minecraft:story/iron_tools", List.of(new Objective("break:BAMBOO", 192, "Harvest 192 Bamboo"))),
+        new Pack("stone_bricks", "Stone Brick Shipment", Material.STONE_BRICKS, 523, 785, "minecraft:story/iron_tools", List.of(new Objective("collect:STONE_BRICKS", 192, "Collect 192 Stone Bricks"))),
+        new Pack("granite_quarry", "Granite Quarry", Material.GRANITE, 570, 798, "minecraft:story/iron_tools", List.of(new Objective("break:GRANITE", 192, "Mine 192 Granite"))),
+        new Pack("andesite_quarry", "Andesite Quarry", Material.ANDESITE, 617, 864, "minecraft:story/iron_tools", List.of(new Objective("break:ANDESITE", 192, "Mine 192 Andesite"))),
+        new Pack("diorite_quarry", "Diorite Quarry", Material.DIORITE, 113, 170, "minecraft:story/iron_tools", List.of(new Objective("break:DIORITE", 192, "Mine 192 Diorite"))),
+        new Pack("clay_contract", "Clay Contract", Material.CLAY, 160, 224, "minecraft:story/iron_tools", List.of(new Objective("break:CLAY", 96, "Mine 96 Clay Blocks"))),
+        new Pack("terracotta_order", "Terracotta Order", Material.TERRACOTTA, 207, 290, "minecraft:story/iron_tools", List.of(new Objective("collect:TERRACOTTA", 128, "Collect 128 Terracotta"))),
+        new Pack("glassworks", "Glassworks", Material.GLASS, 254, 381, "minecraft:story/iron_tools", List.of(new Objective("collect:GLASS", 128, "Collect 128 Glass"))),
+        new Pack("sandstone_supply", "Sandstone Supply", Material.SANDSTONE, 301, 422, "minecraft:story/iron_tools", List.of(new Objective("collect:SANDSTONE", 128, "Collect 128 Sandstone"))),
+        new Pack("obsidian_vault", "Obsidian Vault", Material.OBSIDIAN, 348, 488, "minecraft:story/enter_the_nether", List.of(new Objective("break:OBSIDIAN", 32, "Mine 32 Obsidian"))),
+        new Pack("lapis_order", "Lapis Order", Material.LAPIS_LAZULI, 395, 593, "minecraft:story/iron_tools", List.of(new Objective("collect:LAPIS_LAZULI", 96, "Collect 96 Lapis Lazuli"))),
+        new Pack("redstone_rush", "Redstone Rush", Material.REDSTONE, 442, 619, "minecraft:story/iron_tools", List.of(new Objective("collect:REDSTONE", 128, "Collect 128 Redstone Dust"))),
+        new Pack("emerald_broker", "Emerald Broker", Material.EMERALD, 489, 685, "minecraft:story/upgrade_tools", List.of(new Objective("collect:EMERALD", 24, "Collect 24 Emeralds"))),
+        new Pack("amethyst_miner", "Amethyst Miner", Material.AMETHYST_SHARD, 536, 804, "minecraft:story/iron_tools", List.of(new Objective("collect:AMETHYST_SHARD", 96, "Collect 96 Amethyst Shards"))),
+        new Pack("copper_smelter", "Copper Smelter", Material.COPPER_INGOT, 583, 817, "minecraft:story/iron_tools", List.of(new Objective("collect:COPPER_INGOT", 96, "Collect 96 Copper Ingots"))),
+        new Pack("iron_foundry", "Iron Foundry", Material.IRON_INGOT, 630, 882, "minecraft:story/iron_tools", List.of(new Objective("collect:IRON_INGOT", 128, "Collect 128 Iron Ingots"))),
+        new Pack("gold_foundry", "Gold Foundry", Material.GOLD_INGOT, 126, 189, "minecraft:story/upgrade_tools", List.of(new Objective("collect:GOLD_INGOT", 64, "Collect 64 Gold Ingots"))),
+        new Pack("nether_brick_run", "Nether Brick Run", Material.NETHER_BRICK, 173, 243, "minecraft:nether/root", List.of(new Objective("collect:NETHER_BRICK", 128, "Collect 128 Nether Bricks"))),
+        new Pack("soul_sand_scout", "Soul Sand Scout", Material.SOUL_SAND, 220, 308, "minecraft:nether/root", List.of(new Objective("break:SOUL_SAND", 128, "Gather 128 Soul Sand"))),
+        new Pack("basalt_breaker", "Basalt Breaker", Material.BASALT, 267, 401, "minecraft:nether/root", List.of(new Objective("break:BASALT", 192, "Mine 192 Basalt"))),
+        new Pack("crimson_harvest", "Crimson Harvest", Material.CRIMSON_STEM, 314, 440, "minecraft:nether/root", List.of(new Objective("break:CRIMSON_STEM", 96, "Harvest 96 Crimson Stems"))),
+        new Pack("warped_harvest", "Warped Harvest", Material.WARPED_STEM, 361, 506, "minecraft:nether/root", List.of(new Objective("break:WARPED_STEM", 96, "Harvest 96 Warped Stems"))),
+        new Pack("ghast_hunter", "Ghast Hunter", Material.GHAST_TEAR, 408, 612, "minecraft:nether/root", List.of(new Objective("kill:GHAST", 8, "Defeat 8 Ghasts"))),
+        new Pack("piglin_patrol", "Piglin Patrol", Material.GOLD_INGOT, 455, 637, "minecraft:nether/root", List.of(new Objective("kill:PIGLIN", 24, "Defeat 24 Piglins"))),
+        new Pack("magma_cube_hunt", "Magma Cube Hunt", Material.MAGMA_CREAM, 502, 703, "minecraft:nether/root", List.of(new Objective("kill:MAGMA_CUBE", 20, "Defeat 20 Magma Cubes"))),
+        new Pack("end_city_scout", "End City Scout", Material.PURPUR_BLOCK, 549, 824, "minecraft:story/enter_the_end", List.of(new Objective("break:PURPUR_BLOCK", 128, "Mine 128 Purpur Blocks"))),
+        new Pack("shulker_sweep", "Shulker Sweep", Material.SHULKER_SHELL, 596, 835, "minecraft:story/enter_the_end", List.of(new Objective("kill:SHULKER", 12, "Defeat 12 Shulkers"))),
+        new Pack("chorus_gatherer", "Chorus Gatherer", Material.CHORUS_FRUIT, 643, 901, "minecraft:story/enter_the_end", List.of(new Objective("collect:CHORUS_FRUIT", 64, "Collect 64 Chorus Fruit"))),
+        new Pack("phantom_watch", "Phantom Watch", Material.PHANTOM_MEMBRANE, 139, 209, "minecraft:adventure/kill_a_mob", List.of(new Objective("kill:PHANTOM", 12, "Defeat 12 Phantoms"))),
+        new Pack("spider_control", "Spider Control", Material.SPIDER_EYE, 186, 261, "minecraft:adventure/kill_a_mob", List.of(new Objective("kill:SPIDER", 30, "Defeat 30 Spiders"))),
+        new Pack("creeper_control", "Creeper Control", Material.GUNPOWDER, 233, 327, "minecraft:adventure/kill_a_mob", List.of(new Objective("kill:CREEPER", 25, "Defeat 25 Creepers"))),
+        new Pack("witch_hunt", "Witch Hunt", Material.GLASS_BOTTLE, 280, 420, "minecraft:adventure/kill_a_mob", List.of(new Objective("kill:WITCH", 12, "Defeat 12 Witches"))),
+        new Pack("slime_patrol", "Slime Patrol", Material.SLIME_BALL, 327, 458, "minecraft:adventure/kill_a_mob", List.of(new Objective("kill:SLIME", 24, "Defeat 24 Slimes"))),
+        new Pack("drowned_cleanup", "Drowned Cleanup", Material.TRIDENT, 374, 524, "minecraft:adventure/kill_a_mob", List.of(new Objective("kill:DROWNED", 24, "Defeat 24 Drowned"))),
+        new Pack("guardian_patrol", "Guardian Patrol", Material.PRISMARINE_SHARD, 421, 632, "minecraft:adventure/kill_a_mob", List.of(new Objective("kill:GUARDIAN", 16, "Defeat 16 Guardians"))),
+        new Pack("rabbit_harvest", "Rabbit Harvest", Material.RABBIT, 468, 656, "minecraft:husbandry/balanced_diet", List.of(new Objective("collect:RAW_RABBIT", 32, "Collect 32 Raw Rabbit"))),
+        new Pack("poultry_order", "Poultry Order", Material.CHICKEN, 515, 721, "minecraft:husbandry/balanced_diet", List.of(new Objective("collect:CHICKEN", 64, "Collect 64 Raw Chicken"))),
+        new Pack("pork_supply", "Pork Supply", Material.PORKCHOP, 562, 843, "minecraft:husbandry/balanced_diet", List.of(new Objective("collect:PORKCHOP", 64, "Collect 64 Porkchops"))),
+        new Pack("potato_farmer", "Potato Farmer", Material.POTATO, 609, 853, "minecraft:husbandry/plant_seed", List.of(new Objective("harvest:POTATO", 128, "Harvest 128 fully grown Potato crops"))),
+        new Pack("beetroot_farmer", "Beetroot Farmer", Material.BEETROOT, 105, 147, "minecraft:husbandry/plant_seed", List.of(new Objective("harvest:BEETROOT", 128, "Harvest 128 fully grown Beetroot crops"))),
+        new Pack("melon_delivery", "Melon Delivery", Material.MELON_SLICE, 152, 228, "minecraft:husbandry/plant_seed", List.of(new Objective("harvest:MELON_SLICE", 192, "Harvest 192 melons"))),
+        new Pack("pumpkin_delivery", "Pumpkin Delivery", Material.PUMPKIN, 199, 279, "minecraft:husbandry/plant_seed", List.of(new Objective("harvest:PUMPKIN", 64, "Harvest 64 pumpkins")))
     );
 
+    // Generate 100 one-time packs per progression tier from the expanded curated objective pool.
     private final List<Pack> packs = buildPacks();
+
     private List<Pack> buildPacks() {
-        List<Pack> result = new ArrayList<>(300); String[] tiers = {"easy","hard","master"};
-        for (int tier=0;tier<3;tier++) for (int i=0;i<100;i++) {
-            Pack t=basePacks.get((i*7+tier*11)%basePacks.size()); String id=tiers[tier]+"_"+String.format(Locale.ROOT,"%03d",i+1);
-            int cost=Math.max(tier==0?50:tier==1?250:700,(int)Math.round(t.cost()*(tier==0?.70:tier==1?1.20:1.80)));
-            int reward=(int)Math.ceil(cost*(tier==0?1.45:tier==1?1.70:2.0));
-            double scale=tier==0?.80+(i%4)*.10:tier==1?1.10+(i%4)*.15:1.50+(i%4)*.20;
-            List<Objective> os=new ArrayList<>(); for(Objective o:t.objectives()){int goal=Math.max(1,(int)Math.ceil(o.goal()*scale));os.add(new Objective(o.target(),goal,o.description().replaceFirst("\\d+",Integer.toString(goal))));}
-            String adv=tier==0?t.advancement():tier==1?"minecraft:story/mine_diamond":"minecraft:end/kill_dragon";
-            String label=tiers[tier].substring(0,1).toUpperCase(Locale.ROOT)+tiers[tier].substring(1);
-            result.add(new Pack(id,label+" Pack "+String.format(Locale.ROOT,"%03d",i+1)+" - "+t.name(),t.icon(),cost,reward,adv,List.copyOf(os)));
-        } return List.copyOf(result);
+        List<Pack> result = new ArrayList<>(300);
+        String[] tiers = {"easy", "hard", "master"};
+        for (int tier = 0; tier < tiers.length; tier++) {
+            for (int i = 0; i < 100; i++) {
+                Pack template = basePacks.get((i * 7 + tier * 11) % basePacks.size());
+                String id = tiers[tier] + "_" + String.format(Locale.ROOT, "%03d", i + 1);
+                int cost = Math.max(tier == 0 ? 50 : tier == 1 ? 250 : 700,
+                        (int) Math.round(template.cost() * (tier == 0 ? 0.70 : tier == 1 ? 1.20 : 1.80)));
+                int reward = (int) Math.ceil(cost * (tier == 0 ? 1.45 : tier == 1 ? 1.70 : 2.0));
+                double scale = tier == 0 ? 0.80 + (i % 4) * 0.10
+                        : tier == 1 ? 1.10 + (i % 4) * 0.15 : 1.50 + (i % 4) * 0.20;
+                List<Objective> objectives = new ArrayList<>();
+                for (Objective objective : template.objectives()) {
+                    int goal = Math.max(1, (int) Math.ceil(objective.goal() * scale));
+                    objectives.add(new Objective(objective.target(), goal,
+                            objective.description().replaceFirst("\\d+", Integer.toString(goal))));
+                }
+                String advancement = tier == 0 ? template.advancement()
+                        : tier == 1 ? "minecraft:story/mine_diamond" : "minecraft:end/kill_dragon";
+                String label = tiers[tier].substring(0, 1).toUpperCase(Locale.ROOT) + tiers[tier].substring(1);
+                result.add(new Pack(id, label + " Pack " + String.format(Locale.ROOT, "%03d", i + 1)
+                        + " - " + template.name(), template.icon(), cost, reward, advancement, List.copyOf(objectives)));
+            }
+        }
+        return List.copyOf(result);
     }
-    private String tierOf(Pack p){return p.id().startsWith("master_")?"master":p.id().startsWith("hard_")?"hard":"easy";}
-    private boolean tierUnlocked(Player p,String tier){return switch(tier){case "hard"->hasAdvancement(p,"minecraft:story/mine_diamond");case "master"->hasAdvancement(p,"minecraft:end/kill_dragon");default->true;};}
-    private String tierUnlockDescription(String tier){return switch(tier){case "hard"->"Unlock Hard packs by obtaining the Diamonds advancement";case "master"->"Unlock Master packs by defeating the Ender Dragon";default->"Easy packs are available from the start; individual packs have requirements";};}
-    private boolean completedPack(UUID id,String packId){return data.getBoolean("completed-packs."+id+"."+packId,false);}
+
+    private String tierOf(Pack pack) {
+        return pack.id().startsWith("master_") ? "master" : pack.id().startsWith("hard_") ? "hard" : "easy";
+    }
+
+    private boolean tierUnlocked(Player player, String tier) {
+        return switch (tier) {
+            case "hard" -> hasAdvancement(player, "minecraft:story/mine_diamond");
+            case "master" -> hasAdvancement(player, "minecraft:end/kill_dragon");
+            default -> true;
+        };
+    }
+
+    private String tierUnlockDescription(String tier) {
+        return switch (tier) {
+            case "hard" -> "Unlock Hard packs by obtaining the Diamonds advancement";
+            case "master" -> "Unlock Master packs by defeating the Ender Dragon";
+            default -> "Easy packs are available from the start; individual packs have requirements";
+        };
+    }
+
+    private boolean completedPack(UUID playerId, String packId) {
+        return data.getBoolean("completed-packs." + playerId + "." + packId, false);
+    }
 
     private final List<RandomQuest> randomPool = List.of(
         new RandomQuest("Deep Diamond Expedition", Material.DIAMOND, 180, 252, new Objective("break:DIAMOND_ORE", 12, "Mine 12 Diamond Ore")),
@@ -125,7 +238,16 @@ public final class QuestManager implements Listener {
         new RandomQuest("Sand Quarry", Material.SAND, 75, 105, new Objective("break:SAND", 256, "Mine 256 Sand")),
         new RandomQuest("Monster Cleanup", Material.IRON_SWORD, 140, 196, new Objective("kill:SKELETON", 30, "Kill 30 Skeletons")),
         new RandomQuest("Food Pantry", Material.BREAD, 90, 126, new Objective("collect:BREAD", 64, "Collect 64 Bread")),
-        new RandomQuest("Quartz Shipment", Material.QUARTZ, 160, 224, new Objective("collect:QUARTZ", 96, "Collect 96 Nether Quartz"))
+        new RandomQuest("Quartz Shipment", Material.QUARTZ, 160, 224, new Objective("collect:QUARTZ", 96, "Collect 96 Nether Quartz")),
+        new RandomQuest("Tropical Catch", Material.TROPICAL_FISH, 150, 225, new Objective("fish:TROPICAL_FISH", 8, "Catch 8 Tropical Fish")),
+        new RandomQuest("Pufferfish Watch", Material.PUFFERFISH, 135, 203, new Objective("fish:PUFFERFISH", 10, "Catch 10 Pufferfish")),
+        new RandomQuest("Cod Fishing Run", Material.FISHING_ROD, 120, 180, new Objective("fish:COD", 16, "Catch 16 Cod")),
+        new RandomQuest("Potato Harvest", Material.POTATO, 100, 150, new Objective("harvest:POTATO", 128, "Harvest 128 fully grown Potato crops")),
+        new RandomQuest("Pumpkin Season", Material.PUMPKIN, 125, 188, new Objective("harvest:PUMPKIN", 64, "Harvest 64 pumpkins")),
+        new RandomQuest("Melon Shipment", Material.MELON_SLICE, 110, 165, new Objective("harvest:MELON_SLICE", 192, "Harvest 192 melons")),
+        new RandomQuest("Copper Ore Contract", Material.RAW_COPPER, 145, 218, new Objective("break:COPPER_ORE", 64, "Mine 64 Copper Ore")),
+        new RandomQuest("Lapis Prospecting", Material.LAPIS_LAZULI, 175, 263, new Objective("break:LAPIS_ORE", 32, "Mine 32 Lapis Lazuli Ore")),
+        new RandomQuest("Redstone Extraction", Material.REDSTONE, 165, 248, new Objective("break:REDSTONE_ORE", 48, "Mine 48 Redstone Ore"))
     );
 
     public QuestManager(XZHEconomySystem plugin) {
@@ -155,7 +277,7 @@ public final class QuestManager implements Listener {
         Bukkit.getScheduler().runTaskTimer(plugin, this::refreshSecretQuestIfDue, 20L * 60L, 20L * 60L);
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) updateHud(player);
-        }, 20L, 20L * 5L);
+        }, 20L, 20L);
         // Shared global reminder and progress broadcast every 15 minutes while the event is active.
         Bukkit.getScheduler().runTaskTimer(plugin, this::broadcastGlobalProgress, 20L * 60L * 15L, 20L * 60L * 15L);
         if (!data.contains("single-shop.next-refresh")) {
@@ -174,12 +296,7 @@ public final class QuestManager implements Listener {
 
     public void adminResetEvent() {
         data.set("event", null);
-        data.set("event.date", LocalDate.now().toString());
-        data.set("event.progress", 0);
-        data.set("event.goal", configuredEventGoal());
-        data.set("event.reward", configuredEventReward());
-        data.set("event.claims-remaining", configuredEventClaims());
-        save();
+        startNewGlobalQuest(System.currentTimeMillis(), true);
     }
 
     public boolean setPackStock(String packId, int amount) {
@@ -206,11 +323,17 @@ public final class QuestManager implements Listener {
 
     private void openSingle(Player player) {
         refreshSingleShopIfDue();
+        ensureSingleOfferDiversity();
         refreshSecretQuestIfDue();
         long next = data.getLong("single-shop.next-refresh", nextRefresh(System.currentTimeMillis()));
         long mins = Math.max(0, (next - System.currentTimeMillis()) / 60000L);
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "XZH Single Quests");
-        add(inv,4,Material.ENDER_EYE,ChatColor.LIGHT_PURPLE+"??? Secret Quest","single-secret-buy","secret",List.of(ChatColor.WHITE+"Purchase price: "+ChatColor.YELLOW+data.getInt("single-shop.secret.cost",250)+" coins",ChatColor.WHITE+"Profit: "+ChatColor.GREEN+"+"+data.getInt("single-shop.secret.margin",40)+"%",ChatColor.GRAY+"Objective and reward details are hidden.",ChatColor.GRAY+"Refresh in "+Math.max(0,(data.getLong("single-shop.secret.next-refresh",System.currentTimeMillis())-System.currentTimeMillis())/60000L)+" minute(s)"));
+        // Secret Quest is intentionally the first item in the menu; its 30-minute cycle is unchanged.
+        add(inv, 10, Material.ENDER_EYE, ChatColor.LIGHT_PURPLE + "??? Secret Quest", "single-secret-buy", "secret",
+            List.of(ChatColor.WHITE + "Purchase price: " + ChatColor.YELLOW + data.getInt("single-shop.secret.cost", 250) + " coins",
+                    ChatColor.WHITE + "Profit: " + ChatColor.GREEN + "+" + data.getInt("single-shop.secret.margin", 40) + "%",
+                    ChatColor.GRAY + "Objective and reward details are hidden.",
+                    ChatColor.GRAY + "Refresh in " + Math.max(0, (data.getLong("single-shop.secret.next-refresh", System.currentTimeMillis()) - System.currentTimeMillis()) / 60000L) + " minute(s)"));
         for (int i = 0; i < 5; i++) {
             int poolIndex = data.getInt("single-shop.offers." + i, i % randomPool.size());
             RandomQuest offer = randomPool.get(Math.floorMod(poolIndex, randomPool.size()));
@@ -224,9 +347,8 @@ public final class QuestManager implements Listener {
             lore.add(ChatColor.WHITE + "Completion reward: " + ChatColor.GREEN + reward + " coins");
             lore.add(isTimedSingle(offer) ? ChatColor.RED + "Time limit: 30 minutes" : ChatColor.GRAY + "No time limit");
             lore.add(ChatColor.GRAY + "Refresh in " + (mins / 60) + "h " + (mins % 60) + "m");
-            add(inv, 19 + i, offer.icon(), ChatColor.YELLOW + offer.name(), "single-buy", Integer.toString(i), lore);
+            add(inv, 11 + i, offer.icon(), ChatColor.YELLOW + offer.name(), "single-buy", Integer.toString(i), lore);
         }
-
         add(inv, 31, Material.CLOCK, ChatColor.AQUA + "Offer refresh", "single-info", "",
             List.of(ChatColor.WHITE + "Five regular offers refresh every 2 hours.",
                     ChatColor.WHITE + "The secret quest refreshes every 30 minutes.",
@@ -236,31 +358,66 @@ public final class QuestManager implements Listener {
     }
 
     private void openPacks(Player player) {
-        Inventory inv=Bukkit.createInventory(null,27,ChatColor.DARK_PURPLE+"XZH Pack Tiers");
-        for(String tier:List.of("easy","hard","master")){
-            boolean unlocked=tierUnlocked(player,tier); Material icon=tier.equals("easy")?Material.LIME_STAINED_GLASS_PANE:tier.equals("hard")?Material.YELLOW_STAINED_GLASS_PANE:Material.PURPLE_STAINED_GLASS_PANE;
-            if(!unlocked)icon=Material.BARRIER; String label=tier.equals("easy")?"Easy Packs":tier.equals("hard")?"Hard Packs":"Master Packs";
-            long done=packs.stream().filter(p->tierOf(p).equals(tier)&&completedPack(player.getUniqueId(),p.id())).count();
-            add(inv,tier.equals("easy")?11:tier.equals("hard")?13:15,icon,(unlocked?ChatColor.GREEN:ChatColor.RED)+label,unlocked?"pack-tier":"tier-locked",tier,List.of(ChatColor.WHITE+"Packs: 100",ChatColor.WHITE+"Completed: "+done+"/100",ChatColor.GOLD+tierUnlockDescription(tier)));
-        } add(inv,22,Material.ARROW,ChatColor.WHITE+"Back","back","");player.openInventory(inv);
-    }
-    private void openPacks(Player player,String tier,int page){
-        if(!List.of("easy","hard","master").contains(tier)||!tierUnlocked(player,tier)){openPacks(player);return;}
-        List<Pack> list=packs.stream().filter(p->tierOf(p).equals(tier)).toList();int pages=Math.max(1,(list.size()+44)/45),pg=Math.max(0,Math.min(page,pages-1));
-        String label=tier.substring(0,1).toUpperCase(Locale.ROOT)+tier.substring(1);Inventory inv=Bukkit.createInventory(null,54,ChatColor.DARK_PURPLE+"XZH "+label+" Packs "+(pg+1));
-        for(int i=pg*45;i<Math.min(list.size(),pg*45+45);i++){Pack p=list.get(i);boolean done=completedPack(player.getUniqueId(),p.id()),unlocked=hasAdvancement(player,p.advancement());
-            List<String> lore=new ArrayList<>();lore.add(ChatColor.WHITE+"Cost: "+ChatColor.YELLOW+p.cost()+" coins");lore.add(ChatColor.WHITE+"Reward: "+ChatColor.GREEN+p.reward()+" coins");lore.add(ChatColor.WHITE+"Profit: "+ChatColor.GOLD+"+"+(p.reward()-p.cost())+" coins");lore.add(ChatColor.WHITE+"Objectives:");for(Objective o:p.objectives())lore.add(ChatColor.AQUA+"• "+o.description());
-            lore.add(done?ChatColor.DARK_GRAY+"COMPLETED FOR LIFE — reward already claimed":unlocked?ChatColor.GREEN+"UNLOCKED":ChatColor.RED+"Complete the pack's progression achievement");
-            Material icon=done?Material.BLACK_STAINED_GLASS_PANE:unlocked?p.icon():Material.BARRIER;add(inv,i-pg*45,icon,(done?ChatColor.DARK_GRAY:unlocked?ChatColor.YELLOW:ChatColor.RED)+p.name(),done?"pack-completed":unlocked?"pack-select":"locked",p.id(),lore);
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Pack Tiers");
+        for (String tier : List.of("easy", "hard", "master")) {
+            boolean unlocked = tierUnlocked(player, tier);
+            Material icon = tier.equals("easy") ? Material.OAK_SAPLING
+                    : tier.equals("hard") ? Material.IRON_SWORD : Material.GOLDEN_HELMET;
+            String label = tier.equals("easy") ? "Easy Packs" : tier.equals("hard") ? "Hard Packs" : "Master Packs";
+            long done = packs.stream().filter(pack -> tierOf(pack).equals(tier)
+                    && completedPack(player.getUniqueId(), pack.id())).count();
+            int slot = tier.equals("easy") ? 11 : tier.equals("hard") ? 13 : 15;
+            add(inv, slot, icon, (unlocked ? ChatColor.GREEN : ChatColor.RED) + label,
+                    unlocked ? "pack-tier" : "tier-locked", tier,
+                    List.of(ChatColor.WHITE + "Packs: 100", ChatColor.WHITE + "Completed: " + done + "/100",
+                            ChatColor.GOLD + tierUnlockDescription(tier)));
         }
-        if(pg>0)add(inv,45,Material.ARROW,ChatColor.WHITE+"Previous page","pack-page",tier+":"+(pg-1));add(inv,49,Material.ARROW,ChatColor.WHITE+"Difficulties","back-tiers","");if(pg+1<pages)add(inv,53,Material.ARROW,ChatColor.WHITE+"Next page","pack-page",tier+":"+(pg+1));player.openInventory(inv);
+        add(inv, 22, Material.ARROW, ChatColor.WHITE + "Back", "back", "");
+        player.openInventory(inv);
+    }
+
+    private void openPacks(Player player, String tier, int page) {
+        if (!List.of("easy", "hard", "master").contains(tier)) {
+            openPacks(player);
+            return;
+        }
+        List<Pack> list = packs.stream().filter(pack -> tierOf(pack).equals(tier)).toList();
+        int pages = Math.max(1, (list.size() + 44) / 45);
+        int pg = Math.max(0, Math.min(page, pages - 1));
+        String label = tier.substring(0, 1).toUpperCase(Locale.ROOT) + tier.substring(1);
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "XZH " + label + " Packs " + (pg + 1));
+        for (int i = pg * 45; i < Math.min(list.size(), pg * 45 + 45); i++) {
+            Pack pack = list.get(i);
+            boolean done = completedPack(player.getUniqueId(), pack.id());
+            boolean unlocked = tierUnlocked(player, tierOf(pack)) && hasAdvancement(player, pack.advancement());
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.WHITE + "Cost: " + ChatColor.YELLOW + pack.cost() + " coins");
+            lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + rewardForPack(pack) + " coins");
+            lore.add(ChatColor.WHITE + "Profit: " + ChatColor.GOLD + "+" + (rewardForPack(pack) - pack.cost()) + " coins");
+            lore.add(ChatColor.WHITE + "Objectives:");
+            for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + "• " + objective.description());
+            lore.add(done ? ChatColor.DARK_GRAY + "COMPLETED FOR LIFE — reward already claimed"
+                    : !tierUnlocked(player, tierOf(pack)) ? ChatColor.RED + tierUnlockDescription(tierOf(pack))
+                    : unlocked ? ChatColor.GREEN + "UNLOCKED"
+                    : ChatColor.RED + "Complete the pack's progression achievement");
+            int timerMinutes = packTimerLimitMinutes(pack.id());
+            lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes"
+                    : ChatColor.GRAY + "No time limit");
+            Material icon = done ? Material.BLACK_STAINED_GLASS_PANE : unlocked ? pack.icon() : Material.BARRIER;
+            add(inv, i - pg * 45, icon, (done ? ChatColor.DARK_GRAY : unlocked ? ChatColor.YELLOW : ChatColor.RED)
+                    + pack.name(), done ? "pack-completed" : unlocked ? "pack-select" : "locked", pack.id(), lore);
+        }
+        if (pg > 0) add(inv, 45, Material.ARROW, ChatColor.WHITE + "Previous page", "pack-page", tier + ":" + (pg - 1));
+        add(inv, 49, Material.ARROW, ChatColor.WHITE + "Difficulties", "back-tiers", "");
+        if (pg + 1 < pages) add(inv, 53, Material.ARROW, ChatColor.WHITE + "Next page", "pack-page", tier + ":" + (pg + 1));
+        player.openInventory(inv);
     }
 
     private void confirmPack(Player player, Pack pack) {
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Confirm quest pack");
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.WHITE + "Cost: " + pack.cost() + " coins");
-        lore.add(ChatColor.WHITE + "Reward: " + pack.reward() + " coins");
+        lore.add(ChatColor.WHITE + "Reward: " + rewardForPack(pack) + " coins");
         for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + objective.description());
         int timerMinutes = packTimerLimitMinutes(pack.id());
         lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
@@ -268,6 +425,29 @@ public final class QuestManager implements Listener {
         add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "Confirm purchase", "pack-buy", pack.id());
         add(inv, 15, Material.RED_CONCRETE, ChatColor.RED + "Cancel", "back-packs", "");
         player.openInventory(inv);
+    }
+
+    public boolean cancelActiveQuest(Player player) {
+        UUID id = player.getUniqueId();
+        String activeId = data.getString(id + ".active", "");
+        if (activeId.isBlank()) {
+            plugin.tellPublic(player, "You do not have an active quest or mission to cancel.");
+            return false;
+        }
+        int originalCost = Math.max(0, data.getInt(id + ".cost", 0));
+        int refund = originalCost / 2;
+        // Clear the active record before refunding so this purchase can never be refunded twice.
+        data.set(id.toString(), null);
+        save();
+        plugin.getHudManager().hideActiveQuest(player);
+        if (refund > 0) plugin.setBalance(id, plugin.getBalance(id) + refund);
+        if (originalCost > 0) {
+            plugin.tellPublic(player, "Quest cancelled. Refunded 50% of its purchase price: " + refund
+                    + " coins (original price " + originalCost + "). No completion reward was paid.");
+        } else {
+            plugin.tellPublic(player, "Quest cancelled. It had no purchase price, so no refund or completion reward was paid.");
+        }
+        return true;
     }
 
     private void buyRandom(Player player, int offerSlot) {
@@ -283,14 +463,14 @@ public final class QuestManager implements Listener {
         int goal = Math.max(1, (int) Math.ceil(template.objective().goal() * difficultyScale / 100.0));
         Objective objective = new Objective(template.objective().target(), goal, template.objective().description().replaceFirst("\\d+", Integer.toString(goal)));
         int cost = secret ? data.getInt("single-shop.secret.cost", 250) : Math.max(50, (int) Math.round(template.cost() * (0.90 + random.nextDouble() * 0.21)));
-        int margin = secret ? data.getInt("single-shop.secret.margin", 40) : 30 + random.nextInt(21);
+        int margin = secret ? data.getInt("single-shop.secret.margin", 40) : 40 + random.nextInt(21);
         int reward = (int) Math.ceil(cost * (1.0 + margin / 100.0));
         if (plugin.getCombinedBalance(id) < cost || !plugin.spendAvailableFunds(id, cost)) { plugin.tellPublic(player, "You need " + cost + " coins to buy this random quest."); return; }
         String questName = template.name() + " #" + (data.getInt("single-shop.quest-sequence", 0) + 1);
         data.set("single-shop.quest-sequence", data.getInt("single-shop.quest-sequence", 0) + 1);
         startQuest(player, "single:" + System.currentTimeMillis(), questName, cost, reward, List.of(objective));
         data.set(id + ".profit-margin", margin);
-        if (!secret) data.set("single-shop.offers." + offerSlot, random.nextInt(randomPool.size()));
+        if (!secret) data.set("single-shop.offers." + offerSlot, nextOfferForSlot(offerSlot));
         save();
         plugin.tellPublic(player, "Started " + questName + ": " + objective.description() + ". Cost " + cost + "; reward " + reward + " coins. " + (isTimedSingle(template) ? "Time limit: 30 minutes." : "No timer."));
         player.closeInventory();
@@ -304,12 +484,19 @@ public final class QuestManager implements Listener {
 
     private void buyPack(Player player, Pack pack) {
         UUID id = player.getUniqueId();
+        if (data.getBoolean("completed-packs." + id + "." + pack.id(), false)) {
+            plugin.tellPublic(player, "You have already completed this achievement pack. It can only be completed once.");
+            openPacks(player);
+            return;
+        }
         if (plugin.getLoanManager().isShopPurchaseRestricted(id)) {
             plugin.tellPublic(player, "Your loan is overdue. Quest-pack purchases are locked until full repayment.");
             return;
         }
-        if(completedPack(id,pack.id())){plugin.tellPublic(player,"This achievement pack is already completed for life.");return;}
-        if(!tierUnlocked(player,tierOf(pack))||!hasAdvancement(player,pack.advancement())){plugin.tellPublic(player,"Complete the required progression achievement to unlock this quest pack.");return;}
+        if (!tierUnlocked(player, tierOf(pack)) || !hasAdvancement(player, pack.advancement())) {
+            plugin.tellPublic(player, "Complete the required advancement to unlock this quest pack.");
+            return;
+        }
         if (!data.getString(id + ".active", "").isBlank()) {
             plugin.tellPublic(player, "Finish your active quest before buying another.");
             return;
@@ -318,7 +505,7 @@ public final class QuestManager implements Listener {
             plugin.tellPublic(player, "Not enough coins for this quest pack.");
             return;
         }
-        startQuest(player, "pack:" + pack.id(), pack.name(), pack.cost(), pack.reward(), pack.objectives());
+        startQuest(player, "pack:" + pack.id(), pack.name(), pack.cost(), rewardForPack(pack), pack.objectives());
         player.closeInventory();
         plugin.tellPublic(player, "Quest pack started: " + pack.name() + ". Complete every objective to earn " + pack.reward() + " coins.");
     }
@@ -338,6 +525,8 @@ public final class QuestManager implements Listener {
             data.set(uuid + ".objectives." + i + ".progress", 0);
         }
         data.set(uuid + ".started-at", System.currentTimeMillis());
+        data.set(uuid + ".warned-5m", false);
+        data.set(uuid + ".warned-1m", false);
         save();
         updateHud(player);
     }
@@ -350,14 +539,43 @@ public final class QuestManager implements Listener {
         Material material = event.getBlock().getType();
         String id = material.name();
         incrementTarget(p, "break:" + id, 1);
-        if (event.getBlock().getBlockData() instanceof Ageable ageable && ageable.getAge() >= ageable.getMaximumAge()) {
-            Material crop=switch(material){case WHEAT->Material.WHEAT;case CARROTS->Material.CARROT;case POTATOES->Material.POTATO;case BEETROOTS->Material.BEETROOT;case NETHER_WART->Material.NETHER_WART;case COCOA->Material.COCOA_BEANS;default->null;};
-            if(crop!=null)incrementTarget(p,"harvest:"+crop.name(),1);
+        // Deepslate ore variants count toward the matching ore contracts too.
+        if (id.startsWith("DEEPSLATE_") && id.endsWith("_ORE")) {
+            incrementTarget(p, "break:" + id.substring("DEEPSLATE_".length()), 1);
         }
         if (material.name().endsWith("_ORE") || material == Material.ANCIENT_DEBRIS) {
             incrementTarget(p, "break:ANY_ORE", 1);
-            recordEventOre(p);
+            recordGlobalProgress(p, "ore", 1);
         }
+        if (material.name().endsWith("_LOG") || material.name().endsWith("_STEM")) {
+            recordGlobalProgress(p, "wood", 1);
+        }
+        boolean matureCrop = false;
+        if (event.getBlock().getBlockData() instanceof Ageable ageable
+                && ageable.getAge() >= ageable.getMaximumAge()) {
+            Material harvested = switch (material) {
+                case WHEAT -> Material.WHEAT;
+                case CARROTS -> Material.CARROT;
+                case POTATOES -> Material.POTATO;
+                case BEETROOTS -> Material.BEETROOT;
+                case NETHER_WART -> Material.NETHER_WART;
+                case COCOA -> Material.COCOA_BEANS;
+                default -> null;
+            };
+            if (harvested != null) {
+                incrementTarget(p, "harvest:" + harvested.name(), 1);
+                matureCrop = true;
+            }
+        }
+        // Melons and pumpkins are harvestable blocks rather than Ageable crops.
+        if (material == Material.MELON) {
+            incrementTarget(p, "harvest:MELON_SLICE", 1);
+            matureCrop = true;
+        } else if (material == Material.PUMPKIN) {
+            incrementTarget(p, "harvest:PUMPKIN", 1);
+            matureCrop = true;
+        }
+        if (matureCrop) recordGlobalProgress(p, "crop", 1);
     }
 
     @EventHandler
@@ -365,41 +583,67 @@ public final class QuestManager implements Listener {
         Player p = event.getEntity().getKiller();
         if (p == null || p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         incrementTarget(p, "kill:" + event.getEntityType().name(), 1);
-        for(ItemStack drop:event.getDrops())incrementTarget(p,"collect:"+drop.getType().name(),drop.getAmount());
+        if (event.getEntity() instanceof org.bukkit.entity.Monster) recordGlobalProgress(p, "mob", 1);
     }
 
     @EventHandler
-    public void onBlockDrop(BlockDropItemEvent event) {
+    public void onCraft(CraftItemEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)
+                || player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        ItemStack result = event.getCurrentItem();
+        if (result != null && result.getType() != Material.AIR) {
+            incrementTarget(player, "collect:" + result.getType().name(), result.getAmount());
+        }
+    }
+
+    @EventHandler
+    public void onPickup(PlayerAttemptPickupItemEvent event) {
         if (event.isCancelled()) return;
         Player p = event.getPlayer();
         if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
-
-        // A placed block that drops itself when broken is not a new collection.
-        // Otherwise players could place and break the same block repeatedly to farm
-        // "collect X" objectives (for example, Collect 128 Bricks).
-        Material brokenBlock = event.getBlockState().getType();
-        for (org.bukkit.entity.Item item : event.getItems()) {
-            ItemStack stack = item.getItemStack();
-            if (stack.getType() == brokenBlock) continue;
-            incrementTarget(p, "collect:" + stack.getType().name(), stack.getAmount());
-        }
+        // Player-dropped items can be dropped and picked up repeatedly, so they must not
+        // count as newly collected quest items.
+        if (event.getItem().getThrower() != null) return;
+        Material material = event.getItem().getItemStack().getType();
+        incrementTarget(p, "collect:" + material.name(), event.getItem().getItemStack().getAmount());
     }
+
     @EventHandler
-    public void onCraft(CraftItemEvent event) {
-        if(!(event.getWhoClicked() instanceof Player p)||p.getGameMode()==org.bukkit.GameMode.CREATIVE||p.getGameMode()==org.bukkit.GameMode.SPECTATOR)return;
-        if(event.getCurrentItem()!=null)incrementTarget(p,"collect:"+event.getCurrentItem().getType().name(),event.getCurrentItem().getAmount());
+    public void onFurnaceExtract(FurnaceExtractEvent event) {
+        Player player = event.getPlayer();
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        Material material = event.getItemType();
+        int amount = event.getItemAmount();
+        if (material == null || material == Material.AIR || amount <= 0) return;
+        // Count only the items actually extracted from furnace-family output slots.
+        // FurnaceExtractEvent covers furnaces, blast furnaces, and smokers, including shift-click extraction.
+        incrementTarget(player, "collect:" + material.name(), amount);
     }
 
     @EventHandler
     public void onMove(PlayerMoveEvent event) {
-        if (event.isCancelled() || event.getTo() == null || event.getFrom().getWorld() != event.getTo().getWorld()) return;
         Player p = event.getPlayer();
-        if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         UUID id = p.getUniqueId();
-        if (data.getString(id + ".active", "").isBlank()) return;
+        if (event.isCancelled() || event.getTo() == null || event.getFrom().getWorld() != event.getTo().getWorld()) {
+            travelRemainders.remove(id);
+            return;
+        }
+        if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR
+                || data.getString(id + ".active", "").isBlank() || !matchesTarget(id, "travel")) {
+            travelRemainders.remove(id);
+            return;
+        }
         double step = event.getFrom().distance(event.getTo());
-        if (step > 10) return;
-        if (matchesTarget(id, "travel")) incrementTarget(p, "travel", (int) Math.floor(step));
+        if (step > 10) {
+            travelRemainders.remove(id);
+            return;
+        }
+        double accumulated = travelRemainders.getOrDefault(id, 0.0) + step;
+        int wholeBlocks = (int) Math.floor(accumulated);
+        travelRemainders.put(id, accumulated - wholeBlocks);
+        if (wholeBlocks > 0) incrementTarget(p, "travel", wholeBlocks);
     }
 
     @EventHandler
@@ -408,6 +652,7 @@ public final class QuestManager implements Listener {
         Player player = event.getPlayer();
         if (player.getGameMode() == org.bukkit.GameMode.CREATIVE || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         incrementTarget(player, "fish:" + caught.getItemStack().getType().name(), 1);
+        recordGlobalProgress(player, "fish", 1);
     }
 
     @EventHandler
@@ -449,13 +694,19 @@ public final class QuestManager implements Listener {
             changed = true;
         }
         if (!changed) return;
-        if(allComplete(id)){
-            int reward=data.getInt(id+".reward",0);String completedName=data.getString(id+".name","Quest"),activeId=data.getString(id+".active","");
-            plugin.setBalance(id,plugin.getBalance(id)+reward);plugin.tellPublic(player,"Quest completed! Reward: "+reward+" coins.");
-            if(activeId.startsWith("pack:"))data.set("completed-packs."+id+"."+activeId.substring("pack:".length()),true);
-            Bukkit.broadcastMessage(ChatColor.GOLD+"[XZH QUESTS] "+ChatColor.YELLOW+player.getName()+ChatColor.WHITE+" completed "+ChatColor.AQUA+completedName+ChatColor.WHITE+" and earned "+ChatColor.GREEN+reward+" coins!");
-data.set(id.toString(),null);plugin.getHudManager().hideActiveQuest(player);
-        }else updateHud(player);
+        if (allComplete(id)) {
+            int reward = data.getInt(id + ".reward", 0);
+            String activeQuestId = data.getString(id + ".active", "");
+            if (activeQuestId.startsWith("pack:")) {
+                String packId = activeQuestId.substring("pack:".length());
+                data.set("completed-packs." + id + "." + packId, true);
+                plugin.tellPublic(player, "§6Achievement pack permanently completed: §e" + packId + "§6. It is now marked with black stained glass and cannot be repeated.");
+            }
+            plugin.setBalance(id, plugin.getBalance(id) + reward);
+            plugin.tellPublic(player, "Quest completed! Reward: " + reward + " coins.");
+            data.set(id.toString(), null);
+            plugin.getHudManager().hideActiveQuest(player);
+        } else updateHud(player);
         save();
     }
 
@@ -475,7 +726,36 @@ data.set(id.toString(),null);plugin.getHudManager().hideActiveQuest(player);
         return true;
     }
 
+    private int rewardForPack(Pack pack) {
+        String id = pack.id();
+        if (id.startsWith("easy_") || id.startsWith("hard_") || id.startsWith("master_")) return pack.reward();
+        double multiplier = 2.0;
+        if (List.of("dragon_slayer", "wither_siege", "debris_hunter", "end_expedition",
+                "nether_blaze", "nether_hunter", "raid_supply", "shulker_sweep",
+                "end_city_scout", "guardian_patrol", "deep_sea").contains(id)) {
+            multiplier = 3.5;
+        } else if (pack.objectives().size() > 1 || packTimerLimitMinutes(id) > 0) {
+            multiplier = 2.75;
+        } else if (pack.cost() >= 500) {
+            multiplier = 2.5;
+        }
+        return Math.max(pack.reward(), (int) Math.ceil(pack.cost() * multiplier));
+    }
+
     private int packTimerLimitMinutes(String packId) {
+        // A subset of generated packs remain timed, with stricter tiers offering more timed challenges.
+        if (packId.startsWith("easy_") || packId.startsWith("hard_") || packId.startsWith("master_")) {
+            String tier = packId.substring(0, packId.indexOf('_'));
+            int number;
+            try { number = Integer.parseInt(packId.substring(packId.indexOf('_') + 1)); }
+            catch (NumberFormatException ignored) { return 0; }
+            if (tier.equals("easy") && number % 10 == 0) return 30;
+            if (tier.equals("hard") && number % 5 == 0) return 30;
+            if (tier.equals("hard") && number % 5 == 1) return 60;
+            if (tier.equals("master") && number % 4 == 0) return 30;
+            if (tier.equals("master") && number % 4 == 1) return 60;
+            return 0;
+        }
         return switch (packId) {
             case "debris_hunter", "nether_hunter", "nether_blaze", "ocean_fisher", "salmon_run", "deep_sea", "explorer_trail", "monster_patrol", "raid_supply" -> 30;
             case "diamond_miner", "pearl_trader", "animal_breeder", "cattle_feed", "sheep_flock", "woodcutter", "builder_supply" -> 60;
@@ -493,12 +773,7 @@ data.set(id.toString(),null);plugin.getHudManager().hideActiveQuest(player);
             };
         }
         if (!activeId.startsWith("pack:")) return 0L;
-        String packId = activeId.substring("pack:".length());
-        return switch (packId) {
-            case "debris_hunter", "nether_hunter", "nether_blaze", "ocean_fisher", "salmon_run", "deep_sea", "explorer_trail", "monster_patrol", "raid_supply" -> 30L * 60L;
-            case "diamond_miner", "pearl_trader", "animal_breeder", "cattle_feed", "sheep_flock", "woodcutter", "builder_supply" -> 60L * 60L;
-            default -> 0L;
-        };
+        return packTimerLimitMinutes(activeId.substring("pack:".length())) * 60L;
     }
 
     private void expireTimedQuestIfNeeded(Player player) {
@@ -507,11 +782,24 @@ data.set(id.toString(),null);plugin.getHudManager().hideActiveQuest(player);
         long limit = timerLimitSeconds(id, active);
         if (limit <= 0) return;
         long started = data.getLong(id + ".started-at", System.currentTimeMillis());
-        if (System.currentTimeMillis() - started <= limit * 1000L) return;
-        data.set(id.toString(), null);
-        save();
-        plugin.getHudManager().hideActiveQuest(player);
-        plugin.tellPublic(player, "Quest timer expired. The quest was forfeited; choose another challenge.");
+        long remaining = limit - Math.max(0L, (System.currentTimeMillis() - started) / 1000L);
+        if (remaining <= 0L) {
+            data.set(id.toString(), null);
+            save();
+            plugin.getHudManager().hideActiveQuest(player);
+            plugin.tellPublic(player, "Quest timer expired. The quest was forfeited; choose another challenge.");
+            return;
+        }
+        if (remaining <= 5L * 60L && !data.getBoolean(id + ".warned-5m", false)) {
+            data.set(id + ".warned-5m", true);
+            save();
+            plugin.tellPublic(player, "Quest warning: 5 minutes or less remain on your timed quest!");
+        }
+        if (remaining <= 60L && !data.getBoolean(id + ".warned-1m", false)) {
+            data.set(id + ".warned-1m", true);
+            save();
+            plugin.tellPublic(player, "Quest warning: 1 minute or less remains on your timed quest!");
+        }
     }
 
     private void updateHud(Player player) {
@@ -531,6 +819,14 @@ data.set(id.toString(),null);plugin.getHudManager().hideActiveQuest(player);
             descriptions.add(data.getString(base + ".description", "Objective") + " " + progress + "/" + goal);
         }
         String display = String.join(" | ", descriptions);
+        long limit = timerLimitSeconds(id, active);
+        if (limit > 0) {
+            long started = data.getLong(id + ".started-at", System.currentTimeMillis());
+            long remaining = Math.max(0L, limit - Math.max(0L, (System.currentTimeMillis() - started) / 1000L));
+            long minutes = remaining / 60L;
+            long seconds = remaining % 60L;
+            display += " | " + ChatColor.YELLOW + "Time " + String.format(Locale.ROOT, "%02d:%02d", minutes, seconds) + " left";
+        }
         plugin.getHudManager().showActiveQuest(player, data.getString(id + ".name", "Active quest"),
                 display, total <= 0 ? 0 : Math.min(1.0, (double) done / total));
     }
@@ -541,37 +837,71 @@ data.set(id.toString(),null);plugin.getHudManager().hideActiveQuest(player);
         int progress = data.getInt("event.progress", 0);
         int goal = data.getInt("event.goal", configuredEventGoal());
         int contribution = data.getInt("event.contribution." + id, 0);
-        boolean claimed = LocalDate.now().toString().equals(data.getString("event.claimed." + id, ""));
+        long remaining = Math.max(0L, data.getLong("event.ends-at", System.currentTimeMillis()) - System.currentTimeMillis());
+        boolean completed = data.getBoolean("event.completed", false);
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Global Quest");
-        add(inv, 13, Material.NETHER_STAR, ChatColor.GOLD + "Community Ore Rush", "global-info", "global",
-            List.of(ChatColor.WHITE + "Shared progress: " + progress + "/" + goal + " ores",
+        add(inv, 13, Material.NETHER_STAR, ChatColor.GOLD + data.getString("event.name", "Global Quest"), "global-info", "global",
+            List.of(ChatColor.WHITE + data.getString("event.description", "Work together to complete the objective."),
+                    ChatColor.WHITE + "Shared progress: " + progress + "/" + goal,
                     ChatColor.WHITE + "Your contribution: " + contribution,
-                    ChatColor.WHITE + "Reward: " + data.getInt("event.reward", configuredEventReward()) + " coins",
-                    ChatColor.GRAY + "Everyone can contribute; mine ores to help the server."));
-        add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "Claim reward", "global-claim", "global",
-            List.of(ChatColor.WHITE + "Requires event completion and 10 personal ores",
-                    ChatColor.GRAY + (claimed ? "Already claimed today" : "One reward per player per day")));
+                    ChatColor.WHITE + "Reward: " + data.getInt("event.reward", configuredEventReward()) + " coins each",
+                    ChatColor.WHITE + "Time left: " + formatGlobalTime(remaining),
+                    completed ? ChatColor.GREEN + "Completed! Rewards have been paid." : ChatColor.GRAY + "Contribute before the deadline to earn the reward."));
+        add(inv, 11, Material.GOLD_INGOT, ChatColor.GREEN + "Contributor rewards", "global-info", "global",
+            List.of(ChatColor.WHITE + "Rewards are paid automatically when",
+                    ChatColor.WHITE + "the community completes the objective.",
+                    ChatColor.GRAY + "Only players who contributed receive a reward."));
         add(inv, 15, Material.ARROW, ChatColor.WHITE + "Back", "back", "");
         player.openInventory(inv);
     }
 
-    private void claimGlobal(Player player) {
-        resetEventIfNeeded();
-        UUID id = player.getUniqueId();
-        String today = LocalDate.now().toString();
-        if (today.equals(data.getString("event.claimed." + id, ""))) { plugin.tellPublic(player, "You already claimed today's global quest reward."); return; }
-        if (data.getInt("event.progress", 0) < data.getInt("event.goal", configuredEventGoal())) { plugin.tellPublic(player, "The global quest is not complete yet."); return; }
-        if (data.getInt("event.contribution." + id, 0) < 10) { plugin.tellPublic(player, "Contribute at least 10 ores before claiming."); return; }
-        int remaining = data.getInt("event.claims-remaining", configuredEventClaims());
-        if (remaining <= 0) { plugin.tellPublic(player, "All global quest rewards have been claimed."); return; }
-        int reward = data.getInt("event.reward", configuredEventReward());
-        data.set("event.claimed." + id, today);
-        data.set("event.claims-remaining", remaining - 1);
+    private void recordGlobalProgress(Player player, String target, int amount) {
+        if (amount <= 0 || data.getBoolean("event.completed", false)) return;
+        if (data.getLong("event.ends-at", 0L) <= System.currentTimeMillis()) {
+            resetEventIfNeeded();
+            if (data.getBoolean("event.completed", false)) return;
+        }
+        if (!target.equals(data.getString("event.target", "ore"))) return;
+        int goal = Math.max(1, data.getInt("event.goal", configuredEventGoal()));
+        int progress = Math.min(goal, data.getInt("event.progress", 0) + amount);
+        data.set("event.progress", progress);
+        String contributionPath = "event.contribution." + player.getUniqueId();
+        data.set(contributionPath, data.getInt(contributionPath, 0) + amount);
         save();
-        plugin.setBalance(id,plugin.getBalance(id)+reward);
-        Bukkit.broadcastMessage(ChatColor.GOLD+"[XZH QUESTS] "+ChatColor.YELLOW+player.getName()+ChatColor.WHITE+" completed their Global Quest claim and earned "+ChatColor.GREEN+reward+" coins!");
-        plugin.tellPublic(player,"Global quest reward claimed: "+reward+" coins.");
-        openGlobal(player);
+        if (progress >= goal) completeGlobalQuest();
+    }
+
+    private void completeGlobalQuest() {
+        if (data.getBoolean("event.completed", false)) return;
+        data.set("event.completed", true);
+        save();
+        int reward = data.getInt("event.reward", configuredEventReward());
+        org.bukkit.configuration.ConfigurationSection contributors = data.getConfigurationSection("event.contribution");
+        int paid = 0;
+        if (contributors != null) {
+            for (String rawId : contributors.getKeys(false)) {
+                try {
+                    UUID id = UUID.fromString(rawId);
+                    int contribution = data.getInt("event.contribution." + rawId, 0);
+                    if (contribution <= 0) continue;
+                    plugin.setBalance(id, plugin.getBalance(id) + reward);
+                    Player online = Bukkit.getPlayer(id);
+                    if (online != null) plugin.tellPublic(online, "§aGlobal quest reward received: " + reward + " coins for contributing to " + data.getString("event.name", "the global quest") + ".");
+                    paid++;
+                } catch (IllegalArgumentException ignored) { }
+            }
+        }
+        Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Global Quest] " + ChatColor.GREEN
+                + data.getString("event.name", "Global Quest") + " completed! " + paid
+                + " contributor(s) received " + reward + " coins each.");
+        save();
+        // A successful early completion immediately opens the next four-hour community challenge.
+        startNewGlobalQuest(System.currentTimeMillis(), true);
+    }
+
+    private String formatGlobalTime(long millis) {
+        long minutes = Math.max(0L, millis) / 60000L;
+        return (minutes / 60L) + "h " + (minutes % 60L) + "m";
     }
 
     private void recordEventOre(Player player) {
@@ -585,12 +915,33 @@ data.set(id.toString(),null);plugin.getHudManager().hideActiveQuest(player);
         save();
     }
 
+    /** Compact shared quest status for the Survival plugin's TAB footer. */
+    public String getGlobalQuestTabText() {
+        resetEventIfNeeded();
+        int progress = Math.max(0, data.getInt("event.progress", 0));
+        int goal = Math.max(1, data.getInt("event.goal", configuredEventGoal()));
+        int percent = Math.min(100, (int) Math.floor(progress * 100.0 / goal));
+        long remaining = Math.max(0L, data.getLong("event.ends-at", System.currentTimeMillis()) - System.currentTimeMillis());
+        String target = data.getString("event.target", "ore");
+        String objective = switch (target.toLowerCase(Locale.ROOT)) {
+            case "ore" -> "Mine " + progress + "/" + goal + " Ores";
+            case "mob" -> "Defeat " + progress + "/" + goal + " Mobs";
+            case "fish" -> "Catch " + progress + "/" + goal + " Fish";
+            case "wood" -> "Chop " + progress + "/" + goal + " Logs";
+            case "crop" -> "Harvest " + progress + "/" + goal + " Crops";
+            default -> data.getString("event.description", "Complete the community objective") + " (" + progress + "/" + goal + ")";
+        };
+        return "§6Global Quest: §f" + objective + " §8(" + percent + "%, " + formatGlobalTime(remaining) + ")";
+    }
+
     private void broadcastGlobalProgress() {
         resetEventIfNeeded();
-        if (data.getInt("event.progress", 0) >= data.getInt("event.goal", configuredEventGoal())) return;
+        if (data.getBoolean("event.completed", false)) return;
         String message = ChatColor.GOLD + "[XZH Global Quest] " + ChatColor.YELLOW
-            + "Community Ore Rush: " + data.getInt("event.progress", 0) + "/"
-            + data.getInt("event.goal", configuredEventGoal()) + " ores mined. Everyone can contribute!";
+            + data.getString("event.name", "Global Quest") + ": " + data.getInt("event.progress", 0) + "/"
+            + data.getInt("event.goal", configuredEventGoal()) + " — "
+            + data.getString("event.description", "Help complete the community objective.")
+            + " Time left: " + formatGlobalTime(Math.max(0L, data.getLong("event.ends-at", 0L) - System.currentTimeMillis())) + ".";
         Bukkit.broadcastMessage(message);
     }
 
@@ -600,15 +951,73 @@ data.set(id.toString(),null);plugin.getHudManager().hideActiveQuest(player);
         if (next <= 0 || now >= next) {
             data.set("single-shop.next-refresh", nextRefresh(now));
             data.set("single-shop.refresh-id", data.getInt("single-shop.refresh-id", 0) + 1);
+            List<Integer> candidates = new ArrayList<>();
+            for (int i = 0; i < randomPool.size(); i++) candidates.add(i);
+            Collections.shuffle(candidates, random);
             List<Integer> choices = new ArrayList<>();
-            while (choices.size() < 5) {
-                int candidate = random.nextInt(randomPool.size());
+            Set<String> categories = new HashSet<>();
+            for (int candidate : candidates) {
+                if (categories.add(questCategory(randomPool.get(candidate)))) choices.add(candidate);
+                if (choices.size() == 5) break;
+            }
+            for (int candidate : candidates) {
+                if (choices.size() == 5) break;
                 if (!choices.contains(candidate)) choices.add(candidate);
             }
             for (int i = 0; i < choices.size(); i++) data.set("single-shop.offers." + i, choices.get(i));
             save();
             Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Quests] Five new random single-quest offers are available!");
         }
+    }
+
+    private void ensureSingleOfferDiversity() {
+        Set<String> categories = new HashSet<>();
+        boolean diverse = true;
+        for (int i = 0; i < 5; i++) {
+            int index = Math.floorMod(data.getInt("single-shop.offers." + i, i), randomPool.size());
+            if (!categories.add(questCategory(randomPool.get(index)))) diverse = false;
+        }
+        if (diverse) return;
+        List<Integer> candidates = new ArrayList<>();
+        for (int i = 0; i < randomPool.size(); i++) candidates.add(i);
+        Collections.shuffle(candidates, random);
+        List<Integer> choices = new ArrayList<>();
+        Set<String> used = new HashSet<>();
+        for (int candidate : candidates) {
+            if (used.add(questCategory(randomPool.get(candidate)))) choices.add(candidate);
+            if (choices.size() == 5) break;
+        }
+        for (int i = 0; i < choices.size(); i++) data.set("single-shop.offers." + i, choices.get(i));
+        save();
+    }
+
+    private int nextOfferForSlot(int slot) {
+        Set<String> usedCategories = new HashSet<>();
+        for (int i = 0; i < 5; i++) {
+            if (i == slot) continue;
+            int index = Math.floorMod(data.getInt("single-shop.offers." + i, i), randomPool.size());
+            usedCategories.add(questCategory(randomPool.get(index)));
+        }
+        List<Integer> eligible = new ArrayList<>();
+        for (int i = 0; i < randomPool.size(); i++) {
+            if (!usedCategories.contains(questCategory(randomPool.get(i)))) eligible.add(i);
+        }
+        return eligible.isEmpty() ? random.nextInt(randomPool.size()) : eligible.get(random.nextInt(eligible.size()));
+    }
+
+    private String questCategory(RandomQuest quest) {
+        String target = quest.objective().target();
+        String material = target.contains(":") ? target.substring(target.indexOf(':') + 1) : target;
+        if (target.startsWith("fish:")) return "fishing";
+        if (target.equals("travel")) return "travel";
+        if (target.startsWith("feed:") || target.startsWith("breed:")) return "farming";
+        if (target.startsWith("break:") && (material.endsWith("_LOG") || material.endsWith("_STEM") || material.equals("BAMBOO"))) return "woodcutting";
+        if (target.startsWith("break:")) return "mining";
+        if (target.startsWith("kill:") || material.equals("BLAZE_ROD") || material.equals("ENDER_PEARL") || material.equals("WITHER_SKELETON_SKULL")) return "combat";
+        if (List.of("WHEAT", "CARROT", "POTATO", "BEETROOT", "MELON_SLICE", "PUMPKIN", "SUGAR_CANE", "NETHER_WART", "COCOA_BEANS", "WHEAT_SEEDS", "BEETROOT_SEEDS").contains(material)) return "farming";
+        if (List.of("BREAD", "COOKED_BEEF", "PORKCHOP", "CHICKEN", "RAW_RABBIT").contains(material)) return "food";
+        if (material.equals("QUARTZ") || material.equals("RAW_IRON") || material.equals("RAW_COPPER") || material.equals("LAPIS_LAZULI") || material.equals("REDSTONE")) return "mining";
+        return "gathering";
     }
 
     private long nextRefresh(long now) { return ((now / (2L * 60L * 60L * 1000L)) + 1L) * (2L * 60L * 60L * 1000L); }
@@ -662,19 +1071,37 @@ data.set(id.toString(),null);plugin.getHudManager().hideActiveQuest(player);
     }
 
     private void resetEventIfNeeded() {
-        String today = LocalDate.now().toString();
-        if (!today.equals(data.getString("event.date", ""))) {
-            data.set("event", null);
-            data.set("event.date", today);
-            data.set("event.progress", 0);
-            data.set("event.goal", configuredEventGoal());
-            data.set("event.reward", configuredEventReward());
-            data.set("event.claims-remaining", configuredEventClaims());
-            save();
-        } else {
-            if (!data.contains("event.goal")) data.set("event.goal", configuredEventGoal());
-            if (!data.contains("event.reward")) data.set("event.reward", configuredEventReward());
-            if (!data.contains("event.claims-remaining")) data.set("event.claims-remaining", configuredEventClaims());
+        long now = System.currentTimeMillis();
+        long endAt = data.getLong("event.ends-at", 0L);
+        if (data.getString("event.name", "").isBlank() || endAt <= now) {
+            startNewGlobalQuest(now, true);
+            return;
+        }
+        if (!data.contains("event.progress")) data.set("event.progress", 0);
+        if (!data.contains("event.reward")) data.set("event.reward", configuredEventReward());
+        if (!data.contains("event.completed")) data.set("event.completed", false);
+    }
+
+    private void startNewGlobalQuest(long now, boolean announce) {
+        GlobalQuest selected = globalQuestPool.get(random.nextInt(globalQuestPool.size()));
+        int goal = Math.max(1, (int) Math.round(selected.goal() * (0.80 + random.nextDouble() * 0.40)));
+        int reward = rewardForGlobalQuest(selected, goal);
+        data.set("event", null);
+        data.set("event.name", selected.name());
+        data.set("event.icon", selected.icon().name());
+        data.set("event.target", selected.target());
+        data.set("event.description", selected.description());
+        data.set("event.progress", 0);
+        data.set("event.goal", goal);
+        data.set("event.reward", reward);
+        data.set("event.ends-at", now + 4L * 60L * 60L * 1000L);
+        data.set("event.completed", false);
+        data.set("event.started-at", now);
+        save();
+        if (announce) {
+            Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Global Quest] " + ChatColor.YELLOW
+                    + "New 4-hour community quest: " + selected.name() + " — " + selected.description()
+                    + ". Reward: " + reward + " coins for each contributor. Work together before the deadline!");
         }
     }
 
@@ -682,7 +1109,9 @@ data.set(id.toString(),null);plugin.getHudManager().hideActiveQuest(player);
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if(title==null||!(title.equals("XZH Quests")||title.equals("XZH Single Quests")||title.equals("XZH Pack Tiers")||title.startsWith("XZH Easy Packs ")||title.startsWith("XZH Hard Packs ")||title.startsWith("XZH Master Packs ")||title.equals("Confirm quest pack")||title.equals("XZH Global Quest")))return;
+        if (title == null || !(title.equals("XZH Quests") || title.equals("XZH Single Quests")
+                || title.startsWith("XZH Achievement Packs") || title.equals("XZH Pack Tiers") || title.startsWith("XZH Easy Packs") || title.startsWith("XZH Hard Packs") || title.startsWith("XZH Master Packs") || title.equals("Confirm quest pack")
+                || title.equals("XZH Global Quest"))) return;
         event.setCancelled(true);
         ItemStack item = event.getCurrentItem();
         if (item == null || !item.hasItemMeta()) return;
@@ -694,20 +1123,27 @@ data.set(id.toString(),null);plugin.getHudManager().hideActiveQuest(player);
             case "close" -> player.closeInventory();
             case "section-single" -> openSingle(player);
             case "section-packs" -> openPacks(player);
-            case "pack-tier" -> openPacks(player,value,0);
-            case "tier-locked" -> plugin.tellPublic(player,tierUnlockDescription(value));
-            case "pack-page" -> {String[] a=value.split(":");try{openPacks(player,a[0],Integer.parseInt(a[1]));}catch(RuntimeException ignored){openPacks(player);}}
-            case "back-tiers" -> openPacks(player);
-            case "pack-completed" -> plugin.tellPublic(player,"This achievement pack is permanently completed and cannot reward you again.");
             case "section-global" -> openGlobal(player);
             case "single-buy" -> { try { buyRandom(player, Integer.parseInt(value)); } catch (NumberFormatException ignored) { } }
             case "single-secret-buy" -> buyRandom(player, 5);
             case "single-info" -> plugin.tellPublic(player, "Five random quests are available; each purchase replaces its offer slot.");
+            case "pack-tier" -> openPacks(player, value, 0);
+            case "tier-locked" -> {
+                plugin.tellPublic(player, tierUnlockDescription(value));
+                openPacks(player, value, 0);
+            }
+            case "pack-page" -> {
+                String[] parts = value.split(":");
+                try { openPacks(player, parts[0], Integer.parseInt(parts[1])); }
+                catch (RuntimeException ignored) { openPacks(player); }
+            }
+            case "back-tiers" -> openPacks(player);
+            case "pack-completed" -> plugin.tellPublic(player, "This achievement pack is permanently completed and cannot reward you again.");
             case "pack-select" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> confirmPack(player, p));
             case "pack-buy" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> buyPack(player, p));
-            case "global-claim" -> claimGlobal(player);
+            case "global-claim" -> plugin.tellPublic(player, "Global quest rewards are paid automatically to contributors when the community completes the objective.");
             case "back" -> open(player);
-            case "back-packs" -> {Pack p=packs.stream().filter(x->x.id().equals(value)).findFirst().orElse(null);if(p==null)openPacks(player);else openPacks(player,tierOf(p),0);}
+            case "back-packs" -> { Pack pack = packs.stream().filter(p -> p.id().equals(value)).findFirst().orElse(null); if (pack == null) openPacks(player); else openPacks(player, tierOf(pack), 0); }
             default -> { }
         }
     }
@@ -729,7 +1165,21 @@ data.set(id.toString(),null);plugin.getHudManager().hideActiveQuest(player);
     }
 
     private int configuredEventGoal() { return Math.max(1, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.goal", 500))); }
-    private int configuredEventReward() { return Math.max(0, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.reward", 100))); }
+    private int rewardForGlobalQuest(GlobalQuest quest, int goal) {
+        double effort = switch (quest.target()) {
+            case "mob" -> 1.35;
+            case "ore" -> 1.25;
+            case "fish" -> 1.55;
+            case "wood" -> 0.80;
+            case "crop" -> 0.75;
+            default -> 1.0;
+        };
+        double base = Math.max(100.0, Math.min(5000.0, goal * effort * 2.0));
+        double varied = base * (0.80 + random.nextDouble() * 0.40);
+        int ceiling = Math.max(100, Math.min(10000, plugin.getConfig().getInt("quests.global-event.reward-ceiling", 5000)));
+        return Math.max(100, Math.min(ceiling, (int) Math.round(varied)));
+    }
+    private int configuredEventReward() { return Math.max(100, Math.min(10000, plugin.getConfig().getInt("quests.global-event.reward", 200))); }
     private int configuredEventClaims() { return Math.max(0, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.claims-per-day", 25))); }
 
     private void save() {
