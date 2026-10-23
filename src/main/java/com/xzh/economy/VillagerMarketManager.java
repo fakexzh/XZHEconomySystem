@@ -16,6 +16,7 @@ import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.MerchantInventory;
 import org.bukkit.inventory.MerchantRecipe;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -47,6 +48,23 @@ public final class VillagerMarketManager implements Listener {
     private final File file;
     private final YamlConfiguration data;
     private final Map<UUID, Long> appliedSeeds = new HashMap<>();
+    private final Map<UUID, TradeSession> sessions = new HashMap<>();
+    private static final String MENU_PREFIX = ChatColor.DARK_GRAY + "XZH Villager: ";
+    private static final int[] OFFER_SLOTS = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25};
+    private enum Screen { MAIN, OFFERS, CONFIRM }
+    private enum TradeMode { BUY, SELL }
+    private static final class TradeSession {
+        private final Villager.Profession profession;
+        private final UUID villagerId;
+        private Screen screen = Screen.MAIN;
+        private TradeMode mode = TradeMode.BUY;
+        private List<Offer> offers = new ArrayList<>();
+        private Offer selected;
+        private long seed;
+        private TradeSession(Villager.Profession profession, UUID villagerId) {
+            this.profession = profession; this.villagerId = villagerId;
+        }
+    }
 
     public VillagerMarketManager(XZHEconomySystem plugin) {
         this.plugin = plugin;
@@ -72,24 +90,249 @@ public final class VillagerMarketManager implements Listener {
     public void onVillagerInteract(PlayerInteractEntityEvent event) {
         if (!plugin.getConfig().getBoolean("villager-market.enabled", true)) return;
         if (!(event.getRightClicked() instanceof Villager villager)) return;
-        if (event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) return;
-        if (event.getPlayer().isSneaking()) return;
+        if (event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND || event.getPlayer().isSneaking()) return;
         Villager.Profession profession = villager.getProfession();
         if (profession == Villager.Profession.NONE || profession == Villager.Profession.NITWIT) return;
-
         event.setCancelled(true);
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            if (!event.getPlayer().isOnline() || !villager.isValid()) return;
-            refreshIfDue(profession);
-            applyOffers(villager, profession);
-            event.getPlayer().openMerchant(villager, true);
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                if (!event.getPlayer().isOnline()) return;
-                if (event.getPlayer().getOpenInventory().getTopInventory() instanceof MerchantInventory inventory) {
-                    inventory.setItem(0, createVoucher());
-                }
-            });
-        });
+        Player player = event.getPlayer();
+        refreshIfDue(profession);
+        TradeSession session = new TradeSession(profession, villager.getUniqueId());
+        session.seed = data.getLong(professionPath(profession) + ".seed", 1L);
+        sessions.put(player.getUniqueId(), session);
+        openMainMenu(player, session);
+    }
+
+    private void openMainMenu(Player player, TradeSession session) {
+        session.screen = Screen.MAIN;
+        Inventory inv = Bukkit.createInventory(null, 27, MENU_PREFIX + "Market");
+        fillMenu(inv);
+        inv.setItem(11, menuItem(Material.EMERALD, ChatColor.GREEN + "BUY ITEMS",
+                List.of(ChatColor.GRAY + "Browse items this villager sells",
+                        ChatColor.YELLOW + "Prices use pocket coins", ChatColor.DARK_GRAY + "Click to view offers")));
+        inv.setItem(15, menuItem(Material.GOLD_INGOT, ChatColor.GOLD + "SELL ITEMS",
+                List.of(ChatColor.GRAY + "Sell requested items to this villager",
+                        ChatColor.YELLOW + "Earnings go to pocket coins", ChatColor.DARK_GRAY + "Click to view offers")));
+        inv.setItem(22, menuItem(Material.BARRIER, ChatColor.RED + "CLOSE", List.of(ChatColor.GRAY + "Close this menu")));
+        inv.setItem(4, menuItem(Material.VILLAGER_SPAWN_EGG, ChatColor.AQUA + prettyProfession(session.profession),
+                List.of(ChatColor.GRAY + "Choose whether to buy or sell.", ChatColor.YELLOW + "Every trade requires confirmation.")));
+        player.openInventory(inv);
+    }
+
+    private void openOffersMenu(Player player, TradeSession session) {
+        refreshIfDue(session.profession);
+        session.seed = data.getLong(professionPath(session.profession) + ".seed", 1L);
+        List<Offer> filtered = new ArrayList<>();
+        for (Offer offer : generateOffers(session.profession)) {
+            if (session.mode == TradeMode.BUY && (offer.kind() == Kind.SELL_FOR_COINS || offer.kind() == Kind.ITEM_EXCHANGE)) filtered.add(offer);
+            else if (session.mode == TradeMode.SELL && offer.kind() == Kind.BUY_FOR_COINS) filtered.add(offer);
+        }
+        session.offers = filtered;
+        session.selected = null;
+        session.screen = Screen.OFFERS;
+        Inventory inv = Bukkit.createInventory(null, 54, MENU_PREFIX + (session.mode == TradeMode.BUY ? "Buy Offers" : "Sell Offers"));
+        fillMenu(inv);
+        inv.setItem(4, menuItem(Material.VILLAGER_SPAWN_EGG,
+                session.mode == TradeMode.BUY ? ChatColor.GREEN + "BUY OFFERS" : ChatColor.GOLD + "SELL OFFERS",
+                List.of(ChatColor.GRAY + prettyProfession(session.profession),
+                        ChatColor.YELLOW + "Coins: " + money(plugin.getBalance(player.getUniqueId())),
+                        ChatColor.GRAY + "Select an offer to review it.")));
+        for (int i = 0; i < filtered.size() && i < OFFER_SLOTS.length; i++) inv.setItem(OFFER_SLOTS[i], offerIcon(filtered.get(i)));
+        inv.setItem(49, menuItem(Material.ARROW, ChatColor.AQUA + "BACK", List.of(ChatColor.GRAY + "Return to Buy / Sell")));
+        inv.setItem(45, menuItem(Material.BARRIER, ChatColor.RED + "CLOSE", List.of(ChatColor.GRAY + "Close this menu")));
+        player.openInventory(inv);
+    }
+
+    private void openConfirmMenu(Player player, TradeSession session, Offer offer) {
+        session.selected = offer;
+        session.screen = Screen.CONFIRM;
+        Inventory inv = Bukkit.createInventory(null, 27, MENU_PREFIX + "Confirm Trade");
+        fillMenu(inv);
+        ItemStack preview;
+        List<String> lore = new ArrayList<>();
+        if (offer.kind() == Kind.SELL_FOR_COINS) {
+            preview = new ItemStack(offer.output(), offer.outputAmount());
+            lore.add(ChatColor.GRAY + "You receive: " + ChatColor.WHITE + offer.outputAmount() + " " + pretty(offer.output()));
+            lore.add(ChatColor.GRAY + "You pay: " + ChatColor.YELLOW + money(offer.coins()) + " coins");
+        } else if (offer.kind() == Kind.BUY_FOR_COINS) {
+            preview = new ItemStack(offer.input(), Math.max(1, Math.min(offer.inputAmount(), offer.input().getMaxStackSize())));
+            lore.add(ChatColor.GRAY + "You give: " + ChatColor.WHITE + offer.inputAmount() + " " + pretty(offer.input()));
+            lore.add(ChatColor.GRAY + "You receive: " + ChatColor.YELLOW + money(offer.coins()) + " coins");
+        } else {
+            preview = new ItemStack(offer.output(), Math.max(1, Math.min(offer.outputAmount(), offer.output().getMaxStackSize())));
+            lore.add(ChatColor.GRAY + "You give: " + ChatColor.WHITE + offer.inputAmount() + " " + pretty(offer.input()));
+            lore.add(ChatColor.GRAY + "You receive: " + ChatColor.WHITE + offer.outputAmount() + " " + pretty(offer.output()));
+        }
+        lore.add(ChatColor.DARK_GRAY + "Nothing changes until you confirm.");
+        ItemMeta meta = preview.getItemMeta();
+        if (meta != null) { meta.setDisplayName(ChatColor.AQUA + "Trade Summary"); meta.setLore(lore); preview.setItemMeta(meta); }
+        inv.setItem(13, preview);
+        inv.setItem(11, menuItem(Material.LIME_DYE, ChatColor.GREEN + "CONFIRM TRADE",
+                List.of(ChatColor.GRAY + "Complete this exact trade",
+                        ChatColor.YELLOW + "Pocket coins: " + money(plugin.getBalance(player.getUniqueId())))));
+        inv.setItem(15, menuItem(Material.RED_DYE, ChatColor.RED + "CANCEL", List.of(ChatColor.GRAY + "Return to the offers")));
+        player.openInventory(inv);
+    }
+
+    private ItemStack offerIcon(Offer offer) {
+        Material icon = offer.kind() == Kind.BUY_FOR_COINS ? offer.input() : offer.output();
+        if (icon == null || icon == Material.AIR) icon = Material.EMERALD;
+        int amount = offer.kind() == Kind.BUY_FOR_COINS ? offer.inputAmount() : offer.outputAmount();
+        ItemStack item = new ItemStack(icon, Math.max(1, Math.min(icon.getMaxStackSize(), amount)));
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            List<String> lore = new ArrayList<>();
+            if (offer.kind() == Kind.BUY_FOR_COINS) {
+                meta.setDisplayName(ChatColor.GOLD + "Sell " + offer.inputAmount() + " " + pretty(offer.input()));
+                lore.add(ChatColor.GRAY + "You give: " + ChatColor.WHITE + offer.inputAmount() + " " + pretty(offer.input()));
+                lore.add(ChatColor.GRAY + "You earn: " + ChatColor.YELLOW + money(offer.coins()) + " coins");
+            } else if (offer.kind() == Kind.SELL_FOR_COINS) {
+                meta.setDisplayName(ChatColor.GREEN + "Buy " + offer.outputAmount() + " " + pretty(offer.output()));
+                lore.add(ChatColor.GRAY + "You receive: " + ChatColor.WHITE + offer.outputAmount() + " " + pretty(offer.output()));
+                lore.add(ChatColor.GRAY + "Price: " + ChatColor.YELLOW + money(offer.coins()) + " coins");
+            } else {
+                meta.setDisplayName(ChatColor.GREEN + "Exchange for " + offer.outputAmount() + " " + pretty(offer.output()));
+                lore.add(ChatColor.GRAY + "You give: " + ChatColor.WHITE + offer.inputAmount() + " " + pretty(offer.input()));
+                lore.add(ChatColor.GRAY + "You receive: " + ChatColor.WHITE + offer.outputAmount() + " " + pretty(offer.output()));
+                lore.add(ChatColor.YELLOW + "No coin cost");
+            }
+            lore.add(ChatColor.DARK_GRAY + "Limited stock until profession restock");
+            lore.add(ChatColor.AQUA + "Click to review and confirm");
+            meta.setLore(lore); item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    public void onMarketMenuClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        TradeSession session = sessions.get(player.getUniqueId());
+        if (session == null) return;
+        String title = event.getView().getTitle();
+        if (title == null || !title.startsWith(MENU_PREFIX)) return;
+        event.setCancelled(true);
+        if (event.getRawSlot() < 0 || event.getRawSlot() >= event.getView().getTopInventory().getSize()) return;
+        if (session.screen == Screen.MAIN) {
+            if (event.getRawSlot() == 11 || event.getRawSlot() == 15) {
+                session.mode = event.getRawSlot() == 11 ? TradeMode.BUY : TradeMode.SELL;
+                openOffersMenu(player, session);
+            } else if (event.getRawSlot() == 22) { sessions.remove(player.getUniqueId()); player.closeInventory(); }
+            return;
+        }
+        if (session.screen == Screen.OFFERS) {
+            if (event.getRawSlot() == 49) { openMainMenu(player, session); return; }
+            if (event.getRawSlot() == 45) { sessions.remove(player.getUniqueId()); player.closeInventory(); return; }
+            for (int i = 0; i < OFFER_SLOTS.length && i < session.offers.size(); i++) {
+                if (event.getRawSlot() == OFFER_SLOTS[i]) { openConfirmMenu(player, session, session.offers.get(i)); return; }
+            }
+            return;
+        }
+        if (session.screen == Screen.CONFIRM) {
+            if (event.getRawSlot() == 15) openOffersMenu(player, session);
+            else if (event.getRawSlot() == 11) {
+                sessions.remove(player.getUniqueId());
+                player.closeInventory();
+                completeTrade(player, session);
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    public void onMarketMenuDrag(InventoryDragEvent event) {
+        if (event.getView().getTitle() != null && event.getView().getTitle().startsWith(MENU_PREFIX)) event.setCancelled(true);
+    }
+
+    private void completeTrade(Player player, TradeSession session) {
+        Offer offer = session.selected;
+        if (offer == null || !player.isOnline()) return;
+        refreshIfDue(session.profession);
+        long currentSeed = data.getLong(professionPath(session.profession) + ".seed", 1L);
+        if (currentSeed != session.seed) {
+            player.sendMessage(ChatColor.YELLOW + "This profession restocked. Please choose a new offer.");
+            TradeSession refreshed = new TradeSession(session.profession, session.villagerId);
+            refreshed.seed = currentSeed; sessions.put(player.getUniqueId(), refreshed); openMainMenu(player, refreshed); return;
+        }
+        Villager villager = null;
+        for (org.bukkit.World world : Bukkit.getWorlds()) {
+            org.bukkit.entity.Entity entity = world.getEntity(session.villagerId);
+            if (entity instanceof Villager found && found.isValid()) { villager = found; break; }
+        }
+        if (villager == null || villager.getProfession() != session.profession) {
+            player.sendMessage(ChatColor.RED + "That villager is no longer available."); return;
+        }
+        String stock = stockPath(player.getUniqueId(), session.profession, offer.key());
+        int used = data.getInt(stock, 0);
+        int limit = Math.max(1, plugin.getConfig().getInt("villager-market.stock-per-player-per-offer", 3));
+        if (used >= limit) { player.sendMessage(ChatColor.RED + "You have used all stock for this offer until restock."); return; }
+        if (offer.input() != null && countMaterial(player, offer.input()) < offer.inputAmount()) {
+            player.sendMessage(ChatColor.RED + "You need " + offer.inputAmount() + " " + pretty(offer.input()) + " to complete this trade."); return;
+        }
+        if (offer.kind() == Kind.SELL_FOR_COINS && plugin.getBalance(player.getUniqueId()) + 1e-9 < offer.coins()) {
+            player.sendMessage(ChatColor.RED + "Not enough pocket coins. Price: " + ChatColor.YELLOW + money(offer.coins()) + " coins" + ChatColor.RED + "."); return;
+        }
+        if (offer.input() != null) {
+            removeMaterial(player, offer.input(), offer.inputAmount());
+            Material containerReturn = containerReturnFor(offer.input());
+            if (containerReturn != null) giveReward(player, containerReturn, offer.inputAmount());
+        }
+        if (offer.kind() == Kind.BUY_FOR_COINS) {
+            plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + offer.coins());
+            player.sendMessage(ChatColor.GREEN + "Sold items to villager. Earned " + ChatColor.YELLOW + money(offer.coins()) + " coins" + ChatColor.GREEN + " to your pocket.");
+        } else if (offer.kind() == Kind.SELL_FOR_COINS) {
+            plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) - offer.coins());
+            giveReward(player, offer.output(), offer.outputAmount());
+            player.sendMessage(ChatColor.GREEN + "Purchase complete! Paid " + ChatColor.YELLOW + money(offer.coins()) + " coins" + ChatColor.GREEN + ".");
+        } else {
+            giveReward(player, offer.output(), offer.outputAmount());
+            player.sendMessage(ChatColor.GREEN + "Exchange complete!");
+        }
+        data.set(stock, used + 1); save();
+        int xp = Math.min(250, villager.getVillagerExperience() + 2);
+        villager.setVillagerExperience(xp);
+        int level = xp >= 250 ? 5 : xp >= 150 ? 4 : xp >= 70 ? 3 : xp >= 10 ? 2 : 1;
+        if (level > villager.getVillagerLevel()) villager.setVillagerLevel(level);
+        TradeSession next = new TradeSession(session.profession, session.villagerId);
+        next.seed = currentSeed; sessions.put(player.getUniqueId(), next); openMainMenu(player, next);
+    }
+
+    private int countMaterial(Player player, Material material) {
+        int count = 0;
+        for (ItemStack item : player.getInventory().getStorageContents()) if (item != null && item.getType() == material) count += item.getAmount();
+        return count;
+    }
+
+    private void removeMaterial(Player player, Material material, int amount) {
+        int remaining = amount;
+        ItemStack[] contents = player.getInventory().getStorageContents();
+        for (int i = 0; i < contents.length && remaining > 0; i++) {
+            ItemStack item = contents[i];
+            if (item == null || item.getType() != material) continue;
+            int take = Math.min(remaining, item.getAmount()); remaining -= take;
+            if (item.getAmount() == take) contents[i] = null; else item.setAmount(item.getAmount() - take);
+        }
+        player.getInventory().setStorageContents(contents);
+    }
+
+    private void fillMenu(Inventory inv) {
+        ItemStack filler = menuItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
+        for (int i = 0; i < inv.getSize(); i++) inv.setItem(i, filler);
+    }
+
+    private ItemStack menuItem(Material material, String name, List<String> lore) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) { meta.setDisplayName(name); meta.setLore(lore); item.setItemMeta(meta); }
+        return item;
+    }
+
+    private String prettyProfession(Villager.Profession profession) {
+        String raw = profession.name().toLowerCase(Locale.ROOT).replace('_', ' ');
+        StringBuilder result = new StringBuilder();
+        for (String part : raw.split(" ")) {
+            if (part.isEmpty()) continue;
+            if (result.length() > 0) result.append(' ');
+            result.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
+        }
+        return result.toString();
     }
 
     private void applyOffers(Villager villager, Villager.Profession profession) {
@@ -113,85 +356,6 @@ public final class VillagerMarketManager implements Listener {
         appliedSeeds.put(villager.getUniqueId(), data.getLong(professionPath(profession) + ".seed", 1L));
         // Store current offer identity on the entity so a second villager of this profession
         // cannot grant additional stock; the global seed remains the source of truth.
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onMerchantClick(InventoryClickEvent event) {
-        if (!(event.getView().getTopInventory() instanceof MerchantInventory inventory)) return;
-        if (!(inventory.getMerchant() instanceof Villager villager)) return;
-        if (event.getSlotType() == InventoryType.SlotType.RESULT && event.getRawSlot() == 2) {
-            event.setCancelled(true);
-            if (!(event.getWhoClicked() instanceof Player player)) return;
-            Villager.Profession profession = villager.getProfession();
-            refreshIfDue(profession);
-            long currentSeed = data.getLong(professionPath(profession) + ".seed", 1L);
-            if (appliedSeeds.getOrDefault(villager.getUniqueId(), Long.MIN_VALUE) != currentSeed) {
-                applyOffers(villager, profession);
-                inventory.setItem(0, createVoucher());
-                player.sendMessage(Component.text("This profession just restocked. The new offers are ready; select one again.", NamedTextColor.YELLOW));
-                return;
-            }
-            List<Offer> offers = generateOffers(profession);
-            int selected = inventory.getSelectedRecipeIndex();
-            if (selected < 0 || selected >= offers.size()) return;
-            Offer offer = offers.get(selected);
-            String stockPath = stockPath(player.getUniqueId(), profession, offer.key());
-            int used = data.getInt(stockPath, 0);
-            int limit = Math.max(1, plugin.getConfig().getInt("villager-market.stock-per-player-per-offer", 3));
-            if (used >= limit) {
-                player.sendMessage(Component.text("You've used all your stock for this offer until the profession restocks.", NamedTextColor.RED));
-                return;
-            }
-            ItemStack input = inventory.getItem(1);
-            if (offer.input() != null) {
-                if (input == null || input.getType() != offer.input() || input.getAmount() < offer.inputAmount()) {
-                    player.sendMessage(Component.text("Place the requested items in the second trade slot.", NamedTextColor.RED));
-                    return;
-                }
-            }
-            if (offer.kind() == Kind.SELL_FOR_COINS) {
-                double balance = plugin.getBalance(player.getUniqueId());
-                if (balance + 1e-9 < offer.coins()) {
-                    player.sendMessage(Component.text("Not enough pocket balance. This offer costs " + money(offer.coins()) + " coins.", NamedTextColor.RED));
-                    return;
-                }
-            }
-            if (offer.input() != null) {
-                int left = input.getAmount() - offer.inputAmount();
-                if (left <= 0) inventory.setItem(1, null);
-                else input.setAmount(left);
-                Material containerReturn = containerReturnFor(offer.input());
-                if (containerReturn != null) giveReward(player, containerReturn, offer.inputAmount());
-            }
-            if (offer.kind() == Kind.BUY_FOR_COINS) {
-                double old = plugin.getBalance(player.getUniqueId());
-                plugin.setBalance(player.getUniqueId(), old + offer.coins());
-                player.sendMessage(Component.text("Villager paid you " + money(offer.coins()) + " coins into your pocket balance.", NamedTextColor.GREEN));
-            } else if (offer.kind() == Kind.SELL_FOR_COINS) {
-                plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) - offer.coins());
-                giveReward(player, offer.output(), offer.outputAmount());
-                player.sendMessage(Component.text("Purchased for " + money(offer.coins()) + " coins from your pocket balance.", NamedTextColor.GREEN));
-            } else {
-                giveReward(player, offer.output(), offer.outputAmount());
-                player.sendMessage(Component.text("Trade completed.", NamedTextColor.GREEN));
-            }
-            data.set(stockPath, used + 1);
-            save();
-            int xp = Math.min(250, villager.getVillagerExperience() + 2);
-            villager.setVillagerExperience(xp);
-            int level = xp >= 250 ? 5 : xp >= 150 ? 4 : xp >= 70 ? 3 : xp >= 10 ? 2 : 1;
-            if (level > villager.getVillagerLevel()) villager.setVillagerLevel(level);
-            inventory.setItem(0, createVoucher());
-            player.updateInventory();
-        } else if (event.getRawSlot() == 0 && event.getClickedInventory() == inventory) {
-            event.setCancelled(true);
-        }
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onMerchantDrag(InventoryDragEvent event) {
-        if (!(event.getView().getTopInventory() instanceof MerchantInventory inventory)) return;
-        if (event.getRawSlots().contains(0)) event.setCancelled(true);
     }
 
     private void tickOpenMerchants() {
