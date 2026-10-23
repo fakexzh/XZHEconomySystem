@@ -810,6 +810,18 @@ public final class ShopManager implements Listener {
         } catch (IllegalArgumentException ex) { return null; }
     }
 
+    /** Public price API used by the villager market so offers follow XZH Shop prices. */
+    public double getShopBuyPrice(Material material) {
+        Product p = product(material);
+        return p == null ? 0.0 : buyPrice(p);
+    }
+
+    /** Player sale value in the XZH Shop, including exploit restrictions. */
+    public double getShopSellPrice(Material material) {
+        Product p = product(material);
+        return p == null ? 0.0 : sellPrice(p);
+    }
+
     private double potionBasePrice(PotionType type) {
         String n = type.name();
         if (n.equals("WATER")) return 5;

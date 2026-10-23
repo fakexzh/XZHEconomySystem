@@ -2,7 +2,7 @@ name: Build plugin
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master, integrated-release ]
+    branches: [ main, master, integrated-release, E-B002 ]
 permissions:
   contents: read
   actions: read
@@ -23,7 +23,7 @@ jobs:
       - name: Upload plugin JAR
         uses: actions/upload-artifact@v4
         with:
-          name: XZHEconomySystem-1.0.0
+          name: XZHEconomySystem-E-B002
           path: build/libs/XZHEconomySystem-1.0.0.jar
       - name: Package coin resource pack
         run: |
@@ -38,5 +38,5 @@ jobs:
       - name: Upload source archive
         uses: actions/upload-artifact@v4
         with:
-          name: XZHEconomySystem-source
+          name: XZHEconomySystem-E-B002-source
           path: build/XZHEconomySystem-source.zip

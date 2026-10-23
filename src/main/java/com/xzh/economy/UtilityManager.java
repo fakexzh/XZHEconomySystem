@@ -16,6 +16,9 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.inventory.ItemStack;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,6 +35,9 @@ public final class UtilityManager implements Listener {
     private final YamlConfiguration data;
     private final Map<UUID, UUID> requestsByTarget = new HashMap<>();
     private final Map<UUID, Long> requestExpiry = new HashMap<>();
+    private final Map<UUID, Double> requestFees = new HashMap<>();
+    private final Map<UUID, PendingTpaPreview> pendingTpaPreviews = new HashMap<>();
+    private record PendingTpaPreview(UUID targetId, long expiresAt, double distance, double fee) { }
     private final Map<UUID, UUID> replies = new HashMap<>();
     private final Map<UUID, Boolean> afk = new HashMap<>();
     private final Map<UUID, Long> rtpCooldown = new HashMap<>();
@@ -117,27 +123,75 @@ public final class UtilityManager implements Listener {
             }
             case "tpa" -> {
                 if (args.length != 1) { msg(player, "Usage: /tpa <player>"); return true; }
-                Player target = Bukkit.getPlayerExact(args[0]);
+                String targetName = args[0].startsWith("@") ? args[0].substring(1) : args[0];
+                Player target = Bukkit.getPlayerExact(targetName);
                 if (target == null || target.equals(player)) { msg(player, "Choose another online player."); return true; }
+                if (!player.getWorld().equals(target.getWorld())
+                        && player.getWorld().getEnvironment() != World.Environment.NETHER
+                        && target.getWorld().getEnvironment() != World.Environment.NETHER) {
+                    msg(player, "Distance-priced TPA is available within one world; Nether travel uses the fixed 66-coin fee.");
+                    return true;
+                }
+                double distance = player.getWorld().equals(target.getWorld()) ? player.getLocation().distance(target.getLocation()) : -1.0;
+                double fee = calculateTpaFee(player, target, distance);
+                pendingTpaPreviews.put(player.getUniqueId(), new PendingTpaPreview(target.getUniqueId(),
+                        System.currentTimeMillis() + TPA_TTL, distance, fee));
+                showTpaPreview(player, target, distance, fee);
+                return true;
+            }
+            case "tpaconfirm" -> {
+                PendingTpaPreview preview = pendingTpaPreviews.get(player.getUniqueId());
+                if (preview == null || System.currentTimeMillis() > preview.expiresAt()) {
+                    pendingTpaPreviews.remove(player.getUniqueId());
+                    msg(player, "Your TPA price preview expired. Run /tpa <player> again.");
+                    return true;
+                }
+                Player target = Bukkit.getPlayer(preview.targetId());
+                if (target == null || target.equals(player)) {
+                    pendingTpaPreviews.remove(player.getUniqueId());
+                    msg(player, "That player is no longer available.");
+                    return true;
+                }
+                double distance = player.getWorld().equals(target.getWorld()) ? player.getLocation().distance(target.getLocation()) : -1.0;
+                double fee = calculateTpaFee(player, target, distance);
+                if (Math.abs(fee - preview.fee()) > 0.001 || Math.abs(distance - preview.distance()) > 0.5) {
+                    pendingTpaPreviews.put(player.getUniqueId(), new PendingTpaPreview(target.getUniqueId(),
+                            System.currentTimeMillis() + TPA_TTL, distance, fee));
+                    showTpaPreview(player, target, distance, fee);
+                    msg(player, "The distance or price changed, so please confirm the updated preview.");
+                    return true;
+                }
+                pendingTpaPreviews.remove(player.getUniqueId());
                 requestsByTarget.put(target.getUniqueId(), player.getUniqueId());
                 requestExpiry.put(target.getUniqueId(), System.currentTimeMillis() + TPA_TTL);
+                requestFees.put(target.getUniqueId(), fee);
                 msg(player, "Teleport request sent to " + target.getName() + ".");
-                msg(target, player.getName() + " wants to teleport to you. Use /tpaccept or /tpdeny within 60 seconds.");
+                target.sendMessage(Component.text(player.getName() + " wants to teleport to you. ", NamedTextColor.YELLOW)
+                        .append(Component.text("[Accept]", NamedTextColor.GREEN).clickEvent(ClickEvent.runCommand("/tpaccept")))
+                        .append(Component.text(" ", NamedTextColor.GRAY))
+                        .append(Component.text("[Decline]", NamedTextColor.RED).clickEvent(ClickEvent.runCommand("/tpdeny")))
+                        .append(Component.text(" (60 seconds)", NamedTextColor.GRAY)));
+                return true;
+            }
+            case "tpacancel" -> {
+                pendingTpaPreviews.remove(player.getUniqueId());
+                msg(player, "TPA preview declined. No request was sent and no coins were charged.");
                 return true;
             }
             case "tpaccept", "tpdeny" -> {
                 UUID requesterId = requestsByTarget.remove(player.getUniqueId());
                 Long expiry = requestExpiry.remove(player.getUniqueId());
-                if (requesterId == null || expiry == null || System.currentTimeMillis() > expiry) {
+                Double storedFee = requestFees.remove(player.getUniqueId());
+                if (requesterId == null || expiry == null || storedFee == null || System.currentTimeMillis() > expiry) {
                     msg(player, "You have no active teleport request."); return true;
                 }
                 Player requester = Bukkit.getPlayer(requesterId);
                 if (requester == null) { msg(player, "That player is no longer online."); return true; }
                 if (cmd.equals("tpdeny")) {
-                    msg(player, "Teleport request denied."); msg(requester, player.getName() + " denied your teleport request.");
+                    msg(player, "Teleport request denied."); msg(requester, player.getName() + " denied your teleport request. No coins were charged.");
                 } else {
                     XZHEconomySystem economy = (XZHEconomySystem) plugin;
-                    double fee = Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-cost", 10.0));
+                    double fee = storedFee;
                     if (economy.getCombinedBalance(requesterId) + 1e-9 < fee) {
                         msg(requester, "You need " + money(fee) + " coins to complete /tpa.");
                         msg(player, "Teleport request could not complete because the requester cannot afford the fee.");
@@ -452,6 +506,30 @@ public final class UtilityManager implements Listener {
     private void saveConfig() {
         try { plugin.getConfig().save(new File(plugin.getDataFolder(), "config.yml")); }
         catch (IOException e) { plugin.getLogger().severe("Could not save time-control settings: " + e.getMessage()); }
+    }
+
+    private void showTpaPreview(Player requester, Player target, double distance, double fee) {
+        String distanceText = distance < 0 ? "cross-world" : String.format(Locale.US, "%.0f blocks", distance);
+        requester.sendMessage(Component.text("§8[§6XZH§8] §r"));
+        requester.sendMessage(Component.text("Teleport to @" + target.getName() + " | Distance: " + distanceText + " | Travel cost: " + money(fee) + " coins", NamedTextColor.YELLOW));
+        requester.sendMessage(Component.text("No coins are charged until the teleport succeeds.", NamedTextColor.GRAY));
+        requester.sendMessage(Component.text("[ACCEPT]", NamedTextColor.GREEN).clickEvent(ClickEvent.runCommand("/tpaconfirm"))
+                .append(Component.text("    ", NamedTextColor.GRAY))
+                .append(Component.text("[DECLINE]", NamedTextColor.RED).clickEvent(ClickEvent.runCommand("/tpacancel"))));
+    }
+
+    private double calculateTpaFee(Player requester, Player target, double distance) {
+        if (requester.getWorld().getEnvironment() == World.Environment.NETHER
+                || target.getWorld().getEnvironment() == World.Environment.NETHER) {
+            return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.nether-flat", 66.0));
+        }
+        if (distance < 0) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-cost", 10.0));
+        if (distance <= 250) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-250", 10.0));
+        if (distance <= 1000) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-1000", 10.0));
+        if (distance <= 3000) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-3000", 20.0));
+        if (distance <= 6000) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-6000", 35.0));
+        if (distance <= 10000) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-10000", 50.0));
+        return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-over-10000", 75.0));
     }
 
     private String money(double amount) {

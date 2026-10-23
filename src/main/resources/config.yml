@@ -219,7 +219,42 @@ utilities:
   rtp-radius: 3000
   rtp-cooldown-seconds: 600
   tpa-cost: 10
+  tpa-pricing:
+    # Destination in or requester in the Nether uses this fixed fee.
+    nether-flat: 66
+    # 3D Euclidean distance, in blocks, is used outside the Nether.
+    cost-250: 10
+    cost-1000: 10
+    cost-3000: 20
+    cost-6000: 35
+    cost-10000: 50
+    cost-over-10000: 75
   back-cost: 30
+
+# Profession-wide randomized villager market. Coin offers use pocket balance, not physical coins.
+villager-market:
+  enabled: true
+  restock-duration-minutes: 120
+  offers-per-profession: 5
+  stock-per-player-per-offer: 3
+  # Villager buying offers start from XZH Shop sell values and may pay a small premium.
+  max-buy-premium: 0.35
+  # Used only when the XZH Shop has no buy price for an item.
+  fallback-item-price: 20
+  profession-restock-minutes:
+    farmer: 120
+    fisherman: 120
+    armorer: 120
+    toolsmith: 120
+    weaponsmith: 120
+    mason: 120
+    cleric: 120
+    librarian: 120
+    cartographer: 120
+    butcher: 120
+    fletcher: 120
+    shepherd: 120
+    leatherworker: 120
 
 # Enchantment book shop rules.
 book-shop:
