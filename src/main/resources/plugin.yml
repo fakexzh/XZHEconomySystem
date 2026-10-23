@@ -88,6 +88,12 @@ commands:
   tpa:
     description: Request teleportation to another player.
     usage: /tpa <player>
+  tpasend:
+    description: Confirm sending a prepared teleport request.
+    usage: /tpasend
+  tpacancel:
+    description: Cancel a prepared teleport preview.
+    usage: /tpacancel
   tpaccept:
     description: Accept a teleport request.
     usage: /tpaccept
