@@ -14,6 +14,7 @@ import org.bukkit.event.entity.VillagerAcquireTradeEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.MerchantRecipe;
+import org.bukkit.inventory.Merchant;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionType;
 
@@ -35,6 +36,8 @@ public final class VillagerTradeManager implements Listener {
     private final Map<String, Offer> all = new LinkedHashMap<>();
     private final Map<Villager.Profession, List<Offer>> active = new HashMap<>();
     private final Map<UUID, Map<String, Long>> playerUsedOffers = new HashMap<>();
+    private final Map<Merchant, MerchantSession> merchantSessions = new HashMap<>();
+    private record MerchantSession(UUID playerId, Villager.Profession profession) {}
 
     private enum Kind { PLAYER_SELLS, PLAYER_SELLS_POTION, PLAYER_BUYS, PLAYER_BUYS_POTION, BARTER }
     private record Offer(String id, Villager.Profession profession, Kind kind,
@@ -345,19 +348,27 @@ public final class VillagerTradeManager implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onVillagerInteract(PlayerInteractEntityEvent event) {
         if (!(event.getRightClicked() instanceof Villager villager)) return;
-        if (villager.getProfession() == Villager.Profession.NONE) {
-            event.setCancelled(true);
-            return;
-        }
-        villager.setRecipes(recipes(villager.getProfession(), event.getPlayer().getUniqueId()));
+        event.setCancelled(true);
+        if (villager.getProfession() == Villager.Profession.NONE) return;
+        UUID playerId = event.getPlayer().getUniqueId();
+        Villager.Profession profession = villager.getProfession();
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!event.getPlayer().isOnline() || !villager.isValid()) return;
+            Merchant merchant = Bukkit.createMerchant(ChatColor.GOLD + "XZH " + profession.name().replace('_', ' '));
+            merchant.setRecipes(recipes(profession, playerId));
+            merchantSessions.put(merchant, new MerchantSession(playerId, profession));
+            event.getPlayer().openMerchant(merchant, true);
+        });
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onTrade(PlayerTradeEvent event) {
-        if (!(event.getMerchant() instanceof Villager villager)) return;
-        Villager.Profession profession = villager.getProfession();
+        Merchant merchant = event.getMerchant();
+        MerchantSession session = merchantSessions.get(merchant);
+        if (session == null || !session.playerId().equals(event.getPlayer().getUniqueId())) return;
+        Villager.Profession profession = session.profession();
         List<Offer> offers = active.getOrDefault(profession, List.of());
-        List<MerchantRecipe> currentRecipes = villager.getRecipes();
+        List<MerchantRecipe> currentRecipes = merchant.getRecipes();
         int index = -1;
         for (int i = 0; i < currentRecipes.size(); i++) {
             if (sameRecipe(currentRecipes.get(i), event.getTrade())) { index = i; break; }
@@ -375,7 +386,7 @@ public final class VillagerTradeManager implements Listener {
         long expiresAt = now + OFFER_COOLDOWN_MILLIS;
         used.put(offer.id(), expiresAt);
         save();
-        villager.setRecipes(recipes(profession, playerId));
+        merchant.setRecipes(recipes(profession, playerId));
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (event.isCancelled()) {
                 Map<String, Long> current = playerUsedOffers.get(playerId);
@@ -384,7 +395,7 @@ public final class VillagerTradeManager implements Listener {
                     if (current.isEmpty()) playerUsedOffers.remove(playerId);
                 }
                 save();
-                if (event.getPlayer().isOnline()) villager.setRecipes(recipes(profession, playerId));
+                if (event.getPlayer().isOnline()) merchant.setRecipes(recipes(profession, playerId));
             }
         });
     }
