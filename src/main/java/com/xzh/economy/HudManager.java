@@ -11,6 +11,7 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.ScoreboardManager;
 import org.bukkit.scoreboard.Criteria;
+import io.papermc.paper.scoreboard.numbers.NumberFormat;
 
 import java.time.Duration;
 import java.time.LocalTime;
@@ -95,9 +96,11 @@ public final class HudManager {
         Objective objective = board.getObjective("xzhhud");
         if (objective == null) {
             objective = board.registerNewObjective("xzhhud", Criteria.DUMMY,
-                    ChatColor.GOLD + "" + ChatColor.BOLD + "XZH ECONOMY");
+                    ChatColor.GOLD + "" + ChatColor.BOLD + "eco");
         }
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+        // Hide the vanilla red score numbers on the right of each sidebar line.
+        objective.numberFormat(NumberFormat.blank());
         for (String oldLine : sidebarLines.getOrDefault(id, java.util.List.of())) board.resetScores(oldLine);
         double balance = plugin.getBalance(id);
         double bankBalance = plugin.getBankManager() == null ? 0.0 : plugin.getBankManager().getBalance(id);
