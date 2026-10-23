@@ -37,6 +37,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     private File transactionsFile;
     private MoneyRequestManager moneyRequestManager;
     private BoatManager boatManager;
+    private VillagerTradeManager villagerTradeManager;
 
     @Override
     public void onEnable() {
@@ -63,7 +64,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         boatManager = new BoatManager(this);
         bookShopManager = new BookShopManager(this);
         loanManager = new LoanManager(this);
-        getServer().getPluginManager().registerEvents(new LibrarianTradeListener(this), this);
+        villagerTradeManager = new VillagerTradeManager(this);
         questManager = new QuestManager(this);
         deathRecoveryManager = new DeathRecoveryManager(this);
         utilityManager = new UtilityManager(this);
@@ -90,6 +91,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     @Override
     public void onDisable() {
         if (hudManager != null) hudManager.shutdown();
+        if (villagerTradeManager != null) villagerTradeManager.shutdown();
         saveBalances();
     }
 
