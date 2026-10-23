@@ -94,6 +94,12 @@ commands:
   tpdeny:
     description: Deny a teleport request.
     usage: /tpdeny
+  tpaconfirm:
+    description: Confirm the displayed TPA price and send the request.
+    usage: /tpaconfirm
+  tpacancel:
+    description: Decline a TPA price preview.
+    usage: /tpacancel
   back:
     description: Return to your last death location.
     usage: /back
