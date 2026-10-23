@@ -4,16 +4,21 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.inventory.ItemStack;
 
@@ -32,17 +37,25 @@ public final class UtilityManager implements Listener {
     private final YamlConfiguration data;
     private final Map<UUID, UUID> requestsByTarget = new HashMap<>();
     private final Map<UUID, Long> requestExpiry = new HashMap<>();
+    private final Map<UUID, TpaQuote> quoteByTarget = new HashMap<>();
+    private final Map<UUID, PreparedTpa> preparedByRequester = new HashMap<>();
+    private record TpaQuote(int distance, int cost, boolean netherFixed, String distanceLabel) {}
+    private record PreparedTpa(UUID targetId, TpaQuote quote) {}
     private final Map<UUID, UUID> replies = new HashMap<>();
     private final Map<UUID, Boolean> afk = new HashMap<>();
     private final Map<UUID, Long> rtpCooldown = new HashMap<>();
-    private final Map<UUID, Double> fractionalTimeTicks = new HashMap<>();
+    private final Map<UUID, BukkitRunnable> homeCountdowns = new HashMap<>();
+    private final Map<UUID, Location> homeCountdownStarts = new HashMap<>();
 
     public UtilityManager(JavaPlugin plugin) {
         this.plugin = plugin;
         file = new File(plugin.getDataFolder(), "locations.yml");
         data = YamlConfiguration.loadConfiguration(file);
+        if (data.contains("homes")) { data.set("homes", null); save(); }
+        for (World world : Bukkit.getWorlds()) {
+            world.setGameRule(org.bukkit.GameRule.DO_DAYLIGHT_CYCLE, true);
+        }
         Bukkit.getPluginManager().registerEvents(this, plugin);
-        Bukkit.getScheduler().runTaskTimer(plugin, this::advanceServerTime, 20L, 20L);
     }
 
     public boolean handle(CommandSender sender, String command, String[] args) {
@@ -63,37 +76,30 @@ public final class UtilityManager implements Listener {
                 if (loc == null) loc = player.getWorld().getSpawnLocation();
                 player.teleport(loc); msg(player, "Teleported to spawn."); return true;
             }
-            case "sethome" -> {
-                String name = homeName(args);
-                if (name == null) { msg(player, "Usage: /sethome [name]"); return true; }
-                String base = "homes." + player.getUniqueId();
-                int max = Math.max(1, plugin.getConfig().getInt("utilities.max-homes", 3));
-                if (!data.contains(base + "." + name) && data.getConfigurationSection(base) != null
-                        && data.getConfigurationSection(base).getKeys(false).size() >= max) {
-                    msg(player, "You have reached your home limit (" + max + ")."); return true;
-                }
-                data.set(base + "." + name, player.getLocation()); save();
-                msg(player, "Home '" + name + "' saved."); return true;
-            }
             case "home" -> {
-                if (args.length == 0 && data.contains("bedhomes." + player.getUniqueId())) {
-                    Location bed = bedHome(player.getUniqueId());
-                    if (bed != null) { player.teleport(bed); msg(player, "Teleported to your bed home."); }
-                    else msg(player, "Your bed home has no safe landing spot nearby. Clear space beside your bed and try again.");
+                if (args.length != 0) {
+                    msg(player, "Only /home is available. Place a bed to set your home.");
                     return true;
                 }
-                String name = homeName(args);
-                if (name == null) { msg(player, "Usage: /home [name]"); return true; }
-                Location loc = data.getLocation("homes." + player.getUniqueId() + "." + name);
-                if (loc == null) { msg(player, "Home not found."); return true; }
-                player.teleport(loc); msg(player, "Teleported home."); return true;
-            }
-            case "delhome" -> {
-                String name = homeName(args);
-                if (name == null) { msg(player, "Usage: /delhome [name]"); return true; }
-                String path = "homes." + player.getUniqueId() + "." + name;
-                if (!data.contains(path)) { msg(player, "Home not found."); return true; }
-                data.set(path, null); save(); msg(player, "Home deleted."); return true;
+                String path = "bedhomes." + player.getUniqueId();
+                Location storedBed = data.getLocation(path);
+                if (storedBed == null) {
+                    msg(player, "You don't have a home yet. Place a bed to set one.");
+                    return true;
+                }
+                if (storedBed.getWorld() == null || !storedBed.getBlock().getType().name().endsWith("_BED")) {
+                    data.set(path, null);
+                    save();
+                    msg(player, "Your bed home no longer exists. Place a new bed to set a home.");
+                    return true;
+                }
+                Location bed = bedHome(player.getUniqueId());
+                if (bed == null) {
+                    msg(player, "Your bed home has no safe landing spot nearby. Clear space beside your bed and try again.");
+                    return true;
+                }
+                startHomeCountdown(player);
+                return true;
             }
             case "setwarp" -> {
                 if (!player.hasPermission("xzh.admin")) { msg(player, "No permission."); return true; }
@@ -119,44 +125,118 @@ public final class UtilityManager implements Listener {
                 if (args.length != 1) { msg(player, "Usage: /tpa <player>"); return true; }
                 Player target = Bukkit.getPlayerExact(args[0]);
                 if (target == null || target.equals(player)) { msg(player, "Choose another online player."); return true; }
+                TpaQuote quote = tpaQuote(player, target);
+                if (quote == null) return true;
+                XZHEconomySystem economy = (XZHEconomySystem) plugin;
+                if (economy.getCombinedBalance(player.getUniqueId()) + 1e-9 < quote.cost()) {
+                    msg(player, "You need " + quote.cost() + " coins for this teleport. Your pocket + bank balance is too low.");
+                    return true;
+                }
+                preparedByRequester.put(player.getUniqueId(), new PreparedTpa(target.getUniqueId(), quote));
+                showTpaPreview(player, target, quote);
+                return true;
+            }
+            case "tpasend" -> {
+                PreparedTpa prepared = preparedByRequester.remove(player.getUniqueId());
+                if (prepared == null) { msg(player, "Use /tpa <player> first to review a travel cost."); return true; }
+                Player target = Bukkit.getPlayer(prepared.targetId());
+                if (target == null || !target.isOnline()) { msg(player, "That player is no longer online."); return true; }
+                TpaQuote current = tpaQuote(player, target);
+                if (current == null) return true;
+                if (!sameQuote(prepared.quote(), current)) {
+                    preparedByRequester.put(player.getUniqueId(), new PreparedTpa(target.getUniqueId(), current));
+                    msg(player, "The distance changed. Review the updated travel cost and press SEND again.");
+                    showTpaPreview(player, target, current);
+                    return true;
+                }
+                Long oldExpiry = requestExpiry.get(target.getUniqueId());
+                if (requestsByTarget.containsKey(target.getUniqueId()) && oldExpiry != null && oldExpiry > System.currentTimeMillis()) {
+                    msg(player, "That player already has a pending teleport request.");
+                    return true;
+                }
+                requestsByTarget.remove(target.getUniqueId());
+                requestExpiry.remove(target.getUniqueId());
+                quoteByTarget.remove(target.getUniqueId());
                 requestsByTarget.put(target.getUniqueId(), player.getUniqueId());
-                requestExpiry.put(target.getUniqueId(), System.currentTimeMillis() + TPA_TTL);
+                long expires = System.currentTimeMillis() + TPA_TTL;
+                requestExpiry.put(target.getUniqueId(), expires);
+                quoteByTarget.put(target.getUniqueId(), current);
                 msg(player, "Teleport request sent to " + target.getName() + ".");
-                msg(target, player.getName() + " wants to teleport to you. Use /tpaccept or /tpdeny within 60 seconds.");
+                net.md_5.bungee.api.chat.TextComponent details = new net.md_5.bungee.api.chat.TextComponent(
+                        "§6Teleport request from §d" + player.getName() + " §8| §bDistance: §f" + current.distanceLabel()
+                                + " §8| §eTravel cost: §6✦ " + current.cost() + " coins ");
+                net.md_5.bungee.api.chat.TextComponent accept = new net.md_5.bungee.api.chat.TextComponent("§a[ ACCEPT ]");
+                accept.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                        net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/tpaccept"));
+                net.md_5.bungee.api.chat.TextComponent decline = new net.md_5.bungee.api.chat.TextComponent(" §c[ DECLINE ]");
+                decline.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                        net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/tpdeny"));
+                details.addExtra(accept);
+                details.addExtra(decline);
+                target.spigot().sendMessage(details);
+                target.playSound(target.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.25f);
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    if (requestExpiry.getOrDefault(target.getUniqueId(), 0L) == expires) {
+                        requestsByTarget.remove(target.getUniqueId());
+                        requestExpiry.remove(target.getUniqueId());
+                        quoteByTarget.remove(target.getUniqueId());
+                        Player onlineRequester = Bukkit.getPlayer(player.getUniqueId());
+                        if (onlineRequester != null) msg(onlineRequester, "Your teleport request expired.");
+                        if (target.isOnline()) msg(target, "Teleport request expired.");
+                    }
+                }, TPA_TTL / 50L);
+                return true;
+            }
+            case "tpacancel" -> {
+                preparedByRequester.remove(player.getUniqueId());
+                msg(player, "Teleport preview cancelled.");
                 return true;
             }
             case "tpaccept", "tpdeny" -> {
-                UUID requesterId = requestsByTarget.remove(player.getUniqueId());
-                Long expiry = requestExpiry.remove(player.getUniqueId());
-                if (requesterId == null || expiry == null || System.currentTimeMillis() > expiry) {
+                UUID targetId = player.getUniqueId();
+                UUID requesterId = requestsByTarget.remove(targetId);
+                Long expiry = requestExpiry.remove(targetId);
+                TpaQuote storedQuote = quoteByTarget.remove(targetId);
+                if (requesterId == null || expiry == null || storedQuote == null || System.currentTimeMillis() > expiry) {
                     msg(player, "You have no active teleport request."); return true;
                 }
                 Player requester = Bukkit.getPlayer(requesterId);
                 if (requester == null) { msg(player, "That player is no longer online."); return true; }
                 if (cmd.equals("tpdeny")) {
-                    msg(player, "Teleport request denied."); msg(requester, player.getName() + " denied your teleport request.");
-                } else {
-                    XZHEconomySystem economy = (XZHEconomySystem) plugin;
-                    double fee = Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-cost", 10.0));
-                    if (economy.getCombinedBalance(requesterId) + 1e-9 < fee) {
-                        msg(requester, "You need " + money(fee) + " coins to complete /tpa.");
-                        msg(player, "Teleport request could not complete because the requester cannot afford the fee.");
-                        return true;
-                    }
-                    boolean teleported = requester.teleport(player.getLocation());
-                    if (!teleported) {
-                        msg(requester, "Teleport failed; no fee was charged.");
-                        msg(player, "Teleport failed; no fee was charged.");
-                        return true;
-                    }
-                    if (!economy.spendAvailableFunds(requesterId, fee)) {
-                        msg(requester, "Teleport succeeded, but payment could not be collected. Please contact an admin.");
-                        msg(player, "Teleport request accepted.");
-                        return true;
-                    }
-                    msg(player, "Teleport request accepted.");
-                    msg(requester, "Teleported to " + player.getName() + " for " + money(fee) + " coins.");
+                    msg(player, "Teleport request denied.");
+                    msg(requester, player.getName() + " declined your teleport request.");
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.9f, 0.8f);
+                    requester.playSound(requester.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.9f, 0.8f);
+                    return true;
                 }
+                TpaQuote current = tpaQuote(requester, player);
+                if (current == null) return true;
+                if (!sameQuote(storedQuote, current)) {
+                    msg(requester, "The travel distance changed. Send a new /tpa request to confirm the updated cost.");
+                    msg(player, "The travel distance changed. Ask the player to send a new request.");
+                    return true;
+                }
+                XZHEconomySystem economy = (XZHEconomySystem) plugin;
+                if (economy.getCombinedBalance(requesterId) + 1e-9 < current.cost()) {
+                    msg(requester, "You no longer have enough pocket + bank coins for this teleport.");
+                    msg(player, "Teleport cancelled because the requester cannot afford the travel cost.");
+                    return true;
+                }
+                boolean teleported = requester.teleport(player.getLocation());
+                if (!teleported) {
+                    msg(requester, "Teleport failed; no fee was charged.");
+                    msg(player, "Teleport failed; no fee was charged.");
+                    return true;
+                }
+                if (!economy.spendAvailableFunds(requesterId, current.cost())) {
+                    msg(requester, "Teleport succeeded, but payment could not be collected. Please contact an admin.");
+                    msg(player, "Teleport request accepted.");
+                    return true;
+                }
+                msg(player, "Teleport request accepted.");
+                msg(requester, "Teleported to " + player.getName() + " for " + current.cost() + " coins.");
+                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.9f, 1.2f);
+                requester.playSound(requester.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.9f, 1.2f);
                 return true;
             }
             case "back" -> {
@@ -220,45 +300,6 @@ public final class UtilityManager implements Listener {
                 Bukkit.broadcastMessage(ChatColor.GRAY + player.getName() + (value ? " is now AFK." : " is no longer AFK."));
                 return true;
             }
-            case "xzh" -> {
-                if (args.length == 0 || !args[0].equalsIgnoreCase("time")) {
-                    msg(player, "Usage: /xzh time <daylength|nightlength <minutes>|set <day|night>|pause|resume|info>");
-                    return true;
-                }
-                if (!player.hasPermission("xzh.admin")) { msg(player, "No permission."); return true; }
-                if (args.length == 2 && args[1].equalsIgnoreCase("pause")) {
-                    plugin.getConfig().set("time-control.paused", true); saveConfig();
-                    msg(player, "Custom day/night cycle paused."); return true;
-                }
-                if (args.length == 2 && args[1].equalsIgnoreCase("resume")) {
-                    plugin.getConfig().set("time-control.paused", false); saveConfig();
-                    msg(player, "Custom day/night cycle resumed."); return true;
-                }
-                if (args.length == 2 && args[1].equalsIgnoreCase("info")) {
-                    msg(player, "Day: " + plugin.getConfig().getInt("time-control.daylength-minutes", 30)
-                        + " minutes; night: " + plugin.getConfig().getInt("time-control.nightlength-minutes", 30)
-                        + " minutes; paused: " + plugin.getConfig().getBoolean("time-control.paused", false) + ".");
-                    return true;
-                }
-                if (args.length == 3 && args[1].equalsIgnoreCase("set")) {
-                    if (args[2].equalsIgnoreCase("day")) {
-                        for (World world : Bukkit.getWorlds()) if (world.getEnvironment() == World.Environment.NORMAL) world.setTime(1000L);
-                    } else if (args[2].equalsIgnoreCase("night")) {
-                        for (World world : Bukkit.getWorlds()) if (world.getEnvironment() == World.Environment.NORMAL) world.setTime(13000L);
-                    } else { msg(player, "Use /xzh time set <day|night>."); return true; }
-                    msg(player, "Server world time updated."); return true;
-                }
-                if (args.length == 3 && (args[1].equalsIgnoreCase("daylength") || args[1].equalsIgnoreCase("nightlength"))) {
-                    int minutes;
-                    try { minutes = Integer.parseInt(args[2]); } catch (NumberFormatException ex) { msg(player, "Minutes must be a number from 1 to 240."); return true; }
-                    if (minutes < 1 || minutes > 240) { msg(player, "Minutes must be between 1 and 240."); return true; }
-                    plugin.getConfig().set("time-control." + (args[1].equalsIgnoreCase("daylength") ? "daylength-minutes" : "nightlength-minutes"), minutes);
-                    saveConfig();
-                    msg(player, "Custom " + args[1].replace("length", "") + " length set to " + minutes + " minutes."); return true;
-                }
-                msg(player, "Usage: /xzh time <daylength|nightlength <minutes>|set <day|night>|pause|resume|info>");
-                return true;
-            }
             case "helpxzh" -> {
                 net.md_5.bungee.api.chat.TextComponent link = new net.md_5.bungee.api.chat.TextComponent("§6[XZH] §eClick here to open the XZH server guide");
                 link.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
@@ -273,7 +314,7 @@ public final class UtilityManager implements Listener {
             case "help" -> {
                 sender.sendMessage(ChatColor.GOLD + "XZHEconomySystem commands:");
                 sender.sendMessage(ChatColor.WHITE + "/balance, /pay, /shop, /books, /loan, /quests, /deathinventory");
-                sender.sendMessage(ChatColor.WHITE + "/spawn, /home, /sethome, /delhome, /warp, /tpa, /tpaccept, /tpdeny, /back, /rtp");
+                sender.sendMessage(ChatColor.WHITE + "/spawn, /home, /warp, /tpa, /tpaccept, /tpdeny, /back, /rtp");
                 sender.sendMessage(ChatColor.WHITE + "/msg, /reply, /ignore, /afk, /near, /list, /top, /kit");
                 if (sender.hasPermission("xzh.admin")) sender.sendMessage(ChatColor.WHITE + "/xzhadmin, /eco, /shopadmin, /setspawn, /setwarp, /delwarp");
                 return true;
@@ -319,6 +360,12 @@ public final class UtilityManager implements Listener {
                 return true;
             }
             case "rtp" -> {
+                XZHEconomySystem economy = (XZHEconomySystem) plugin;
+                final double fee = 30.0;
+                if (economy.getCombinedBalance(player.getUniqueId()) + 1e-9 < fee) {
+                    msg(player, "Random teleport costs 30 coins. You need more pocket/bank funds.");
+                    return true;
+                }
                 long now = System.currentTimeMillis();
                 long ready = rtpCooldown.getOrDefault(player.getUniqueId(), 0L);
                 if (now < ready) { msg(player, "Random teleport cooldown: " + ((ready - now + 999) / 1000) + " seconds."); return true; }
@@ -326,9 +373,12 @@ public final class UtilityManager implements Listener {
                 Location center = data.getLocation("spawn");
                 if (center == null) center = player.getWorld().getSpawnLocation();
                 World world = center.getWorld();
-                if (world == null) { msg(player, "No valid world for random teleport."); return true; }
+                if (world == null || world.getEnvironment() != player.getWorld().getEnvironment()) {
+                    msg(player, "Random teleport is only available in your current dimension, and no valid center was found.");
+                    return true;
+                }
                 java.util.concurrent.ThreadLocalRandom random = java.util.concurrent.ThreadLocalRandom.current();
-                for (int attempt = 0; attempt < 30; attempt++) {
+                for (int attempt = 0; attempt < 50; attempt++) {
                     int x = center.getBlockX() + random.nextInt(-radius, radius + 1);
                     int z = center.getBlockZ() + random.nextInt(-radius, radius + 1);
                     Block floor = world.getHighestBlockAt(x, z);
@@ -338,14 +388,23 @@ public final class UtilityManager implements Listener {
                     if (!ground.isSolid() || ground == Material.MAGMA_BLOCK || ground == Material.CACTUS
                             || ground == Material.CAMPFIRE || ground == Material.SOUL_CAMPFIRE
                             || ground == Material.FIRE || ground == Material.SOUL_FIRE
-                            || feet != Material.AIR || head != Material.AIR) continue;
-                    player.teleport(new Location(world, x + 0.5, floor.getY() + 1, z + 0.5));
+                            || ground == Material.LAVA || feet != Material.AIR || head != Material.AIR) continue;
+                    Location destination = new Location(world, x + 0.5, floor.getY() + 1, z + 0.5,
+                            player.getLocation().getYaw(), player.getLocation().getPitch());
+                    if (!player.teleport(destination)) {
+                        msg(player, "Teleport failed; no fee was charged.");
+                        return true;
+                    }
+                    if (!economy.spendAvailableFunds(player.getUniqueId(), fee)) {
+                        msg(player, "Teleport succeeded, but payment could not be collected. Contact an admin.");
+                        return true;
+                    }
                     long cooldownSeconds = Math.max(1L, plugin.getConfig().getLong("utilities.rtp-cooldown-seconds", 600));
                     rtpCooldown.put(player.getUniqueId(), now + cooldownSeconds * 1000L);
-                    msg(player, "Randomly teleported. Cooldown: " + Math.max(1L, cooldownSeconds / 60L) + " minutes.");
+                    msg(player, "Randomly teleported safely for 30 coins. Cooldown: " + Math.max(1L, cooldownSeconds / 60L) + " minutes.");
                     return true;
                 }
-                msg(player, "Could not find a safe location. Try again.");
+                msg(player, "Could not find a safe location. No coins were charged; try again.");
                 return true;
             }
             case "top" -> {
@@ -355,6 +414,84 @@ public final class UtilityManager implements Listener {
                 msg(player, "Moved to the surface."); return true;
             }
             default -> { return false; }
+        }
+    }
+
+    private void startHomeCountdown(Player player) {
+        UUID id = player.getUniqueId();
+        BukkitRunnable previous = homeCountdowns.remove(id);
+        if (previous != null) previous.cancel();
+        Location start = player.getLocation().clone();
+        homeCountdownStarts.put(id, start);
+        msg(player, "Home teleport in §e4 seconds§f. Don't move.");
+        BukkitRunnable task = new BukkitRunnable() {
+            private int seconds = 4;
+            @Override public void run() {
+                if (!player.isOnline()) {
+                    homeCountdowns.remove(id);
+                    homeCountdownStarts.remove(id);
+                    cancel();
+                    return;
+                }
+                if (seconds > 1) {
+                    seconds--;
+                    player.sendMessage("§8[§6XZH§8] §bHOME §8» §fTeleporting in §e" + seconds + "§f...");
+                    return;
+                }
+                Location destination = bedHome(id);
+                if (destination == null) {
+                    msg(player, "Your bed home is no longer available. Place a bed to set a new home.");
+                } else {
+                    player.teleport(destination);
+                    msg(player, "Teleported to your bed home.");
+                }
+                homeCountdowns.remove(id);
+                homeCountdownStarts.remove(id);
+                cancel();
+            }
+        };
+        homeCountdowns.put(id, task);
+        task.runTaskTimer(plugin, 20L, 20L);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onHomeCountdownMove(PlayerMoveEvent event) {
+        UUID id = event.getPlayer().getUniqueId();
+        if (!homeCountdowns.containsKey(id) || event.getTo() == null) return;
+        Location from = event.getFrom();
+        Location to = event.getTo();
+        if (from.getBlockX() == to.getBlockX() && from.getBlockY() == to.getBlockY()
+                && from.getBlockZ() == to.getBlockZ()) return;
+        BukkitRunnable task = homeCountdowns.remove(id);
+        homeCountdownStarts.remove(id);
+        if (task != null) task.cancel();
+        msg(event.getPlayer(), "Home teleport cancelled because you moved.");
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onHomeCommandPreprocess(PlayerCommandPreprocessEvent event) {
+        String raw = event.getMessage();
+        if (raw == null || !raw.startsWith("/")) return;
+        String[] parts = raw.substring(1).trim().split("\\s+");
+        if (parts.length == 0 || parts[0].isBlank()) return;
+
+        String root = parts[0].toLowerCase(Locale.ROOT);
+        int namespace = root.indexOf(':');
+        if (namespace >= 0) root = root.substring(namespace + 1);
+
+        if (root.equals("home")) {
+            event.setCancelled(true);
+            if (parts.length == 1) {
+                handle(event.getPlayer(), "home", new String[0]);
+            } else {
+                msg(event.getPlayer(), "Only /home is available. Place a bed to set your home.");
+            }
+            return;
+        }
+        if (root.equals("sethome") || root.equals("delhome") || root.equals("homes")
+                || root.equals("deletehome") || root.equals("removehome")) {
+            event.setCancelled(true);
+            msg(event.getPlayer(), "That command has been removed. Place a bed and use /home.");
         }
     }
 
@@ -422,51 +559,73 @@ public final class UtilityManager implements Listener {
 
     @EventHandler
     public void onDeath(PlayerDeathEvent event) {
+        // Save the location for /back. The global death announcement is handled once
+        // by XZH Survival so this listener does not send a second death message.
         data.set("back." + event.getEntity().getUniqueId(), event.getEntity().getLocation());
         save();
-        Player player = event.getEntity();
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            if (!player.isOnline()) return;
-            msg(player, "You died. Use /back to return to your death location (30 coins), or /deathinventory to review recovery options.");
-        });
     }
 
-    private void advanceServerTime() {
-        if (!plugin.getConfig().getBoolean("time-control.enabled", true)) return;
-        for (World world : Bukkit.getWorlds()) {
-            if (world.getEnvironment() != World.Environment.NORMAL) continue;
-            world.setGameRule(org.bukkit.GameRule.DO_DAYLIGHT_CYCLE, false);
-            if (plugin.getConfig().getBoolean("time-control.paused", false)) continue;
-            long time = Math.floorMod(world.getTime(), 24000L);
-            boolean day = time < 12000L;
-            int minutes = Math.max(1, plugin.getConfig().getInt(day ? "time-control.daylength-minutes" : "time-control.nightlength-minutes", 30));
-            double ticksPerSecond = 12000.0 / (minutes * 60.0);
-            UUID worldId = world.getUID();
-            double accumulated = fractionalTimeTicks.getOrDefault(worldId, 0.0) + ticksPerSecond;
-            long advance = (long) accumulated;
-            fractionalTimeTicks.put(worldId, accumulated - advance);
-            if (advance > 0) world.setTime(Math.floorMod(time + advance, 24000L));
+    private TpaQuote tpaQuote(Player requester, Player target) {
+        if (requester.getWorld() != target.getWorld()) {
+            if (requester.getWorld().getEnvironment() == World.Environment.NETHER
+                    || target.getWorld().getEnvironment() == World.Environment.NETHER) {
+                return new TpaQuote(-1, plugin.getConfig().getInt("utilities.tpa-nether-fixed-cost", 66),
+                        true, "cross-dimension");
+            }
+            msg(requester, "Teleport requests across different worlds are not supported (except Nether travel).");
+            return null;
         }
+        int distance = (int) Math.round(Math.sqrt(requester.getLocation().distanceSquared(target.getLocation())));
+        if (requester.getWorld().getEnvironment() == World.Environment.NETHER) {
+            return new TpaQuote(distance, plugin.getConfig().getInt("utilities.tpa-nether-fixed-cost", 66),
+                    true, String.format(Locale.US, "%,d blocks", distance));
+        }
+        String root = "utilities.tpa-prices.";
+        int cost;
+        if (distance <= 250) cost = plugin.getConfig().getInt(root + "up-to-250", 10);
+        else if (distance <= 1000) cost = plugin.getConfig().getInt(root + "up-to-1000", 20);
+        else if (distance <= 3000) cost = plugin.getConfig().getInt(root + "up-to-3000", 30);
+        else if (distance <= 6000) cost = plugin.getConfig().getInt(root + "up-to-6000", 40);
+        else if (distance <= 10000) cost = plugin.getConfig().getInt(root + "up-to-10000", 50);
+        else cost = plugin.getConfig().getInt(root + "over-10000", 75);
+        return new TpaQuote(distance, cost, false, String.format(Locale.US, "%,d blocks", distance));
     }
 
-    private void saveConfig() {
-        try { plugin.getConfig().save(new File(plugin.getDataFolder(), "config.yml")); }
-        catch (IOException e) { plugin.getLogger().severe("Could not save time-control settings: " + e.getMessage()); }
+    private boolean sameQuote(TpaQuote first, TpaQuote second) {
+        return first.distance() == second.distance() && first.cost() == second.cost()
+                && first.netherFixed() == second.netherFixed();
+    }
+
+    private void showTpaPreview(Player requester, Player target, TpaQuote quote) {
+        net.md_5.bungee.api.chat.TextComponent line = new net.md_5.bungee.api.chat.TextComponent(
+                "§6Teleport to §d@" + target.getName() + " §8| §bDistance: §f" + quote.distanceLabel()
+                        + " §8| §eTravel cost: §6✦ " + quote.cost() + " coins");
+        net.md_5.bungee.api.chat.TextComponent send = new net.md_5.bungee.api.chat.TextComponent("§a[ SEND ]");
+        send.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/tpasend"));
+        net.md_5.bungee.api.chat.TextComponent decline = new net.md_5.bungee.api.chat.TextComponent(" §c[ DECLINE ]");
+        decline.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/tpacancel"));
+        requester.spigot().sendMessage(line);
+        requester.spigot().sendMessage(send, decline);
     }
 
     private String money(double amount) {
         return String.format(Locale.US, "%.2f", amount).replaceAll("\\.00$", "");
     }
 
-    private String homeName(String[] args) {
-        if (args.length > 1) return null;
-        return args.length == 0 ? "home" : named(args);
-    }
     private String named(String[] args) {
         if (args.length != 1 || !args[0].matches("[A-Za-z0-9_-]{1,24}")) return null;
         return args[0].toLowerCase(Locale.ROOT);
     }
-    private void msg(Player player, String text) { player.sendMessage("§8[§6XZH§8] §r" + text); }
+    private void msg(Player player, String text) {
+        String lower = text.toLowerCase(Locale.ROOT);
+        String color = lower.contains("death") || lower.contains("died") ? "§c"
+                : lower.contains("back") || lower.contains("returned") ? "§6"
+                : lower.contains("teleport") || lower.contains("tpa") || lower.contains("tp request") ? "§b"
+                : "§f";
+        player.sendMessage("§8[§6XZH§8] " + color + text);
+    }
     private void save() {
         try { data.save(file); }
         catch (IOException e) { plugin.getLogger().severe("Could not save locations.yml: " + e.getMessage()); }
