@@ -124,6 +124,13 @@ public final class VillagerMarketManager implements Listener {
             if (!(event.getWhoClicked() instanceof Player player)) return;
             Villager.Profession profession = villager.getProfession();
             refreshIfDue(profession);
+            long currentSeed = data.getLong(professionPath(profession) + ".seed", 1L);
+            if (appliedSeeds.getOrDefault(villager.getUniqueId(), Long.MIN_VALUE) != currentSeed) {
+                applyOffers(villager, profession);
+                inventory.setItem(0, createVoucher());
+                player.sendMessage(Component.text("This profession just restocked. The new offers are ready; select one again.", NamedTextColor.YELLOW));
+                return;
+            }
             List<Offer> offers = generateOffers(profession);
             int selected = inventory.getSelectedRecipeIndex();
             if (selected < 0 || selected >= offers.size()) return;
