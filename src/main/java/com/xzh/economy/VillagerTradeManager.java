@@ -22,17 +22,18 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Vanilla-interface XZH profession market. Stock and offer rotations are shared globally
- * per profession and persisted between restarts. XZH coins are the real tagged pocket coins.
+ * Vanilla-interface XZH profession market. Offers rotate globally per profession, while
+ * each player has an independent one-trade-per-offer allowance for each 4-hour rotation.
+ * XZH coins are the real tagged pocket coins.
  */
 public final class VillagerTradeManager implements Listener {
-    private static final long REFRESH_MILLIS = 2L * 60L * 60L * 1000L;
+    private static final long REFRESH_MILLIS = 4L * 60L * 60L * 1000L;
     private final XZHEconomySystem plugin;
     private final File file;
     private final YamlConfiguration data;
     private final Map<String, Offer> all = new LinkedHashMap<>();
     private final Map<Villager.Profession, List<Offer>> active = new HashMap<>();
-    private final Map<String, Integer> remaining = new HashMap<>();
+    private final Map<UUID, Set<String>> playerUsedOffers = new HashMap<>();
     private long nextRefresh;
     private BukkitTask ticker;
 
@@ -123,7 +124,18 @@ public final class VillagerTradeManager implements Listener {
                     .filter(o -> o.profession() == profession).collect(Collectors.toCollection(ArrayList::new));
             if (offers.isEmpty()) offers = choose(profession);
             active.put(profession, offers);
-            for (Offer offer : offers) remaining.put(offer.id(), data.getInt("stock." + offer.id(), offer.stock()));
+        }
+        org.bukkit.configuration.ConfigurationSection usedSection = data.getConfigurationSection("player-used");
+        if (usedSection != null) {
+            for (String uuidText : usedSection.getKeys(false)) {
+                try {
+                    UUID uuid = UUID.fromString(uuidText);
+                    Set<String> used = new HashSet<>(data.getStringList("player-used." + uuidText));
+                    if (!used.isEmpty()) playerUsedOffers.put(uuid, used);
+                } catch (IllegalArgumentException ignored) {
+                    plugin.getLogger().warning("Ignoring invalid player UUID in villager market data: " + uuidText);
+                }
+            }
         }
         if (nextRefresh <= System.currentTimeMillis()) refreshAll();
         else save();
@@ -139,8 +151,8 @@ public final class VillagerTradeManager implements Listener {
         for (Villager.Profession profession : Villager.Profession.values()) {
             List<Offer> offers = choose(profession);
             active.put(profession, offers);
-            for (Offer offer : offers) remaining.put(offer.id(), offer.stock());
         }
+        playerUsedOffers.clear();
         nextRefresh = System.currentTimeMillis() + REFRESH_MILLIS;
         save();
         for (Entity entity : Bukkit.getWorlds().stream().flatMap(w -> w.getEntities().stream()).toList()) {
@@ -149,13 +161,12 @@ public final class VillagerTradeManager implements Listener {
             }
         }
         Bukkit.broadcastMessage(ChatColor.DARK_GRAY + "[" + ChatColor.GOLD + "XZH MARKET" + ChatColor.DARK_GRAY
-                + "] " + ChatColor.YELLOW + "Villager offers and global stock have refreshed.");
+                + "] " + ChatColor.YELLOW + "Villager offers refreshed! Personal trade limits have reset. Next refresh in 4 hours.");
     }
 
     private List<MerchantRecipe> recipes(Villager.Profession profession) {
         List<MerchantRecipe> result = new ArrayList<>();
         for (Offer offer : active.getOrDefault(profession, List.of())) {
-            int stock = remaining.getOrDefault(offer.id(), offer.stock());
             ItemStack output;
             List<ItemStack> inputs = new ArrayList<>();
             if (offer.kind() == Kind.BARTER) {
@@ -163,18 +174,18 @@ public final class VillagerTradeManager implements Listener {
                 output = new ItemStack(offer.other(), offer.otherAmount());
             } else if (offer.kind() == Kind.PLAYER_SELLS) {
                 inputs.add(new ItemStack(offer.item(), offer.amount()));
-                int rawPayout = Math.max(1, (int) Math.floor(referenceBuyPrice(offer.item()) * offer.payoutRate() * offer.amount()));
+                int rawPayout = Math.max(1, (int) Math.floor(referenceBuyPrice(offer.item()) * offer.payoutRate() * offer.amount() * 0.90));
                 int payout = rawPayout >= 640 ? (int) Math.round(rawPayout / 100.0) * 100 : Math.max(1, (int) Math.round(rawPayout / 10.0) * 10);
                 output = coins(payout);
             } else {
-                int price = Math.max(1, (int) Math.ceil(referenceBuyPrice(offer.item()) * offer.payoutRate() * offer.amount()));
+                int price = Math.max(1, (int) Math.ceil(referenceBuyPrice(offer.item()) * offer.payoutRate() * offer.amount() * 0.95));
                 addCoinInputs(inputs, price);
                 output = new ItemStack(offer.item(), offer.amount());
             }
             if (output == null || output.getAmount() > output.getMaxStackSize()) continue;
-            int maxUses = Math.max(1, stock);
-            int uses = stock <= 0 ? maxUses : 0;
-            MerchantRecipe recipe = new MerchantRecipe(output, uses, maxUses, false, 0, 0.0f);
+            // MerchantRecipe uses are shared by every player who opens this villager.
+            // Keep the vanilla recipe open and enforce the real limit by player UUID in onTrade.
+            MerchantRecipe recipe = new MerchantRecipe(output, 0, 1_000_000, false, 0, 0.0f);
             for (ItemStack input : inputs) recipe.addIngredient(input);
             result.add(recipe);
         }
@@ -259,14 +270,19 @@ public final class VillagerTradeManager implements Listener {
         for (Villager.Profession profession : Villager.Profession.values()) {
             data.set("active." + profession.name(), active.getOrDefault(profession, List.of()).stream().map(Offer::id).toList());
         }
-        for (Map.Entry<String, Integer> entry : remaining.entrySet()) data.set("stock." + entry.getKey(), entry.getValue());
+        data.set("player-used", null);
+        for (Map.Entry<UUID, Set<String>> entry : playerUsedOffers.entrySet()) {
+            if (!entry.getValue().isEmpty()) {
+                data.set("player-used." + entry.getKey(), new ArrayList<>(entry.getValue()));
+            }
+        }
         try { file.getParentFile().mkdirs(); data.save(file); }
         catch (IOException ex) { plugin.getLogger().severe("Could not save global villager stock: " + ex.getMessage()); }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onAcquireTrade(VillagerAcquireTradeEvent event) {
-        // Vanilla level-up offers must not add enchanted books or bypass the XZH stock pool.
+        // Vanilla level-up offers must not add enchanted books or bypass the XZH market.
         event.setCancelled(true);
     }
 
@@ -289,18 +305,23 @@ public final class VillagerTradeManager implements Listener {
         }
         if (index < 0 || index >= offers.size()) return;
         Offer offer = offers.get(index);
-        int stock = remaining.getOrDefault(offer.id(), offer.stock());
-        if (stock <= 0) {
+        UUID playerId = event.getPlayer().getUniqueId();
+        Set<String> used = playerUsedOffers.computeIfAbsent(playerId, ignored -> new HashSet<>());
+        if (used.contains(offer.id())) {
             event.setCancelled(true);
-            event.getPlayer().sendMessage(ChatColor.RED + "This profession's global stock is exhausted. It refreshes every 2 hours.");
+            event.getPlayer().sendMessage(ChatColor.RED + "You have already used this market offer this rotation. It refreshes every 4 hours.");
             return;
         }
-        remaining.put(offer.id(), stock - 1);
+        used.add(offer.id());
         save();
-        // If another listener cancels later, restore the reserved stock next tick.
+        // If another listener cancels the trade, return the player's allowance next tick.
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (event.isCancelled()) {
-                remaining.put(offer.id(), Math.min(offer.stock(), remaining.getOrDefault(offer.id(), 0) + 1));
+                Set<String> current = playerUsedOffers.get(playerId);
+                if (current != null) {
+                    current.remove(offer.id());
+                    if (current.isEmpty()) playerUsedOffers.remove(playerId);
+                }
                 save();
             }
         });
