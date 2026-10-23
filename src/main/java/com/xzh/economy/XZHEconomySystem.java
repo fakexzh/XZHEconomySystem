@@ -117,6 +117,44 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         if (!getConfig().contains("time-control.nightlength-minutes")) { getConfig().set("time-control.nightlength-minutes", 30); changed = true; }
         if (!getConfig().contains("time-control.paused")) { getConfig().set("time-control.paused", false); changed = true; }
         if (!getConfig().contains("announcements.bank.enabled")) { getConfig().set("announcements.bank.enabled", true); changed = true; }
+        // New TPA pricing defaults are migrated into existing server configs.
+        String[][] tpaDefaults = {
+                {"utilities.tpa-pricing.nether-flat", "66"},
+                {"utilities.tpa-pricing.cost-250", "10"},
+                {"utilities.tpa-pricing.cost-1000", "10"},
+                {"utilities.tpa-pricing.cost-3000", "20"},
+                {"utilities.tpa-pricing.cost-6000", "35"},
+                {"utilities.tpa-pricing.cost-10000", "50"},
+                {"utilities.tpa-pricing.cost-over-10000", "75"}
+        };
+        for (String[] entry : tpaDefaults) {
+            if (!getConfig().contains(entry[0])) {
+                getConfig().set(entry[0], Double.parseDouble(entry[1]));
+                changed = true;
+            }
+        }
+        Object[][] marketDefaults = {
+                {"villager-market.enabled", true},
+                {"villager-market.restock-duration-minutes", 120},
+                {"villager-market.offers-per-profession", 5},
+                {"villager-market.stock-per-player-per-offer", 3},
+                {"villager-market.max-buy-premium", 0.35},
+                {"villager-market.fallback-item-price", 20}
+        };
+        for (Object[] entry : marketDefaults) {
+            if (!getConfig().contains((String) entry[0])) {
+                getConfig().set((String) entry[0], entry[1]);
+                changed = true;
+            }
+        }
+        for (String profession : List.of("farmer", "fisherman", "armorer", "toolsmith", "weaponsmith",
+                "mason", "cleric", "librarian", "cartographer", "butcher", "fletcher", "shepherd", "leatherworker")) {
+            String path = "villager-market.profession-restock-minutes." + profession;
+            if (!getConfig().contains(path)) {
+                getConfig().set(path, 120);
+                changed = true;
+            }
+        }
         if (changed) {
             saveConfig();
             getLogger().info("Migrated legacy config defaults for revised XZH economy rules.");
