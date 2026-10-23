@@ -37,6 +37,10 @@ public final class UtilityManager implements Listener {
     private final YamlConfiguration data;
     private final Map<UUID, UUID> requestsByTarget = new HashMap<>();
     private final Map<UUID, Long> requestExpiry = new HashMap<>();
+    private final Map<UUID, TpaQuote> quoteByTarget = new HashMap<>();
+    private final Map<UUID, PreparedTpa> preparedByRequester = new HashMap<>();
+    private record TpaQuote(int distance, int cost, boolean netherFixed, String distanceLabel) {}
+    private record PreparedTpa(UUID targetId, TpaQuote quote) {}
     private final Map<UUID, UUID> replies = new HashMap<>();
     private final Map<UUID, Boolean> afk = new HashMap<>();
     private final Map<UUID, Long> rtpCooldown = new HashMap<>();
@@ -121,56 +125,118 @@ public final class UtilityManager implements Listener {
                 if (args.length != 1) { msg(player, "Usage: /tpa <player>"); return true; }
                 Player target = Bukkit.getPlayerExact(args[0]);
                 if (target == null || target.equals(player)) { msg(player, "Choose another online player."); return true; }
+                TpaQuote quote = tpaQuote(player, target);
+                if (quote == null) return true;
+                XZHEconomySystem economy = (XZHEconomySystem) plugin;
+                if (economy.getCombinedBalance(player.getUniqueId()) + 1e-9 < quote.cost()) {
+                    msg(player, "You need " + quote.cost() + " coins for this teleport. Your pocket + bank balance is too low.");
+                    return true;
+                }
+                preparedByRequester.put(player.getUniqueId(), new PreparedTpa(target.getUniqueId(), quote));
+                showTpaPreview(player, target, quote);
+                return true;
+            }
+            case "tpasend" -> {
+                PreparedTpa prepared = preparedByRequester.remove(player.getUniqueId());
+                if (prepared == null) { msg(player, "Use /tpa <player> first to review a travel cost."); return true; }
+                Player target = Bukkit.getPlayer(prepared.targetId());
+                if (target == null || !target.isOnline()) { msg(player, "That player is no longer online."); return true; }
+                TpaQuote current = tpaQuote(player, target);
+                if (current == null) return true;
+                if (!sameQuote(prepared.quote(), current)) {
+                    preparedByRequester.put(player.getUniqueId(), new PreparedTpa(target.getUniqueId(), current));
+                    msg(player, "The distance changed. Review the updated travel cost and press SEND again.");
+                    showTpaPreview(player, target, current);
+                    return true;
+                }
+                Long oldExpiry = requestExpiry.get(target.getUniqueId());
+                if (requestsByTarget.containsKey(target.getUniqueId()) && oldExpiry != null && oldExpiry > System.currentTimeMillis()) {
+                    msg(player, "That player already has a pending teleport request.");
+                    return true;
+                }
+                requestsByTarget.remove(target.getUniqueId());
+                requestExpiry.remove(target.getUniqueId());
+                quoteByTarget.remove(target.getUniqueId());
                 requestsByTarget.put(target.getUniqueId(), player.getUniqueId());
-                requestExpiry.put(target.getUniqueId(), System.currentTimeMillis() + TPA_TTL);
+                long expires = System.currentTimeMillis() + TPA_TTL;
+                requestExpiry.put(target.getUniqueId(), expires);
+                quoteByTarget.put(target.getUniqueId(), current);
                 msg(player, "Teleport request sent to " + target.getName() + ".");
-                net.md_5.bungee.api.chat.TextComponent prompt = new net.md_5.bungee.api.chat.TextComponent("§e" + player.getName() + " wants to teleport to you. ");
-                net.md_5.bungee.api.chat.TextComponent accept = new net.md_5.bungee.api.chat.TextComponent("§a[ACCEPT]");
-                accept.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/tpaccept"));
-                net.md_5.bungee.api.chat.TextComponent decline = new net.md_5.bungee.api.chat.TextComponent(" §c[DECLINE]");
-                decline.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/tpdeny"));
-                prompt.addExtra(accept); prompt.addExtra(decline);
-                prompt.addExtra(new net.md_5.bungee.api.chat.TextComponent(" §7(60 seconds)"));
-                target.spigot().sendMessage(prompt);
+                net.md_5.bungee.api.chat.TextComponent details = new net.md_5.bungee.api.chat.TextComponent(
+                        "§6Teleport request from §d" + player.getName() + " §8| §bDistance: §f" + current.distanceLabel()
+                                + " §8| §eTravel cost: §6✦ " + current.cost() + " coins ");
+                net.md_5.bungee.api.chat.TextComponent accept = new net.md_5.bungee.api.chat.TextComponent("§a[ ACCEPT ]");
+                accept.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                        net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/tpaccept"));
+                net.md_5.bungee.api.chat.TextComponent decline = new net.md_5.bungee.api.chat.TextComponent(" §c[ DECLINE ]");
+                decline.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                        net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/tpdeny"));
+                details.addExtra(accept);
+                details.addExtra(decline);
+                target.spigot().sendMessage(details);
                 target.playSound(target.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.25f);
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    if (requestExpiry.getOrDefault(target.getUniqueId(), 0L) == expires) {
+                        requestsByTarget.remove(target.getUniqueId());
+                        requestExpiry.remove(target.getUniqueId());
+                        quoteByTarget.remove(target.getUniqueId());
+                        Player onlineRequester = Bukkit.getPlayer(player.getUniqueId());
+                        if (onlineRequester != null) msg(onlineRequester, "Your teleport request expired.");
+                        if (target.isOnline()) msg(target, "Teleport request expired.");
+                    }
+                }, TPA_TTL / 50L);
+                return true;
+            }
+            case "tpacancel" -> {
+                preparedByRequester.remove(player.getUniqueId());
+                msg(player, "Teleport preview cancelled.");
                 return true;
             }
             case "tpaccept", "tpdeny" -> {
-                UUID requesterId = requestsByTarget.remove(player.getUniqueId());
-                Long expiry = requestExpiry.remove(player.getUniqueId());
-                if (requesterId == null || expiry == null || System.currentTimeMillis() > expiry) {
+                UUID targetId = player.getUniqueId();
+                UUID requesterId = requestsByTarget.remove(targetId);
+                Long expiry = requestExpiry.remove(targetId);
+                TpaQuote storedQuote = quoteByTarget.remove(targetId);
+                if (requesterId == null || expiry == null || storedQuote == null || System.currentTimeMillis() > expiry) {
                     msg(player, "You have no active teleport request."); return true;
                 }
                 Player requester = Bukkit.getPlayer(requesterId);
                 if (requester == null) { msg(player, "That player is no longer online."); return true; }
                 if (cmd.equals("tpdeny")) {
-                    msg(player, "Teleport request denied."); msg(requester, player.getName() + " denied your teleport request.");
+                    msg(player, "Teleport request denied.");
+                    msg(requester, player.getName() + " declined your teleport request.");
                     player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.9f, 0.8f);
                     requester.playSound(requester.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.9f, 0.8f);
-                } else {
-                    XZHEconomySystem economy = (XZHEconomySystem) plugin;
-                    double fee = Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-cost", 10.0));
-                    if (economy.getCombinedBalance(requesterId) + 1e-9 < fee) {
-                        msg(requester, "You need " + money(fee) + " coins to complete /tpa.");
-                        msg(player, "Teleport request could not complete because the requester cannot afford the fee.");
-                        return true;
-                    }
-                    boolean teleported = requester.teleport(player.getLocation());
-                    if (!teleported) {
-                        msg(requester, "Teleport failed; no fee was charged.");
-                        msg(player, "Teleport failed; no fee was charged.");
-                        return true;
-                    }
-                    if (!economy.spendAvailableFunds(requesterId, fee)) {
-                        msg(requester, "Teleport succeeded, but payment could not be collected. Please contact an admin.");
-                        msg(player, "Teleport request accepted.");
-                        return true;
-                    }
-                    msg(player, "Teleport request accepted.");
-                    msg(requester, "Teleported to " + player.getName() + " for " + money(fee) + " coins.");
-                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.9f, 1.2f);
-                    requester.playSound(requester.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.9f, 1.2f);
+                    return true;
                 }
+                TpaQuote current = tpaQuote(requester, player);
+                if (current == null) return true;
+                if (!sameQuote(storedQuote, current)) {
+                    msg(requester, "The travel distance changed. Send a new /tpa request to confirm the updated cost.");
+                    msg(player, "The travel distance changed. Ask the player to send a new request.");
+                    return true;
+                }
+                XZHEconomySystem economy = (XZHEconomySystem) plugin;
+                if (economy.getCombinedBalance(requesterId) + 1e-9 < current.cost()) {
+                    msg(requester, "You no longer have enough pocket + bank coins for this teleport.");
+                    msg(player, "Teleport cancelled because the requester cannot afford the travel cost.");
+                    return true;
+                }
+                boolean teleported = requester.teleport(player.getLocation());
+                if (!teleported) {
+                    msg(requester, "Teleport failed; no fee was charged.");
+                    msg(player, "Teleport failed; no fee was charged.");
+                    return true;
+                }
+                if (!economy.spendAvailableFunds(requesterId, current.cost())) {
+                    msg(requester, "Teleport succeeded, but payment could not be collected. Please contact an admin.");
+                    msg(player, "Teleport request accepted.");
+                    return true;
+                }
+                msg(player, "Teleport request accepted.");
+                msg(requester, "Teleported to " + player.getName() + " for " + current.cost() + " coins.");
+                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.9f, 1.2f);
+                requester.playSound(requester.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.9f, 1.2f);
                 return true;
             }
             case "back" -> {
@@ -497,6 +563,51 @@ public final class UtilityManager implements Listener {
         // by XZH Survival so this listener does not send a second death message.
         data.set("back." + event.getEntity().getUniqueId(), event.getEntity().getLocation());
         save();
+    }
+
+    private TpaQuote tpaQuote(Player requester, Player target) {
+        if (requester.getWorld() != target.getWorld()) {
+            if (requester.getWorld().getEnvironment() == World.Environment.NETHER
+                    || target.getWorld().getEnvironment() == World.Environment.NETHER) {
+                return new TpaQuote(-1, plugin.getConfig().getInt("utilities.tpa-nether-fixed-cost", 66),
+                        true, "cross-dimension");
+            }
+            msg(requester, "Teleport requests across different worlds are not supported (except Nether travel).");
+            return null;
+        }
+        int distance = (int) Math.round(Math.sqrt(requester.getLocation().distanceSquared(target.getLocation())));
+        if (requester.getWorld().getEnvironment() == World.Environment.NETHER) {
+            return new TpaQuote(distance, plugin.getConfig().getInt("utilities.tpa-nether-fixed-cost", 66),
+                    true, String.format(Locale.US, "%,d blocks", distance));
+        }
+        String root = "utilities.tpa-prices.";
+        int cost;
+        if (distance <= 250) cost = plugin.getConfig().getInt(root + "up-to-250", 10);
+        else if (distance <= 1000) cost = plugin.getConfig().getInt(root + "up-to-1000", 20);
+        else if (distance <= 3000) cost = plugin.getConfig().getInt(root + "up-to-3000", 30);
+        else if (distance <= 6000) cost = plugin.getConfig().getInt(root + "up-to-6000", 40);
+        else if (distance <= 10000) cost = plugin.getConfig().getInt(root + "up-to-10000", 50);
+        else cost = plugin.getConfig().getInt(root + "over-10000", 75);
+        return new TpaQuote(distance, cost, false, String.format(Locale.US, "%,d blocks", distance));
+    }
+
+    private boolean sameQuote(TpaQuote first, TpaQuote second) {
+        return first.distance() == second.distance() && first.cost() == second.cost()
+                && first.netherFixed() == second.netherFixed();
+    }
+
+    private void showTpaPreview(Player requester, Player target, TpaQuote quote) {
+        net.md_5.bungee.api.chat.TextComponent line = new net.md_5.bungee.api.chat.TextComponent(
+                "§6Teleport to §d@" + target.getName() + " §8| §bDistance: §f" + quote.distanceLabel()
+                        + " §8| §eTravel cost: §6✦ " + quote.cost() + " coins");
+        net.md_5.bungee.api.chat.TextComponent send = new net.md_5.bungee.api.chat.TextComponent("§a[ SEND ]");
+        send.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/tpasend"));
+        net.md_5.bungee.api.chat.TextComponent decline = new net.md_5.bungee.api.chat.TextComponent(" §c[ DECLINE ]");
+        decline.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/tpacancel"));
+        requester.spigot().sendMessage(line);
+        requester.spigot().sendMessage(send, decline);
     }
 
     private String money(double amount) {
