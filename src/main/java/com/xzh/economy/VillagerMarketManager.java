@@ -10,7 +10,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
-import org.bukkit.event.player.PlayerTradeEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.MerchantInventory;
 import org.bukkit.inventory.MerchantRecipe;
@@ -93,19 +93,17 @@ public final class VillagerMarketManager implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onPlayerTrade(PlayerTradeEvent event) {
-        if (!(event.getVillager() instanceof Villager villager)) return;
+    public void onMerchantTradeClick(InventoryClickEvent event) {
+        if (event.getRawSlot() != 2) return;
+        if (!(event.getView().getTopInventory() instanceof MerchantInventory inventory)) return;
+        if (!(inventory.getMerchant() instanceof Villager villager)) return;
+        if (!(event.getWhoClicked() instanceof Player player)) return;
         if (!plugin.getConfig().getBoolean("villager-market.enabled", true)) return;
-        Player player = event.getPlayer();
+
         Villager.Profession profession = villager.getProfession();
-        int offerIndex = -1;
-        if (player.getOpenInventory().getTopInventory() instanceof MerchantInventory inventory
-                && inventory.getMerchant() == villager) {
-            offerIndex = inventory.getSelectedRecipeIndex();
-        }
-        if (offerIndex < 0) return;
+        int offerIndex = inventory.getSelectedRecipeIndex();
         List<Offer> offers = generateOffers(profession);
-        if (offerIndex >= offers.size()) return;
+        if (offerIndex < 0 || offerIndex >= offers.size()) return;
         Offer offer = offers.get(offerIndex);
         String stockPath = stockPath(player.getUniqueId(), profession, offer.key());
         int used = data.getInt(stockPath, 0);
@@ -115,8 +113,19 @@ public final class VillagerMarketManager implements Listener {
             player.sendMessage(Component.text("You've used all your stock for this offer until the profession restocks.", NamedTextColor.RED));
             return;
         }
-        data.set(stockPath, used + 1);
-        save();
+
+        // Let vanilla perform the actual exchange. Count stock only if the recipe's
+        // native use counter advances after the trade click succeeds.
+        int previousUses = inventory.getSelectedRecipe() == null ? 0 : inventory.getSelectedRecipe().getUses();
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!player.isOnline() || !villager.isValid()) return;
+            List<MerchantRecipe> recipes = villager.getRecipes();
+            if (offerIndex >= recipes.size()) return;
+            if (recipes.get(offerIndex).getUses() > previousUses) {
+                data.set(stockPath, data.getInt(stockPath, 0) + 1);
+                save();
+            }
+        }, 1L);
     }
 
     private void tickOpenMerchants() {
