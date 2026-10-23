@@ -264,19 +264,32 @@ public final class VillagerMarketManager implements Listener {
     }
 
     private List<Material> wantedItems(Villager.Profession profession) {
-        List<Material> list = switch (profession) {
-            case FARMER -> new ArrayList<>(List.of(Material.WHEAT, Material.CARROT, Material.POTATO, Material.BEETROOT, Material.PUMPKIN, Material.MELON_SLICE));
-            case FISHERMAN -> new ArrayList<>(List.of(Material.COD, Material.SALMON, Material.PUFFERFISH, Material.TROPICAL_FISH, Material.STRING, Material.REDSTONE));
-            case ARMORER, TOOLSMITH, WEAPONSMITH -> new ArrayList<>(List.of(Material.COAL, Material.IRON_INGOT, Material.COPPER_INGOT, Material.GOLD_INGOT, Material.DIAMOND));
-            case MASON -> new ArrayList<>(List.of(Material.CLAY_BALL, Material.BRICK, Material.STONE, Material.COBBLESTONE, Material.OBSIDIAN));
-            case CLERIC -> new ArrayList<>(List.of(Material.ROTTEN_FLESH, Material.GOLD_INGOT, Material.BLAZE_ROD, Material.ENDER_PEARL, Material.GLOWSTONE_DUST));
-            case LIBRARIAN, CARTOGRAPHER -> new ArrayList<>(List.of(Material.PAPER, Material.BOOK, Material.INK_SAC, Material.COMPASS, Material.GLASS_PANE));
-            case BUTCHER -> new ArrayList<>(List.of(Material.BEEF, Material.PORKCHOP, Material.CHICKEN, Material.MUTTON, Material.RABBIT));
-            case FLETCHER -> new ArrayList<>(List.of(Material.STICK, Material.FEATHER, Material.FLINT, Material.STRING));
-            case SHEPHERD -> new ArrayList<>(List.of(Material.WHITE_WOOL, Material.BLACK_WOOL, Material.RED_DYE, Material.BLUE_DYE, Material.YELLOW_DYE));
-            case LEATHERWORKER -> new ArrayList<>(List.of(Material.LEATHER, Material.RABBIT_HIDE, Material.FLINT, Material.STRING));
-            default -> new ArrayList<>(List.of(Material.COAL, Material.IRON_INGOT, Material.REDSTONE, Material.OBSIDIAN, Material.ENDER_PEARL));
-        };
+        List<Material> list;
+        // Profession is a registry-backed OldEnum in current Paper APIs, so use
+        // qualified profession constants rather than Java enum switch labels.
+        if (profession == Villager.Profession.FARMER) {
+            list = new ArrayList<>(List.of(Material.WHEAT, Material.CARROT, Material.POTATO, Material.BEETROOT, Material.PUMPKIN, Material.MELON_SLICE));
+        } else if (profession == Villager.Profession.FISHERMAN) {
+            list = new ArrayList<>(List.of(Material.COD, Material.SALMON, Material.PUFFERFISH, Material.TROPICAL_FISH, Material.STRING, Material.REDSTONE));
+        } else if (profession == Villager.Profession.ARMORER || profession == Villager.Profession.TOOLSMITH || profession == Villager.Profession.WEAPONSMITH) {
+            list = new ArrayList<>(List.of(Material.COAL, Material.IRON_INGOT, Material.COPPER_INGOT, Material.GOLD_INGOT, Material.DIAMOND));
+        } else if (profession == Villager.Profession.MASON) {
+            list = new ArrayList<>(List.of(Material.CLAY_BALL, Material.BRICK, Material.STONE, Material.COBBLESTONE, Material.OBSIDIAN));
+        } else if (profession == Villager.Profession.CLERIC) {
+            list = new ArrayList<>(List.of(Material.ROTTEN_FLESH, Material.GOLD_INGOT, Material.BLAZE_ROD, Material.ENDER_PEARL, Material.GLOWSTONE_DUST));
+        } else if (profession == Villager.Profession.LIBRARIAN || profession == Villager.Profession.CARTOGRAPHER) {
+            list = new ArrayList<>(List.of(Material.PAPER, Material.BOOK, Material.INK_SAC, Material.COMPASS, Material.GLASS_PANE));
+        } else if (profession == Villager.Profession.BUTCHER) {
+            list = new ArrayList<>(List.of(Material.BEEF, Material.PORKCHOP, Material.CHICKEN, Material.MUTTON, Material.RABBIT));
+        } else if (profession == Villager.Profession.FLETCHER) {
+            list = new ArrayList<>(List.of(Material.STICK, Material.FEATHER, Material.FLINT, Material.STRING));
+        } else if (profession == Villager.Profession.SHEPHERD) {
+            list = new ArrayList<>(List.of(Material.WHITE_WOOL, Material.BLACK_WOOL, Material.RED_DYE, Material.BLUE_DYE, Material.YELLOW_DYE));
+        } else if (profession == Villager.Profession.LEATHERWORKER) {
+            list = new ArrayList<>(List.of(Material.LEATHER, Material.RABBIT_HIDE, Material.FLINT, Material.STRING));
+        } else {
+            list = new ArrayList<>(List.of(Material.COAL, Material.IRON_INGOT, Material.REDSTONE, Material.OBSIDIAN, Material.ENDER_PEARL));
+        }
         // Add rare, high-demand items as occasional barter requests.
         if (profession == Villager.Profession.CLERIC || profession == Villager.Profession.WEAPONSMITH
                 || profession == Villager.Profession.ARMORER || profession == Villager.Profession.TOOLSMITH) {
@@ -287,22 +300,34 @@ public final class VillagerMarketManager implements Listener {
     }
 
     private List<Material> rewardItems(Villager.Profession profession) {
-        return switch (profession) {
-            case FARMER -> List.of(Material.BREAD, Material.COOKED_BEEF, Material.GOLDEN_CARROT, Material.PUMPKIN_PIE, Material.GOLDEN_APPLE);
-            case FISHERMAN -> List.of(Material.COD, Material.COOKED_COD, Material.SALMON, Material.COOKED_SALMON, Material.TROPICAL_FISH);
-            case ARMORER -> List.of(Material.IRON_CHESTPLATE, Material.IRON_HELMET, Material.SHIELD, Material.IRON_INGOT, Material.GOLDEN_APPLE);
-            case TOOLSMITH -> List.of(Material.IRON_PICKAXE, Material.IRON_AXE, Material.DIAMOND_PICKAXE, Material.IRON_INGOT, Material.DIAMOND);
-            case WEAPONSMITH -> List.of(Material.IRON_SWORD, Material.SHIELD, Material.DIAMOND_SWORD, Material.BLAZE_ROD, Material.ENDER_PEARL);
-            case MASON -> List.of(Material.BRICKS, Material.OBSIDIAN, Material.GLASS, Material.QUARTZ, Material.CLAY);
-            case CLERIC -> List.of(Material.GLOWSTONE, Material.BLAZE_ROD, Material.ENDER_PEARL, Material.EXPERIENCE_BOTTLE, Material.GOLDEN_APPLE);
-            case LIBRARIAN -> List.of(Material.BOOK, Material.BOOKSHELF, Material.PAPER, Material.COMPASS, Material.ENDER_PEARL);
-            case CARTOGRAPHER -> List.of(Material.MAP, Material.COMPASS, Material.GLASS_PANE, Material.PAPER, Material.ENDER_PEARL);
-            case BUTCHER -> List.of(Material.COOKED_BEEF, Material.COOKED_PORKCHOP, Material.COOKED_CHICKEN, Material.COOKED_MUTTON, Material.GOLDEN_CARROT);
-            case FLETCHER -> List.of(Material.ARROW, Material.BOW, Material.CROSSBOW, Material.FLINT, Material.ENDER_PEARL);
-            case SHEPHERD -> List.of(Material.WHITE_WOOL, Material.BLACK_WOOL, Material.RED_WOOL, Material.BLUE_WOOL, Material.WHITE_BANNER);
-            case LEATHERWORKER -> List.of(Material.LEATHER, Material.LEATHER_CHESTPLATE, Material.SADDLE, Material.RABBIT_HIDE, Material.LEAD);
-            default -> List.of(Material.IRON_INGOT, Material.GOLD_INGOT, Material.DIAMOND, Material.OBSIDIAN, Material.ENDER_PEARL);
-        };
+        if (profession == Villager.Profession.FARMER) {
+            return List.of(Material.BREAD, Material.COOKED_BEEF, Material.GOLDEN_CARROT, Material.PUMPKIN_PIE, Material.GOLDEN_APPLE);
+        } else if (profession == Villager.Profession.FISHERMAN) {
+            return List.of(Material.COD, Material.COOKED_COD, Material.SALMON, Material.COOKED_SALMON, Material.TROPICAL_FISH);
+        } else if (profession == Villager.Profession.ARMORER) {
+            return List.of(Material.IRON_CHESTPLATE, Material.IRON_HELMET, Material.SHIELD, Material.IRON_INGOT, Material.GOLDEN_APPLE);
+        } else if (profession == Villager.Profession.TOOLSMITH) {
+            return List.of(Material.IRON_PICKAXE, Material.IRON_AXE, Material.DIAMOND_PICKAXE, Material.IRON_INGOT, Material.DIAMOND);
+        } else if (profession == Villager.Profession.WEAPONSMITH) {
+            return List.of(Material.IRON_SWORD, Material.SHIELD, Material.DIAMOND_SWORD, Material.BLAZE_ROD, Material.ENDER_PEARL);
+        } else if (profession == Villager.Profession.MASON) {
+            return List.of(Material.BRICKS, Material.OBSIDIAN, Material.GLASS, Material.QUARTZ, Material.CLAY);
+        } else if (profession == Villager.Profession.CLERIC) {
+            return List.of(Material.GLOWSTONE, Material.BLAZE_ROD, Material.ENDER_PEARL, Material.EXPERIENCE_BOTTLE, Material.GOLDEN_APPLE);
+        } else if (profession == Villager.Profession.LIBRARIAN) {
+            return List.of(Material.BOOK, Material.BOOKSHELF, Material.PAPER, Material.COMPASS, Material.ENDER_PEARL);
+        } else if (profession == Villager.Profession.CARTOGRAPHER) {
+            return List.of(Material.MAP, Material.COMPASS, Material.GLASS_PANE, Material.PAPER, Material.ENDER_PEARL);
+        } else if (profession == Villager.Profession.BUTCHER) {
+            return List.of(Material.COOKED_BEEF, Material.COOKED_PORKCHOP, Material.COOKED_CHICKEN, Material.COOKED_MUTTON, Material.GOLDEN_CARROT);
+        } else if (profession == Villager.Profession.FLETCHER) {
+            return List.of(Material.ARROW, Material.BOW, Material.CROSSBOW, Material.FLINT, Material.ENDER_PEARL);
+        } else if (profession == Villager.Profession.SHEPHERD) {
+            return List.of(Material.WHITE_WOOL, Material.BLACK_WOOL, Material.RED_WOOL, Material.BLUE_WOOL, Material.WHITE_BANNER);
+        } else if (profession == Villager.Profession.LEATHERWORKER) {
+            return List.of(Material.LEATHER, Material.LEATHER_CHESTPLATE, Material.SADDLE, Material.RABBIT_HIDE, Material.LEAD);
+        }
+        return List.of(Material.IRON_INGOT, Material.GOLD_INGOT, Material.DIAMOND, Material.OBSIDIAN, Material.ENDER_PEARL);
     }
 
     private int randomAmount(Random random, Material material) {
