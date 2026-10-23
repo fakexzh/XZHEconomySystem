@@ -70,6 +70,7 @@ public final class VillagerMarketManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onVillagerInteract(PlayerInteractEntityEvent event) {
+        if (!plugin.getConfig().getBoolean("villager-market.enabled", true)) return;
         if (!(event.getRightClicked() instanceof Villager villager)) return;
         if (event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) return;
         if (event.getPlayer().isSneaking()) return;
@@ -172,7 +173,6 @@ public final class VillagerMarketManager implements Listener {
             int level = xp >= 250 ? 5 : xp >= 150 ? 4 : xp >= 70 ? 3 : xp >= 10 ? 2 : 1;
             if (level > villager.getVillagerLevel()) villager.setVillagerLevel(level);
             inventory.setItem(0, createVoucher());
-            inventory.setItem(2, null);
             player.updateInventory();
         } else if (event.getRawSlot() == 0 && event.getClickedInventory() == inventory) {
             event.setCancelled(true);
