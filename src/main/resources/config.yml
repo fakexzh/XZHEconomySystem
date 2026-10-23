@@ -38,12 +38,6 @@ announcements:
   bank:
     enabled: true
 
-time-control:
-  enabled: true
-  daylength-minutes: 30
-  nightlength-minutes: 30
-  paused: false
-
 # HUD settings
 hud:
   clock:
@@ -69,13 +63,66 @@ death-recovery:
     ancient_debris: 120
     mending: 100
 
-# Global shop stock caps. Stock is shared by every player and refills to these caps daily.\n# Resale values are deliberately item-specific in code; legacy 30% sell defaults are not used.
+# Shop buy-stock caps are shared by every player and refill daily.\n# Resale values are deliberately item-specific in code; legacy 30% sell defaults are not used.
 shop:
   default-sell-price: 0.015625
+  # Personal sell quotas for renewable/farmable items; each player's quota refills every 6 real-world hours.
+  # Every configured personal sell-stock limit has a hard minimum of 200 items.
+  sell-stock-restock-hours: 6
+  sell-stock-limits:
+    dried_kelp: 200
+    dried_kelp_block: 200
+    kelp: 512
+    sugar_cane: 512
+    bamboo: 512
+    cactus: 512
+    wheat: 512
+    carrot: 512
+    potato: 512
+    beetroot: 512
+    pumpkin: 512
+    melon: 512
+    melon_slice: 512
+    cod: 256
+    salmon: 256
+    cooked_cod: 256
+    cooked_salmon: 256
+    egg: 256
+    milk_bucket: 256
   prices:
+    tnt:
+      buy: 70
+      sell: 20
     elytra:
-      buy: 5000
-      sell: 1500
+      buy: 10000
+      sell: 0
+    netherite_ingot:
+      buy: 1800
+      sell: 360
+    netherite_helmet:
+      buy: 6000
+      sell: 300
+    netherite_chestplate:
+      buy: 6000
+      sell: 300
+    netherite_leggings:
+      buy: 6000
+      sell: 300
+    netherite_boots:
+      buy: 6000
+      sell: 300
+    mace:
+      buy: 4500
+      sell: 900
+    ender_chest:
+      buy: 500
+      sell: 105
+    enchanted_golden_apple:
+      buy: 2000
+      sell: 750
+    netherite_upgrade_smithing_template:
+      buy: 1500
+      sell: 500
     diamond:
       buy: 100
       sell: 5
@@ -85,6 +132,18 @@ shop:
     cooked_beef:
       buy: 14
       sell: 4.2
+    cod:
+      buy: 5
+      sell: 4
+    salmon:
+      buy: 6
+      sell: 5
+    cooked_cod:
+      buy: 10
+      sell: 6
+    cooked_salmon:
+      buy: 12
+      sell: 7.5
   stock-limits:
     coal: 2000
     iron_ingot: 1000
@@ -103,6 +162,8 @@ shop:
     end_stone: 500
     iron_block: 100
     diamond_block: 10
+    tnt: 128
+    firework_rocket: 256
     bread: 1000
     cooked_beef: 1000
     iron_pickaxe: 100
@@ -204,7 +265,7 @@ quests:
     end: 5
   global-event:
     goal: 500
-    reward: 100
+    reward: 200
     claims-per-day: 25
 
 # Configurable gameplay restrictions.
@@ -218,58 +279,86 @@ utilities:
   max-homes: 3
   rtp-radius: 3000
   rtp-cooldown-seconds: 600
-  tpa-cost: 10
+  tpa-cost: 10 # legacy fallback; distance prices below are used by /tpa
+  tpa-nether-fixed-cost: 66
+  tpa-prices:
+    up-to-250: 10
+    up-to-1000: 20
+    up-to-3000: 30
+    up-to-6000: 40
+    up-to-10000: 50
+    over-10000: 75
   back-cost: 30
 
 # Enchantment book shop rules.
 book-shop:
-  cooldown-hours: 24
-  rare-daily-stock: 3
+  cooldown-hours: 12
+  max-books-per-player-per-day: 2 # legacy/global setting; current limit is per enchantment
+  rare-daily-stock: 4
   normal-daily-stock: 100
+  stock:
+    mending: 3
+    unbreaking: 6
+    efficiency: 6
+    fortune: 6
+    silk_touch: 3
+    looting: 6
+    sharpness: 6
+    protection: 6
+    feather_falling: 6
+    wind_burst: 3
+    swift_sneak: 3
+    soul_speed: 3
+    frost_walker: 4
+    riptide: 4
+    channeling: 4
+    thorns: 4
+    sweeping_edge: 4
+    infinity: 4
   prices:
-    mending: 3000
-    wind_burst: 3500
-    lunge: 1800
-    swift_sneak: 1600
-    soul_speed: 1500
-    frost_walker: 1400
-    fortune: 1400
-    silk_touch: 1400
-    unbreaking: 1300
-    efficiency: 1300
-    looting: 1300
-    sharpness: 1100
-    protection: 1100
-    feather_falling: 1000
-    power: 1000
-    breach: 1800
-    density: 1800
-    infinity: 1200
-    riptide: 1200
-    channeling: 1300
-    thorns: 1000
-    sweeping_edge: 1000
-    respiration: 900
-    depth_strider: 1000
-    aqua_affinity: 800
-    fire_aspect: 1000
-    fire_protection: 800
-    blast_protection: 800
-    projectile_protection: 800
-    smite: 900
-    bane_of_arthropods: 700
-    knockback: 700
-    punch: 700
-    flame: 800
-    loyalty: 900
-    impaling: 900
-    multishot: 900
-    piercing: 800
-    quick_charge: 800
-    lure: 800
-    luck_of_the_sea: 900
-    binding_curse: 500
-    vanishing_curse: 500
+    aqua_affinity: 1700
+    bane_of_arthropods: 1500
+    binding_curse: 1000
+    blast_protection: 1700
+    breach: 3750
+    channeling: 2700
+    density: 3750
+    depth_strider: 2100
+    efficiency: 2700
+    feather_falling: 2100
+    fire_aspect: 2100
+    fire_protection: 1700
+    flame: 1700
+    fortune: 2900
+    frost_walker: 2900
+    impaling: 1900
+    infinity: 2500
+    knockback: 1500
+    looting: 2700
+    loyalty: 1900
+    luck_of_the_sea: 1900
+    lure: 1700
+    mending: 2500
+    multishot: 1900
+    piercing: 1700
+    power: 2100
+    projectile_protection: 1700
+    protection: 2300
+    punch: 1500
+    quick_charge: 1700
+    respiration: 1900
+    riptide: 2500
+    sharpness: 2300
+    silk_touch: 2900
+    smite: 1900
+    soul_speed: 3100
+    sweeping_edge: 2100
+    swift_sneak: 3350
+    thorns: 2100
+    unbreaking: 2700
+    vanishing_curse: 1000
+    wind_burst: 7300
+    lunge: 3750
 
 # Configurable starter kit; items use MATERIAL:AMOUNT syntax.
 kits:
@@ -279,3 +368,17 @@ kits:
       - STONE_PICKAXE:1
       - BREAD:8
       - TORCH:16
+
+# Travel shop restrictions. Spawn eggs can still be purchased from the Travel menu.
+travel:
+  disable-natural-horse-donkey-spawning: true
+  disable-horse-donkey-breeding: true
+
+# XZH premium boats. Prices are defined by the curated BoatManager offers.
+premium-boats:
+  enabled: true
+  disable-crafting: true
+  speed-cap:
+    basic: 0.25
+    aura: 0.34
+    super: 0.46
