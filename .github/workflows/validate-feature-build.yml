@@ -1,0 +1,34 @@
+name: Validate economy feature branch build
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.event.pull_request.head.repo.full_name == github.repository && (github.event.pull_request.head.ref == 'feature/villager-market-player-limits-4h' || github.event.pull_request.head.ref == 'build/validate-market')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the same-repository feature branch
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build economy plugin
+        run: gradle clean build
+      - name: Upload built JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: XZHEconomySystem-validated
+          path: build/libs/*.jar
+          if-no-files-found: error
