@@ -67,7 +67,6 @@ public final class VillagerTradeManager implements Listener {
         add("fish_puffer_bucket", Villager.Profession.FISHERMAN, Kind.PLAYER_SELLS, Material.PUFFERFISH_BUCKET, 1, null, 0, 8, .82);
         add("fish_axolotl_bucket", Villager.Profession.FISHERMAN, Kind.PLAYER_SELLS, Material.AXOLOTL_BUCKET, 1, null, 0, 3, .85);
         add("fish_cod_redstone", Villager.Profession.FISHERMAN, Kind.BARTER, Material.COD, 50, Material.REDSTONE, 64, 4, 1.0);
-        add("fish_lava_bucket", Villager.Profession.FISHERMAN, Kind.PLAYER_SELLS, Material.LAVA_BUCKET, 1, null, 0, 8, .70);
         add("fish_cooked_cod", Villager.Profession.FISHERMAN, Kind.PLAYER_BUYS, Material.COOKED_COD, 16, null, 0, 32, 1.05);
 
         add("cleric_blaze", Villager.Profession.CLERIC, Kind.PLAYER_SELLS, Material.BLAZE_ROD, 8, null, 0, 24, .65);
@@ -77,7 +76,6 @@ public final class VillagerTradeManager implements Listener {
         add("cleric_glowstone", Villager.Profession.CLERIC, Kind.PLAYER_BUYS, Material.GLOWSTONE_DUST, 16, null, 0, 32, 1.10);
         add("cleric_redstone", Villager.Profession.CLERIC, Kind.PLAYER_BUYS, Material.REDSTONE, 32, null, 0, 32, 1.10);
         add("cleric_lapis", Villager.Profession.CLERIC, Kind.PLAYER_BUYS, Material.LAPIS_LAZULI, 16, null, 0, 32, 1.10);
-        add("cleric_potion", Villager.Profession.CLERIC, Kind.PLAYER_SELLS, Material.POTION, 1, null, 0, 16, .85);
 
         add("librarian_paper", Villager.Profession.LIBRARIAN, Kind.PLAYER_SELLS, Material.PAPER, 32, null, 0, 48, .75);
         add("librarian_book", Villager.Profession.LIBRARIAN, Kind.PLAYER_SELLS, Material.BOOK, 8, null, 0, 24, .75);
@@ -188,10 +186,8 @@ public final class VillagerTradeManager implements Listener {
         if (plugin.getConfig().contains(path)) return Math.max(1, plugin.getConfig().getDouble(path));
         return switch (material) {
             case WITHER_SKELETON_SKULL -> 1000;
-            case POTION -> 150;
             case AXOLOTL_BUCKET -> 1200;
             case TROPICAL_FISH_BUCKET, PUFFERFISH_BUCKET -> 180;
-            case LAVA_BUCKET -> 100;
             case REDSTONE -> 8;
             case LAPIS_LAZULI -> 10;
             case DIAMOND -> 250;
