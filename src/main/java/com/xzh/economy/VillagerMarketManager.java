@@ -98,11 +98,10 @@ public final class VillagerMarketManager implements Listener {
         if (!plugin.getConfig().getBoolean("villager-market.enabled", true)) return;
         Player player = event.getPlayer();
         Villager.Profession profession = villager.getProfession();
-        MerchantRecipe trade = event.getTrade();
         int offerIndex = -1;
-        List<MerchantRecipe> recipes = villager.getRecipes();
-        for (int i = 0; i < recipes.size(); i++) {
-            if (recipes.get(i).equals(trade)) { offerIndex = i; break; }
+        if (player.getOpenInventory().getTopInventory() instanceof MerchantInventory inventory
+                && inventory.getMerchant() == villager) {
+            offerIndex = inventory.getSelectedRecipeIndex();
         }
         if (offerIndex < 0) return;
         List<Offer> offers = generateOffers(profession);
