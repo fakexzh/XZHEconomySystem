@@ -123,7 +123,8 @@ public final class UtilityManager implements Listener {
             }
             case "tpa" -> {
                 if (args.length != 1) { msg(player, "Usage: /tpa <player>"); return true; }
-                Player target = Bukkit.getPlayerExact(args[0]);
+                String targetName = args[0].startsWith("@") ? args[0].substring(1) : args[0];
+                Player target = Bukkit.getPlayerExact(targetName);
                 if (target == null || target.equals(player)) { msg(player, "Choose another online player."); return true; }
                 if (!player.getWorld().equals(target.getWorld())
                         && player.getWorld().getEnvironment() != World.Environment.NETHER
