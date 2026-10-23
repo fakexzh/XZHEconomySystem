@@ -28,6 +28,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.UUID;
 
 /**
@@ -44,6 +46,7 @@ public final class VillagerMarketManager implements Listener {
     private final NamespacedKey voucherKey;
     private final File file;
     private final YamlConfiguration data;
+    private final Map<UUID, Long> appliedSeeds = new HashMap<>();
 
     public VillagerMarketManager(XZHEconomySystem plugin) {
         this.plugin = plugin;
@@ -106,7 +109,7 @@ public final class VillagerMarketManager implements Listener {
             recipes.add(recipe);
         }
         villager.setRecipes(recipes);
-        villager.setRecipes(recipes);
+        appliedSeeds.put(villager.getUniqueId(), data.getLong(professionPath(profession) + ".seed", 1L));
         // Store current offer identity on the entity so a second villager of this profession
         // cannot grant additional stock; the global seed remains the source of truth.
     }
@@ -189,6 +192,10 @@ public final class VillagerMarketManager implements Listener {
             if (!(inventory.getMerchant() instanceof Villager villager)) continue;
             Villager.Profession profession = villager.getProfession();
             refreshIfDue(profession);
+            long currentSeed = data.getLong(professionPath(profession) + ".seed", 1L);
+            if (appliedSeeds.getOrDefault(villager.getUniqueId(), Long.MIN_VALUE) != currentSeed) {
+                applyOffers(villager, profession);
+            }
             long remaining = Math.max(0L, data.getLong(professionPath(profession) + ".next-restock", now) - now);
             long seconds = (remaining + 999L) / 1000L;
             String time = seconds >= 3600 ? (seconds / 3600) + "h " + ((seconds % 3600) / 60) + "m"
@@ -259,7 +266,6 @@ public final class VillagerMarketManager implements Listener {
             case FLETCHER -> new ArrayList<>(List.of(Material.STICK, Material.FEATHER, Material.FLINT, Material.STRING));
             case SHEPHERD -> new ArrayList<>(List.of(Material.WHITE_WOOL, Material.BLACK_WOOL, Material.RED_DYE, Material.BLUE_DYE, Material.YELLOW_DYE));
             case LEATHERWORKER -> new ArrayList<>(List.of(Material.LEATHER, Material.RABBIT_HIDE, Material.FLINT, Material.STRING));
-            case FISHERMAN -> new ArrayList<>(List.of(Material.COD, Material.SALMON, Material.PUFFERFISH, Material.TROPICAL_FISH));
             default -> new ArrayList<>(List.of(Material.COAL, Material.IRON_INGOT, Material.REDSTONE, Material.OBSIDIAN, Material.ENDER_PEARL));
         };
         // Add rare, high-demand items as occasional barter requests.
@@ -293,8 +299,9 @@ public final class VillagerMarketManager implements Listener {
     private int randomAmount(Random random, Material material) {
         if (material == Material.WITHER_SKELETON_SKULL || material == Material.LAVA_BUCKET
                 || material == Material.AXOLOTL_BUCKET || material == Material.COD_BUCKET) return 1;
-        if (material == Material.ENDER_PEARL || material == Material.BLAZE_ROD || material == Material.DIAMOND) return 1 + random.nextInt(4);
-        return 4 + random.nextInt(29);
+        if (material == Material.ENDER_PEARL || material == Material.BLAZE_ROD || material == Material.DIAMOND) return Math.min(material.getMaxStackSize(), 1 + random.nextInt(4));
+        if (material.getMaxStackSize() == 1) return 1;
+        return Math.min(material.getMaxStackSize(), 4 + random.nextInt(29));
     }
 
     private ItemStack createVoucher() {
