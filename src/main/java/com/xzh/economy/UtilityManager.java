@@ -40,9 +40,6 @@ public final class UtilityManager implements Listener {
     private final Map<UUID, Double> requestFees = new HashMap<>();
     private final Map<UUID, PendingTpaPreview> pendingTpaPreviews = new HashMap<>();
     private record PendingTpaPreview(UUID targetId, long expiresAt, double distance, double fee) { }
-    private final Map<UUID, Double> requestFees = new HashMap<>();
-    private final Map<UUID, PendingTpaPreview> pendingTpaPreviews = new HashMap<>();
-    private record PendingTpaPreview(UUID targetId, long expiresAt, double distance, double fee) { }
     private final Map<UUID, UUID> replies = new HashMap<>();
     private final Map<UUID, Boolean> afk = new HashMap<>();
     private final Map<UUID, Long> rtpCooldown = new HashMap<>();
@@ -560,31 +557,6 @@ public final class UtilityManager implements Listener {
                 || target.getWorld().getEnvironment() == World.Environment.NETHER) {
             return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.nether-flat", 66.0));
         }
-        if (distance < 0) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-cost", 10.0));
-        if (distance <= 250) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-250", 10.0));
-        if (distance <= 1000) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-1000", 10.0));
-        if (distance <= 3000) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-3000", 20.0));
-        if (distance <= 6000) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-6000", 35.0));
-        if (distance <= 10000) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-10000", 50.0));
-        return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-over-10000", 75.0));
-    }
-
-    private void showTpaPreview(Player requester, Player target, double distance, double fee) {
-        String distanceText = distance < 0 ? "cross-world" : String.format(Locale.US, "%.0f blocks", distance);
-        requester.spigot().sendMessage(new net.md_5.bungee.api.chat.TextComponent("§eTeleport to @" + target.getName()
-                + " | Distance: " + distanceText + " | Travel cost: " + money(fee) + " coins"));
-        requester.sendMessage("§7No coins are charged until the teleport succeeds.");
-        net.md_5.bungee.api.chat.TextComponent controls = new net.md_5.bungee.api.chat.TextComponent("");
-        net.md_5.bungee.api.chat.TextComponent accept = new net.md_5.bungee.api.chat.TextComponent("§a[ACCEPT]");
-        accept.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/tpaconfirm"));
-        net.md_5.bungee.api.chat.TextComponent decline = new net.md_5.bungee.api.chat.TextComponent("§c    [DECLINE]");
-        decline.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/tpacancel"));
-        controls.addExtra(accept); controls.addExtra(decline); requester.spigot().sendMessage(controls);
-    }
-
-    private double calculateTpaFee(Player requester, Player target, double distance) {
-        if (requester.getWorld().getEnvironment() == World.Environment.NETHER || target.getWorld().getEnvironment() == World.Environment.NETHER)
-            return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.nether-flat", 66.0));
         if (distance < 0) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-cost", 10.0));
         if (distance <= 250) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-250", 10.0));
         if (distance <= 1000) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-1000", 10.0));
