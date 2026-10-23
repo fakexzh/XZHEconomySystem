@@ -280,7 +280,7 @@ public final class VillagerTradeManager implements Listener {
             }
         }
         try { file.getParentFile().mkdirs(); data.save(file); }
-        catch (IOException ex) { plugin.getLogger().severe("Could not save global villager stock: " + ex.getMessage()); }
+        catch (IOException ex) { plugin.getLogger().severe("Could not save villager market data: " + ex.getMessage()); }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
