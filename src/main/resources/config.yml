@@ -373,7 +373,9 @@ premium-boats:
   speed-cap:
     basic: 0.25
     aura: 0.34
-    super: 0.46\n\n# Profession-based villager market. Right-click an employed villager to open XZH BUY / SELL menus.
+    super: 0.46
+
+# Profession-based villager market. Right-click an employed villager to open XZH BUY / SELL menus.
 # Each offer displays stock remaining, the profession's restock timer, and the player's cooldown.
 villager-market:
   enabled: true
