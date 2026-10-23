@@ -153,6 +153,8 @@ public final class VillagerMarketManager implements Listener {
                 int left = input.getAmount() - offer.inputAmount();
                 if (left <= 0) inventory.setItem(1, null);
                 else input.setAmount(left);
+                Material containerReturn = containerReturnFor(offer.input());
+                if (containerReturn != null) giveReward(player, containerReturn, offer.inputAmount());
             }
             if (offer.kind() == Kind.BUY_FOR_COINS) {
                 double old = plugin.getBalance(player.getUniqueId());
@@ -302,6 +304,14 @@ public final class VillagerMarketManager implements Listener {
         if (material == Material.ENDER_PEARL || material == Material.BLAZE_ROD || material == Material.DIAMOND) return Math.min(material.getMaxStackSize(), 1 + random.nextInt(4));
         if (material.getMaxStackSize() == 1) return 1;
         return Math.min(material.getMaxStackSize(), 4 + random.nextInt(29));
+    }
+
+    private Material containerReturnFor(Material material) {
+        return switch (material) {
+            case LAVA_BUCKET, COD_BUCKET, SALMON_BUCKET, PUFFERFISH_BUCKET, TROPICAL_FISH_BUCKET,
+                    AXOLOTL_BUCKET, MILK_BUCKET, WATER_BUCKET -> Material.BUCKET;
+            default -> null;
+        };
     }
 
     private ItemStack createVoucher() {
