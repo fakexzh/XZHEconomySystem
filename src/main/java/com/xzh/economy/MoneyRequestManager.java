@@ -85,32 +85,27 @@ public final class MoneyRequestManager implements Listener {
                 amount, System.currentTimeMillis() + TIMEOUT_MS);
         pendingByRecipient.put(recipientId, pending);
         openPrompt(target, requester, pending);
-        requester.playSound(requester.getLocation(),org.bukkit.Sound.BLOCK_NOTE_BLOCK_CHIME,.45f,1.35f);
-        target.playSound(target.getLocation(),org.bukkit.Sound.BLOCK_NOTE_BLOCK_PLING,.45f,1.45f);
+        requester.playSound(requester.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_CHIME, 0.45f, 1.35f);
+        target.playSound(target.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_PLING, 0.45f, 1.45f);
         plugin.tellPublic(requester, (kind == Kind.SEND ? "Transfer request sent to " : "Money request sent to ")
                 + target.getName() + " for " + amount + " coins. It expires in 60 seconds.");
         return true;
     }
 
     private void openPrompt(Player recipient, Player requester, Pending pending) {
-        String title = pending.kind() == Kind.SEND ? "XZH Transfer Request" : "XZH Money Request";
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + title);
-        ItemStack summary = new ItemStack(pending.kind() == Kind.SEND ? Material.GOLD_INGOT : Material.PAPER);
-        ItemMeta meta = summary.getItemMeta();
         String actionText = pending.kind() == Kind.SEND ? "wants to send you" : "asks you to send";
-        meta.setDisplayName(ChatColor.YELLOW + requester.getName() + " " + actionText + " " + pending.amount() + " coins");
-        meta.setLore(List.of(
-                ChatColor.WHITE + "Amount: " + ChatColor.GOLD + pending.amount() + " coins",
-                ChatColor.GRAY + "Request expires in 60 seconds.",
-                ChatColor.GRAY + (pending.kind() == Kind.SEND
-                        ? "Accept to receive the coins."
-                        : "Accept to pay the requester from pocket/bank funds.")
-        ));
-        summary.setItemMeta(meta);
-        inv.setItem(13, summary);
-        add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "Accept", "accept");
-        add(inv, 15, Material.RED_CONCRETE, ChatColor.RED + "Decline", "decline");
-        recipient.openInventory(inv);
+        net.md_5.bungee.api.chat.TextComponent prompt = new net.md_5.bungee.api.chat.TextComponent(
+                "§6[XZH] §e" + requester.getName() + " " + actionText + " " + pending.amount() + " coins. ");
+        net.md_5.bungee.api.chat.TextComponent accept = new net.md_5.bungee.api.chat.TextComponent("§a[ACCEPT]");
+        accept.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/moneyresponse accept"));
+        net.md_5.bungee.api.chat.TextComponent decline = new net.md_5.bungee.api.chat.TextComponent(" §c[DECLINE]");
+        decline.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/moneyresponse decline"));
+        prompt.addExtra(accept);
+        prompt.addExtra(decline);
+        prompt.addExtra(new net.md_5.bungee.api.chat.TextComponent(" §7(expires in 60 seconds)"));
+        recipient.spigot().sendMessage(prompt);
     }
 
     private void add(Inventory inv, int slot, Material material, String name, String action) {
@@ -120,6 +115,45 @@ public final class MoneyRequestManager implements Listener {
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         item.setItemMeta(meta);
         inv.setItem(slot, item);
+    }
+
+    public boolean handleResponse(Player recipient, String[] args) {
+        if (args.length != 1 || !(args[0].equalsIgnoreCase("accept") || args[0].equalsIgnoreCase("decline"))) {
+            plugin.tellPublic(recipient, "Usage: /moneyresponse <accept|decline>");
+            return true;
+        }
+        Pending pending = pendingByRecipient.get(recipient.getUniqueId());
+        if (pending == null || pending.expiresAt() <= System.currentTimeMillis()) {
+            pendingByRecipient.remove(recipient.getUniqueId());
+            plugin.tellPublic(recipient, "There is no active money request; it may have expired.");
+            return true;
+        }
+        pendingByRecipient.remove(recipient.getUniqueId());
+        Player requester = Bukkit.getPlayer(pending.requester());
+        Player target = Bukkit.getPlayer(pending.target());
+        if (args[0].equalsIgnoreCase("decline")) {
+            if (requester != null) plugin.tellPublic(requester, recipient.getName() + " declined the money request.");
+            plugin.tellPublic(recipient, "Money request declined.");
+            return true;
+        }
+        if (requester == null || target == null) {
+            plugin.tellPublic(recipient, "The other player must remain online. No money was transferred.");
+            if (requester != null) plugin.tellPublic(requester, "The request could not be completed because a player went offline.");
+            return true;
+        }
+        Player payer = pending.kind() == Kind.SEND ? requester : target;
+        Player payee = pending.kind() == Kind.SEND ? target : requester;
+        long amount = pending.amount();
+        if (plugin.getCombinedBalance(payer.getUniqueId()) < amount
+                || !plugin.spendAvailableFunds(payer.getUniqueId(), amount)) {
+            plugin.tellPublic(recipient, "The payer no longer has enough available funds. Nothing was transferred.");
+            plugin.tellPublic(payer, "Transfer failed: not enough available funds.");
+            return true;
+        }
+        plugin.setBalance(payee.getUniqueId(), plugin.getBalance(payee.getUniqueId()) + amount);
+        plugin.tellPublic(payer, "Transferred " + amount + " coins to " + payee.getName() + ".");
+        plugin.tellPublic(payee, "Received " + amount + " coins from " + payer.getName() + ".");
+        return true;
     }
 
     @EventHandler
