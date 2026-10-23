@@ -511,7 +511,7 @@ public final class UtilityManager implements Listener {
     private void showTpaPreview(Player requester, Player target, double distance, double fee) {
         String distanceText = distance < 0 ? "cross-world" : String.format(Locale.US, "%.0f blocks", distance);
         requester.sendMessage(Component.text("§8[§6XZH§8] §r"));
-        requester.sendMessage(Component.text("Teleport to " + target.getName() + " | Distance: " + distanceText + " | Travel cost: " + money(fee) + " coins", NamedTextColor.YELLOW));
+        requester.sendMessage(Component.text("Teleport to @" + target.getName() + " | Distance: " + distanceText + " | Travel cost: " + money(fee) + " coins", NamedTextColor.YELLOW));
         requester.sendMessage(Component.text("No coins are charged until the teleport succeeds.", NamedTextColor.GRAY));
         requester.sendMessage(Component.text("[ACCEPT]", NamedTextColor.GREEN).clickEvent(ClickEvent.runCommand("/tpaconfirm"))
                 .append(Component.text("    ", NamedTextColor.GRAY))
