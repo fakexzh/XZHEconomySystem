@@ -77,7 +77,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
-        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quest", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "tpaconfirm", "tpacancel", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit", "gmc", "gms", "gma", "gmsp", "day", "night", "gamemode", "heal", "feed", "fly", "weather", "helpxzh")) {
+        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quest", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit", "gmc", "gms", "gma", "gmsp", "day", "night", "gamemode", "heal", "feed", "fly", "weather", "helpxzh")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
@@ -113,21 +113,6 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         }
         if (!getConfig().contains("utilities.tpa-cost")) { getConfig().set("utilities.tpa-cost", 10.0); changed = true; }
         if (!getConfig().contains("utilities.back-cost")) { getConfig().set("utilities.back-cost", 30.0); changed = true; }
-        String[][] tpaDefaults = {
-            {"utilities.tpa-pricing.nether-flat", "66"},
-            {"utilities.tpa-pricing.cost-250", "10"},
-            {"utilities.tpa-pricing.cost-1000", "10"},
-            {"utilities.tpa-pricing.cost-3000", "20"},
-            {"utilities.tpa-pricing.cost-6000", "35"},
-            {"utilities.tpa-pricing.cost-10000", "50"},
-            {"utilities.tpa-pricing.cost-over-10000", "75"}
-        };
-        for (String[] entry : tpaDefaults) {
-            if (!getConfig().contains(entry[0])) {
-                getConfig().set(entry[0], Double.parseDouble(entry[1]));
-                changed = true;
-            }
-        }
         if (getConfig().contains("time-control")) { getConfig().set("time-control", null); changed = true; }
         if (!getConfig().contains("announcements.bank.enabled")) { getConfig().set("announcements.bank.enabled", true); changed = true; }
 

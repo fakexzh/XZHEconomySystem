@@ -281,16 +281,6 @@ utilities:
   rtp-cooldown-seconds: 600
   tpa-cost: 10
   back-cost: 30
-  tpa-pricing:
-    nether-flat: 66
-    cost-250: 10
-    cost-1000: 10
-    cost-3000: 20
-    cost-6000: 35
-    cost-10000: 50
-    cost-over-10000: 75
-
-
 
 # Enchantment book shop rules.
 book-shop:
