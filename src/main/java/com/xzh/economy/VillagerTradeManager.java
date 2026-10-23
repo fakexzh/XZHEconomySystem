@@ -118,6 +118,8 @@ public final class VillagerTradeManager implements Listener {
 
     private void loadOrRefresh() {
         nextRefresh = data.getLong("next-refresh", 0L);
+        // Force one clean rotation when upgrading from the old shared-stock, 2-hour system.
+        if (data.getInt("rotation-version", 0) < 2) nextRefresh = 0L;
         for (Villager.Profession profession : Villager.Profession.values()) {
             List<String> ids = data.getStringList("active." + profession.name());
             List<Offer> offers = ids.stream().map(all::get).filter(Objects::nonNull)
@@ -266,6 +268,7 @@ public final class VillagerTradeManager implements Listener {
     }
 
     private void save() {
+        data.set("rotation-version", 2);
         data.set("next-refresh", nextRefresh);
         for (Villager.Profession profession : Villager.Profession.values()) {
             data.set("active." + profession.name(), active.getOrDefault(profession, List.of()).stream().map(Offer::id).toList());
