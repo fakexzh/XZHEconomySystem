@@ -524,7 +524,7 @@ public final class UtilityManager implements Listener {
             return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.nether-flat", 66.0));
         }
         if (distance < 0) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-cost", 10.0));
-        if (distance <= 250) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-250", 5.0));
+        if (distance <= 250) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-250", 10.0));
         if (distance <= 1000) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-1000", 10.0));
         if (distance <= 3000) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-3000", 20.0));
         if (distance <= 6000) return Math.max(0.0, plugin.getConfig().getDouble("utilities.tpa-pricing.cost-6000", 35.0));
