@@ -12,6 +12,8 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.VillagerAcquireTradeEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.inventory.MerchantInventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.MerchantRecipe;
 import org.bukkit.inventory.Merchant;
@@ -24,8 +26,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Vanilla-interface XZH profession market. Offers rotate globally per profession, while
- * each player has an independent one-trade-per-offer allowance for each 4-hour rotation.
+ * Fixed XZH profession market. Each player can use each offer once every two hours;
+ * the player's own merchant inventory displays vanilla's red X while that offer is cooling down.
  * XZH coins are the real tagged pocket coins.
  */
 public final class VillagerTradeManager implements Listener {
@@ -350,15 +352,23 @@ public final class VillagerTradeManager implements Listener {
         if (!(event.getRightClicked() instanceof Villager villager)) return;
         event.setCancelled(true);
         if (villager.getProfession() == Villager.Profession.NONE) return;
-        UUID playerId = event.getPlayer().getUniqueId();
+        Player player = event.getPlayer();
+        UUID playerId = player.getUniqueId();
         Villager.Profession profession = villager.getProfession();
         Bukkit.getScheduler().runTask(plugin, () -> {
-            if (!event.getPlayer().isOnline() || !villager.isValid()) return;
+            if (!player.isOnline() || !villager.isValid()) return;
             Merchant merchant = Bukkit.createMerchant(ChatColor.GOLD + "XZH " + profession.name().replace('_', ' '));
             merchant.setRecipes(recipes(profession, playerId));
             merchantSessions.put(merchant, new MerchantSession(playerId, profession));
-            event.getPlayer().openMerchant(merchant, true);
+            player.openMerchant(merchant, true);
         });
+    }
+
+    @EventHandler
+    public void onMerchantClose(InventoryCloseEvent event) {
+        if (event.getInventory() instanceof MerchantInventory merchantInventory) {
+            merchantSessions.remove(merchantInventory.getMerchant());
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
