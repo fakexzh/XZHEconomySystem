@@ -480,7 +480,9 @@ public final class VillagerTradeManager implements Listener {
         for (int i = 0; i < aa.size(); i++) {
             ItemStack x = aa.get(i), y = bb.get(i);
             if (x.getType() != y.getType() || x.getAmount() != y.getAmount()) return false;
-            if (plugin.getPocketCoinManager().isCoin(x) && plugin.getPocketCoinManager().isCoin(y)) {
+            // Potion base types must match too; otherwise two potion offers with equal coin payouts
+            // could be mistaken for one another by the player-use limiter.
+            if (x.getType() == Material.POTION || plugin.getPocketCoinManager().isCoin(x)) {
                 if (!x.isSimilar(y)) return false;
             }
         }
