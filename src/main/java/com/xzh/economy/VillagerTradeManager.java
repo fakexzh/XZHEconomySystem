@@ -39,7 +39,7 @@ public final class VillagerTradeManager implements Listener {
     private long nextRefresh;
     private BukkitTask ticker;
 
-    private enum Kind { PLAYER_SELLS, PLAYER_BUYS, PLAYER_BUYS_POTION, BARTER }
+    private enum Kind { PLAYER_SELLS, PLAYER_SELLS_POTION, PLAYER_BUYS, PLAYER_BUYS_POTION, BARTER }
     private record Offer(String id, Villager.Profession profession, Kind kind,
                          Material item, int amount, Material other, int otherAmount,
                          int stock, double payoutRate) {}
@@ -86,6 +86,16 @@ public final class VillagerTradeManager implements Listener {
         add("cleric_redstone", Villager.Profession.CLERIC, Kind.PLAYER_BUYS, Material.REDSTONE, 32, null, 0, 32, 1.05);
         add("cleric_strength_potion", Villager.Profession.CLERIC, Kind.PLAYER_BUYS_POTION, Material.BLAZE_POWDER, 4, null, 1, 12, 2.0);
         add("cleric_fire_resistance_potion", Villager.Profession.CLERIC, Kind.PLAYER_BUYS_POTION, Material.MAGMA_CREAM, 4, null, 1, 12, 2.0);
+        // Potion market: buy brewed potions from players and sell useful potions for coins.
+        for (String potionId : List.of("healing", "regeneration", "strength", "fire_resistance",
+                "swiftness", "water_breathing", "night_vision", "slow_falling")) {
+            add("cleric_potion_buy_" + potionId, Villager.Profession.CLERIC,
+                    Kind.PLAYER_BUYS_POTION, Material.POTION, 1, null, 0, 12, 1.0);
+            add("cleric_potion_sell_" + potionId, Villager.Profession.CLERIC,
+                    Kind.PLAYER_SELLS_POTION, Material.POTION, 1, null, 0, 12, 0.45);
+        }
+        add("cleric_wither_skull", Villager.Profession.CLERIC, Kind.PLAYER_SELLS,
+                Material.WITHER_SKELETON_SKULL, 1, null, 0, 2, .50);
         add("cleric_netherwart_glowstone", Villager.Profession.CLERIC, Kind.BARTER, Material.NETHER_WART, 16, Material.GLOWSTONE_DUST, 12, 20, 1.0);
         add("cleric_ghast_blaze", Villager.Profession.CLERIC, Kind.BARTER, Material.GHAST_TEAR, 2, Material.BLAZE_ROD, 4, 12, 1.0);
 
@@ -225,7 +235,8 @@ public final class VillagerTradeManager implements Listener {
     private List<Offer> choose(Villager.Profession profession) {
         List<Offer> pool = all.values().stream().filter(o -> o.profession() == profession).collect(Collectors.toCollection(ArrayList::new));
         Collections.shuffle(pool);
-        return new ArrayList<>(pool.subList(0, Math.min(6, pool.size())));
+        int visibleOffers = profession == Villager.Profession.CLERIC ? 10 : 6;
+        return new ArrayList<>(pool.subList(0, Math.min(visibleOffers, pool.size())));
     }
 
     private void refreshAll() {
@@ -259,9 +270,12 @@ public final class VillagerTradeManager implements Listener {
                 int payout = rawPayout >= 640 ? (int) Math.round(rawPayout / 100.0) * 100 : Math.max(1, (int) Math.round(rawPayout / 10.0) * 10);
                 output = coins(payout);
             } else if (offer.kind() == Kind.PLAYER_BUYS_POTION) {
-                int price = Math.max(1, (int) Math.ceil(referenceBuyPrice(offer.item()) * offer.payoutRate() * offer.amount() * 0.95));
+                int price = potionPrice(offer.id(), true);
                 addCoinInputs(inputs, price);
                 output = potionForOffer(offer.id());
+            } else if (offer.kind() == Kind.PLAYER_SELLS_POTION) {
+                inputs.add(potionForOffer(offer.id()));
+                output = coins(potionPrice(offer.id(), false));
             } else {
                 int price = Math.max(1, (int) Math.ceil(referenceBuyPrice(offer.item()) * offer.payoutRate() * offer.amount() * 0.95));
                 addCoinInputs(inputs, price);
@@ -277,19 +291,47 @@ public final class VillagerTradeManager implements Listener {
         return result;
     }
 
+    private int potionPrice(String id, boolean buyingFromVillager) {
+        String potion = id.substring(id.lastIndexOf('_') + 1);
+        int buyPrice = switch (potion) {
+            case "healing" -> 200;
+            case "regeneration" -> 260;
+            case "strength" -> 180;
+            case "resistance" -> 220;
+            case "vision" -> 120;
+            case "breathing" -> 180;
+            case "swiftness" -> 140;
+            case "falling" -> 160;
+            case "potion" -> id.equals("cleric_strength_potion") ? 180 : 220;
+            default -> 180;
+        };
+        return buyingFromVillager ? buyPrice : Math.max(10, (int) Math.round(buyPrice * 0.45 / 10.0) * 10);
+    }
+
     private ItemStack potionForOffer(String id) {
-        PotionType type = switch (id) {
-            case "cleric_strength_potion" -> PotionType.STRENGTH;
-            case "cleric_fire_resistance_potion" -> PotionType.FIRE_RESISTANCE;
+        String potion = id.substring(id.lastIndexOf('_') + 1);
+        PotionType type;
+        if (id.equals("cleric_strength_potion")) type = PotionType.STRENGTH;
+        else if (id.equals("cleric_fire_resistance_potion")) type = PotionType.FIRE_RESISTANCE;
+        else type = switch (potion) {
+            case "healing" -> PotionType.HEALING;
+            case "regeneration" -> PotionType.REGENERATION;
+            case "strength" -> PotionType.STRENGTH;
+            case "resistance" -> PotionType.FIRE_RESISTANCE;
+            case "vision" -> PotionType.NIGHT_VISION;
+            case "breathing" -> PotionType.WATER_BREATHING;
+            case "swiftness" -> PotionType.SWIFTNESS;
+            case "falling" -> PotionType.SLOW_FALLING;
+            case "potion" -> id.equals("cleric_strength_potion") ? PotionType.STRENGTH : PotionType.FIRE_RESISTANCE;
             default -> null;
         };
         if (type == null) return null;
-        ItemStack potion = new ItemStack(Material.POTION, 1);
-        if (potion.getItemMeta() instanceof PotionMeta meta) {
+        ItemStack potionItem = new ItemStack(Material.POTION, 1);
+        if (potionItem.getItemMeta() instanceof PotionMeta meta) {
             meta.setBasePotionType(type);
-            potion.setItemMeta(meta);
+            potionItem.setItemMeta(meta);
         }
-        return potion;
+        return potionItem;
     }
 
     private double referenceBuyPrice(Material material) {
@@ -390,7 +432,10 @@ public final class VillagerTradeManager implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onVillagerInteract(PlayerInteractEntityEvent event) {
         if (!(event.getRightClicked() instanceof Villager villager)) return;
-        if (villager.getProfession() == Villager.Profession.NONE) return;
+        if (villager.getProfession() == Villager.Profession.NONE) {
+            event.setCancelled(true);
+            return;
+        }
         villager.setRecipes(recipes(villager.getProfession()));
     }
 
