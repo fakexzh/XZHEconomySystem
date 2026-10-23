@@ -71,6 +71,7 @@ public final class VillagerTradeManager implements Listener {
         add("fish_cooked_cod", Villager.Profession.FISHERMAN, Kind.PLAYER_BUYS, Material.COOKED_COD, 16, null, 0, 32, 1.05);
 
         add("cleric_blaze", Villager.Profession.CLERIC, Kind.PLAYER_SELLS, Material.BLAZE_ROD, 8, null, 0, 24, .65);
+        add("cleric_wither_skull", Villager.Profession.CLERIC, Kind.PLAYER_SELLS, Material.WITHER_SKELETON_SKULL, 1, null, 0, 2, .55);
         add("cleric_ghast", Villager.Profession.CLERIC, Kind.PLAYER_SELLS, Material.GHAST_TEAR, 4, null, 0, 12, .70);
         add("cleric_ender", Villager.Profession.CLERIC, Kind.PLAYER_SELLS, Material.ENDER_PEARL, 8, null, 0, 24, .70);
         add("cleric_glowstone", Villager.Profession.CLERIC, Kind.PLAYER_BUYS, Material.GLOWSTONE_DUST, 16, null, 0, 32, 1.10);
@@ -158,7 +159,6 @@ public final class VillagerTradeManager implements Listener {
         List<MerchantRecipe> result = new ArrayList<>();
         for (Offer offer : active.getOrDefault(profession, List.of())) {
             int stock = remaining.getOrDefault(offer.id(), offer.stock());
-            if (stock <= 0) continue;
             ItemStack output;
             List<ItemStack> inputs = new ArrayList<>();
             if (offer.kind() == Kind.BARTER) {
@@ -174,7 +174,9 @@ public final class VillagerTradeManager implements Listener {
                 output = new ItemStack(offer.item(), offer.amount());
             }
             if (output == null || output.getAmount() > output.getMaxStackSize()) continue;
-            MerchantRecipe recipe = new MerchantRecipe(output, 0, stock, false, 0, 0.0f);
+            int maxUses = Math.max(1, stock);
+            int uses = stock <= 0 ? maxUses : 0;
+            MerchantRecipe recipe = new MerchantRecipe(output, uses, maxUses, false, 0, 0.0f);
             for (ItemStack input : inputs) recipe.addIngredient(input);
             result.add(recipe);
         }
