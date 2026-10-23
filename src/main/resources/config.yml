@@ -282,6 +282,33 @@ utilities:
   tpa-cost: 10
   back-cost: 30
 
+
+# Profession-guided randomized villager market. Money is credited/charged through pocket balance.
+villager-market:
+  enabled: true
+  restock-duration-minutes: 120
+  offers-per-profession: 5
+  stock-per-player-per-offer: 3
+  # Villagers may pay above the XZH Shop selling value for requested items.
+  max-buy-premium: 0.35
+  # Used only if an item has no configured XZH Shop buy price.
+  fallback-item-price: 20
+  # Override the shared restock interval for individual professions if desired.
+  profession-restock-minutes:
+    farmer: 120
+    fisherman: 120
+    armorer: 120
+    toolsmith: 120
+    weaponsmith: 120
+    mason: 120
+    cleric: 120
+    librarian: 120
+    cartographer: 120
+    butcher: 120
+    fletcher: 120
+    shepherd: 120
+    leatherworker: 120
+
 # Enchantment book shop rules.
 book-shop:
   cooldown-hours: 12

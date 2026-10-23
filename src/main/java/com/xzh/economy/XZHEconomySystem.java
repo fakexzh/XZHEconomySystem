@@ -28,6 +28,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     private HudManager hudManager;
     private BankManager bankManager;
     private ShopManager shopManager;
+    private VillagerMarketManager villagerMarketManager;
     private LoanManager loanManager;
     private QuestManager questManager;
     private DeathRecoveryManager deathRecoveryManager;
@@ -64,6 +65,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         bookShopManager = new BookShopManager(this);
         loanManager = new LoanManager(this);
         getServer().getPluginManager().registerEvents(new LibrarianTradeListener(this), this);
+        villagerMarketManager = new VillagerMarketManager(this);
         questManager = new QuestManager(this);
         deathRecoveryManager = new DeathRecoveryManager(this);
         utilityManager = new UtilityManager(this);
