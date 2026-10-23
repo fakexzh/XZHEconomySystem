@@ -41,7 +41,7 @@ public final class VillagerTradeManager implements Listener {
     private final Map<Merchant, MerchantSession> merchantSessions = new HashMap<>();
     private record MerchantSession(UUID playerId, Villager.Profession profession) {}
 
-    private enum Kind { PLAYER_SELLS, PLAYER_SELLS_POTION, PLAYER_BUYS, PLAYER_BUYS_POTION, BARTER }
+    private enum Kind { PLAYER_SELLS, PLAYER_SELLS_POTION, PLAYER_BUYS, PLAYER_BUYS_POTION, BARTER, BARTER_POTION }
     private record Offer(String id, Villager.Profession profession, Kind kind,
                          Material item, int amount, Material other, int otherAmount,
                          int stock, double payoutRate) {}
@@ -70,35 +70,37 @@ public final class VillagerTradeManager implements Listener {
         addBarterMany(Villager.Profession.LIBRARIAN, "PAPER:24>BOOK:4,INK_SAC:8>PAPER:24,BOOK:4>BOOKSHELF:1,PAPER:32>MAP:1,LAPIS_LAZULI:16>BOOK:2");
         addSellMany(Villager.Profession.MASON, "CLAY_BALL:32:0.70,BRICK:32:0.70,STONE:32:0.60,ANDESITE:32:0.55,DIORITE:32:0.55,GRANITE:32:0.55,SAND:32:0.50,GRAVEL:32:0.50,QUARTZ:16:0.55,OBSIDIAN:4:0.60");
         addBuyMany(Villager.Profession.MASON, "GLASS:32,STONE_BRICKS:32,BRICKS:32,TERRACOTTA:16,WHITE_TERRACOTTA:16,QUARTZ_BLOCK:8,POLISHED_ANDESITE:16,POLISHED_DIORITE:16,POLISHED_GRANITE:16");
-        addBarterMany(Villager.Profession.MASON, "CLAY_BALL:32>BRICK:16,COBBLESTONE:64>STONE:48,SAND:32>GLASS:16,GRAVEL:32>FLINT:8,QUARTZ:16>QUARTZ_BLOCK:8");
+        addBarterMany(Villager.Profession.MASON, "CLAY_BALL:32>BRICK:16,COBBLESTONE:64>STONE:48,SAND:32>GLASS:16,GRAVEL:32>FLINT:8,QUARTZ:16>GLASS:32");
         addSellMany(Villager.Profession.TOOLSMITH, "IRON_INGOT:16:0.60,COPPER_INGOT:32:0.60,GOLD_INGOT:8:0.55,DIAMOND:2:0.55,FLINT:32:0.55,COAL:32:0.50");
-        addBuyMany(Villager.Profession.TOOLSMITH, "IRON_PICKAXE:1,IRON_AXE:1,IRON_SHOVEL:1,IRON_HOE:1,SHEARS:1,BUCKET:1,ANVIL:1");
-        addBarterMany(Villager.Profession.TOOLSMITH, "COPPER_INGOT:32>IRON_INGOT:8,FLINT:16>IRON_INGOT:2,IRON_INGOT:8>IRON_PICKAXE:1,IRON_INGOT:6>SHEARS:1,IRON_INGOT:8>BUCKET:1");
-        addSellMany(Villager.Profession.WEAPONSMITH, "IRON_INGOT:16:0.60,GOLD_INGOT:8:0.60,DIAMOND:2:0.50,BLAZE_ROD:8:0.45,GUNPOWDER:16:0.45");
+        addBuyMany(Villager.Profession.TOOLSMITH, "REDSTONE:32,IRON_PICKAXE:1,IRON_AXE:1,IRON_SHOVEL:1,IRON_HOE:1,SHEARS:1,BUCKET:1,ANVIL:1");
+        addBarterMany(Villager.Profession.TOOLSMITH, "COPPER_INGOT:32>IRON_INGOT:8,FLINT:32>IRON_INGOT:4,IRON_INGOT:8>IRON_PICKAXE:1,IRON_INGOT:6>SHEARS:1,IRON_INGOT:8>BUCKET:1,REDSTONE:64>IRON_INGOT:8");
+        addSellMany(Villager.Profession.WEAPONSMITH, "IRON_INGOT:16:0.60,GOLD_INGOT:16:0.60,DIAMOND:2:0.50,BLAZE_ROD:8:0.45,GUNPOWDER:16:0.45");
         addBuyMany(Villager.Profession.WEAPONSMITH, "IRON_SWORD:1,SHIELD:1,CROSSBOW:1,BOW:1,ARROW:32,FLINT_AND_STEEL:1");
-        addBarterMany(Villager.Profession.WEAPONSMITH, "FLINT:16>ARROW:16,IRON_INGOT:8>SHIELD:1,STRING:16>BOW:1,IRON_INGOT:12>CROSSBOW:1,BLAZE_ROD:4>FIRE_CHARGE:8");
-        addSellMany(Villager.Profession.ARMORER, "IRON_INGOT:16:0.60,GOLD_INGOT:8:0.60,DIAMOND:2:0.50,COPPER_INGOT:32:0.50,TURTLE_SCUTE:4:0.45");
+        addBarterMany(Villager.Profession.WEAPONSMITH, "FLINT:16>ARROW:32,IRON_INGOT:8>SHIELD:1,STRING:16>BOW:1,IRON_INGOT:12>CROSSBOW:1,BLAZE_ROD:4>FIRE_CHARGE:8,GOLD_INGOT:16>IRON_INGOT:8");
+        addSellMany(Villager.Profession.ARMORER, "IRON_INGOT:16:0.60,GOLD_INGOT:16:0.60,DIAMOND:2:0.50,COPPER_INGOT:32:0.50,TURTLE_SCUTE:4:0.45");
         addBuyMany(Villager.Profession.ARMORER, "IRON_HELMET:1,IRON_CHESTPLATE:1,IRON_LEGGINGS:1,IRON_BOOTS:1,CHAINMAIL_CHESTPLATE:1,SHIELD:1,IRON_HORSE_ARMOR:1");
-        addBarterMany(Villager.Profession.ARMORER, "IRON_INGOT:12>IRON_HELMET:1,IRON_INGOT:20>IRON_CHESTPLATE:1,IRON_INGOT:16>IRON_LEGGINGS:1,IRON_INGOT:10>IRON_BOOTS:1,TURTLE_SCUTE:5>TURTLE_HELMET:1");
+        addBarterMany(Villager.Profession.ARMORER, "IRON_INGOT:16>GOLD_INGOT:8,IRON_INGOT:12>CHAINMAIL_HELMET:1,IRON_INGOT:12>IRON_HELMET:1,IRON_INGOT:20>IRON_CHESTPLATE:1,IRON_INGOT:16>IRON_LEGGINGS:1,IRON_INGOT:10>IRON_BOOTS:1,GOLD_INGOT:16>GOLDEN_HELMET:1,TURTLE_SCUTE:5>TURTLE_HELMET:1");
         addSellMany(Villager.Profession.FLETCHER, "FEATHER:32:0.70,STRING:32:0.70,FLINT:32:0.65,STICK:64:0.55,INK_SAC:16:0.50");
         addBuyMany(Villager.Profession.FLETCHER, "ARROW:32,BOW:1,SPECTRAL_ARROW:8,TIPPED_ARROW:8,CROSSBOW:1");
-        addBarterMany(Villager.Profession.FLETCHER, "FLINT:16>ARROW:16,FEATHER:16>ARROW:16,STRING:16>BOW:1,STICK:32>ARROW:16,FLINT:8>ARROW:16");
+        addBarterMany(Villager.Profession.FLETCHER, "FLINT:16>ARROW:16,FEATHER:16>ARROW:16,STRING:16>BOW:1,STICK:32>ARROW:16,FLINT:8>ARROW:16,FEATHER:24>STRING:12");
         addSellMany(Villager.Profession.LEATHERWORKER, "LEATHER:16:0.70,RABBIT_HIDE:16:0.70,ARMADILLO_SCUTE:8:0.60,RABBIT_FOOT:4:0.45");
         addBuyMany(Villager.Profession.LEATHERWORKER, "SADDLE:1,LEATHER_HORSE_ARMOR:1,LEATHER:16,ITEM_FRAME:8,BUNDLE:1");
-        addBarterMany(Villager.Profession.LEATHERWORKER, "RABBIT_HIDE:16>LEATHER:8,LEATHER:16>LEATHER_BOOTS:1,LEATHER:8>ITEM_FRAME:4,RABBIT_FOOT:4>LEATHER:4");
+        addBarterMany(Villager.Profession.LEATHERWORKER, "RABBIT_HIDE:16>LEATHER:8,LEATHER:16>LEATHER_BOOTS:1,LEATHER:8>ITEM_FRAME:4,RABBIT_FOOT:4>LEATHER:4,STRING:32>LEATHER:4");
         addSellMany(Villager.Profession.SHEPHERD, "WHITE_WOOL:16:0.70,BLACK_WOOL:16:0.60,RED_WOOL:16:0.60,BLUE_WOOL:16:0.60,YELLOW_WOOL:16:0.60,STRING:32:0.65,WHITE_CARPET:16:0.60");
         addBuyMany(Villager.Profession.SHEPHERD, "WHITE_DYE:16,BLACK_DYE:16,RED_DYE:16,BLUE_DYE:16,YELLOW_DYE:16,WHITE_BED:1,WHITE_BANNER:4,PAINTING:4");
-        addBarterMany(Villager.Profession.SHEPHERD, "WHITE_WOOL:16>WHITE_CARPET:8,WHITE_WOOL:8>WHITE_BED:1,STRING:16>WHITE_WOOL:8,WHITE_WOOL:8>WHITE_BANNER:1,WHITE_WOOL:16>WHITE_DYE:4");
+        addBarterMany(Villager.Profession.SHEPHERD, "WHITE_WOOL:16>STRING:8,WHITE_DYE:8>WHITE_WOOL:8,WHITE_WOOL:16>WHITE_CARPET:8,WHITE_WOOL:8>WHITE_BED:1,STRING:16>WHITE_WOOL:8,WHITE_WOOL:8>WHITE_BANNER:1,WHITE_WOOL:16>WHITE_DYE:4");
         addSellMany(Villager.Profession.BUTCHER, "BEEF:16:0.60,PORKCHOP:16:0.60,CHICKEN:32:0.60,MUTTON:16:0.55,RABBIT:16:0.50,ROTTEN_FLESH:32:0.35,EGG:16:0.50,SWEET_BERRIES:32:0.45");
         addBuyMany(Villager.Profession.BUTCHER, "COOKED_BEEF:16,COOKED_PORKCHOP:16,COOKED_CHICKEN:32,COOKED_MUTTON:16,COOKED_RABBIT:16,RABBIT_STEW:1,COOKED_COD:16");
-        addBarterMany(Villager.Profession.BUTCHER, "BEEF:16>COOKED_BEEF:12,PORKCHOP:16>COOKED_PORKCHOP:12,CHICKEN:16>COOKED_CHICKEN:12,MUTTON:16>COOKED_MUTTON:12,RABBIT:16>COOKED_RABBIT:12");
+        addBarterMany(Villager.Profession.BUTCHER, "BEEF:16>COOKED_BEEF:12,PORKCHOP:16>COOKED_PORKCHOP:12,CHICKEN:16>COOKED_CHICKEN:12,MUTTON:16>COOKED_MUTTON:12,RABBIT:16>COOKED_RABBIT:12,CHICKEN:16>FEATHER:16");
         addSellMany(Villager.Profession.CARTOGRAPHER, "PAPER:32:0.70,GLASS_PANE:32:0.55,INK_SAC:16:0.60,COMPASS:2:0.50,MAP:4:0.50");
         addBuyMany(Villager.Profession.CARTOGRAPHER, "COMPASS:1,MAP:1,ITEM_FRAME:8,NAME_TAG:1,CREEPER_BANNER_PATTERN:1,FLOWER_BANNER_PATTERN:1,SKULL_BANNER_PATTERN:1,MOJANG_BANNER_PATTERN:1");
-        addBarterMany(Villager.Profession.CARTOGRAPHER, "PAPER:32>MAP:1,GLASS_PANE:32>GLASS:16,INK_SAC:8>PAPER:24,COMPASS:1>MAP:2,PAPER:24>WHITE_BANNER:1");
+        addBarterMany(Villager.Profession.CARTOGRAPHER, "PAPER:32>COMPASS:1,PAPER:32>MAP:1,GLASS_PANE:32>PAPER:24,INK_SAC:8>PAPER:24,COMPASS:1>MAP:2,PAPER:24>WHITE_BANNER:1");
         for (String potionId : List.of("healing", "regeneration", "strength", "fire_resistance", "swiftness", "water_breathing", "night_vision", "slow_falling")) {
             add("cleric_potion_buy_" + potionId, Villager.Profession.CLERIC, Kind.PLAYER_BUYS_POTION, Material.POTION, 1, null, 0, 1, 1.0);
             add("cleric_potion_sell_" + potionId, Villager.Profession.CLERIC, Kind.PLAYER_SELLS_POTION, Material.POTION, 1, null, 0, 1, 0.45);
         }
+        add("cleric_barter_regeneration", Villager.Profession.CLERIC, Kind.BARTER_POTION, Material.GHAST_TEAR, 2, null, 0, 1, 1.0);
+        add("cleric_barter_strength", Villager.Profession.CLERIC, Kind.BARTER_POTION, Material.BLAZE_ROD, 4, null, 0, 1, 1.0);
     }
 
     private void add(String id, Villager.Profession profession, Kind kind, Material item, int amount,
@@ -185,6 +187,9 @@ public final class VillagerTradeManager implements Listener {
                 int rawPayout = Math.max(1, (int) Math.floor(referenceBuyPrice(offer.item()) * offer.payoutRate() * offer.amount() * 0.90));
                 int payout = rawPayout >= 640 ? (int) Math.round(rawPayout / 100.0) * 100 : Math.max(1, (int) Math.round(rawPayout / 10.0) * 10);
                 output = coins(payout);
+            } else if (offer.kind() == Kind.BARTER_POTION) {
+                inputs.add(new ItemStack(offer.item(), offer.amount()));
+                output = potionForOffer(offer.id());
             } else if (offer.kind() == Kind.PLAYER_BUYS_POTION) {
                 int price = potionPrice(offer.id(), true);
                 addCoinInputs(inputs, price);
