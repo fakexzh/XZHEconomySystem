@@ -78,7 +78,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
-        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quest", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "warp", "setwarp", "delwarp", "tpa", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit", "gmc", "gms", "gma", "gmsp", "day", "night", "gamemode", "heal", "feed", "fly", "weather", "helpxzh")) {
+        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quest", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "warp", "setwarp", "delwarp", "tpa", "tpasend", "tpacancel", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit", "gmc", "gms", "gma", "gmsp", "day", "night", "gamemode", "heal", "feed", "fly", "weather", "helpxzh")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
@@ -114,6 +114,17 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             changed = true;
         }
         if (!getConfig().contains("utilities.tpa-cost")) { getConfig().set("utilities.tpa-cost", 10.0); changed = true; }
+        String[][] tpaPrices = {
+            {"up-to-250", "10"}, {"up-to-1000", "20"}, {"up-to-3000", "30"},
+            {"up-to-6000", "40"}, {"up-to-10000", "50"}, {"over-10000", "75"}
+        };
+        for (String[] price : tpaPrices) {
+            String path = "utilities.tpa-prices." + price[0];
+            if (!getConfig().contains(path)) { getConfig().set(path, Integer.parseInt(price[1])); changed = true; }
+        }
+        if (!getConfig().contains("utilities.tpa-nether-fixed-cost")) {
+            getConfig().set("utilities.tpa-nether-fixed-cost", 66); changed = true;
+        }
         if (!getConfig().contains("utilities.back-cost")) { getConfig().set("utilities.back-cost", 30.0); changed = true; }
         if (getConfig().contains("time-control")) { getConfig().set("time-control", null); changed = true; }
         if (!getConfig().contains("announcements.bank.enabled")) { getConfig().set("announcements.bank.enabled", true); changed = true; }
