@@ -31,7 +31,7 @@ public final class VillagerTradeManager implements Listener {
     private final File file;
     private final YamlConfiguration data;
     private final Map<String, Offer> all = new LinkedHashMap<>();
-    private final Map<Villager.Profession, List<Offer>> active = new EnumMap<>(Villager.Profession.class);
+    private final Map<Villager.Profession, List<Offer>> active = new HashMap<>();
     private final Map<String, Integer> remaining = new HashMap<>();
     private long nextRefresh;
     private BukkitTask ticker;
