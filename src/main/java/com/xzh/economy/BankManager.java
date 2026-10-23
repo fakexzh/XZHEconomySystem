@@ -54,7 +54,9 @@ public final class BankManager implements Listener {
         data.set(id.toString(), newAmount);
         save();
         Player online = Bukkit.getPlayer(id);
-        if (online != null && newAmount > oldAmount) online.playSound(online.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_CHIME, 0.45f, 1.3f);
+        if (online != null && newAmount > oldAmount) {
+            online.playSound(online.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_CHIME, 0.45f, 1.3f);
+        }
     }
 
     public boolean isOpenNow() {
@@ -106,8 +108,8 @@ public final class BankManager implements Listener {
             boolean day = cursor < 12000L;
             long boundary = day ? 12000L : 24000L;
             long span = Math.min(distance, boundary - cursor);
-            int minutes = Math.max(1, plugin.getConfig().getInt(day ? "time-control.daylength-minutes" : "time-control.nightlength-minutes", 30));
-            seconds += span * (minutes * 60.0 / 12000.0);
+            // Vanilla daylight cycling: each 12,000-tick half-day lasts 10 real minutes.
+            seconds += span * (600.0 / 12000.0);
             distance -= span;
             cursor += span;
             if (cursor >= 24000L) cursor = 0L;
@@ -146,10 +148,12 @@ public final class BankManager implements Listener {
         add(inv, 12, Material.BARREL, ChatColor.GREEN + "Deposit all", "deposit-all", 0,
                 List.of(ChatColor.GRAY + "Deposit your entire pocket balance."));
 
-        add(inv,13,Material.GOLD_NUGGET,ChatColor.AQUA+"Withdraw 10","withdraw",10,List.of(ChatColor.GRAY+"Move 10 bank coins into your pocket."));
-        add(inv,14,Material.GOLD_INGOT,ChatColor.AQUA+"Withdraw 100","withdraw",100,List.of(ChatColor.GRAY+"Move 100 bank coins into your pocket."));
-        add(inv,15,Material.GOLD_BLOCK,ChatColor.AQUA+"Withdraw 500","withdraw",500,List.of(ChatColor.GRAY+"Move 500 bank coins into your pocket."));
-        add(inv,16,Material.CHEST_MINECART,ChatColor.AQUA+"Withdraw all","withdraw-all",0,List.of(ChatColor.GRAY+"Withdraw your entire bank balance."));
+        add(inv, 14, Material.GOLD_NUGGET, ChatColor.AQUA + "Withdraw 10", "withdraw", 10,
+                List.of(ChatColor.GRAY + "Move 10 bank coins into your pocket."));
+        add(inv, 15, Material.GOLD_INGOT, ChatColor.AQUA + "Withdraw 100", "withdraw", 100,
+                List.of(ChatColor.GRAY + "Move 100 bank coins into your pocket."));
+        add(inv, 16, Material.CHEST_MINECART, ChatColor.AQUA + "Withdraw all", "withdraw-all", 0,
+                List.of(ChatColor.GRAY + "Withdraw your entire bank balance."));
 
         add(inv, 22, Material.WRITABLE_BOOK, ChatColor.LIGHT_PURPLE + "Loans", "loans", 0,
                 List.of(ChatColor.GRAY + "Borrow, review your debt, or repay.",
