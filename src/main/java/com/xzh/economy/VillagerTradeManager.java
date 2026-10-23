@@ -166,7 +166,8 @@ public final class VillagerTradeManager implements Listener {
                 output = new ItemStack(offer.other(), offer.otherAmount());
             } else if (offer.kind() == Kind.PLAYER_SELLS) {
                 inputs.add(new ItemStack(offer.item(), offer.amount()));
-                int payout = Math.max(1, (int) Math.floor(referenceBuyPrice(offer.item()) * offer.payoutRate() * offer.amount()));
+                int rawPayout = Math.max(1, (int) Math.floor(referenceBuyPrice(offer.item()) * offer.payoutRate() * offer.amount()));
+                int payout = rawPayout >= 640 ? (int) Math.round(rawPayout / 100.0) * 100 : Math.max(1, (int) Math.round(rawPayout / 10.0) * 10);
                 output = coins(payout);
             } else {
                 int price = Math.max(1, (int) Math.ceil(referenceBuyPrice(offer.item()) * offer.payoutRate() * offer.amount()));
@@ -241,16 +242,22 @@ public final class VillagerTradeManager implements Listener {
     }
 
     private void addCoinInputs(List<ItemStack> inputs, int rawPrice) {
-        int price = Math.max(1, (int) Math.round(rawPrice / 10.0) * 10);
-        int thousands = price / 1000;
-        int remainder = price % 1000;
-        if (thousands > 0) inputs.add(plugin.getPocketCoinManager().createCoin(1000, Math.min(64, thousands)));
-        if (remainder > 0) {
-            int tens = remainder / 10;
+        int price = Math.max(10, (int) Math.round(rawPrice / 10.0) * 10);
+        if (price >= 1000) {
+            price = (int) Math.round(price / 100.0) * 100;
+            int thousands = price / 1000;
+            int hundreds = (price % 1000) / 100;
+            if (thousands > 0) inputs.add(plugin.getPocketCoinManager().createCoin(1000, Math.min(64, thousands)));
+            if (hundreds > 0) inputs.add(plugin.getPocketCoinManager().createCoin(100, Math.min(64, hundreds)));
+        } else if (price > 640) {
+            int hundreds = price / 100;
+            int tens = (price % 100) / 10;
+            if (hundreds > 0) inputs.add(plugin.getPocketCoinManager().createCoin(100, Math.min(64, hundreds)));
             if (tens > 0) inputs.add(plugin.getPocketCoinManager().createCoin(10, Math.min(64, tens)));
+        } else {
+            inputs.add(plugin.getPocketCoinManager().createCoin(10, Math.min(64, price / 10)));
         }
         if (inputs.isEmpty()) inputs.add(plugin.getPocketCoinManager().createCoin(10, 1));
-        while (inputs.size() > 2) inputs.remove(inputs.size() - 1);
     }
 
     private void save() {
