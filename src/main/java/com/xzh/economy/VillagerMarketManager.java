@@ -3,23 +3,16 @@ package com.xzh.economy;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerTradeEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.MerchantInventory;
 import org.bukkit.inventory.MerchantRecipe;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
@@ -43,14 +36,12 @@ public final class VillagerMarketManager implements Listener {
                          double coins, String key) { }
 
     private final XZHEconomySystem plugin;
-    private final NamespacedKey voucherKey;
     private final File file;
     private final YamlConfiguration data;
     private final Map<UUID, Long> appliedSeeds = new HashMap<>();
 
     public VillagerMarketManager(XZHEconomySystem plugin) {
         this.plugin = plugin;
-        this.voucherKey = new NamespacedKey(plugin, "villager_balance_voucher");
         this.file = new File(plugin.getDataFolder(), "villager-market.yml");
         this.data = YamlConfiguration.loadConfiguration(file);
         initializeProfessions();
@@ -68,7 +59,7 @@ public final class VillagerMarketManager implements Listener {
         save();
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onVillagerInteract(PlayerInteractEntityEvent event) {
         if (!plugin.getConfig().getBoolean("villager-market.enabled", true)) return;
         if (!(event.getRightClicked() instanceof Villager villager)) return;
@@ -77,121 +68,55 @@ public final class VillagerMarketManager implements Listener {
         Villager.Profession profession = villager.getProfession();
         if (profession == Villager.Profession.NONE || profession == Villager.Profession.NITWIT) return;
 
-        event.setCancelled(true);
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            if (!event.getPlayer().isOnline() || !villager.isValid()) return;
-            refreshIfDue(profession);
-            applyOffers(villager, profession);
-            event.getPlayer().openMerchant(villager, true);
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                if (!event.getPlayer().isOnline()) return;
-                if (event.getPlayer().getOpenInventory().getTopInventory() instanceof MerchantInventory inventory) {
-                    inventory.setItem(0, createVoucher());
-                }
-            });
-        });
+        // Do not cancel interaction or manually open a screen: vanilla opens its own
+        // MerchantInventory with the villager's normal model and trade layout.
+        refreshIfDue(profession);
+        applyOffers(villager, profession);
     }
 
     private void applyOffers(Villager villager, Villager.Profession profession) {
         List<Offer> offers = generateOffers(profession);
         List<MerchantRecipe> recipes = new ArrayList<>();
         for (Offer offer : offers) {
-            ItemStack result = offer.kind() == Kind.BUY_FOR_COINS
-                    ? coinPreview(offer.coins())
-                    : previewResult(offer);
+            ItemStack result = new ItemStack(offer.output(), offer.outputAmount());
             MerchantRecipe recipe = new MerchantRecipe(result, 999999);
             recipe.setUses(0);
             recipe.setMaxUses(999999);
             recipe.setExperienceReward(true);
-            List<ItemStack> ingredients = new ArrayList<>();
-            ingredients.add(createVoucher());
-            if (offer.input() != null && offer.inputAmount() > 0) ingredients.add(new ItemStack(offer.input(), offer.inputAmount()));
-            recipe.setIngredients(ingredients);
+            recipe.setVillagerExperience(2);
+            recipe.setIngredients(List.of(new ItemStack(offer.input(), offer.inputAmount())));
             recipes.add(recipe);
         }
         villager.setRecipes(recipes);
         appliedSeeds.put(villager.getUniqueId(), data.getLong(professionPath(profession) + ".seed", 1L));
-        // Store current offer identity on the entity so a second villager of this profession
-        // cannot grant additional stock; the global seed remains the source of truth.
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onMerchantClick(InventoryClickEvent event) {
-        if (!(event.getView().getTopInventory() instanceof MerchantInventory inventory)) return;
-        if (!(inventory.getMerchant() instanceof Villager villager)) return;
-        if (event.getSlotType() == InventoryType.SlotType.RESULT && event.getRawSlot() == 2) {
-            event.setCancelled(true);
-            if (!(event.getWhoClicked() instanceof Player player)) return;
-            Villager.Profession profession = villager.getProfession();
-            refreshIfDue(profession);
-            long currentSeed = data.getLong(professionPath(profession) + ".seed", 1L);
-            if (appliedSeeds.getOrDefault(villager.getUniqueId(), Long.MIN_VALUE) != currentSeed) {
-                applyOffers(villager, profession);
-                inventory.setItem(0, createVoucher());
-                player.sendMessage(Component.text("This profession just restocked. The new offers are ready; select one again.", NamedTextColor.YELLOW));
-                return;
-            }
-            List<Offer> offers = generateOffers(profession);
-            int selected = inventory.getSelectedRecipeIndex();
-            if (selected < 0 || selected >= offers.size()) return;
-            Offer offer = offers.get(selected);
-            String stockPath = stockPath(player.getUniqueId(), profession, offer.key());
-            int used = data.getInt(stockPath, 0);
-            int limit = Math.max(1, plugin.getConfig().getInt("villager-market.stock-per-player-per-offer", 3));
-            if (used >= limit) {
-                player.sendMessage(Component.text("You've used all your stock for this offer until the profession restocks.", NamedTextColor.RED));
-                return;
-            }
-            ItemStack input = inventory.getItem(1);
-            if (offer.input() != null) {
-                if (input == null || input.getType() != offer.input() || input.getAmount() < offer.inputAmount()) {
-                    player.sendMessage(Component.text("Place the requested items in the second trade slot.", NamedTextColor.RED));
-                    return;
-                }
-            }
-            if (offer.kind() == Kind.SELL_FOR_COINS) {
-                double balance = plugin.getBalance(player.getUniqueId());
-                if (balance + 1e-9 < offer.coins()) {
-                    player.sendMessage(Component.text("Not enough pocket balance. This offer costs " + money(offer.coins()) + " coins.", NamedTextColor.RED));
-                    return;
-                }
-            }
-            if (offer.input() != null) {
-                int left = input.getAmount() - offer.inputAmount();
-                if (left <= 0) inventory.setItem(1, null);
-                else input.setAmount(left);
-                Material containerReturn = containerReturnFor(offer.input());
-                if (containerReturn != null) giveReward(player, containerReturn, offer.inputAmount());
-            }
-            if (offer.kind() == Kind.BUY_FOR_COINS) {
-                double old = plugin.getBalance(player.getUniqueId());
-                plugin.setBalance(player.getUniqueId(), old + offer.coins());
-                player.sendMessage(Component.text("Villager paid you " + money(offer.coins()) + " coins into your pocket balance.", NamedTextColor.GREEN));
-            } else if (offer.kind() == Kind.SELL_FOR_COINS) {
-                plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) - offer.coins());
-                giveReward(player, offer.output(), offer.outputAmount());
-                player.sendMessage(Component.text("Purchased for " + money(offer.coins()) + " coins from your pocket balance.", NamedTextColor.GREEN));
-            } else {
-                giveReward(player, offer.output(), offer.outputAmount());
-                player.sendMessage(Component.text("Trade completed.", NamedTextColor.GREEN));
-            }
-            data.set(stockPath, used + 1);
-            save();
-            int xp = Math.min(250, villager.getVillagerExperience() + 2);
-            villager.setVillagerExperience(xp);
-            int level = xp >= 250 ? 5 : xp >= 150 ? 4 : xp >= 70 ? 3 : xp >= 10 ? 2 : 1;
-            if (level > villager.getVillagerLevel()) villager.setVillagerLevel(level);
-            inventory.setItem(0, createVoucher());
-            player.updateInventory();
-        } else if (event.getRawSlot() == 0 && event.getClickedInventory() == inventory) {
-            event.setCancelled(true);
+    public void onPlayerTrade(PlayerTradeEvent event) {
+        if (!(event.getVillager() instanceof Villager villager)) return;
+        if (!plugin.getConfig().getBoolean("villager-market.enabled", true)) return;
+        Player player = event.getPlayer();
+        Villager.Profession profession = villager.getProfession();
+        MerchantRecipe trade = event.getTrade();
+        int offerIndex = -1;
+        List<MerchantRecipe> recipes = villager.getRecipes();
+        for (int i = 0; i < recipes.size(); i++) {
+            if (recipes.get(i).equals(trade)) { offerIndex = i; break; }
         }
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onMerchantDrag(InventoryDragEvent event) {
-        if (!(event.getView().getTopInventory() instanceof MerchantInventory inventory)) return;
-        if (event.getRawSlots().contains(0)) event.setCancelled(true);
+        if (offerIndex < 0) return;
+        List<Offer> offers = generateOffers(profession);
+        if (offerIndex >= offers.size()) return;
+        Offer offer = offers.get(offerIndex);
+        String stockPath = stockPath(player.getUniqueId(), profession, offer.key());
+        int used = data.getInt(stockPath, 0);
+        int limit = Math.max(1, plugin.getConfig().getInt("villager-market.stock-per-player-per-offer", 3));
+        if (used >= limit) {
+            event.setCancelled(true);
+            player.sendMessage(Component.text("You've used all your stock for this offer until the profession restocks.", NamedTextColor.RED));
+            return;
+        }
+        data.set(stockPath, used + 1);
+        save();
     }
 
     private void tickOpenMerchants() {
@@ -210,7 +135,6 @@ public final class VillagerMarketManager implements Listener {
             String time = seconds >= 3600 ? (seconds / 3600) + "h " + ((seconds % 3600) / 60) + "m"
                     : seconds >= 60 ? (seconds / 60) + "m " + (seconds % 60) + "s" : seconds + "s";
             player.sendActionBar(Component.text("Profession restock: " + time, NamedTextColor.YELLOW));
-            inventory.setItem(0, createVoucher());
         }
     }
 
@@ -223,42 +147,19 @@ public final class VillagerMarketManager implements Listener {
         List<Offer> result = new ArrayList<>();
         int count = Math.max(3, Math.min(8, plugin.getConfig().getInt("villager-market.offers-per-profession", 5)));
         for (int i = 0; i < count; i++) {
-            int type = random.nextInt(3);
             Material input = wanted.get(random.nextInt(wanted.size()));
             Material output = rewards.get(random.nextInt(rewards.size()));
             int inputAmount = randomAmount(random, input);
             int outputAmount = randomAmount(random, output);
-            String key = seed + "-" + i;
-            if (type == 0) {
-                double base = plugin.getShopManager().getShopSellPrice(input);
-                if (base <= 0) {
-                    // Zero-value shop items can still be used in barter deals rather than being
-                    // assigned an invented cash value.
-                    type = 2;
-                } else {
-                    double premium = 1.0 + random.nextDouble() * Math.max(0.0,
-                            plugin.getConfig().getDouble("villager-market.max-buy-premium", 0.35));
-                    double payout = Math.max(1.0, Math.floor(base * inputAmount * premium));
-                    result.add(new Offer(Kind.BUY_FOR_COINS, input, inputAmount, Material.GOLD_NUGGET, 1, payout, key));
-                    continue;
-                }
+            // Every offer is a real item-for-item MerchantRecipe. No placeholder,
+            // voucher, coin-preview, or intercepted result click is used.
+            if (profession == Villager.Profession.FISHERMAN && random.nextInt(4) == 0) {
+                input = Material.REDSTONE;
+                inputAmount = 64 * (1 + random.nextInt(5));
+                output = random.nextBoolean() ? Material.COD : Material.COOKED_COD;
+                outputAmount = 8 + random.nextInt(25);
             }
-            if (type == 1) {
-                double base = plugin.getShopManager().getShopBuyPrice(output);
-                if (base <= 0) base = Math.max(1.0, plugin.getConfig().getDouble("villager-market.fallback-item-price", 20.0));
-                double modifier = 0.75 + random.nextDouble() * 0.60;
-                double cost = Math.max(1.0, Math.ceil(base * outputAmount * modifier));
-                result.add(new Offer(Kind.SELL_FOR_COINS, null, 0, output, outputAmount, cost, key));
-            } else {
-                // Profession-themed bartering, including unusual/rare requested materials.
-                if (profession == Villager.Profession.FISHERMAN && random.nextInt(4) == 0) {
-                    input = Material.REDSTONE;
-                    inputAmount = 64 * (1 + random.nextInt(5));
-                    output = random.nextBoolean() ? Material.COD : Material.COOKED_COD;
-                    outputAmount = 8 + random.nextInt(25);
-                }
-                result.add(new Offer(Kind.ITEM_EXCHANGE, input, inputAmount, output, outputAmount, 0, key));
-            }
+            result.add(new Offer(Kind.ITEM_EXCHANGE, input, inputAmount, output, outputAmount, 0, seed + "-" + i));
         }
         return result;
     }
@@ -346,37 +247,8 @@ public final class VillagerMarketManager implements Listener {
         };
     }
 
-    private ItemStack createVoucher() {
-        ItemStack voucher = new ItemStack(Material.PAPER);
-        ItemMeta meta = voucher.getItemMeta();
-        meta.setDisplayName(ChatColor.GOLD + "XZH Balance");
-        meta.setLore(List.of(ChatColor.GRAY + "Villager market payment slot",
-                ChatColor.YELLOW + "Coin transactions use your pocket balance."));
-        meta.getPersistentDataContainer().set(voucherKey, PersistentDataType.BYTE, (byte) 1);
-        voucher.setItemMeta(meta);
-        return voucher;
-    }
-
-    private ItemStack coinPreview(double coins) {
-        ItemStack item = new ItemStack(Material.GOLD_NUGGET);
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.GOLD + "XZH Coins");
-        meta.setLore(List.of(ChatColor.YELLOW + money(coins) + " coins credited to pocket balance",
-                ChatColor.GRAY + "This is a balance payment, not a physical coin."));
-        item.setItemMeta(meta);
-        return item;
-    }
-
     private ItemStack previewResult(Offer offer) {
-        ItemStack item = new ItemStack(offer.output(), offer.outputAmount());
-        ItemMeta meta = item.getItemMeta();
-        List<String> lore = new ArrayList<>();
-        if (offer.kind() == Kind.SELL_FOR_COINS) lore.add(ChatColor.YELLOW + "Cost: " + money(offer.coins()) + " pocket coins");
-        if (offer.kind() == Kind.ITEM_EXCHANGE) lore.add(ChatColor.GRAY + "Give " + offer.inputAmount() + " " + pretty(offer.input()) + " in the second slot");
-        lore.add(ChatColor.DARK_GRAY + "Stock limit applies per player until restock.");
-        meta.setLore(lore);
-        item.setItemMeta(meta);
-        return item;
+        return new ItemStack(offer.output(), offer.outputAmount());
     }
 
     private void giveReward(Player player, Material material, int amount) {
