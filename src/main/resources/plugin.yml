@@ -22,6 +22,9 @@ commands:
   askmoney:
     description: Ask another player for a recipient-confirmed payment.
     usage: /askmoney <player> <amount>
+  moneyresponse:
+    description: Accept or decline a pending money request.
+    usage: /moneyresponse <accept|decline>
   shop:
     description: Open the XZH shop GUI.
     usage: /shop
@@ -31,6 +34,9 @@ commands:
   loan:
     description: Open the bank or repay an active loan.
     usage: /loan [repay]
+  quest:
+    description: Cancel your active quest for a 50% refund of its purchase price.
+    usage: /quest cancel
   quests:
     description: Open the quest packs menu.
     usage: /quests
@@ -66,14 +72,8 @@ commands:
     usage: /setspawn
     permission: xzh.admin
   home:
-    description: Teleport to a saved home.
-    usage: /home [name]
-  sethome:
-    description: Save a home.
-    usage: /sethome [name]
-  delhome:
-    description: Delete a saved home.
-    usage: /delhome [name]
+    description: Teleport to your bed home.
+    usage: /home
   warp:
     description: Teleport to a named warp.
     usage: /warp <name>
@@ -88,6 +88,12 @@ commands:
   tpa:
     description: Request teleportation to another player.
     usage: /tpa <player>
+  tpasend:
+    description: Confirm sending a prepared teleport request.
+    usage: /tpasend
+  tpacancel:
+    description: Cancel a prepared teleport preview.
+    usage: /tpacancel
   tpaccept:
     description: Accept a teleport request.
     usage: /tpaccept
