@@ -82,7 +82,7 @@ public final class PocketCoinManager implements Listener {
         return (long) item.getAmount() * denomination;
     }
 
-    private ItemStack createCoin(int denomination, int amount) {
+    public ItemStack createCoin(int denomination, int amount) {
         // Use a non-placeable nugget base for every denomination; the persistent tag and name
         // distinguish official currency from ordinary gold nuggets.
         ItemStack item = new ItemStack(Material.GOLD_NUGGET, amount);
