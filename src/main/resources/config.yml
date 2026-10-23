@@ -223,7 +223,7 @@ utilities:
     # Destination in or requester in the Nether uses this fixed fee.
     nether-flat: 66
     # 3D Euclidean distance, in blocks, is used outside the Nether.
-    cost-250: 5
+    cost-250: 10
     cost-1000: 10
     cost-3000: 20
     cost-6000: 35
