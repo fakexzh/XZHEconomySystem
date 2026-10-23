@@ -95,7 +95,6 @@ public final class VillagerTradeManager implements Listener {
         add("toolsmith_diamond", Villager.Profession.TOOLSMITH, Kind.PLAYER_SELLS, Material.DIAMOND, 4, null, 0, 8, .60);
         add("toolsmith_redstone", Villager.Profession.TOOLSMITH, Kind.PLAYER_BUYS, Material.REDSTONE, 32, null, 0, 32, 1.08);
         add("weaponsmith_gold", Villager.Profession.WEAPONSMITH, Kind.PLAYER_SELLS, Material.GOLD_INGOT, 16, null, 0, 24, .65);
-        add("weaponsmith_diamond", Villager.Profession.WEAPONSMITH, Kind.PLAYER_BUYS, Material.DIAMOND_SWORD, 1, null, 0, 8, 1.10);
         add("armorer_iron", Villager.Profession.ARMORER, Kind.PLAYER_SELLS, Material.IRON_INGOT, 16, null, 0, 32, .65);
         add("armorer_diamond", Villager.Profession.ARMORER, Kind.PLAYER_BUYS, Material.DIAMOND_CHESTPLATE, 1, null, 0, 6, 1.10);
 
@@ -223,7 +222,6 @@ public final class VillagerTradeManager implements Listener {
             case PORKCHOP -> 9;
             case ARROW -> 2;
             case COMPASS -> 40;
-            case DIAMOND_SWORD -> 500;
             case DIAMOND_CHESTPLATE -> 900;
             default -> 5;
         };
