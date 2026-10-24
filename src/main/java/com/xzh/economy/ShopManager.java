@@ -442,7 +442,7 @@ public final class ShopManager implements Listener {
                 ChatColor.GRAY + "Hover to inspect the item; confirm to sell."));
         summary.setItemMeta(meta);
         inv.setItem(13, summary);
-        add(inv, 11, Material.BLUE_CONCRETE, "Confirm sale", "sell-hand-confirm", hand.getType().name() + ":-:" + hand.getAmount());
+        add(inv, 11, Material.SNOWBALL, "Confirm sale", "sell-hand-confirm", hand.getType().name() + ":-:" + hand.getAmount());
         ItemStack confirm = inv.getItem(11);
         ItemMeta confirmMeta = confirm.getItemMeta();
         confirmMeta.getPersistentDataContainer().set(sellUnitPriceKey, PersistentDataType.DOUBLE, unitSell);
@@ -592,8 +592,12 @@ public final class ShopManager implements Listener {
         int max = Math.max(1, Math.min(64, getStock(p.material())));
         int quantity = Math.max(1, Math.min(max, requestedQuantity));
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "Choose quantity");
-        ItemStack minus = quantityControl(p, quantity, Material.RED_CONCRETE, "−1", "quantity-minus");
-        ItemStack plus = quantityControl(p, quantity, Material.LIME_CONCRETE, "+1", "quantity-plus");
+        ItemStack minus64 = quantityControl(p, quantity, Material.COPPER_NUGGET, "−64", "quantity-minus-64");
+        ItemStack minus10 = quantityControl(p, quantity, Material.COPPER_NUGGET, "−10", "quantity-minus-10");
+        ItemStack minus1 = quantityControl(p, quantity, Material.COPPER_NUGGET, "−1", "quantity-minus");
+        ItemStack plus1 = quantityControl(p, quantity, Material.GHAST_TEAR, "+1", "quantity-plus");
+        ItemStack plus10 = quantityControl(p, quantity, Material.GHAST_TEAR, "+10", "quantity-plus-10");
+        ItemStack plus64 = quantityControl(p, quantity, Material.GHAST_TEAR, "+64", "quantity-plus-64");
         ItemStack summary = createStack(p, quantity);
         ItemMeta summaryMeta = summary.getItemMeta();
         summaryMeta.setDisplayName(ChatColor.YELLOW + "Selected: " + quantity + " × " + prettyProduct(p));
@@ -602,17 +606,21 @@ public final class ShopManager implements Listener {
                 ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(buyPrice(p) * quantity) + " coins",
                 ChatColor.WHITE + "Available stock: " + ChatColor.AQUA + getStock(p.material())));
         summary.setItemMeta(summaryMeta);
-        inv.setItem(10, minus);
+        inv.setItem(9, minus64);
+        inv.setItem(10, minus10);
+        inv.setItem(11, minus1);
         inv.setItem(13, summary);
-        inv.setItem(16, plus);
-        ItemStack buy = quantityControl(p, quantity, Material.EMERALD, "Buy " + quantity, "quantity-buy");
+        inv.setItem(15, plus1);
+        inv.setItem(16, plus10);
+        inv.setItem(17, plus64);
+        ItemStack buy = quantityControl(p, quantity, Material.SLIME_BALL, "Buy " + quantity, "quantity-buy");
         ItemMeta buyMeta = buy.getItemMeta();
         buyMeta.setLore(List.of(ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(buyPrice(p) * quantity) + " coins",
                 ChatColor.GRAY + "Confirm your purchase on the next screen."));
         buy.setItemMeta(buyMeta);
         inv.setItem(22, buy);
         if (!p.category().equals("bounty-maps")) {
-            ItemStack sell = createStack(p, 1);
+            ItemStack sell = new ItemStack(Material.SNOWBALL);
             ItemMeta sm = sell.getItemMeta();
             sm.setDisplayName(ChatColor.RED + "Sell all of this item in inventory");
             sm.setLore(List.of(ChatColor.WHITE + "Value: " + ChatColor.RED + money(sellPrice(p)) + " coins each",
@@ -672,7 +680,8 @@ public final class ShopManager implements Listener {
         summary.setItemMeta(sm);
         inv.setItem(13, summary);
         String txValue = material.name() + ":" + (p.potionType() != null ? p.potionType().name() : (p.fireworkPower() > 0 ? "POWER_" + p.fireworkPower() : "-")) + ":" + quantity;
-        add(inv, 11, Material.BLUE_CONCRETE, "Confirm", buying ? "buy" : (handOnly ? "sell-hand-confirm" : "sell"), txValue);
+        add(inv, 11, buying ? Material.SLIME_BALL : Material.SNOWBALL,
+                buying ? "Confirm Buy" : "Confirm Sell", buying ? "buy" : (handOnly ? "sell-hand-confirm" : "sell"), txValue);
         ItemMeta confirmMeta = inv.getItem(11).getItemMeta();
         if (p.potionType() != null) confirmMeta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
         if (p.fireworkPower() > 0) confirmMeta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
@@ -774,15 +783,23 @@ public final class ShopManager implements Listener {
                 Product selected = productFromMeta(meta);
                 if (selected != null) openQuantity(player, selected);
             }
-            case "quantity-minus", "quantity-plus", "quantity-buy" -> {
+            case "quantity-minus", "quantity-plus", "quantity-minus-10", "quantity-minus-64",
+                    "quantity-plus-10", "quantity-plus-64", "quantity-buy" -> {
                 Product selected = productFromMeta(meta);
                 Integer selectedQuantity = meta.getPersistentDataContainer().get(quantityKey, PersistentDataType.INTEGER);
                 if (selected == null || selectedQuantity == null) return;
                 if (action.equals("quantity-buy")) {
                     openConfirm(player, selected, selectedQuantity, true);
                 } else {
-                    int next = selectedQuantity + (action.equals("quantity-plus") ? 1 : -1);
-                    openQuantity(player, selected, next);
+                    int delta = switch (action) {
+                        case "quantity-minus-64" -> -64;
+                        case "quantity-minus-10" -> -10;
+                        case "quantity-plus-10" -> 10;
+                        case "quantity-plus-64" -> 64;
+                        case "quantity-plus" -> 1;
+                        default -> -1;
+                    };
+                    openQuantity(player, selected, selectedQuantity + delta);
                 }
             }
             case "back" -> openMain(player);
@@ -999,11 +1016,11 @@ public final class ShopManager implements Listener {
         fillerMeta.setDisplayName(ChatColor.DARK_GRAY + "Place items in the slots above");
         filler.setItemMeta(fillerMeta);
         for (int slot = 45; slot < 54; slot++) inv.setItem(slot, filler.clone());
-        add(inv, 45, Material.RED_CONCRETE, "Cancel / Return Items", "hand-sell-cancel", "cancel",
-                List.of(ChatColor.GRAY + "Close and return all placed items."));
+        add(inv, 45, Material.ARROW, "Back to Shop / Return Items", "hand-sell-cancel", "cancel",
+                List.of(ChatColor.GRAY + "Return placed items and go back to the shop."));
         add(inv, 49, Material.GOLD_INGOT, "Total: 0 coins", "hand-sell-total", "total",
                 List.of(ChatColor.GRAY + "Eligible items are counted automatically."));
-        add(inv, 53, Material.LIME_CONCRETE, "Confirm Sell", "hand-sell-confirm", "confirm",
+        add(inv, 53, Material.SNOWBALL, "Confirm Sell", "hand-sell-confirm", "confirm",
                 List.of(ChatColor.GRAY + "Sell eligible items and return everything else."));
         player.openInventory(inv);
         updateHandSellMenu(player);
