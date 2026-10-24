@@ -6,10 +6,17 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.CraftItemEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryMoveItemEvent;
+import org.bukkit.event.inventory.InventoryPickupItemEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -19,7 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/** Physical, server-tagged pocket currency. These items naturally drop with inventory on death. */
+/** Physical, server-tagged pocket currency. Coins may stay in player inventory or be deposited in the bank, never stored in containers. */
 public final class PocketCoinManager implements Listener {
     private static final int[] DENOMINATIONS = {1000, 100, 10, 1};
     private final XZHEconomySystem plugin;
@@ -114,6 +121,71 @@ public final class PocketCoinManager implements Listener {
     @EventHandler
     public void onPlace(BlockPlaceEvent event) {
         if (isCoin(event.getItemInHand())) event.setCancelled(true);
+    }
+
+    /**
+     * Only player inventory is a valid item destination for physical coins.
+     * This covers cursor placement, shift-click, number-key hotbar swaps and offhand swaps.
+     * Taking coins out of a container remains possible so old/illegally stored coins can be recovered.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        Inventory clicked = event.getClickedInventory();
+        if (clicked == null || clicked == player.getInventory()) return;
+
+        // Cursor placement or cursor/slot swapping would move a coin into a non-player inventory.
+        if (isCoin(event.getCursor())) {
+            event.setCancelled(true);
+            return;
+        }
+
+        // Number-key swaps move the selected hotbar item into the clicked container slot.
+        if (event.getClick() == ClickType.NUMBER_KEY) {
+            int hotbarButton = event.getHotbarButton();
+            if (hotbarButton >= 0 && hotbarButton < 9
+                    && isCoin(player.getInventory().getItem(hotbarButton))) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+
+        // The offhand swap key can also move a coin into the clicked container slot.
+        if (event.getClick() == ClickType.SWAP_OFFHAND
+                && isCoin(player.getInventory().getItemInOffHand())) {
+            event.setCancelled(true);
+            return;
+        }
+
+        // Shift-clicking a coin from the player inventory would send it to the open container.
+        if (event.isShiftClick() && isCoin(event.getCurrentItem())) {
+            event.setCancelled(true);
+        }
+    }
+
+    /** Prevent dragging coins from the cursor into any non-player inventory. */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (!isCoin(event.getOldCursor())) return;
+        int topSize = event.getView().getTopInventory().getSize();
+        for (int rawSlot : event.getRawSlots()) {
+            if (rawSlot < topSize) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    /** Prevent hoppers and other inventory automation from storing/transferring official coins. */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onInventoryMove(InventoryMoveItemEvent event) {
+        if (isCoin(event.getItem())) event.setCancelled(true);
+    }
+
+    /** Prevent hoppers or other inventories from picking up dropped official coins. */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onInventoryPickup(InventoryPickupItemEvent event) {
+        if (isCoin(event.getItem().getItemStack())) event.setCancelled(true);
     }
 
     @EventHandler
