@@ -42,15 +42,6 @@ public final class HudManager {
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 updateSidebar(player);
-                if (plugin.getConfig().getBoolean("hud.clock.enabled", true)) {
-                    String pattern = plugin.getConfig().getString("hud.clock.format", "HH:mm");
-                    long dayTicks = Math.floorMod(player.getWorld().getTime() + 6000L, 24000L);
-                    int totalMinutes = (int) (dayTicks * 1440L / 24000L);
-                    String time;
-                    try { time = LocalTime.of(totalMinutes / 60, totalMinutes % 60).format(DateTimeFormatter.ofPattern(pattern)); }
-                    catch (IllegalArgumentException ex) { time = LocalTime.of(totalMinutes / 60, totalMinutes % 60).format(DateTimeFormatter.ofPattern("HH:mm")); }
-                    player.setPlayerListHeaderFooter("", ChatColor.GOLD + "⌚ " + ChatColor.WHITE + time);
-                }
             }
         }, 1L, 20L);
         for (Player player : Bukkit.getOnlinePlayers()) updateSidebar(player);
@@ -105,7 +96,7 @@ public final class HudManager {
         double owed = loanAmounts.getOrDefault(id, 0.0);
         long dueAt = loanDueTimes.getOrDefault(id, 0L);
         long graceUntil = loanGraceTimes.getOrDefault(id, 0L);
-        java.util.List<String> lines = java.util.List.of(
+        java.util.List<String> lines = new java.util.ArrayList<>(java.util.List.of(
                 ChatColor.GRAY + "Pocket",
                 ChatColor.YELLOW + formatMoney(balance),
                 ChatColor.GRAY + "Bank",
@@ -113,8 +104,11 @@ public final class HudManager {
                 ChatColor.DARK_GRAY + " ",
                 ChatColor.GRAY + "Loan owed",
                 (owed > 0 ? ChatColor.RED : ChatColor.GREEN) + formatMoney(owed),
-                ChatColor.AQUA + clip(owed <= 0 ? "No active loan" : remaining(dueAt, graceUntil), 38)
-        );
+                (owed <= 0 ? ChatColor.RED : ChatColor.AQUA) + clip(owed <= 0 ? "NO LOAN" : remaining(dueAt, graceUntil), 38)
+        ));
+        if (plugin.getConfig().getBoolean("hud.clock.enabled", true)) {
+            lines.add(ChatColor.GOLD + "⌚ " + ChatColor.WHITE + formatClock(player));
+        }
         int score = lines.size();
         for (String line : lines) objective.getScore(line).setScore(score--);
         sidebarLines.put(id, lines);
@@ -178,6 +172,19 @@ public final class HudManager {
         if (bar != null) {
             bar.removePlayer(player);
             bar.setVisible(false);
+        }
+    }
+
+    private String formatClock(Player player) {
+        String pattern = plugin.getConfig().getString("hud.clock.format", "HH:mm");
+        long dayTicks = Math.floorMod(player.getWorld().getTime() + 6000L, 24000L);
+        int totalMinutes = (int) (dayTicks * 1440L / 24000L);
+        try {
+            return LocalTime.of(totalMinutes / 60, totalMinutes % 60)
+                    .format(DateTimeFormatter.ofPattern(pattern));
+        } catch (IllegalArgumentException ex) {
+            return LocalTime.of(totalMinutes / 60, totalMinutes % 60)
+                    .format(DateTimeFormatter.ofPattern("HH:mm"));
         }
     }
 
