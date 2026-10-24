@@ -16,8 +16,6 @@ import io.papermc.paper.scoreboard.numbers.NumberFormat;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -51,7 +49,7 @@ public final class HudManager {
                     String time;
                     try { time = LocalTime.of(totalMinutes / 60, totalMinutes % 60).format(DateTimeFormatter.ofPattern(pattern)); }
                     catch (IllegalArgumentException ex) { time = LocalTime.of(totalMinutes / 60, totalMinutes % 60).format(DateTimeFormatter.ofPattern("HH:mm")); }
-                    player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(ChatColor.GOLD + "⌚ " + ChatColor.WHITE + time));
+                    player.setPlayerListHeaderFooter("", ChatColor.GOLD + "⌚ " + ChatColor.WHITE + time);
                 }
             }
         }, 1L, 20L);
