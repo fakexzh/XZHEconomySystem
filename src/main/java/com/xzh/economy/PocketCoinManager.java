@@ -29,6 +29,7 @@ public final class PocketCoinManager implements Listener {
         this.plugin = plugin;
         denominationKey = new NamespacedKey(plugin, "coin_denomination");
         Bukkit.getPluginManager().registerEvents(this, plugin);
+        new CoinStorageGuard(plugin);
     }
 
     public double count(Player player) {
