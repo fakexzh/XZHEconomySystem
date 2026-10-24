@@ -141,14 +141,9 @@ public final class UtilityManager implements Listener {
                 if (prepared == null) { msg(player, "Use /tpa <player> first to review a travel cost."); return true; }
                 Player target = Bukkit.getPlayer(prepared.targetId());
                 if (target == null || !target.isOnline()) { msg(player, "That player is no longer online."); return true; }
-                TpaQuote current = tpaQuote(player, target);
-                if (current == null) return true;
-                if (!sameQuote(prepared.quote(), current)) {
-                    preparedByRequester.put(player.getUniqueId(), new PreparedTpa(target.getUniqueId(), current));
-                    msg(player, "The distance changed. Review the updated travel cost and press SEND again.");
-                    showTpaPreview(player, target, current);
-                    return true;
-                }
+                // Keep the quote calculated when /tpa was entered. Movement after that
+                // point must not change the displayed distance or travel cost.
+                TpaQuote current = prepared.quote();
                 Long oldExpiry = requestExpiry.get(target.getUniqueId());
                 if (requestsByTarget.containsKey(target.getUniqueId()) && oldExpiry != null && oldExpiry > System.currentTimeMillis()) {
                     msg(player, "That player already has a pending teleport request.");
@@ -209,13 +204,9 @@ public final class UtilityManager implements Listener {
                     requester.playSound(requester.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.9f, 0.8f);
                     return true;
                 }
-                TpaQuote current = tpaQuote(requester, player);
-                if (current == null) return true;
-                if (!sameQuote(storedQuote, current)) {
-                    msg(requester, "The travel distance changed. Send a new /tpa request to confirm the updated cost.");
-                    msg(player, "The travel distance changed. Ask the player to send a new request.");
-                    return true;
-                }
+                // Acceptance uses the exact quote captured when the requester typed /tpa,
+                // regardless of movement by either player while the request was pending.
+                TpaQuote current = storedQuote;
                 XZHEconomySystem economy = (XZHEconomySystem) plugin;
                 if (economy.getCombinedBalance(requesterId) + 1e-9 < current.cost()) {
                     msg(requester, "You no longer have enough pocket + bank coins for this teleport.");
