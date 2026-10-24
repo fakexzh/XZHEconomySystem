@@ -132,7 +132,15 @@ public final class PocketCoinManager implements Listener {
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         Inventory clicked = event.getClickedInventory();
-        if (clicked == null || clicked == player.getInventory()) return;
+        if (clicked == null) return;
+
+        // Shift-clicking a coin from the player inventory would send it to the open container.
+        if (clicked == player.getInventory()) {
+            if (event.isShiftClick() && isCoin(event.getCurrentItem())) {
+                event.setCancelled(true);
+            }
+            return;
+        }
 
         // Cursor placement or cursor/slot swapping would move a coin into a non-player inventory.
         if (isCoin(event.getCursor())) {
@@ -157,10 +165,6 @@ public final class PocketCoinManager implements Listener {
             return;
         }
 
-        // Shift-clicking a coin from the player inventory would send it to the open container.
-        if (event.isShiftClick() && isCoin(event.getCurrentItem())) {
-            event.setCancelled(true);
-        }
     }
 
     /** Prevent dragging coins from the cursor into any non-player inventory. */
