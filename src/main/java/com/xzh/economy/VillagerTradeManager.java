@@ -13,6 +13,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.VillagerAcquireTradeEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.MerchantInventory;
 import org.bukkit.inventory.ItemStack;
@@ -40,7 +41,10 @@ public final class VillagerTradeManager implements Listener {
     private final Map<Villager.Profession, List<Offer>> active = new HashMap<>();
     private final Map<UUID, Map<String, Long>> playerUsedOffers = new HashMap<>();
     private final Map<Merchant, MerchantSession> merchantSessions = new HashMap<>();
-    private record MerchantSession(UUID playerId, Villager.Profession profession) {}
+    private final Map<UUID, Boolean> originalVillagerAi = new HashMap<>();
+    private final Map<UUID, Set<UUID>> playersViewingVillager = new HashMap<>();
+    private final Map<UUID, UUID> villagerByPlayer = new HashMap<>();
+    private record MerchantSession(UUID playerId, Villager.Profession profession, UUID villagerId) {}
 
     private enum Kind { PLAYER_SELLS, PLAYER_SELLS_POTION, PLAYER_BUYS, PLAYER_BUYS_POTION, BARTER, BARTER_POTION }
     private record Offer(String id, Villager.Profession profession, Kind kind,
@@ -360,12 +364,22 @@ public final class VillagerTradeManager implements Listener {
         if (villager.getProfession() == Villager.Profession.NONE) return;
         Player player = event.getPlayer();
         UUID playerId = player.getUniqueId();
+        UUID villagerId = villager.getUniqueId();
         Villager.Profession profession = villager.getProfession();
+        releaseVillager(playerId, null);
+        originalVillagerAi.putIfAbsent(villagerId, villager.hasAI());
+        playersViewingVillager.computeIfAbsent(villagerId, ignored -> new HashSet<>()).add(playerId);
+        villagerByPlayer.put(playerId, villagerId);
+        villager.getPathfinder().stopPathfinding();
+        villager.setAI(false);
         Bukkit.getScheduler().runTask(plugin, () -> {
-            if (!player.isOnline() || !villager.isValid()) return;
+            if (!player.isOnline() || !villager.isValid()) {
+                releaseVillager(playerId, villagerId);
+                return;
+            }
             Merchant merchant = Bukkit.createMerchant(ChatColor.GOLD + "XZH " + profession.name().replace('_', ' '));
             merchant.setRecipes(recipes(profession, playerId));
-            merchantSessions.put(merchant, new MerchantSession(playerId, profession));
+            merchantSessions.put(merchant, new MerchantSession(playerId, profession, villagerId));
             player.openMerchant(merchant, true);
         });
     }
@@ -373,7 +387,30 @@ public final class VillagerTradeManager implements Listener {
     @EventHandler
     public void onMerchantClose(InventoryCloseEvent event) {
         if (event.getInventory() instanceof MerchantInventory merchantInventory) {
-            merchantSessions.remove(merchantInventory.getMerchant());
+            MerchantSession session = merchantSessions.remove(merchantInventory.getMerchant());
+            if (session != null) releaseVillager(session.playerId(), session.villagerId());
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        releaseVillager(event.getPlayer().getUniqueId(), null);
+    }
+
+    private void releaseVillager(UUID playerId, UUID expectedVillagerId) {
+        UUID villagerId = villagerByPlayer.get(playerId);
+        if (villagerId == null || (expectedVillagerId != null && !expectedVillagerId.equals(villagerId))) return;
+        villagerByPlayer.remove(playerId);
+        Set<UUID> viewers = playersViewingVillager.get(villagerId);
+        if (viewers != null) {
+            viewers.remove(playerId);
+            if (!viewers.isEmpty()) return;
+            playersViewingVillager.remove(villagerId);
+        }
+        Boolean wasAiEnabled = originalVillagerAi.remove(villagerId);
+        Entity entity = Bukkit.getEntity(villagerId);
+        if (entity instanceof Villager villager && villager.isValid() && wasAiEnabled != null) {
+            villager.setAI(wasAiEnabled);
         }
     }
 
@@ -433,6 +470,14 @@ public final class VillagerTradeManager implements Listener {
     }
 
     public void shutdown() {
+        for (Map.Entry<UUID, Boolean> entry : new HashMap<>(originalVillagerAi).entrySet()) {
+            Entity entity = Bukkit.getEntity(entry.getKey());
+            if (entity instanceof Villager villager && villager.isValid()) villager.setAI(entry.getValue());
+        }
+        originalVillagerAi.clear();
+        playersViewingVillager.clear();
+        villagerByPlayer.clear();
+        merchantSessions.clear();
         save();
     }
 }
