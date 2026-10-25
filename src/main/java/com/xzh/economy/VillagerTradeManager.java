@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
  * Fixed XZH profession market. Each player can use each offer once every two hours;
  * the player's own merchant inventory displays vanilla's red X while that offer is cooling down.
  * XZH coins are the real tagged pocket coins; offer definitions are fixed and never randomly rotated.
+ * A villager's AI is disabled only while at least one player has its XZH trade menu open.
  */
 public final class VillagerTradeManager implements Listener {
     private static final long OFFER_COOLDOWN_MILLIS = 2L * 60L * 60L * 1000L;
