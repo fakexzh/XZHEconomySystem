@@ -12,6 +12,7 @@ import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.block.Action;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -55,6 +56,7 @@ public final class ShopManager implements Listener {
     private final YamlConfiguration historyData;
     private final File bountyCooldownFile;
     private final YamlConfiguration bountyCooldownData;
+    private final Map<java.util.UUID, Boolean> pendingShopSearch = new HashMap<>();
 
     private record Product(String category, Material material, double buy, double sell, PotionType potionType, int fireworkPower) {
         Product(String category, Material material, double buy, double sell) { this(category, material, buy, sell, null, 0); }
@@ -293,6 +295,7 @@ public final class ShopManager implements Listener {
         add(inv, 28, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
         add(inv, 29, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
         add(inv, 30, Material.POTION, "Potions", "category", "potions");
+        add(inv, 31, Material.SPYGLASS, "Search Items", "shop-search", "search", List.of(ChatColor.GRAY + "Search the shop by item name.", ChatColor.YELLOW + "Click, then type your search in chat."));
         add(inv, 32, Material.NETHER_STAR, "Quest Packs", "quests", "quests");
         add(inv, 33, Material.NETHERITE_SWORD, "Bounty Hunt", "category", "bounty-maps");
         // Row 5: align bank, transaction history, and online players' money.
@@ -373,6 +376,86 @@ public final class ShopManager implements Listener {
         } catch (IOException ex) {
             plugin.getLogger().warning("Could not save shop purchase history: " + ex.getMessage());
         }
+    }
+
+    private void promptShopSearch(Player player) {
+        pendingShopSearch.put(player.getUniqueId(), true);
+        player.closeInventory();
+        player.sendMessage(ChatColor.GOLD + "[XZH SHOP] " + ChatColor.WHITE + "Type an item name to search. Type " + ChatColor.YELLOW + "cancel" + ChatColor.WHITE + " to stop.");
+    }
+
+    @EventHandler
+    public void onShopSearchChat(AsyncPlayerChatEvent event) {
+        if (!pendingShopSearch.containsKey(event.getPlayer().getUniqueId())) return;
+        event.setCancelled(true);
+        String query = event.getMessage() == null ? "" : event.getMessage().trim();
+        pendingShopSearch.remove(event.getPlayer().getUniqueId());
+        Player player = event.getPlayer();
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!player.isOnline()) return;
+            if (query.equalsIgnoreCase("cancel")) {
+                player.sendMessage(ChatColor.GOLD + "[XZH SHOP] " + ChatColor.GRAY + "Search cancelled.");
+                openMain(player);
+                return;
+            }
+            if (query.isBlank()) {
+                player.sendMessage(ChatColor.GOLD + "[XZH SHOP] " + ChatColor.RED + "Enter an item name to search.");
+                promptShopSearch(player);
+                return;
+            }
+            if (query.length() > 48) query = query.substring(0, 48);
+            openSearchResults(player, query, 0);
+        });
+    }
+
+    private void openSearchResults(Player player, String query, int requestedPage) {
+        String needle = query.toLowerCase(Locale.ROOT).replace('_', ' ').trim();
+        List<Product> matches = products.stream()
+                .filter(p -> {
+                    String name = prettyProduct(p).toLowerCase(Locale.ROOT);
+                    String material = p.material().name().toLowerCase(Locale.ROOT).replace('_', ' ');
+                    String potion = p.potionType() == null ? "" : p.potionType().name().toLowerCase(Locale.ROOT).replace('_', ' ');
+                    return name.contains(needle) || material.contains(needle) || potion.contains(needle);
+                })
+                .sorted(java.util.Comparator.comparing((Product p) -> prettyProduct(p).toLowerCase(Locale.ROOT))
+                        .thenComparing(p -> p.material().name())
+                        .thenComparing(p -> p.potionType() == null ? "" : p.potionType().name()))
+                .toList();
+        int pages = Math.max(1, (matches.size() + 44) / 45);
+        int page = Math.max(0, Math.min(requestedPage, pages - 1));
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP: Search " + (page + 1));
+        int start = page * 45;
+        int end = Math.min(matches.size(), start + 45);
+        for (int index = start; index < end; index++) {
+            Product p = matches.get(index);
+            ItemStack item = createStack(p, 1);
+            if (p.category().equals("bounty-maps")) item.setType(Material.NETHERITE_SWORD);
+            ItemMeta meta = item.getItemMeta();
+            meta.setDisplayName(ChatColor.YELLOW + prettyProduct(p));
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.WHITE + "Buy: " + ChatColor.YELLOW + money(buyPrice(p)) + " coins each");
+            lore.add(ChatColor.WHITE + "Sell: " + ChatColor.RED + money(sellPrice(p)) + " coins each");
+            if (isFarmableSellItem(p.material())) lore.add(ChatColor.WHITE + "Your sell stock: " + ChatColor.AQUA + getSellStock(player, p.material()) + "/" + sellStockLimit(p.material()) + ChatColor.GRAY + " (personal 6h restock)");
+            if (!p.category().equals("bounty-maps")) lore.add(ChatColor.WHITE + "Global buy stock: " + ChatColor.AQUA + getStock(p.material()) + "/" + stockLimit(p.material()));
+            if (p.material() == Material.ELYTRA) lore.add(ChatColor.LIGHT_PURPLE + "Unlock: Visit the End first");
+            lore.add(ChatColor.GRAY + "Click to choose quantity");
+            meta.setLore(lore);
+            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "product");
+            meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, p.material().name());
+            if (p.potionType() != null) meta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
+            if (p.fireworkPower() > 0) meta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
+            item.setItemMeta(meta);
+            inv.setItem(index - start, item);
+        }
+        if (matches.isEmpty()) {
+            add(inv, 22, Material.BARRIER, "No items found", "search-again", "search",
+                    List.of(ChatColor.GRAY + "No shop items matched: " + query, ChatColor.YELLOW + "Click to search again."));
+        }
+        if (page > 0) add(inv, 45, Material.ARROW, "Previous page", "search-page", (page - 1) + "|" + query);
+        add(inv, 48, Material.SPYGLASS, "Search again", "search-again", "search");
+        add(inv, 49, Material.ARROW, "Back to Shop", "back", "main");
+        if (page + 1 < pages) add(inv, 53, Material.ARROW, "Next page", "search-page", (page + 1) + "|" + query);
+        player.openInventory(inv);
     }
 
     private void openCategory(Player player, String category) {
@@ -730,6 +813,14 @@ public final class ShopManager implements Listener {
         if (action == null || value == null) return;
         switch (action) {
             case "category" -> openCategory(player, value);
+            case "shop-search", "search-again" -> promptShopSearch(player);
+            case "search-page" -> {
+                String[] bits = value.split("\\|", 2);
+                if (bits.length == 2) {
+                    try { openSearchResults(player, bits[1], Integer.parseInt(bits[0])); }
+                    catch (NumberFormatException ignored) { openSearchResults(player, bits[1], 0); }
+                }
+            }
             case "books" -> plugin.getBookShopManager().open(player);
             case "quests" -> plugin.getQuestManager().open(player);
             case "deathinventory" -> plugin.getDeathRecoveryManager().open(player);
