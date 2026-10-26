@@ -436,31 +436,45 @@ public final class VillagerTradeManager implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onTrade(PlayerTradeEvent event) {
         Merchant merchant = event.getMerchant();
+        UUID playerId = event.getPlayer().getUniqueId();
         MerchantSession session = merchantSessions.get(merchant);
-        if (session == null || !session.playerId().equals(event.getPlayer().getUniqueId())) return;
+        // Paper can expose a wrapper/reference for the merchant in the trade event.
+        // Recover the player's active session rather than silently skipping cooldowns.
+        if (session == null || !session.playerId().equals(playerId)) {
+            session = merchantSessions.values().stream()
+                    .filter(candidate -> candidate.playerId().equals(playerId))
+                    .findFirst().orElse(null);
+        }
+        if (session == null) {
+            plugin.getLogger().warning("Villager cooldown skipped: no merchant session for player " + playerId);
+            return;
+        }
         Villager.Profession profession = session.profession();
         List<String> recipeOfferIds = session.offerIds();
         List<MerchantRecipe> currentRecipes = merchant.getRecipes();
         int index = -1;
 
-        // Resolve from the actual recipe being traded first. The selected index can be stale
-        // when Paper refreshes a merchant inventory, so never let it override the trade itself.
-        for (int i = 0; i < currentRecipes.size() && i < recipeOfferIds.size(); i++) {
-            if (sameRecipe(currentRecipes.get(i), event.getTrade())) {
-                index = i;
-                break;
-            }
-        }
-        // If the API returns a recipe whose metadata differs from the displayed copy, fall back
-        // to the selected slot only when the inventory is still open for this merchant.
-        if (index < 0 && event.getPlayer().getOpenInventory().getTopInventory() instanceof MerchantInventory inventory
+        // Prefer the selected slot while this player's custom merchant is open: it directly
+        // identifies the offer the player clicked and avoids ambiguous matching of similar recipes.
+        if (event.getPlayer().getOpenInventory().getTopInventory() instanceof MerchantInventory inventory
                 && inventory.getMerchant() == merchant) {
             int selectedIndex = inventory.getSelectedRecipeIndex();
             if (selectedIndex >= 0 && selectedIndex < recipeOfferIds.size()
                     && selectedIndex < currentRecipes.size()) index = selectedIndex;
         }
+        // Fall back to recipe matching if the selected index is unavailable.
+        if (index < 0) {
+            for (int i = 0; i < currentRecipes.size() && i < recipeOfferIds.size(); i++) {
+                if (sameRecipe(currentRecipes.get(i), event.getTrade())) {
+                    index = i;
+                    break;
+                }
+            }
+        }
         if (index < 0 || index >= recipeOfferIds.size()) {
-            plugin.getLogger().warning("Could not map villager trade to a fixed offer for " + event.getPlayer().getUniqueId());
+            plugin.getLogger().warning("Could not map villager trade to a fixed offer for " + playerId
+                    + " (merchant session found, recipes=" + currentRecipes.size()
+                    + ", offerIds=" + recipeOfferIds.size() + ")");
             return;
         }
         Offer offer = all.get(recipeOfferIds.get(index));
@@ -468,7 +482,6 @@ public final class VillagerTradeManager implements Listener {
             plugin.getLogger().warning("Unknown villager offer ID in merchant session: " + recipeOfferIds.get(index));
             return;
         }
-        UUID playerId = event.getPlayer().getUniqueId();
         long now = System.currentTimeMillis();
         Map<String, Long> used = playerUsedOffers.computeIfAbsent(playerId, ignored -> new HashMap<>());
         if (used.getOrDefault(offer.id(), 0L) > now) {
@@ -479,6 +492,8 @@ public final class VillagerTradeManager implements Listener {
         long expiresAt = now + OFFER_COOLDOWN_MILLIS;
         used.put(offer.id(), expiresAt);
         save();
+        plugin.getLogger().info("Villager offer cooldown applied: player=" + playerId
+                + ", offer=" + offer.id() + ", expiresInMinutes=120");
         // Do not replace merchant recipes inside PlayerTradeEvent: Paper may still be
         // processing the selected recipe, and mutating the merchant here can block the trade.
         // Refresh only after the event finishes; if another listener cancels it, roll back
