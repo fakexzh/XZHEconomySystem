@@ -100,7 +100,7 @@ public final class BookShopManager implements Listener {
                 ChatColor.GRAY + "Per-enchantment daily limit: " + dailyLimit(key) + ". 12-hour personal cooldown."));
         book.setItemMeta(meta);
         inv.setItem(13, book);
-        add(inv, 11, Material.LIME_CONCRETE, "Confirm purchase", "buy", key);
+        add(inv, 11, Material.SLIME_BALL, "Confirm purchase", "buy", key);
         add(inv, 15, Material.RED_CONCRETE, "Cancel", "back-list", "");
         player.openInventory(inv);
     }
