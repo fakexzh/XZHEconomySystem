@@ -15,6 +15,7 @@ import org.bukkit.event.entity.VillagerAcquireTradeEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.MerchantInventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.MerchantRecipe;
@@ -431,6 +432,44 @@ public final class VillagerTradeManager implements Listener {
         if (entity instanceof Villager villager && villager.isValid() && wasAiEnabled != null) {
             villager.setAI(wasAiEnabled);
         }
+    }
+
+    /**
+     * Fallback for custom merchant result clicks in case PlayerTradeEvent is not delivered.
+     * Applies the lock next tick only if the trade handler did not already apply it.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onMerchantResultClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player) || event.getRawSlot() != 2) return;
+        if (!(event.getView().getTopInventory() instanceof MerchantInventory inventory)) return;
+        Merchant merchant = inventory.getMerchant();
+        UUID playerId = player.getUniqueId();
+        MerchantSession session = merchantSessions.get(merchant);
+        if (session == null || !session.playerId().equals(playerId)) {
+            session = merchantSessions.values().stream()
+                    .filter(candidate -> candidate.playerId().equals(playerId))
+                    .findFirst().orElse(null);
+        }
+        if (session == null) return;
+        int index = inventory.getSelectedRecipeIndex();
+        if (index < 0 || index >= session.offerIds().size()) return;
+        String offerId = session.offerIds().get(index);
+        if (!all.containsKey(offerId) || event.getCurrentItem() == null) return;
+        MerchantSession capturedSession = session;
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            long now = System.currentTimeMillis();
+            Map<String, Long> used = playerUsedOffers.get(playerId);
+            if (used != null && used.getOrDefault(offerId, 0L) > now) {
+                if (player.isOnline()) merchant.setRecipes(recipes(capturedSession.profession(), playerId));
+                return;
+            }
+            playerUsedOffers.computeIfAbsent(playerId, ignored -> new HashMap<>())
+                    .put(offerId, now + OFFER_COOLDOWN_MILLIS);
+            save();
+            plugin.getLogger().info("Villager offer cooldown applied by result-click fallback: player="
+                    + playerId + ", offer=" + offerId + ", expiresInMinutes=120");
+            if (player.isOnline()) merchant.setRecipes(recipes(capturedSession.profession(), playerId));
+        });
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
