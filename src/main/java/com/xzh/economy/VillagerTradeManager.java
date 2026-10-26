@@ -45,7 +45,8 @@ public final class VillagerTradeManager implements Listener {
     private final Map<UUID, Boolean> originalVillagerAi = new HashMap<>();
     private final Map<UUID, Set<UUID>> playersViewingVillager = new HashMap<>();
     private final Map<UUID, UUID> villagerByPlayer = new HashMap<>();
-    private record MerchantSession(UUID playerId, Villager.Profession profession, UUID villagerId) {}
+    private record MerchantSession(UUID playerId, Villager.Profession profession, UUID villagerId, List<String> offerIds) {}
+    private record RecipeSet(List<MerchantRecipe> recipes, List<String> offerIds) {}
 
     private enum Kind { PLAYER_SELLS, PLAYER_SELLS_POTION, PLAYER_BUYS, PLAYER_BUYS_POTION, BARTER, BARTER_POTION }
     private record Offer(String id, Villager.Profession profession, Kind kind,
@@ -179,9 +180,14 @@ public final class VillagerTradeManager implements Listener {
     }
 
     private List<MerchantRecipe> recipes(Villager.Profession profession, UUID playerId) {
+        return buildRecipeSet(profession, playerId).recipes();
+    }
+
+    private RecipeSet buildRecipeSet(Villager.Profession profession, UUID playerId) {
         Map<String, Long> used = playerUsedOffers.getOrDefault(playerId, Map.of());
         long now = System.currentTimeMillis();
         List<MerchantRecipe> result = new ArrayList<>();
+        List<String> recipeOfferIds = new ArrayList<>();
         for (Offer offer : active.getOrDefault(profession, List.of())) {
             ItemStack output;
             List<ItemStack> inputs = new ArrayList<>();
@@ -215,8 +221,9 @@ public final class VillagerTradeManager implements Listener {
             MerchantRecipe recipe = new MerchantRecipe(output, exhaustedForPlayer ? 1 : 0, 1, false, 0, 0.0f);
             for (ItemStack input : inputs) recipe.addIngredient(input);
             result.add(recipe);
+            recipeOfferIds.add(offer.id());
         }
-        return result;
+        return new RecipeSet(result, recipeOfferIds);
     }
 
     private int potionPrice(String id, boolean buyingFromVillager) {
@@ -379,8 +386,9 @@ public final class VillagerTradeManager implements Listener {
                 return;
             }
             Merchant merchant = Bukkit.createMerchant(ChatColor.GOLD + "XZH " + profession.name().replace('_', ' '));
-            merchant.setRecipes(recipes(profession, playerId));
-            merchantSessions.put(merchant, new MerchantSession(playerId, profession, villagerId));
+            RecipeSet recipeSet = buildRecipeSet(profession, playerId);
+            merchant.setRecipes(recipeSet.recipes());
+            merchantSessions.put(merchant, new MerchantSession(playerId, profession, villagerId, recipeSet.offerIds()));
             player.openMerchant(merchant, true);
         });
     }
@@ -421,29 +429,37 @@ public final class VillagerTradeManager implements Listener {
         MerchantSession session = merchantSessions.get(merchant);
         if (session == null || !session.playerId().equals(event.getPlayer().getUniqueId())) return;
         Villager.Profession profession = session.profession();
-        List<Offer> offers = active.getOrDefault(profession, List.of());
+        List<String> recipeOfferIds = session.offerIds();
         List<MerchantRecipe> currentRecipes = merchant.getRecipes();
         int index = -1;
 
-        // Prefer the selected recipe index from the open merchant inventory.
-        // This avoids fragile item comparisons for custom coin/item components.
+        // Resolve against the exact recipe list built for this player's merchant.
+        // Do not index the profession's full offer list: invalid/unsupported recipes
+        // can be omitted when building the merchant and shift every later index.
         if (event.getPlayer().getOpenInventory().getTopInventory() instanceof MerchantInventory inventory
                 && inventory.getMerchant() == merchant) {
             int selectedIndex = inventory.getSelectedRecipeIndex();
-            if (selectedIndex >= 0 && selectedIndex < offers.size()
+            if (selectedIndex >= 0 && selectedIndex < recipeOfferIds.size()
                     && selectedIndex < currentRecipes.size()) {
                 index = selectedIndex;
             }
         }
 
-        // Fallback if the selected index is unavailable or invalid.
+        // Fallback to the recipe actually traded, still resolving through the aligned ID list.
         if (index < 0) {
-            for (int i = 0; i < currentRecipes.size(); i++) {
+            for (int i = 0; i < currentRecipes.size() && i < recipeOfferIds.size(); i++) {
                 if (sameRecipe(currentRecipes.get(i), event.getTrade())) { index = i; break; }
             }
         }
-        if (index < 0 || index >= offers.size()) return;
-        Offer offer = offers.get(index);
+        if (index < 0 || index >= recipeOfferIds.size()) {
+            plugin.getLogger().warning("Could not map villager trade to a fixed offer for " + event.getPlayer().getUniqueId());
+            return;
+        }
+        Offer offer = all.get(recipeOfferIds.get(index));
+        if (offer == null) {
+            plugin.getLogger().warning("Unknown villager offer ID in merchant session: " + recipeOfferIds.get(index));
+            return;
+        }
         UUID playerId = event.getPlayer().getUniqueId();
         long now = System.currentTimeMillis();
         Map<String, Long> used = playerUsedOffers.computeIfAbsent(playerId, ignored -> new HashMap<>());
