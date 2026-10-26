@@ -1596,6 +1596,8 @@ public final class ShopManager implements Listener {
 
     private double blockBuyPrice(Material m) {
         String n = m.name();
+        if (n.contains("CUT_COPPER") || n.contains("CHISELED_COPPER") || n.contains("COPPER_GRATE")) return 25.0;
+        if (n.equals("WAXED_COPPER_BLOCK")) return 90.0;
         double exact = switch (n) {
             case "NETHERITE_BLOCK" -> 16200.0;
             case "ANCIENT_DEBRIS" -> 300.0;
@@ -1648,7 +1650,9 @@ public final class ShopManager implements Listener {
         if (exact >= 0.0) return exact;
         if (n.contains("NETHERRACK") || n.contains("DIRT") || n.contains("GRAVEL") || n.contains("SAND")
                 || n.contains("COBBLESTONE") || n.equals("STONE") || n.equals("NETHERRACK")) return 2.0;
-        if (n.contains("LOG") || n.contains("WOOD") || n.contains("PLANKS") || n.contains("LEAVES")) return 8.0;
+        if (n.contains("LEAVES")) return 2.0;
+        if (n.contains("PLANKS")) return 4.0;
+        if (n.contains("LOG") || n.contains("WOOD")) return 5.0;
         if (n.contains("ORE") || n.contains("ANCIENT_DEBRIS")) return 100.0;
         if (n.contains("DEEPSLATE") || n.contains("TUFF") || n.contains("ANDESITE") || n.contains("DIORITE") || n.contains("GRANITE")) return 3.0;
         if (n.contains("OBSIDIAN") || n.contains("CRYING")) return 30.0;
