@@ -75,20 +75,18 @@ public final class BoatManager implements Listener {
             icon.setItemMeta(meta);
             inv.setItem(slots[i], icon);
         }
-        inv.setItem(11, travelEgg(Material.HORSE_SPAWN_EGG, "horse", "Horse Spawn Egg"));
-        inv.setItem(15, travelEgg(Material.DONKEY_SPAWN_EGG, "donkey", "Donkey Spawn Egg"));
-        inv.setItem(17, travelEgg(Material.NAUTILUS_SPAWN_EGG, "nautilus", "Nautilus Spawn Egg"));
+        // Horse and donkey spawn eggs are intentionally removed from the Travel menu.
+        inv.setItem(22, travelEgg(Material.NAUTILUS_SPAWN_EGG, "nautilus", "Nautilus Spawn Egg"));
         ItemStack info = new ItemStack(Material.BOOK);
         ItemMeta im = info.getItemMeta();
         im.setDisplayName(ChatColor.WHITE + "Travel");
         im.setLore(List.of(
-            ChatColor.GRAY + "Premium boats and land companions.",
-            ChatColor.GRAY + "Horse and donkey spawn eggs: " + ChatColor.YELLOW + "2,500 coins each",
+            ChatColor.GRAY + "Premium XZH boats and a Nautilus travel companion.",
             ChatColor.GRAY + "Nautilus Spawn Egg: " + ChatColor.YELLOW + "2,000 coins",
             ChatColor.GRAY + "Natural horse/donkey and nautilus spawning are disabled."
         ));
         info.setItemMeta(im);
-        inv.setItem(22, info);
+        inv.setItem(24, info);
         inv.setItem(26, backItem());
         player.openInventory(inv);
     }
@@ -225,9 +223,9 @@ public final class BoatManager implements Listener {
                 ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(unitPrice * quantity) + " coins"));
         summary.setItemMeta(sm);
         inv.setItem(13, summary);
-        inv.setItem(10, quantityButton(Material.RED_CONCRETE, "−1", offer.tier(), chest, quantity, "quantity-minus"));
-        inv.setItem(16, quantityButton(Material.LIME_CONCRETE, "+1", offer.tier(), chest, quantity, "quantity-plus"));
-        inv.setItem(22, quantityButton(Material.EMERALD, "Buy " + quantity, offer.tier(), chest, quantity, "quantity-buy",
+        inv.setItem(10, quantityButton(Material.COPPER_NUGGET, "−1", offer.tier(), chest, quantity, "quantity-minus"));
+        inv.setItem(16, quantityButton(Material.GHAST_TEAR, "+1", offer.tier(), chest, quantity, "quantity-plus"));
+        inv.setItem(22, quantityButton(Material.SLIME_BALL, "Buy " + quantity, offer.tier(), chest, quantity, "quantity-buy",
                 List.of(ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(unitPrice * quantity) + " coins")));
         inv.setItem(26, quantityButton(Material.ARROW, "Back", offer.tier(), chest, quantity, "quantity-back"));
         player.openInventory(inv);
@@ -247,9 +245,9 @@ public final class BoatManager implements Listener {
                 ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(unitPrice * quantity) + " coins"));
         summary.setItemMeta(sm);
         inv.setItem(13, summary);
-        inv.setItem(10, quantityButton(Material.RED_CONCRETE, "−1", tier, false, quantity, "quantity-minus"));
-        inv.setItem(16, quantityButton(Material.LIME_CONCRETE, "+1", tier, false, quantity, "quantity-plus"));
-        inv.setItem(22, quantityButton(Material.EMERALD, "Buy " + quantity, tier, false, quantity, "quantity-buy",
+        inv.setItem(10, quantityButton(Material.COPPER_NUGGET, "−1", tier, false, quantity, "quantity-minus"));
+        inv.setItem(16, quantityButton(Material.GHAST_TEAR, "+1", tier, false, quantity, "quantity-plus"));
+        inv.setItem(22, quantityButton(Material.SLIME_BALL, "Buy " + quantity, tier, false, quantity, "quantity-buy",
                 List.of(ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(unitPrice * quantity) + " coins")));
         inv.setItem(26, quantityButton(Material.ARROW, "Back", tier, false, quantity, "quantity-back"));
         player.openInventory(inv);

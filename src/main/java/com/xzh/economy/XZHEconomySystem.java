@@ -168,6 +168,37 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             getConfig().set("migrations.price-rebalance-20261022", true);
             changed = true;
         }
+        // One-time combined shop rebalance for existing servers; later admin edits remain authoritative.
+        if (!getConfig().getBoolean("migrations.shop-villager-rebalance-20261026", false)) {
+            String[][] prices = {
+                {"iron_ingot","25","1"},{"gold_ingot","40","2"},{"coal","8","0"},{"copper_ingot","10","1"},
+                {"lapis_lazuli","10","0"},{"redstone","8","0"},{"emerald","70","8"},{"amethyst_shard","12","1"},
+                {"quartz","12","0"},{"netherite_scrap","300","35"},{"netherite_ingot","1800","250"},
+                {"diamond","100","5"},{"obsidian","30","0"},{"glass","6","0"},{"end_stone","8","0"},
+                {"iron_block","225","0"},{"diamond_block","900","0"},{"tnt","70","10"},
+                {"iron_sword","80","4"},{"iron_helmet","190","4"},{"iron_chestplate","300","6"},
+                {"iron_leggings","265","5"},{"iron_boots","150","3"},{"shield","60","3"},{"bow","60","3"},
+                {"crossbow","110","5"},{"diamond_pickaxe","450","22"},{"diamond_sword","300","15"},
+                {"diamond_axe","450","22"},{"diamond_shovel","150","7"},{"diamond_hoe","300","15"},
+                {"diamond_helmet","750","37"},{"diamond_chestplate","1200","60"},{"diamond_leggings","1050","52"},
+                {"diamond_boots","600","30"},{"netherite_pickaxe","2700","135"},{"netherite_axe","2700","135"},
+                {"netherite_sword","2500","125"},{"netherite_helmet","3200","160"},{"netherite_chestplate","3600","180"},
+                {"netherite_leggings","3500","175"},{"netherite_boots","3100","155"},{"trident","1000","100"},
+                {"mace","3500","350"},{"totem_of_undying","1500","150"},{"ender_chest","500","50"},
+                {"golden_carrot","50","5"},{"golden_apple","400","40"},{"enchanted_golden_apple","2000","400"},
+                {"netherite_upgrade_smithing_template","1500","0"},{"cod","5","3"},{"salmon","6","3.5"},
+                {"cooked_cod","10","4.5"},{"cooked_salmon","12","5.5"},{"cooked_rabbit","11","1"}
+            };
+            for (String[] price : prices) {
+                getConfig().set("shop.prices." + price[0] + ".buy", Double.parseDouble(price[1]));
+                getConfig().set("shop.prices." + price[0] + ".sell", Double.parseDouble(price[2]));
+            }
+            getConfig().set("shop.sell-stock-limits.potion", 256);
+            getConfig().set("shop.sell-stock-limits.splash_potion", 256);
+            getConfig().set("shop.sell-stock-limits.lingering_potion", 256);
+            getConfig().set("migrations.shop-villager-rebalance-20261026", true);
+            changed = true;
+        }
         if (changed) {
             saveConfig();
             getLogger().info("Migrated legacy config defaults for revised XZH economy rules.");
