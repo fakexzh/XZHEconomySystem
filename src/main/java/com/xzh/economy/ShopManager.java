@@ -302,36 +302,58 @@ public final class ShopManager implements Listener {
 
     public void openMain(Player player) {
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP");
-        // Row 1: mining/building on the left, equipment in the middle, food/farming on the right.
+
+        // Search sits alone at the top.
+        add(inv, 4, Material.SPYGLASS, "Search Items", "shop-search", "search",
+                List.of(ChatColor.GRAY + "Search the shop by item name.", ChatColor.YELLOW + "Click, then type your search in chat."));
+
+        // Category icons are tightly grouped in the middle, with no empty slots between options.
         add(inv, 10, Material.IRON_INGOT, "Ores", "category", "ores");
         add(inv, 11, Material.BRICKS, "Blocks", "category", "blocks");
-        add(inv, 13, Material.IRON_CHESTPLATE, "Armor", "category", "armor");
-        add(inv, 14, Material.DIAMOND_PICKAXE, "Tools", "category", "tools");
-        add(inv, 16, Material.COOKED_BEEF, "Food", "category", "food");
-        add(inv, 17, Material.WHEAT_SEEDS, "Seeds & Farming", "category", "seeds");
+        add(inv, 12, Material.NETHERITE_CHESTPLATE, "Armor", "category", "armor");
+        add(inv, 13, Material.NETHERITE_PICKAXE, "Tools", "category", "tools");
+        add(inv, 14, Material.COOKED_BEEF, "Food", "category", "food");
+        add(inv, 15, Material.WHEAT_SEEDS, "Seeds & Farming", "category", "seeds");
+        add(inv, 16, Material.CRAFTING_TABLE, "Essentials", "category", "essentials");
+        add(inv, 17, Material.ELYTRA, "Special Items", "category", "special");
+        inv.getItem(17).addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.UNBREAKING, 1);
 
-        // Row 2: practical items and other collectible categories.
-        add(inv, 19, Material.CRAFTING_TABLE, "Essentials", "category", "essentials");
-        add(inv, 20, Material.ELYTRA, "Special Items", "category", "special");
-        add(inv, 22, Material.POPPY, "Flowers & Dyes", "category", "flowers-dyes");
-        add(inv, 23, Material.BEE_SPAWN_EGG, "Eggs & Heads", "category", "eggs-heads");
-        add(inv, 25, Material.BAMBOO_RAFT, "Travel", "category", "travel");
+        add(inv, 19, Material.POPPY, "Flowers & Dyes", "category", "flowers-dyes");
+        add(inv, 20, Material.BEE_SPAWN_EGG, "Eggs & Heads", "category", "eggs-heads");
+        add(inv, 21, Material.PALE_OAK_BOAT, "Travel", "category", "travel");
+        ItemStack travelIcon = inv.getItem(21);
+        ItemMeta travelMeta = travelIcon.getItemMeta();
+        travelMeta.setCustomModelData(1002);
+        travelIcon.setItemMeta(travelMeta);
+        add(inv, 22, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
+        add(inv, 23, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
+        add(inv, 24, Material.POTION, "Potions", "category", "potions");
+        ItemStack potionIcon = inv.getItem(24);
+        org.bukkit.inventory.meta.PotionMeta potionMeta = (org.bukkit.inventory.meta.PotionMeta) potionIcon.getItemMeta();
+        potionMeta.setBasePotionType(PotionType.HEALING);
+        potionIcon.setItemMeta(potionMeta);
+        add(inv, 25, Material.END_CRYSTAL, "Quest Packs", "quests", "quests");
+        add(inv, 26, Material.NETHERITE_SWORD, "Bounty Hunt", "category", "bounty-maps");
 
-        // Row 3: books, XP, potions, quests and bounty hunting.
-        add(inv, 28, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
-        add(inv, 29, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
-        add(inv, 30, Material.POTION, "Potions", "category", "potions");
-        add(inv, 31, Material.SPYGLASS, "Search Items", "shop-search", "search", List.of(ChatColor.GRAY + "Search the shop by item name.", ChatColor.YELLOW + "Click, then type your search in chat."));
-        add(inv, 32, Material.NETHER_STAR, "Quest Packs", "quests", "quests");
-        add(inv, 33, Material.NETHERITE_SWORD, "Bounty Hunt", "category", "bounty-maps");
-        // Row 5: align bank, transaction history, and online players' money.
-        add(inv, 38, Material.BUNDLE, "XZH BANK", "bank", "bank");
-        add(inv, 39, Material.PAPER, "Transition", "transition", "history");
-        add(inv, 40, Material.PLAYER_HEAD, "Other Players' Money", "players-money", "players-money");
-        add(inv, 42, Material.BOOK, "Help", "help", "help");
-        add(inv, 43, Material.CHEST, "Death Inventory", "deathinventory", "deathinventory");
+        // Account and recovery utilities stay together in one compact centered group.
+        ItemStack bankIcon = plugin.getPocketCoinManager().createCoin(1000, 1);
+        ItemMeta bankMeta = bankIcon.getItemMeta();
+        bankMeta.setDisplayName(ChatColor.WHITE + "XZH BANK");
+        bankMeta.setLore(List.of(ChatColor.GRAY + "Open your bank account."));
+        bankMeta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "bank");
+        bankMeta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, "bank");
+        bankIcon.setItemMeta(bankMeta);
+        inv.setItem(29, bankIcon);
+        add(inv, 30, Material.PAPER, "Transaction History", "transition", "history");
+        add(inv, 31, Material.PLAYER_HEAD, "Other Players' Money", "players-money", "players-money");
+        add(inv, 32, Material.SCULK_SENSOR, "Death Inventory", "deathinventory", "deathinventory");
+        add(inv, 34, Material.BOOK, "Help", "help", "help");
 
-        add(inv, 49, Material.CHEST, "Hand Sell (multiple items)", "sell-hand", "hand", List.of(ChatColor.WHITE + "Place multiple item stacks into the sell slots.", ChatColor.GRAY + "The menu totals eligible items and respects your personal sell stock.", ChatColor.YELLOW + "Confirm to sell; unsellable items return to you."));
+        // Hand Sell is intentionally alone at the bottom.
+        add(inv, 49, Material.CHEST, "Hand Sell (multiple items)", "sell-hand", "hand",
+                List.of(ChatColor.WHITE + "Place multiple item stacks into the sell slots.",
+                        ChatColor.GRAY + "The menu totals eligible items and respects your personal sell stock.",
+                        ChatColor.YELLOW + "Confirm to sell; unsellable items return to you."));
         player.openInventory(inv);
     }
 
@@ -586,7 +608,7 @@ public final class ShopManager implements Listener {
             inv.setItem(slots[i], bottle);
         }
         int xp = totalExperience(player);
-        ItemStack sell = new ItemStack(Material.EXPERIENCE_BOTTLE);
+        ItemStack sell = new ItemStack(Material.SNOWBALL);
         ItemMeta sm = sell.getItemMeta();
         sm.setDisplayName(ChatColor.GREEN + "Sell my XP bar");
         sm.setLore(List.of(ChatColor.WHITE + "Your current XP: " + xp + " points",
@@ -623,7 +645,7 @@ public final class ShopManager implements Listener {
                 ChatColor.GRAY + (selling ? "Your current XP will be set to zero." : "Bottle is unstackable and consumed by right-click.")));
         summary.setItemMeta(meta);
         inv.setItem(13, summary);
-        add(inv, 11, Material.BLUE_CONCRETE, "Confirm", selling ? "xp-sell-confirm" : "xp-buy-confirm", points + ":" + price);
+        add(inv, 11, selling ? Material.SNOWBALL : Material.SLIME_BALL, "Confirm", selling ? "xp-sell-confirm" : "xp-buy-confirm", points + ":" + price);
         add(inv, 15, Material.RED_CONCRETE, "Cancel", "category-back", "xp");
         player.openInventory(inv);
     }
