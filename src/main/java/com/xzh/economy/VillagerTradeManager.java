@@ -218,7 +218,7 @@ public final class VillagerTradeManager implements Listener {
             // MerchantRecipe uses are shared by every player who opens this villager.
             // Keep the vanilla recipe open and enforce the real limit by player UUID in onTrade.
             boolean exhaustedForPlayer = used.getOrDefault(offer.id(), 0L) > now;
-            MerchantRecipe recipe = new MerchantRecipe(output, exhaustedForPlayer ? 1 : 0, 1, false, 0, 0.0f);
+            MerchantRecipe recipe = new MerchantRecipe(output, 1, exhaustedForPlayer ? 1 : 0, false, 0, 0.0f);
             for (ItemStack input : inputs) recipe.addIngredient(input);
             result.add(recipe);
             recipeOfferIds.add(offer.id());
