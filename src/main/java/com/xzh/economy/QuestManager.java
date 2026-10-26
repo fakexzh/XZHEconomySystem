@@ -317,7 +317,7 @@ public final class QuestManager implements Listener {
         add(inv, 16, Material.NETHER_STAR, ChatColor.GOLD + "Global Quest", "section-global", "global",
             List.of(ChatColor.GRAY + "Everyone contributes to shared progress",
                     ChatColor.GRAY + "Server reminders every 15 minutes"));
-        add(inv, 22, Material.BARRIER, ChatColor.RED + "Close", "close", "");
+        add(inv, 22, Material.ARROW, ChatColor.WHITE + "Back to Shop", "back-shop", "");
         player.openInventory(inv);
     }
 
@@ -407,9 +407,9 @@ public final class QuestManager implements Listener {
             add(inv, i - pg * 45, icon, (done ? ChatColor.DARK_GRAY : unlocked ? ChatColor.YELLOW : ChatColor.RED)
                     + pack.name(), done ? "pack-completed" : unlocked ? "pack-select" : "locked", pack.id(), lore);
         }
-        if (pg > 0) add(inv, 45, Material.ARROW, ChatColor.WHITE + "Previous page", "pack-page", tier + ":" + (pg - 1));
+        if (pg > 0) add(inv, 45, Material.PAPER, ChatColor.WHITE + "Previous page", "pack-page", tier + ":" + (pg - 1));
         add(inv, 49, Material.ARROW, ChatColor.WHITE + "Difficulties", "back-tiers", "");
-        if (pg + 1 < pages) add(inv, 53, Material.ARROW, ChatColor.WHITE + "Next page", "pack-page", tier + ":" + (pg + 1));
+        if (pg + 1 < pages) add(inv, 53, Material.PAPER, ChatColor.WHITE + "Next page", "pack-page", tier + ":" + (pg + 1));
         player.openInventory(inv);
     }
 
@@ -423,7 +423,8 @@ public final class QuestManager implements Listener {
         lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
         add(inv, 13, pack.icon(), ChatColor.YELLOW + pack.name(), "pack-info", pack.id(), lore);
         add(inv, 11, Material.SLIME_BALL, ChatColor.GREEN + "Confirm purchase", "pack-buy", pack.id());
-        add(inv, 15, Material.RED_CONCRETE, ChatColor.RED + "Cancel", "back-packs", "");
+        add(inv, 15, Material.FIRE_CHARGE, ChatColor.RED + "Cancel", "back-packs", "");
+        add(inv, 22, Material.ARROW, ChatColor.WHITE + "Back to packs", "back-packs", pack.id());
         player.openInventory(inv);
     }
 
@@ -1121,6 +1122,7 @@ public final class QuestManager implements Listener {
         if (action == null) return;
         switch (action) {
             case "close" -> player.closeInventory();
+            case "back-shop" -> plugin.getShopManager().openMain(player);
             case "section-single" -> openSingle(player);
             case "section-packs" -> openPacks(player);
             case "section-global" -> openGlobal(player);
