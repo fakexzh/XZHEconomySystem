@@ -89,61 +89,64 @@ shop:
     cooked_salmon: 256
     egg: 256
     milk_bucket: 256
+    potion: 256
+    splash_potion: 256
+    lingering_potion: 256
   prices:
     tnt:
       buy: 70
-      sell: 20
+      sell: 10
     elytra:
       buy: 10000
       sell: 0
     netherite_ingot:
       buy: 1800
-      sell: 360
+      sell: 250
     netherite_helmet:
-      buy: 6000
-      sell: 300
+      buy: 3200
+      sell: 160
     netherite_chestplate:
-      buy: 6000
-      sell: 300
+      buy: 3600
+      sell: 180
     netherite_leggings:
-      buy: 6000
-      sell: 300
+      buy: 3500
+      sell: 175
     netherite_boots:
-      buy: 6000
-      sell: 300
+      buy: 3100
+      sell: 155
     mace:
-      buy: 4500
-      sell: 900
+      buy: 3500
+      sell: 350
     ender_chest:
       buy: 500
-      sell: 105
+      sell: 50
     enchanted_golden_apple:
       buy: 2000
-      sell: 750
+      sell: 400
     netherite_upgrade_smithing_template:
       buy: 1500
-      sell: 500
+      sell: 0
     diamond:
       buy: 100
       sell: 5
     iron_ingot:
       buy: 25
-      sell: 7.5
+      sell: 1
     cooked_beef:
       buy: 14
       sell: 4.2
     cod:
       buy: 5
-      sell: 4
+      sell: 3
     salmon:
       buy: 6
-      sell: 5
+      sell: 3.5
     cooked_cod:
       buy: 10
-      sell: 6
+      sell: 4.5
     cooked_salmon:
       buy: 12
-      sell: 7.5
+      sell: 5.5
   stock-limits:
     coal: 2000
     iron_ingot: 1000
