@@ -82,9 +82,9 @@ public final class BookShopManager implements Listener {
             item.setItemMeta(meta);
             inv.setItem(i - start, item);
         }
-        if (currentPage > 0) add(inv, 45, Material.ARROW, "Previous page", "page", Integer.toString(currentPage - 1));
-        add(inv, 49, Material.BARRIER, "Back to shop", "back", "");
-        if (currentPage + 1 < pages) add(inv, 53, Material.ARROW, "Next page", "page", Integer.toString(currentPage + 1));
+        if (currentPage > 0) add(inv, 45, Material.PAPER, "Previous page", "page", Integer.toString(currentPage - 1));
+        add(inv, 49, Material.ARROW, "Back to shop", "back", "");
+        if (currentPage + 1 < pages) add(inv, 53, Material.PAPER, "Next page", "page", Integer.toString(currentPage + 1));
         player.openInventory(inv);
     }
 
@@ -101,7 +101,8 @@ public final class BookShopManager implements Listener {
         book.setItemMeta(meta);
         inv.setItem(13, book);
         add(inv, 11, Material.SLIME_BALL, "Confirm purchase", "buy", key);
-        add(inv, 15, Material.RED_CONCRETE, "Cancel", "back-list", "");
+        add(inv, 15, Material.FIRE_CHARGE, "Cancel", "back-list", "");
+        add(inv, 22, Material.ARROW, "Back to books", "back-list", "");
         player.openInventory(inv);
     }
 
