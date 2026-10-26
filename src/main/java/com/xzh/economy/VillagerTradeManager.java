@@ -424,8 +424,23 @@ public final class VillagerTradeManager implements Listener {
         List<Offer> offers = active.getOrDefault(profession, List.of());
         List<MerchantRecipe> currentRecipes = merchant.getRecipes();
         int index = -1;
-        for (int i = 0; i < currentRecipes.size(); i++) {
-            if (sameRecipe(currentRecipes.get(i), event.getTrade())) { index = i; break; }
+
+        // Prefer the selected recipe index from the open merchant inventory.
+        // This avoids fragile item comparisons for custom coin/item components.
+        if (event.getPlayer().getOpenInventory().getTopInventory() instanceof MerchantInventory inventory
+                && inventory.getMerchant() == merchant) {
+            int selectedIndex = inventory.getSelectedRecipeIndex();
+            if (selectedIndex >= 0 && selectedIndex < offers.size()
+                    && selectedIndex < currentRecipes.size()) {
+                index = selectedIndex;
+            }
+        }
+
+        // Fallback if the selected index is unavailable or invalid.
+        if (index < 0) {
+            for (int i = 0; i < currentRecipes.size(); i++) {
+                if (sameRecipe(currentRecipes.get(i), event.getTrade())) { index = i; break; }
+            }
         }
         if (index < 0 || index >= offers.size()) return;
         Offer offer = offers.get(index);
