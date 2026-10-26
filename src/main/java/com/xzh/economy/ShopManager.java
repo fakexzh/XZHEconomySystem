@@ -65,72 +65,97 @@ public final class ShopManager implements Listener {
     }
 
     private final List<Product> products = new ArrayList<>(List.of(
-        new Product("ores", Material.COAL, 8, 2.4),
-        new Product("ores", Material.IRON_INGOT, 25, 7.5),
-        new Product("ores", Material.GOLD_INGOT, 40, 12),
-        new Product("ores", Material.COPPER_INGOT, 15, 4.5),
-        new Product("ores", Material.LAPIS_LAZULI, 10, 3),
-        new Product("ores", Material.REDSTONE, 8, 2.4),
-        new Product("ores", Material.EMERALD, 100, 30),
-        new Product("ores", Material.AMETHYST_SHARD, 20, 6),
-        new Product("ores", Material.QUARTZ, 12, 3.6),
-        new Product("ores", Material.NETHERITE_SCRAP, 300, 90),
-        new Product("ores", Material.NETHERITE_INGOT, 1800, 360),
-        new Product("ores", Material.DIAMOND, 250, 75),
-        new Product("blocks", Material.OBSIDIAN, 30, 9),
-        new Product("blocks", Material.GLASS, 10, 3),
-        new Product("blocks", Material.END_STONE, 15, 4.5),
-        new Product("blocks", Material.IRON_BLOCK, 225, 67.5),
-        new Product("blocks", Material.DIAMOND_BLOCK, 2250, 675),
+        new Product("ores", Material.COAL, 8, 0),
+        new Product("ores", Material.IRON_INGOT, 25, 1),
+        new Product("ores", Material.GOLD_INGOT, 40, 2),
+        new Product("ores", Material.COPPER_INGOT, 10, 1),
+        new Product("ores", Material.LAPIS_LAZULI, 10, 0),
+        new Product("ores", Material.REDSTONE, 8, 0),
+        new Product("ores", Material.EMERALD, 70, 8),
+        new Product("ores", Material.AMETHYST_SHARD, 12, 1),
+        new Product("ores", Material.QUARTZ, 12, 0),
+        new Product("ores", Material.NETHERITE_SCRAP, 300, 35),
+        new Product("ores", Material.NETHERITE_INGOT, 1800, 250),
+        new Product("ores", Material.DIAMOND, 100, 5),
+        new Product("blocks", Material.OBSIDIAN, 30, 0),
+        new Product("blocks", Material.GLASS, 6, 0),
+        new Product("blocks", Material.END_STONE, 8, 0),
+        new Product("blocks", Material.IRON_BLOCK, 225, 0),
+        new Product("blocks", Material.DIAMOND_BLOCK, 900, 0),
+        new Product("blocks", Material.NETHERITE_BLOCK, 16200, 0),
+        new Product("blocks", Material.GOLD_BLOCK, 360, 0),
+        new Product("blocks", Material.RAW_GOLD_BLOCK, 360, 0),
+        new Product("blocks", Material.RAW_IRON_BLOCK, 225, 0),
+        new Product("blocks", Material.RAW_COPPER_BLOCK, 90, 0),
+        new Product("blocks", Material.COPPER_BLOCK, 90, 0),
+        new Product("blocks", Material.EMERALD_BLOCK, 630, 0),
+        new Product("blocks", Material.LAPIS_BLOCK, 90, 0),
+        new Product("blocks", Material.REDSTONE_BLOCK, 72, 0),
+        new Product("blocks", Material.COAL_BLOCK, 72, 0),
+        new Product("blocks", Material.AMETHYST_BLOCK, 48, 0),
+        new Product("blocks", Material.SLIME_BLOCK, 135, 0),
+        new Product("blocks", Material.MAGMA_BLOCK, 120, 0),
+        new Product("blocks", Material.NETHER_WART_BLOCK, 180, 0),
+        new Product("blocks", Material.PRISMARINE, 60, 0),
+        new Product("blocks", Material.PRISMARINE_BRICKS, 135, 0),
+        new Product("blocks", Material.DARK_PRISMARINE, 130, 0),
+        new Product("blocks", Material.QUARTZ_BLOCK, 50, 0),
+        new Product("blocks", Material.QUARTZ_PILLAR, 50, 0),
+        new Product("blocks", Material.SMOOTH_QUARTZ, 50, 0),
+        new Product("blocks", Material.CHISELED_QUARTZ_BLOCK, 50, 0),
+        new Product("blocks", Material.BONE_BLOCK, 45, 0),
+        new Product("blocks", Material.DRIED_KELP_BLOCK, 45, 0),
+        new Product("blocks", Material.HAY_BLOCK, 18, 0),
+        new Product("blocks", Material.HONEY_BLOCK, 30, 0),
         new Product("food-cooked", Material.BREAD, 8, 2.4),
         new Product("food-cooked", Material.COOKED_BEEF, 14, 4.2),
         new Product("food-cooked", Material.COOKED_PORKCHOP, 16, 4.8),
         new Product("food-cooked", Material.COOKED_CHICKEN, 12, 3.6),
         new Product("food-cooked", Material.BAKED_POTATO, 7, 2.1),
-        new Product("food-cooked", Material.COOKED_COD, 10, 6),
-        new Product("food-cooked", Material.COOKED_SALMON, 12, 7.5),
+        new Product("food-cooked", Material.COOKED_COD, 10, 4.5),
+        new Product("food-cooked", Material.COOKED_SALMON, 12, 5.5),
         new Product("food-raw", Material.BEEF, 8, 2.4),
         new Product("food-raw", Material.PORKCHOP, 9, 2.7),
         new Product("food-raw", Material.CHICKEN, 7, 2.1),
-        new Product("food-raw", Material.COD, 5, 4),
-        new Product("food-raw", Material.SALMON, 6, 5),
+        new Product("food-raw", Material.COD, 5, 3),
+        new Product("food-raw", Material.SALMON, 6, 3.5),
         new Product("food-raw", Material.MUTTON, 7, 2.1),
         new Product("food-raw", Material.RABBIT, 7, 2.1),
         new Product("food-raw", Material.MILK_BUCKET, 15, 10),
         new Product("equipment", Material.IRON_PICKAXE, 120, 36),
-        new Product("equipment", Material.DIAMOND_PICKAXE, 650, 195),
-        new Product("equipment", Material.IRON_CHESTPLATE, 180, 54),
-        new Product("equipment", Material.DIAMOND_SWORD, 500, 150),
-        new Product("equipment", Material.IRON_SWORD, 90, 27),
+        new Product("equipment", Material.DIAMOND_PICKAXE, 450, 22),
+        new Product("equipment", Material.IRON_CHESTPLATE, 300, 6),
+        new Product("equipment", Material.DIAMOND_SWORD, 300, 15),
+        new Product("equipment", Material.IRON_SWORD, 80, 4),
         new Product("equipment", Material.IRON_AXE, 110, 33),
-        new Product("equipment", Material.DIAMOND_AXE, 600, 180),
-        new Product("equipment", Material.DIAMOND_SHOVEL, 250, 75),
-        new Product("equipment", Material.DIAMOND_HOE, 300, 90),
-        new Product("equipment", Material.NETHERITE_PICKAXE, 3000, 900),
-        new Product("equipment", Material.NETHERITE_AXE, 2800, 840),
-        new Product("equipment", Material.NETHERITE_SWORD, 2500, 750),
-        new Product("equipment", Material.IRON_HELMET, 100, 30),
-        new Product("equipment", Material.IRON_LEGGINGS, 160, 48),
-        new Product("equipment", Material.IRON_BOOTS, 90, 27),
-        new Product("equipment", Material.DIAMOND_HELMET, 450, 135),
-        new Product("equipment", Material.DIAMOND_CHESTPLATE, 900, 270),
-        new Product("equipment", Material.DIAMOND_LEGGINGS, 800, 240),
-        new Product("equipment", Material.DIAMOND_BOOTS, 400, 120),
-        new Product("equipment", Material.NETHERITE_HELMET, 6000, 300),
-        new Product("equipment", Material.NETHERITE_CHESTPLATE, 6000, 300),
-        new Product("equipment", Material.NETHERITE_LEGGINGS, 6000, 300),
-        new Product("equipment", Material.NETHERITE_BOOTS, 6000, 300),
-        new Product("equipment", Material.BOW, 180, 54),
-        new Product("equipment", Material.CROSSBOW, 220, 66),
-        new Product("equipment", Material.SHIELD, 100, 30),
-        new Product("equipment", Material.TRIDENT, 1800, 540),
-        new Product("equipment", Material.MACE, 4500, 900),
-        new Product("equipment", Material.TOTEM_OF_UNDYING, 2500, 750),
-        new Product("equipment", Material.ENDER_CHEST, 500, 105),
-        new Product("food-cooked", Material.GOLDEN_CARROT, 10, 3),
+        new Product("equipment", Material.DIAMOND_AXE, 450, 22),
+        new Product("equipment", Material.DIAMOND_SHOVEL, 150, 7),
+        new Product("equipment", Material.DIAMOND_HOE, 300, 15),
+        new Product("equipment", Material.NETHERITE_PICKAXE, 2700, 135),
+        new Product("equipment", Material.NETHERITE_AXE, 2700, 135),
+        new Product("equipment", Material.NETHERITE_SWORD, 2500, 125),
+        new Product("equipment", Material.IRON_HELMET, 190, 4),
+        new Product("equipment", Material.IRON_LEGGINGS, 265, 5),
+        new Product("equipment", Material.IRON_BOOTS, 150, 3),
+        new Product("equipment", Material.DIAMOND_HELMET, 750, 37),
+        new Product("equipment", Material.DIAMOND_CHESTPLATE, 1200, 60),
+        new Product("equipment", Material.DIAMOND_LEGGINGS, 1050, 52),
+        new Product("equipment", Material.DIAMOND_BOOTS, 600, 30),
+        new Product("equipment", Material.NETHERITE_HELMET, 3200, 160),
+        new Product("equipment", Material.NETHERITE_CHESTPLATE, 3600, 180),
+        new Product("equipment", Material.NETHERITE_LEGGINGS, 3500, 175),
+        new Product("equipment", Material.NETHERITE_BOOTS, 3100, 155),
+        new Product("equipment", Material.BOW, 60, 3),
+        new Product("equipment", Material.CROSSBOW, 110, 5),
+        new Product("equipment", Material.SHIELD, 60, 3),
+        new Product("equipment", Material.TRIDENT, 1000, 100),
+        new Product("equipment", Material.MACE, 3500, 350),
+        new Product("equipment", Material.TOTEM_OF_UNDYING, 1500, 150),
+        new Product("equipment", Material.ENDER_CHEST, 500, 50),
+        new Product("food-cooked", Material.GOLDEN_CARROT, 50, 5),
         new Product("food-cooked", Material.PUMPKIN_PIE, 12, 3.6),
-        new Product("food-cooked", Material.GOLDEN_APPLE, 180, 54),
-        new Product("food-cooked", Material.ENCHANTED_GOLDEN_APPLE, 2000, 750),
+        new Product("food-cooked", Material.GOLDEN_APPLE, 400, 40),
+        new Product("food-cooked", Material.ENCHANTED_GOLDEN_APPLE, 2000, 400),
         new Product("food-cooked", Material.COOKED_MUTTON, 10, 3),
         new Product("eggs-heads", Material.CREEPER_HEAD, 500, 150),
         new Product("eggs-heads", Material.SKELETON_SKULL, 350, 105),
@@ -170,7 +195,7 @@ public final class ShopManager implements Listener {
         new Product("special", Material.HOST_ARMOR_TRIM_SMITHING_TEMPLATE, 900, 0),
         new Product("special", Material.FLOW_ARMOR_TRIM_SMITHING_TEMPLATE, 1200, 0),
         new Product("special", Material.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE, 1200, 0),
-        new Product("special", Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE, 1500, 500),
+        new Product("special", Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE, 1500, 0),
         new Product("special", Material.ELYTRA, 10000, 0),
         new Product("bounty-maps", Material.FILLED_MAP, 100, 0, null, 1),
         new Product("bounty-maps", Material.FILLED_MAP, 300, 0, null, 2),
@@ -1282,6 +1307,7 @@ public final class ShopManager implements Listener {
 
     private int stockLimit(Material material) {
         int fallback = material == Material.ELYTRA ? 3
+                : material == Material.NETHERITE_BLOCK ? 5
                 : material == Material.DIAMOND_PICKAXE ? 30
                 : material == Material.IRON_PICKAXE ? 100 : 1000;
         return Math.max(0, plugin.getConfig().getInt(
@@ -1310,6 +1336,7 @@ public final class ShopManager implements Listener {
                 || n.equals("KELP") || n.equals("SEAGRASS")
                 || n.equals("COD") || n.equals("SALMON") || n.equals("TROPICAL_FISH") || n.equals("PUFFERFISH")
                 || n.equals("COOKED_COD") || n.equals("COOKED_SALMON")
+                || n.equals("POTION") || n.equals("SPLASH_POTION") || n.equals("LINGERING_POTION")
                 // Renewable resources commonly produced by mob, iron, gold and witch farms.
                 || n.equals("COAL") || n.equals("CHARCOAL") || n.equals("IRON_INGOT") || n.equals("GOLD_INGOT")
                 || n.equals("COPPER_INGOT") || n.equals("REDSTONE") || n.equals("GLOWSTONE_DUST")
@@ -1522,60 +1549,24 @@ public final class ShopManager implements Listener {
     }
 
     private double sellPrice(Product p) {
-        if (p.material() == Material.ENCHANTED_BOOK) return Math.floor(buyPrice(p) * 0.30);
         if (p.category().equals("bounty-maps")) return 0.0;
-        if (p.category().equals("misc")) return p.sell();
-        String name = p.material().name();
-        String lower = name.toLowerCase(Locale.ROOT);
-        if (name.equals("ELYTRA")) return 0.0;
-        if (name.equals("ENCHANTED_GOLDEN_APPLE")) return 750.0;
-        if (name.equals("NETHERITE_UPGRADE_SMITHING_TEMPLATE")) return 500.0;
-        if (name.equals("MACE")) return 900.0;
-        if (name.equals("ENDER_CHEST")) return 105.0;
-        if (name.equals("TRIDENT") || name.equals("TOTEM_OF_UNDYING")) return 200.0;
-        if (name.equals("MILK_BUCKET")) return 10.0;
+        if (p.material() == Material.ENCHANTED_BOOK) return Math.floor(buyPrice(p) * 0.30);
         if (p.material() == Material.FIREWORK_ROCKET) return 0.0;
-        if (p.material() == Material.TNT) return Math.max(0.0, plugin.getConfig().getDouble("shop.prices.tnt.sell", 20.0));
-        if (List.of("WHEAT", "CARROT", "POTATO", "BEETROOT", "MELON_SLICE", "PUMPKIN", "SUGAR_CANE", "NETHER_WART", "COCOA_BEANS").contains(name)) return 5.0 / 64.0;
-        if (name.equals("COD")) return 4.0;
-        if (name.equals("SALMON")) return 5.0;
-        if (name.equals("COOKED_COD")) return 6.0;
-        if (name.equals("COOKED_SALMON")) return 7.5;
-        if (isUnsellableExploitItem(p.material())) return 0.0;
-        if (lower.endsWith("_spawn_egg") && plugin.getConfig().getBoolean("restrictions.buy-only-spawn-eggs", true)) return 0.0;
-        // Every potion form and base type resells for 20% of its actual configured buy price.
-        // This covers regular, splash, and lingering potions, including upgraded/extended variants.
         if (p.potionType() != null || p.category().equals("potions")) {
-            return Math.floor(buyPrice(p) * 0.20);
+            String type = p.potionType() == null ? "" : p.potionType().name();
+            if (List.of("WATER", "AWKWARD", "MUNDANE", "THICK", "UNCRAFTABLE", "CUSTOM").contains(type)) return 0.0;
+            return Math.floor(buyPrice(p) * 0.06);
         }
-        // Resale is deliberately based on farmability/usefulness, never a blanket
-        // percentage of buy price. Common renewable blocks earn 1 coin per 64.
-        if (name.equals("ANCIENT_DEBRIS")) return 20.0;
-        if (name.equals("NETHERITE_SCRAP")) return 35.0;
-        if (name.equals("NETHERITE_INGOT")) return 360.0;
-        if (p.category().equals("blocks")) return 1.0 / 64.0;
-        if (p.category().equals("essentials") && isMobDrop(p.material())) return mobDropSellPrice(p.material());
-        if (name.equals("DIAMOND")) return 5.0;
-        if (p.category().equals("ores")) {
-            if (name.equals("NETHERITE_SCRAP")) return 35.0;
-            if (name.equals("NETHERITE_INGOT")) return 100.0;
-            if (name.contains("NETHERITE")) return Math.max(1.0, Math.floor(buyPrice(p) * 0.03));
-            return Math.max(0.0, Math.floor(buyPrice(p) * 0.05));
+        // Exclusive and duplication-prone items cannot be converted back into coins.
+        if (isUnsellableExploitItem(p.material())) return 0.0;
+        String sellPath = "shop.prices." + p.material().name().toLowerCase(Locale.ROOT) + ".sell";
+        if (plugin.getConfig().contains(sellPath)) {
+            double configured = plugin.getConfig().getDouble(sellPath, p.sell());
+            return validPrice(configured) ? configured : Math.max(0.0, p.sell());
         }
-        if (p.category().equals("equipment")) {
-            return Math.max(0.0, Math.floor(buyPrice(p) * 0.05));
-        }
-        if (p.category().startsWith("food")) return Math.max(1.0, Math.floor(buyPrice(p) * 0.15));
-        if (p.category().equals("eggs-heads")) {
-            if (name.endsWith("_SPAWN_EGG")) return 0.0;
-            if (name.equals("EGG")) return 1.0 / 64.0;
-            return Math.max(0.0, Math.floor(buyPrice(p) * 0.01));
-        }
-        if (p.category().equals("xp")) return 0.0;
-        if (p.category().equals("seeds")) return seedSellPrice(p.material());
-        if (p.category().equals("special")) return 0.0;
-        if (p.category().equals("essentials") && p.material() == Material.TNT) return 0.0;
-        return Math.max(0.0, Math.floor(buyPrice(p) * 0.02));
+        if (p.material().name().endsWith("_SPAWN_EGG")
+                && plugin.getConfig().getBoolean("restrictions.buy-only-spawn-eggs", true)) return 0.0;
+        return Math.max(0.0, p.sell());
     }
 
     private boolean isMobDrop(Material m) {
@@ -1605,6 +1596,56 @@ public final class ShopManager implements Listener {
 
     private double blockBuyPrice(Material m) {
         String n = m.name();
+        double exact = switch (n) {
+            case "NETHERITE_BLOCK" -> 16200.0;
+            case "ANCIENT_DEBRIS" -> 300.0;
+            case "GOLD_BLOCK", "RAW_GOLD_BLOCK" -> 360.0;
+            case "RAW_IRON_BLOCK" -> 225.0;
+            case "RAW_COPPER_BLOCK", "COPPER_BLOCK" -> 90.0;
+            case "EMERALD_BLOCK" -> 630.0;
+            case "LAPIS_BLOCK" -> 90.0;
+            case "REDSTONE_BLOCK", "COAL_BLOCK" -> 72.0;
+            case "AMETHYST_BLOCK" -> 48.0;
+            case "SLIME_BLOCK" -> 135.0;
+            case "MAGMA_BLOCK" -> 120.0;
+            case "NETHER_WART_BLOCK" -> 180.0;
+            case "PRISMARINE" -> 60.0;
+            case "PRISMARINE_BRICKS" -> 135.0;
+            case "DARK_PRISMARINE" -> 130.0;
+            case "QUARTZ_BLOCK", "QUARTZ_PILLAR", "QUARTZ_BRICKS", "SMOOTH_QUARTZ", "CHISELED_QUARTZ_BLOCK" -> 50.0;
+            case "BONE_BLOCK", "DRIED_KELP_BLOCK" -> 45.0;
+            case "HAY_BLOCK" -> 18.0;
+            case "HONEY_BLOCK" -> 30.0;
+            case "CONDUIT" -> 800.0;
+            case "LODESTONE" -> 2100.0;
+            case "RESPAWN_ANCHOR" -> 350.0;
+            case "SHULKER_BOX" -> 500.0;
+            case "SNIFFER_EGG" -> 3000.0;
+            case "TURTLE_EGG" -> 300.0;
+            case "CREAKING_HEART" -> 400.0;
+            case "SCULK_SHRIEKER" -> 200.0;
+            case "SCULK_CATALYST" -> 150.0;
+            case "SCULK_SENSOR", "CALIBRATED_SCULK_SENSOR" -> 100.0;
+            case "SPONGE", "WET_SPONGE" -> 150.0;
+            case "HEAVY_CORE" -> 2000.0;
+            case "FROGSPAWN" -> 50.0;
+            case "HOPPER", "CRAFTER" -> 150.0;
+            case "PISTON" -> 60.0;
+            case "STICKY_PISTON" -> 75.0;
+            case "DISPENSER" -> 60.0;
+            case "DROPPER", "OBSERVER" -> 40.0;
+            case "DAYLIGHT_DETECTOR" -> 60.0;
+            case "NOTE_BLOCK" -> 20.0;
+            case "TARGET" -> 30.0;
+            case "JUKEBOX" -> 150.0;
+            case "COPPER_BULB" -> 60.0;
+            case "IRON_BARS" -> 10.0;
+            case "CHAIN" -> 30.0;
+            case "COPPER_BARS" -> 6.0;
+            case "COPPER_CHAIN" -> 20.0;
+            default -> -1.0;
+        };
+        if (exact >= 0.0) return exact;
         if (n.contains("NETHERRACK") || n.contains("DIRT") || n.contains("GRAVEL") || n.contains("SAND")
                 || n.contains("COBBLESTONE") || n.equals("STONE") || n.equals("NETHERRACK")) return 2.0;
         if (n.contains("LOG") || n.contains("WOOD") || n.contains("PLANKS") || n.contains("LEAVES")) return 8.0;
@@ -1690,9 +1731,10 @@ public final class ShopManager implements Listener {
 
     private double foodBuyPrice(Material material) {
         String n = material.name();
-        if (n.contains("ENCHANTED_GOLDEN_APPLE")) return 2500;
-        if (n.contains("GOLDEN_APPLE")) return 180;
-        if (n.contains("GOLDEN_CARROT")) return 10;
+        if (n.contains("ENCHANTED_GOLDEN_APPLE")) return 2000;
+        if (n.contains("GOLDEN_APPLE")) return 400;
+        if (n.contains("GOLDEN_CARROT")) return 50;
+        if (n.equals("COOKED_RABBIT")) return 11;
         if (n.contains("BEEF") || n.contains("PORKCHOP") || n.contains("MUTTON")) return 10;
         if (n.contains("SALMON") || n.contains("COD") || n.contains("CHICKEN") || n.contains("RABBIT")) return 7;
         if (n.contains("POTATO") || n.contains("CARROT") || n.contains("BEETROOT") || n.contains("MELON") || n.contains("BERRY")) return 3;
@@ -1703,8 +1745,12 @@ public final class ShopManager implements Listener {
         return switch (material.name()) {
             case "BEDROCK", "BARRIER", "COMMAND_BLOCK", "CHAIN_COMMAND_BLOCK",
                  "REPEATING_COMMAND_BLOCK", "COMMAND_BLOCK_MINECART", "STRUCTURE_BLOCK",
-                 "STRUCTURE_VOID", "JIGSAW", "END_PORTAL_FRAME", "SPAWNER",
-                 "LIGHT", "DEBUG_STICK", "KNOWLEDGE_BOOK", "PLAYER_HEAD" -> true;
+                 "STRUCTURE_VOID", "JIGSAW", "END_PORTAL_FRAME", "SPAWNER", "TRIAL_SPAWNER", "VAULT",
+                 "LIGHT", "DEBUG_STICK", "KNOWLEDGE_BOOK", "PLAYER_HEAD", "BUDDING_AMETHYST",
+                 "REINFORCED_DEEPSLATE", "TEST_BLOCK", "TEST_INSTANCE_BLOCK", "INFESTED_STONE",
+                 "INFESTED_COBBLESTONE", "INFESTED_STONE_BRICKS", "INFESTED_MOSSY_STONE_BRICKS",
+                 "INFESTED_CRACKED_STONE_BRICKS", "INFESTED_CHISELED_STONE_BRICKS", "INFESTED_DEEPSLATE",
+                 "FARMLAND", "DIRT_PATH", "SUSPICIOUS_SAND", "SUSPICIOUS_GRAVEL" -> true;
             default -> false;
         };
     }
@@ -1749,7 +1795,6 @@ public final class ShopManager implements Listener {
         if (name.endsWith("_SMITHING_TEMPLATE")) return true;
         // Rare items or drops commonly targeted by duplication glitches / scalable farms.
         return name.equals("ELYTRA")
-                || name.equals("ENCHANTED_GOLDEN_APPLE")
                 || name.equals("SHULKER_SHELL")
                 || name.contains("SHULKER_BOX")
                 || name.equals("WITHER_SKELETON_SKULL")
