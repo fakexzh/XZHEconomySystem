@@ -34,6 +34,7 @@ import java.util.UUID;
 
 public final class VillagerWorkstationPlugin extends JavaPlugin implements Listener {
     private final Map<String, Workstation> workstations = new HashMap<>();
+    private final Map<String, ChestLocation> chestCache = new HashMap<>();
     private BukkitTask workerTask;
 
     @Override
@@ -95,7 +96,7 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
             if (farmer == null) continue;
             assignedFarmers.add(farmer.getUniqueId());
 
-            Block chestBlock = findCopperChest(world, stationBlock.getLocation(), chestRadius);
+            Block chestBlock = findCopperChest(workstation, world, stationBlock.getLocation(), chestRadius);
             if (chestBlock == null || !(chestBlock.getState() instanceof Container container)) continue;
             Inventory inventory = container.getInventory();
 
@@ -150,14 +151,29 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
         }
     }
 
-    private Block findCopperChest(World world, Location center, int radius) {
+    private Block findCopperChest(Workstation workstation, World world, Location center, int radius) {
+        // Cache the selected chest so every work cycle doesn't rescan thousands of blocks.
+        ChestLocation cached = chestCache.get(workstation.key());
+        if (cached != null && cached.worldId().equals(world.getUID())
+                && world.isChunkLoaded(cached.x() >> 4, cached.z() >> 4)) {
+            Block cachedBlock = world.getBlockAt(cached.x(), cached.y(), cached.z());
+            if (cachedBlock.getType().name().endsWith("COPPER_CHEST")
+                    && cachedBlock.getState() instanceof Container) {
+                return cachedBlock;
+            }
+            chestCache.remove(workstation.key());
+        }
+
         for (int x = center.getBlockX() - radius; x <= center.getBlockX() + radius; x++) {
             for (int y = center.getBlockY() - radius; y <= center.getBlockY() + radius; y++) {
                 for (int z = center.getBlockZ() - radius; z <= center.getBlockZ() + radius; z++) {
                     if (!world.isChunkLoaded(x >> 4, z >> 4)) continue;
                     Block block = world.getBlockAt(x, y, z);
                     if (!block.getType().name().endsWith("COPPER_CHEST")) continue;
-                    if (block.getState() instanceof Container) return block;
+                    if (!(block.getState() instanceof Container)) continue;
+                    chestCache.put(workstation.key(),
+                            new ChestLocation(world.getUID(), block.getX(), block.getY(), block.getZ()));
+                    return block;
                 }
             }
         }
@@ -248,6 +264,7 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
         Workstation workstation = new Workstation(
                 block.getWorld().getUID(), block.getX(), block.getY(), block.getZ());
         if (workstations.remove(workstation.key()) != null) {
+            chestCache.remove(workstation.key());
             saveWorkstations();
             event.getPlayer().sendMessage(color("&eFarmer workstation unregistered."));
         }
@@ -321,6 +338,7 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
             Workstation workstation = new Workstation(location.getWorld().getUID(),
                     location.getBlockX(), location.getBlockY(), location.getBlockZ());
             if (workstations.remove(workstation.key()) != null) {
+                chestCache.remove(workstation.key());
                 saveWorkstations();
                 player.sendMessage(color("&aFarmer workstation removed."));
             } else {
@@ -378,6 +396,8 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
     private String color(String text) {
         return ChatColor.translateAlternateColorCodes('&', text);
     }
+
+    private record ChestLocation(UUID worldId, int x, int y, int z) { }
 
     private record Workstation(UUID worldId, int x, int y, int z) {
         private String key() {
