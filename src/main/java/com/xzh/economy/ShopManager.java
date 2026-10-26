@@ -420,11 +420,14 @@ public final class ShopManager implements Listener {
                         .thenComparing(p -> p.potionType() == null ? "" : p.potionType().name())
                         .thenComparingInt(Product::fireworkPower))
                 .toList();
-        int pages = Math.max(1, (matches.size() + 44) / 45);
+        int pages = Math.max(1, (matches.size() + 35) / 36);
         int page = Math.max(0, Math.min(requestedPage, pages - 1));
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP: Search " + (page + 1));
-        int start = page * 45;
-        int end = Math.min(matches.size(), start + 45);
+        Inventory inv = Bukkit.createInventory(null, 54,
+                ChatColor.DARK_GREEN + "XZH CREATIVE SHOP " + ChatColor.GRAY + "| Search: "
+                        + ChatColor.YELLOW + query + ChatColor.DARK_GRAY + " (" + (page + 1) + "/" + pages + ")");
+        addBrowserTabs(inv, "search");
+        int start = page * 36;
+        int end = Math.min(matches.size(), start + 36);
         for (int index = start; index < end; index++) {
             Product p = matches.get(index);
             ItemStack item = createStack(p, 1);
@@ -434,8 +437,13 @@ public final class ShopManager implements Listener {
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.WHITE + "Buy: " + ChatColor.YELLOW + money(buyPrice(p)) + " coins each");
             lore.add(ChatColor.WHITE + "Sell: " + ChatColor.RED + money(sellPrice(p)) + " coins each");
-            if (isFarmableSellItem(p.material())) lore.add(ChatColor.WHITE + "Your sell stock: " + ChatColor.AQUA + getSellStock(player, p.material()) + "/" + sellStockLimit(p.material()) + ChatColor.GRAY + " (personal restock)");
-            if (!p.category().equals("bounty-maps")) lore.add(ChatColor.WHITE + "Global buy stock: " + ChatColor.AQUA + getStock(p.material()) + "/" + stockLimit(p.material()));
+            if (isFarmableSellItem(p.material())) {
+                lore.add(ChatColor.WHITE + "Your sell stock: " + ChatColor.AQUA + getSellStock(player, p.material())
+                        + "/" + sellStockLimit(p.material()) + ChatColor.GRAY + " (personal restock)");
+            }
+            if (!p.category().equals("bounty-maps")) {
+                lore.add(ChatColor.WHITE + "Global buy stock: " + ChatColor.AQUA + getStock(p.material()) + "/" + stockLimit(p.material()));
+            }
             lore.add(ChatColor.GRAY + "Click to choose quantity");
             meta.setLore(lore);
             meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "product");
@@ -443,15 +451,41 @@ public final class ShopManager implements Listener {
             if (p.potionType() != null) meta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
             if (p.fireworkPower() > 0) meta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
             item.setItemMeta(meta);
-            inv.setItem(index - start, item);
+            inv.setItem(9 + index - start, item);
         }
         if (matches.isEmpty()) add(inv, 22, Material.BARRIER, "No matching items", "shop-search", "prompt",
                 List.of(ChatColor.GRAY + "No shop items matched: " + query, ChatColor.YELLOW + "Click to search again."));
         if (page > 0) add(inv, 45, Material.ARROW, "Previous page", "search-page", query + ":" + (page - 1));
-        add(inv, 48, Material.COMPASS, "Search again", "shop-search", "prompt");
-        add(inv, 49, Material.ARROW, "Back to Shop", "back", "main");
+        add(inv, 46, Material.GOLD_INGOT, "My Balance", "balance", "balance");
+        add(inv, 47, Material.BOOKSHELF, "Categories & Services", "category-menu", "open");
+        add(inv, 48, Material.COMPASS, "Search Items", "shop-search", "prompt");
+        add(inv, 49, Material.BUNDLE, "Bank", "bank", "bank");
+        add(inv, 50, Material.NETHER_STAR, "Quests", "quests", "quests");
+        add(inv, 51, Material.PLAYER_HEAD, "Other Players' Money", "players-money", "players-money");
+        add(inv, 52, Material.BOOK, "Help", "help", "help");
         if (page + 1 < pages) add(inv, 53, Material.ARROW, "Next page", "search-page", query + ":" + (page + 1));
         player.openInventory(inv);
+    }
+
+    private void addBrowserTabs(Inventory inv, String selected) {
+        add(inv, 0, Material.COMPASS, (selected.equals("all") ? ChatColor.GREEN + "▶ " : ChatColor.YELLOW + "") + "All Items",
+                "back", "main", List.of(ChatColor.GRAY + "Browse the complete catalogue"));
+        add(inv, 1, Material.IRON_INGOT, (selected.equals("ores") ? ChatColor.GREEN + "▶ " : ChatColor.YELLOW + "") + "Ores & Gems",
+                "category", "ores");
+        add(inv, 2, Material.BRICKS, (selected.equals("blocks") ? ChatColor.GREEN + "▶ " : ChatColor.YELLOW + "") + "Building Blocks",
+                "category", "blocks");
+        add(inv, 3, Material.DIAMOND_PICKAXE, (selected.equals("tools") ? ChatColor.GREEN + "▶ " : ChatColor.YELLOW + "") + "Tools",
+                "category", "tools");
+        add(inv, 4, Material.IRON_CHESTPLATE, (selected.equals("armor") ? ChatColor.GREEN + "▶ " : ChatColor.YELLOW + "") + "Armor",
+                "category", "armor");
+        add(inv, 5, Material.COOKED_BEEF, (selected.equals("food") ? ChatColor.GREEN + "▶ " : ChatColor.YELLOW + "") + "Food",
+                "category", "food");
+        add(inv, 6, Material.WHEAT_SEEDS, (selected.equals("seeds") ? ChatColor.GREEN + "▶ " : ChatColor.YELLOW + "") + "Farming",
+                "category", "seeds");
+        add(inv, 7, Material.POTION, (selected.equals("potions") ? ChatColor.GREEN + "▶ " : ChatColor.YELLOW + "") + "Potions",
+                "category", "potions");
+        add(inv, 8, Material.BOOKSHELF, ChatColor.AQUA + "Categories & Services", "category-menu", "open",
+                List.of(ChatColor.GRAY + "More categories, bank, quests and utilities"));
     }
 
     private void openCategory(Player player, String category) {
@@ -472,7 +506,7 @@ public final class ShopManager implements Listener {
                         .thenComparingInt(Product::fireworkPower))
                 .toList();
 
-        int pages = Math.max(1, (list.size() + 44) / 45);
+        int pages = Math.max(1, (list.size() + 35) / 36);
         int page = Math.max(0, Math.min(requestedPage, pages - 1));
         String label = switch (category) {
             case "all" -> "All Items";
@@ -491,10 +525,11 @@ public final class ShopManager implements Listener {
             default -> category.replace('-', ' ');
         };
         Inventory inv = Bukkit.createInventory(null, 54,
-                ChatColor.DARK_GREEN + "XZH SHOP: " + label + " (" + (page + 1) + "/" + pages + ")");
-
-        int start = page * 45;
-        int end = Math.min(list.size(), start + 45);
+                ChatColor.DARK_GREEN + "XZH CREATIVE SHOP " + ChatColor.GRAY + "| "
+                        + ChatColor.YELLOW + label + ChatColor.DARK_GRAY + " (" + (page + 1) + "/" + pages + ")");
+        addBrowserTabs(inv, category);
+        int start = page * 36;
+        int end = Math.min(list.size(), start + 36);
         for (int index = start; index < end; index++) {
             Product p = list.get(index);
             ItemStack item = createStack(p, 1);
@@ -533,21 +568,14 @@ public final class ShopManager implements Listener {
             meta.setLore(lore);
             meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "product");
             meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, p.material().name());
-            if (p.potionType() != null) {
-                meta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
-            }
-            if (p.fireworkPower() > 0) {
-                meta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
-            }
+            if (p.potionType() != null) meta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
+            if (p.fireworkPower() > 0) meta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
             item.setItemMeta(meta);
-            inv.setItem(index - start, item);
+            inv.setItem(9 + index - start, item);
         }
-
-        if (list.isEmpty()) {
-            add(inv, 22, Material.BARRIER, "No items in this category", "category-menu", "open");
-        }
+        if (list.isEmpty()) add(inv, 22, Material.BARRIER, "No items in this category", "category-menu", "open");
         if (page > 0) add(inv, 45, Material.ARROW, "Previous page", "category-page", category + ":" + (page - 1));
-        add(inv, 46, Material.CHEST, "All Items", "back", "main");
+        add(inv, 46, Material.GOLD_INGOT, "My Balance", "balance", "balance");
         add(inv, 47, Material.BOOKSHELF, "Categories & Services", "category-menu", "open");
         add(inv, 48, Material.COMPASS, "Search Items", "shop-search", "prompt");
         add(inv, 49, Material.BUNDLE, "Bank", "bank", "bank");
