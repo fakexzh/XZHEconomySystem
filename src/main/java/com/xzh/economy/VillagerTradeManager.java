@@ -471,7 +471,10 @@ public final class VillagerTradeManager implements Listener {
         long expiresAt = now + OFFER_COOLDOWN_MILLIS;
         used.put(offer.id(), expiresAt);
         save();
-        merchant.setRecipes(recipes(profession, playerId));
+        // Do not replace merchant recipes inside PlayerTradeEvent: Paper may still be
+        // processing the selected recipe, and mutating the merchant here can block the trade.
+        // Refresh only after the event finishes; if another listener cancels it, roll back
+        // the cooldown so a failed trade never consumes the offer.
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (event.isCancelled()) {
                 Map<String, Long> current = playerUsedOffers.get(playerId);
@@ -480,7 +483,9 @@ public final class VillagerTradeManager implements Listener {
                     if (current.isEmpty()) playerUsedOffers.remove(playerId);
                 }
                 save();
-                if (event.getPlayer().isOnline()) merchant.setRecipes(recipes(profession, playerId));
+            }
+            if (event.getPlayer().isOnline()) {
+                merchant.setRecipes(recipes(profession, playerId));
             }
         });
     }
