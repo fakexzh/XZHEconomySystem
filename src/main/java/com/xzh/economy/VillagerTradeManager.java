@@ -388,6 +388,8 @@ public final class VillagerTradeManager implements Listener {
         UUID playerId = player.getUniqueId();
         UUID villagerId = villager.getUniqueId();
         Villager.Profession profession = villager.getProfession();
+        player.sendMessage(ChatColor.DARK_GRAY + "[" + ChatColor.GOLD + "XZH" + ChatColor.DARK_GRAY + "] "
+                + ChatColor.YELLOW + "Villager offers refresh every 2 hours after each successful trade.");
         releaseVillager(playerId, null);
         originalVillagerAi.putIfAbsent(villagerId, villager.hasAI());
         playersViewingVillager.computeIfAbsent(villagerId, ignored -> new HashSet<>()).add(playerId);
