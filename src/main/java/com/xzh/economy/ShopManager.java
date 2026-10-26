@@ -585,6 +585,7 @@ public final class ShopManager implements Listener {
         confirmMeta.getPersistentDataContainer().set(sellUnitPriceKey, PersistentDataType.DOUBLE, unitSell);
         confirm.setItemMeta(confirmMeta);
         add(inv, 15, Material.FIRE_CHARGE, "Cancel", "category-back", "main");
+        add(inv, 22, Material.ARROW, "Back", "category-back", "main");
         player.openInventory(inv);
     }
 
@@ -648,6 +649,7 @@ public final class ShopManager implements Listener {
         inv.setItem(13, summary);
         add(inv, 11, selling ? Material.SNOWBALL : Material.SLIME_BALL, "Confirm", selling ? "xp-sell-confirm" : "xp-buy-confirm", points + ":" + price);
         add(inv, 15, Material.FIRE_CHARGE, "Cancel", "category-back", "xp");
+        add(inv, 22, Material.ARROW, "Back", "category-back", "xp");
         player.openInventory(inv);
     }
 
@@ -824,6 +826,7 @@ public final class ShopManager implements Listener {
         if (p.fireworkPower() > 0) confirmMeta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
         inv.getItem(11).setItemMeta(confirmMeta);
         add(inv, 15, Material.FIRE_CHARGE, "Cancel", "category-back", handOnly ? "main" : p.category());
+        add(inv, 22, Material.ARROW, "Back", "category-back", handOnly ? "main" : p.category());
         player.openInventory(inv);
     }
 
