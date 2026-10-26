@@ -56,7 +56,7 @@ public final class ShopManager implements Listener {
     private final YamlConfiguration historyData;
     private final File bountyCooldownFile;
     private final YamlConfiguration bountyCooldownData;
-    private final Map<java.util.UUID, Boolean> pendingShopSearch = new HashMap<>();
+    private final Map<java.util.UUID, Boolean> pendingShopSearch = new java.util.concurrent.ConcurrentHashMap<>();
 
     private record Product(String category, Material material, double buy, double sell, PotionType potionType, int fireworkPower) {
         Product(String category, Material material, double buy, double sell) { this(category, material, buy, sell, null, 0); }
@@ -403,8 +403,8 @@ public final class ShopManager implements Listener {
                 promptShopSearch(player);
                 return;
             }
-            if (query.length() > 48) query = query.substring(0, 48);
-            openSearchResults(player, query, 0);
+            String searchTerm = query.length() > 48 ? query.substring(0, 48) : query;
+            openSearchResults(player, searchTerm, 0);
         });
     }
 
