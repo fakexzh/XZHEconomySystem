@@ -226,8 +226,8 @@ public final class VillagerTradeManager implements Listener {
             // Cooldowns are enforced per-player and per-offer; an exhausted offer is shown as red X.
             boolean exhaustedForPlayer = used.getOrDefault(offer.id(), 0L) > now;
             int maxUses = Integer.MAX_VALUE;
-            MerchantRecipe recipe = new MerchantRecipe(output, maxUses,
-                    exhaustedForPlayer ? maxUses : 0, false, 0, 0.0f);
+            MerchantRecipe recipe = new MerchantRecipe(output,
+                    exhaustedForPlayer ? maxUses : 0, maxUses, false, 0, 0.0f);
             for (ItemStack input : inputs) recipe.addIngredient(input);
             result.add(recipe);
             recipeOfferIds.add(offer.id());
