@@ -158,7 +158,14 @@ public final class VillagerTradeManager implements Listener {
                     .collect(Collectors.toCollection(ArrayList::new)));
         }
         long now = System.currentTimeMillis();
-        org.bukkit.configuration.ConfigurationSection usedSection = data.getConfigurationSection("player-used");
+        int cooldownSchema = data.getInt("cooldown-schema", 0);
+        // Earlier cooldown builds could assign the wrong offer ID or persist false locks.
+        // Migrate once by discarding only legacy cooldowns; new cooldowns remain persistent.
+        org.bukkit.configuration.ConfigurationSection usedSection =
+                cooldownSchema >= 2 ? data.getConfigurationSection("player-used") : null;
+        if (cooldownSchema < 2 && data.contains("player-used")) {
+            plugin.getLogger().warning("Resetting legacy villager cooldown data from an older broken cooldown build.");
+        }
         if (usedSection != null) {
             for (String uuidText : usedSection.getKeys(false)) {
                 try {
@@ -215,10 +222,12 @@ public final class VillagerTradeManager implements Listener {
                 output = new ItemStack(offer.item(), offer.amount());
             }
             if (output == null || output.getAmount() > output.getMaxStackSize()) continue;
-            // MerchantRecipe uses are shared by every player who opens this villager.
-            // Keep the vanilla recipe open and enforce the real limit by player UUID in onTrade.
+            // Each player gets a private merchant, so use a large limit for available offers.
+            // Cooldowns are enforced per-player and per-offer; an exhausted offer is shown as red X.
             boolean exhaustedForPlayer = used.getOrDefault(offer.id(), 0L) > now;
-            MerchantRecipe recipe = new MerchantRecipe(output, 1, exhaustedForPlayer ? 1 : 0, false, 0, 0.0f);
+            int maxUses = Integer.MAX_VALUE;
+            MerchantRecipe recipe = new MerchantRecipe(output, maxUses,
+                    exhaustedForPlayer ? maxUses : 0, false, 0, 0.0f);
             for (ItemStack input : inputs) recipe.addIngredient(input);
             result.add(recipe);
             recipeOfferIds.add(offer.id());
@@ -343,6 +352,7 @@ public final class VillagerTradeManager implements Listener {
     }
 
     private void save() {
+        data.set("cooldown-schema", 2);
         data.set("rotation-version", 3);
         data.set("next-refresh", null);
         data.set("active", null);
@@ -433,23 +443,21 @@ public final class VillagerTradeManager implements Listener {
         List<MerchantRecipe> currentRecipes = merchant.getRecipes();
         int index = -1;
 
-        // Resolve against the exact recipe list built for this player's merchant.
-        // Do not index the profession's full offer list: invalid/unsupported recipes
-        // can be omitted when building the merchant and shift every later index.
-        if (event.getPlayer().getOpenInventory().getTopInventory() instanceof MerchantInventory inventory
+        // Resolve from the actual recipe being traded first. The selected index can be stale
+        // when Paper refreshes a merchant inventory, so never let it override the trade itself.
+        for (int i = 0; i < currentRecipes.size() && i < recipeOfferIds.size(); i++) {
+            if (sameRecipe(currentRecipes.get(i), event.getTrade())) {
+                index = i;
+                break;
+            }
+        }
+        // If the API returns a recipe whose metadata differs from the displayed copy, fall back
+        // to the selected slot only when the inventory is still open for this merchant.
+        if (index < 0 && event.getPlayer().getOpenInventory().getTopInventory() instanceof MerchantInventory inventory
                 && inventory.getMerchant() == merchant) {
             int selectedIndex = inventory.getSelectedRecipeIndex();
             if (selectedIndex >= 0 && selectedIndex < recipeOfferIds.size()
-                    && selectedIndex < currentRecipes.size()) {
-                index = selectedIndex;
-            }
-        }
-
-        // Fallback to the recipe actually traded, still resolving through the aligned ID list.
-        if (index < 0) {
-            for (int i = 0; i < currentRecipes.size() && i < recipeOfferIds.size(); i++) {
-                if (sameRecipe(currentRecipes.get(i), event.getTrade())) { index = i; break; }
-            }
+                    && selectedIndex < currentRecipes.size()) index = selectedIndex;
         }
         if (index < 0 || index >= recipeOfferIds.size()) {
             plugin.getLogger().warning("Could not map villager trade to a fixed offer for " + event.getPlayer().getUniqueId());
