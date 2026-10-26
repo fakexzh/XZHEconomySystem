@@ -275,36 +275,45 @@ public final class ShopManager implements Listener {
     }
 
     public void openMain(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP");
-        // Row 1: mining/building on the left, equipment in the middle, food/farming on the right.
-        add(inv, 10, Material.IRON_INGOT, "Ores", "category", "ores");
-        add(inv, 11, Material.BRICKS, "Blocks", "category", "blocks");
-        add(inv, 13, Material.IRON_CHESTPLATE, "Armor", "category", "armor");
-        add(inv, 14, Material.DIAMOND_PICKAXE, "Tools", "category", "tools");
-        add(inv, 16, Material.COOKED_BEEF, "Food", "category", "food");
-        add(inv, 17, Material.WHEAT_SEEDS, "Seeds & Farming", "category", "seeds");
+        // Main shop is a Creative-style product browser, not a category-only landing page.
+        openCategory(player, "all", 0);
+    }
 
-        // Row 2: practical items and other collectible categories.
-        add(inv, 19, Material.CRAFTING_TABLE, "Essentials", "category", "essentials");
-        add(inv, 20, Material.ELYTRA, "Special Items", "category", "special");
-        add(inv, 22, Material.POPPY, "Flowers & Dyes", "category", "flowers-dyes");
-        add(inv, 23, Material.BEE_SPAWN_EGG, "Eggs & Heads", "category", "eggs-heads");
-        add(inv, 25, Material.BAMBOO_RAFT, "Travel", "category", "travel");
+    private void openCategoriesMenu(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP: Categories & Services");
 
-        // Row 3: books, XP, potions, quests and bounty hunting.
+        // Product categories
+        add(inv, 10, Material.IRON_INGOT, "Ores & Gems", "category", "ores");
+        add(inv, 11, Material.BRICKS, "Building Blocks", "category", "blocks");
+        add(inv, 12, Material.IRON_CHESTPLATE, "Armor", "category", "armor");
+        add(inv, 13, Material.DIAMOND_PICKAXE, "Tools & Weapons", "category", "tools");
+        add(inv, 14, Material.COOKED_BEEF, "Food", "category", "food");
+        add(inv, 15, Material.WHEAT_SEEDS, "Seeds & Farming", "category", "seeds");
+        add(inv, 16, Material.CRAFTING_TABLE, "Essentials", "category", "essentials");
+
+        add(inv, 19, Material.ELYTRA, "Special Items", "category", "special");
+        add(inv, 20, Material.POPPY, "Flowers & Dyes", "category", "flowers-dyes");
+        add(inv, 21, Material.BEE_SPAWN_EGG, "Eggs & Heads", "category", "eggs-heads");
+        add(inv, 22, Material.POTION, "Potions", "category", "potions");
+        add(inv, 23, Material.NETHERITE_SWORD, "Bounty Hunt", "category", "bounty-maps");
+
+        // Services keep their existing managers and transaction handlers.
         add(inv, 28, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
-        add(inv, 29, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
-        add(inv, 30, Material.POTION, "Potions", "category", "potions");
-        add(inv, 31, Material.COMPASS, "Search Items", "shop-search", "prompt", List.of(ChatColor.GRAY + "Search every shop category by item name.", ChatColor.YELLOW + "Click, then type your search in chat."));
-        add(inv, 32, Material.NETHER_STAR, "Quest Packs", "quests", "quests");
-        add(inv, 33, Material.NETHERITE_SWORD, "Bounty Hunt", "category", "bounty-maps");        // Row 5: align bank, transaction history, and online players' money.
-        add(inv, 38, Material.BUNDLE, "XZH BANK", "bank", "bank");
-        add(inv, 39, Material.PAPER, "Transition", "transition", "history");
-        add(inv, 40, Material.PLAYER_HEAD, "Other Players' Money", "players-money", "players-money");
-        add(inv, 42, Material.BOOK, "Help", "help", "help");
-        add(inv, 43, Material.CHEST, "Death Inventory", "deathinventory", "deathinventory");
+        add(inv, 29, Material.EXPERIENCE_BOTTLE, "XP Exchange", "category", "xp");
+        add(inv, 30, Material.BAMBOO_RAFT, "Travel & Boats", "category", "travel");
+        add(inv, 31, Material.NETHER_STAR, "Quests", "quests", "quests");
+        add(inv, 32, Material.BUNDLE, "Bank", "bank", "bank");
+        add(inv, 33, Material.PAPER, "Purchase History", "transition", "history");
+        add(inv, 34, Material.PLAYER_HEAD, "Other Players' Money", "players-money", "players-money");
+        add(inv, 35, Material.CHEST, "Death Inventory", "deathinventory", "deathinventory");
+        add(inv, 36, Material.GOLD_INGOT, "My Balance", "balance", "balance");
+        add(inv, 37, Material.BOOK, "Help", "help", "help");
 
-        add(inv, 49, Material.CHEST, "Hand Sell (multiple items)", "sell-hand", "hand", List.of(ChatColor.WHITE + "Place multiple item stacks into the sell slots.", ChatColor.GRAY + "The menu totals eligible items and respects your personal sell stock.", ChatColor.YELLOW + "Confirm to sell; unsellable items return to you."));
+        add(inv, 45, Material.CHEST, "Hand Sell", "sell-hand", "hand",
+                List.of(ChatColor.GRAY + "Place eligible items into the sell menu.",
+                        ChatColor.YELLOW + "Review the payout and confirm before selling."));
+        add(inv, 49, Material.ARROW, "Back to All Items", "back", "main");
+        add(inv, 53, Material.COMPASS, "Search Items", "shop-search", "prompt");
         player.openInventory(inv);
     }
 
@@ -451,17 +460,43 @@ public final class ShopManager implements Listener {
 
     private void openCategory(Player player, String category, int requestedPage) {
         if (category.equals("travel")) { plugin.getBoatManager().open(player); return; }
-        if (category.equals("food")) { openFoodMenu(player); return; }
         if (category.equals("xp")) { openXpMenu(player); return; }
-        List<Product> list = products.stream().filter(p -> p.category().equals(category)).sorted(java.util.Comparator.comparingInt(this::productOrder).thenComparing(p -> p.material().name())).toList();
+
+        List<Product> list = products.stream()
+                .filter(p -> category.equals("all")
+                        || (category.equals("food") && p.category().startsWith("food"))
+                        || p.category().equals(category))
+                .sorted(java.util.Comparator.comparingInt(this::productOrder)
+                        .thenComparing(p -> p.material().name())
+                        .thenComparing(p -> p.potionType() == null ? "" : p.potionType().name())
+                        .thenComparingInt(Product::fireworkPower))
+                .toList();
+
         int pages = Math.max(1, (list.size() + 44) / 45);
         int page = Math.max(0, Math.min(requestedPage, pages - 1));
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP: " + category + " " + (page + 1));
+        String label = switch (category) {
+            case "all" -> "All Items";
+            case "ores" -> "Ores & Gems";
+            case "blocks" -> "Building Blocks";
+            case "armor" -> "Armor";
+            case "tools" -> "Tools & Weapons";
+            case "food" -> "Food";
+            case "seeds" -> "Seeds & Farming";
+            case "essentials" -> "Essentials";
+            case "special" -> "Special Items";
+            case "flowers-dyes" -> "Flowers & Dyes";
+            case "eggs-heads" -> "Eggs & Heads";
+            case "potions" -> "Potions";
+            case "bounty-maps" -> "Bounty Hunt";
+            default -> category.replace('-', ' ');
+        };
+        Inventory inv = Bukkit.createInventory(null, 54,
+                ChatColor.DARK_GREEN + "XZH SHOP: " + label + " (" + (page + 1) + "/" + pages + ")");
+
         int start = page * 45;
         int end = Math.min(list.size(), start + 45);
         for (int index = start; index < end; index++) {
             Product p = list.get(index);
-            int slot = index - start;
             ItemStack item = createStack(p, 1);
             if (p.category().equals("bounty-maps")) item.setType(Material.NETHERITE_SWORD);
             ItemMeta meta = item.getItemMeta();
@@ -469,32 +504,56 @@ public final class ShopManager implements Listener {
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.WHITE + "Buy: " + ChatColor.YELLOW + money(buyPrice(p)) + " coins each");
             lore.add(ChatColor.WHITE + "Sell: " + ChatColor.RED + money(sellPrice(p)) + " coins each");
-            if (isFarmableSellItem(p.material())) lore.add(ChatColor.WHITE + "Your sell stock: " + ChatColor.AQUA + getSellStock(player, p.material()) + "/" + sellStockLimit(p.material()) + ChatColor.GRAY + " (personal 6h restock)");
-            if (!p.category().equals("bounty-maps")) lore.add(ChatColor.WHITE + "Global buy stock: " + ChatColor.AQUA + getStock(p.material()) + "/" + stockLimit(p.material()));
+            if (isFarmableSellItem(p.material())) {
+                lore.add(ChatColor.WHITE + "Your sell stock: " + ChatColor.AQUA + getSellStock(player, p.material())
+                        + "/" + sellStockLimit(p.material()) + ChatColor.GRAY + " (personal 6h restock)");
+            }
+            if (!p.category().equals("bounty-maps")) {
+                lore.add(ChatColor.WHITE + "Global buy stock: " + ChatColor.AQUA + getStock(p.material()) + "/" + stockLimit(p.material()));
+            }
             if (p.material() == Material.ELYTRA) lore.add(ChatColor.LIGHT_PURPLE + "Unlock: Visit the End first");
-            lore.add(ChatColor.GRAY + "Click to choose quantity");
-            meta.setLore(lore);
-            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "product");
-            meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, p.material().name());
-            if (p.potionType() != null) meta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
-            if (p.fireworkPower() > 0) meta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
             if (p.category().equals("bounty-maps")) {
-                String tier = switch ((p.fireworkPower() - 1) % 3) { case 0 -> "common"; case 1 -> "rare"; default -> "legendary"; };
+                String tier = switch ((p.fireworkPower() - 1) % 3) {
+                    case 0 -> "common";
+                    case 1 -> "rare";
+                    default -> "legendary";
+                };
                 String dimension = p.fireworkPower() >= 4 ? "nether" : "overworld";
-                meta.setDisplayName(ChatColor.LIGHT_PURPLE + "XZH " + Character.toUpperCase(tier.charAt(0)) + tier.substring(1) + (dimension.equals("nether") ? " Nether" : "") + " Bounty Map");
+                meta.setDisplayName(ChatColor.LIGHT_PURPLE + "XZH "
+                        + Character.toUpperCase(tier.charAt(0)) + tier.substring(1)
+                        + (dimension.equals("nether") ? " Nether" : "") + " Bounty Map");
                 lore.add(ChatColor.GRAY + "Dimension: " + (dimension.equals("nether") ? "Nether" : "Overworld"));
                 lore.add(ChatColor.GRAY + "Right-click to accept a " + tier + " bounty contract.");
                 lore.add(ChatColor.GRAY + "Bow, arrows and tracking compass supplied.");
                 lore.add(ChatColor.GRAY + "12-hour personal cooldown for this tier across both dimensions.");
                 lore.add(ChatColor.GRAY + "Time limit: " + (tier.equals("common") ? "25 minutes" : tier.equals("rare") ? "45 minutes" : "2 hours"));
                 lore.add(ChatColor.GRAY + "Hidden reward; possible profit bonus: 30–60%");
-                meta.setLore(lore);
+            }
+            lore.add(ChatColor.GRAY + "Click to choose quantity");
+            meta.setLore(lore);
+            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "product");
+            meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, p.material().name());
+            if (p.potionType() != null) {
+                meta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
+            }
+            if (p.fireworkPower() > 0) {
+                meta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
             }
             item.setItemMeta(meta);
-            inv.setItem(slot, item);
+            inv.setItem(index - start, item);
+        }
+
+        if (list.isEmpty()) {
+            add(inv, 22, Material.BARRIER, "No items in this category", "category-menu", "open");
         }
         if (page > 0) add(inv, 45, Material.ARROW, "Previous page", "category-page", category + ":" + (page - 1));
-        add(inv, 49, Material.ARROW, "Back", "back", "main");
+        add(inv, 46, Material.CHEST, "All Items", "back", "main");
+        add(inv, 47, Material.BOOKSHELF, "Categories & Services", "category-menu", "open");
+        add(inv, 48, Material.COMPASS, "Search Items", "shop-search", "prompt");
+        add(inv, 49, Material.BUNDLE, "Bank", "bank", "bank");
+        add(inv, 50, Material.NETHER_STAR, "Quests", "quests", "quests");
+        add(inv, 51, Material.PLAYER_HEAD, "Other Players' Money", "players-money", "players-money");
+        add(inv, 52, Material.BOOK, "Help", "help", "help");
         if (page + 1 < pages) add(inv, 53, Material.ARROW, "Next page", "category-page", category + ":" + (page + 1));
         player.openInventory(inv);
     }
@@ -596,6 +655,7 @@ public final class ShopManager implements Listener {
         if (level <= 31) return 5 * level - 38;
         return 9 * level - 158;
     }
+
     /** Open the shop when an official XZH physical coin is right-clicked. */
     @EventHandler
     public void onPreventNetheriteTemplateDuplication(PrepareItemCraftEvent event) {
@@ -790,6 +850,7 @@ public final class ShopManager implements Listener {
         if (action == null || value == null) return;
         switch (action) {
             case "category" -> openCategory(player, value);
+            case "category-menu" -> openCategoriesMenu(player);
             case "shop-search" -> beginShopSearch(player);
             case "search-page" -> {
                 int split = value.lastIndexOf(":");
@@ -895,7 +956,8 @@ public final class ShopManager implements Listener {
                 int quantity;
                 try { quantity = Integer.parseInt(bits[bits.length - 1]); } catch (NumberFormatException ex) { return; }
                 Product p = material == null ? null : (potionTypeName.startsWith("POWER_")
-                        ? products.stream().filter(candidate -> candidate.material() == material && candidate.fireworkPower() == Integer.parseInt(potionTypeName.substring(6))).findFirst().orElse(null)                        : (potionTypeName.equals("-") ? product(material) : potionProduct(material, potionTypeName)));
+                        ? products.stream().filter(candidate -> candidate.material() == material && candidate.fireworkPower() == Integer.parseInt(potionTypeName.substring(6))).findFirst().orElse(null)
+                        : (potionTypeName.equals("-") ? product(material) : potionProduct(material, potionTypeName)));
                 double handUnitPrice = meta.getPersistentDataContainer().getOrDefault(sellUnitPriceKey, PersistentDataType.DOUBLE, defaultSellPrice());
                 if (p == null && !action.equals("buy") && material != null)
                     p = new Product("misc", material, 0.0, action.equals("sell-hand-confirm") ? handUnitPrice : defaultSellPrice());
@@ -1194,6 +1256,7 @@ public final class ShopManager implements Listener {
                 "shop.prices." + stack.getType().name().toLowerCase(Locale.ROOT) + ".sell", defaultSellPrice());
         return validPrice(configured) ? configured : defaultSellPrice();
     }
+
     private void confirmHandSell(Player player, Inventory inv) {
         Map<Integer, Integer> sellAmounts = handSellableAmounts(player, inv);
         double total = 0.0;
@@ -1493,7 +1556,8 @@ public final class ShopManager implements Listener {
         if (name.equals("NETHERITE_UPGRADE_SMITHING_TEMPLATE")) return 500.0;
         if (name.equals("MACE")) return 900.0;
         if (name.equals("ENDER_CHEST")) return 105.0;
-        if (name.equals("TRIDENT") || name.equals("TOTEM_OF_UNDYING")) return 200.0;        if (name.equals("MILK_BUCKET")) return 10.0;
+        if (name.equals("TRIDENT") || name.equals("TOTEM_OF_UNDYING")) return 200.0;
+        if (name.equals("MILK_BUCKET")) return 10.0;
         if (p.material() == Material.FIREWORK_ROCKET) return 0.0;
         if (p.material() == Material.TNT) return Math.max(0.0, plugin.getConfig().getDouble("shop.prices.tnt.sell", 20.0));
         if (List.of("WHEAT", "CARROT", "POTATO", "BEETROOT", "MELON_SLICE", "PUMPKIN", "SUGAR_CANE", "NETHER_WART", "COCOA_BEANS").contains(name)) return 5.0 / 64.0;
@@ -1792,7 +1856,8 @@ public final class ShopManager implements Listener {
             if (item.getAmount() <= 0) player.getInventory().setItem(i, null);
         }
         return requested - remaining;
-    }    private String pretty(Material material) {
+    }
+    private String pretty(Material material) {
         return material.name().toLowerCase(Locale.ROOT).replace('_', ' ');
     }
     private String money(double amount) {
