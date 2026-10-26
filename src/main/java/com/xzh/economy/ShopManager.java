@@ -13,6 +13,7 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.block.Action;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -406,6 +407,11 @@ public final class ShopManager implements Listener {
             String searchTerm = query.length() > 48 ? query.substring(0, 48) : query;
             openSearchResults(player, searchTerm, 0);
         });
+    }
+
+    @EventHandler
+    public void onShopSearchQuit(PlayerQuitEvent event) {
+        pendingShopSearch.remove(event.getPlayer().getUniqueId());
     }
 
     private void openSearchResults(Player player, String query, int requestedPage) {
