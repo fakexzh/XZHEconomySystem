@@ -422,7 +422,7 @@ public final class QuestManager implements Listener {
         int timerMinutes = packTimerLimitMinutes(pack.id());
         lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
         add(inv, 13, pack.icon(), ChatColor.YELLOW + pack.name(), "pack-info", pack.id(), lore);
-        add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "Confirm purchase", "pack-buy", pack.id());
+        add(inv, 11, Material.SLIME_BALL, ChatColor.GREEN + "Confirm purchase", "pack-buy", pack.id());
         add(inv, 15, Material.RED_CONCRETE, ChatColor.RED + "Cancel", "back-packs", "");
         player.openInventory(inv);
     }
