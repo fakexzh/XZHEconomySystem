@@ -344,7 +344,7 @@ public final class ShopManager implements Listener {
         bankMeta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, "bank");
         bankIcon.setItemMeta(bankMeta);
         inv.setItem(29, bankIcon);
-        add(inv, 30, Material.PAPER, "Transaction History", "transition", "history");
+        add(inv, 30, Material.PAPER, "Transition", "transition", "history", List.of(ChatColor.GRAY + "Your recent shop purchases."));
         add(inv, 31, Material.PLAYER_HEAD, "Other Players' Money", "players-money", "players-money");
         add(inv, 32, Material.SCULK_SENSOR, "Death Inventory", "deathinventory", "deathinventory");
         add(inv, 34, Material.BOOK, "Help", "help", "help");
