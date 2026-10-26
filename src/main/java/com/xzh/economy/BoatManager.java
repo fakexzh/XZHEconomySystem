@@ -223,8 +223,8 @@ public final class BoatManager implements Listener {
                 ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(unitPrice * quantity) + " coins"));
         summary.setItemMeta(sm);
         inv.setItem(13, summary);
-        inv.setItem(10, quantityButton(Material.RED_CONCRETE, "−1", offer.tier(), chest, quantity, "quantity-minus"));
-        inv.setItem(16, quantityButton(Material.LIME_CONCRETE, "+1", offer.tier(), chest, quantity, "quantity-plus"));
+        inv.setItem(10, quantityButton(Material.COPPER_NUGGET, "−1", offer.tier(), chest, quantity, "quantity-minus"));
+        inv.setItem(16, quantityButton(Material.GHAST_TEAR, "+1", offer.tier(), chest, quantity, "quantity-plus"));
         inv.setItem(22, quantityButton(Material.SLIME_BALL, "Buy " + quantity, offer.tier(), chest, quantity, "quantity-buy",
                 List.of(ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(unitPrice * quantity) + " coins")));
         inv.setItem(26, quantityButton(Material.ARROW, "Back", offer.tier(), chest, quantity, "quantity-back"));
@@ -245,8 +245,8 @@ public final class BoatManager implements Listener {
                 ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(unitPrice * quantity) + " coins"));
         summary.setItemMeta(sm);
         inv.setItem(13, summary);
-        inv.setItem(10, quantityButton(Material.RED_CONCRETE, "−1", tier, false, quantity, "quantity-minus"));
-        inv.setItem(16, quantityButton(Material.LIME_CONCRETE, "+1", tier, false, quantity, "quantity-plus"));
+        inv.setItem(10, quantityButton(Material.COPPER_NUGGET, "−1", tier, false, quantity, "quantity-minus"));
+        inv.setItem(16, quantityButton(Material.GHAST_TEAR, "+1", tier, false, quantity, "quantity-plus"));
         inv.setItem(22, quantityButton(Material.SLIME_BALL, "Buy " + quantity, tier, false, quantity, "quantity-buy",
                 List.of(ChatColor.WHITE + "Total: " + ChatColor.GREEN + money(unitPrice * quantity) + " coins")));
         inv.setItem(26, quantityButton(Material.ARROW, "Back", tier, false, quantity, "quantity-back"));
