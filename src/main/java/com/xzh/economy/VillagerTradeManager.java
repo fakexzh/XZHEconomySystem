@@ -223,10 +223,13 @@ public final class VillagerTradeManager implements Listener {
                 output = new ItemStack(offer.item(), offer.amount());
             }
             if (output == null || output.getAmount() > output.getMaxStackSize()) continue;
-            // Each player gets a private merchant, so use a large limit for available offers.
-            // Cooldowns are enforced per-player and per-offer; an exhausted offer is shown as red X.
+            // Each player gets a private merchant and each offer is inherently single-use.
+            // Do not rely only on the trade event to replace recipes: if an event is missed or
+            // cannot map its recipe, Integer.MAX_VALUE would leave this offer infinitely usable.
+            // A successful trade exhausts the recipe in vanilla; the event handlers persist the
+            // two-hour cooldown and rebuild it as exhausted when the menu is reopened.
             boolean exhaustedForPlayer = used.getOrDefault(offer.id(), 0L) > now;
-            int maxUses = Integer.MAX_VALUE;
+            int maxUses = 1;
             MerchantRecipe recipe = new MerchantRecipe(output,
                     exhaustedForPlayer ? maxUses : 0, maxUses, false, 0, 0.0f);
             for (ItemStack input : inputs) recipe.addIngredient(input);
