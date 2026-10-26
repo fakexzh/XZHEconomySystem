@@ -12,6 +12,7 @@ import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.block.Action;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -55,6 +56,7 @@ public final class ShopManager implements Listener {
     private final YamlConfiguration historyData;
     private final File bountyCooldownFile;
     private final YamlConfiguration bountyCooldownData;
+    private final java.util.Set<java.util.UUID> awaitingShopSearch = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     private record Product(String category, Material material, double buy, double sell, PotionType potionType, int fireworkPower) {
         Product(String category, Material material, double buy, double sell) { this(category, material, buy, sell, null, 0); }
@@ -293,6 +295,7 @@ public final class ShopManager implements Listener {
         add(inv, 28, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
         add(inv, 29, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
         add(inv, 30, Material.POTION, "Potions", "category", "potions");
+        add(inv, 31, Material.COMPASS, "Search Items", "shop-search", "prompt", List.of(ChatColor.GRAY + "Search every shop category by item name.", ChatColor.YELLOW + "Click, then type your search in chat."));
         add(inv, 32, Material.NETHER_STAR, "Quest Packs", "quests", "quests");
         add(inv, 33, Material.NETHERITE_SWORD, "Bounty Hunt", "category", "bounty-maps");
         // Row 5: align bank, transaction history, and online players' money.
@@ -373,6 +376,74 @@ public final class ShopManager implements Listener {
         } catch (IOException ex) {
             plugin.getLogger().warning("Could not save shop purchase history: " + ex.getMessage());
         }
+    }
+
+    private void beginShopSearch(Player player) {
+        awaitingShopSearch.add(player.getUniqueId());
+        player.closeInventory();
+        player.sendMessage(ChatColor.GREEN + "XZH Shop Search " + ChatColor.GRAY + "» " + ChatColor.WHITE + "Type an item name in chat. Type " + ChatColor.YELLOW + "cancel" + ChatColor.WHITE + " to stop.");
+    }
+
+    @EventHandler
+    public void onShopSearchChat(AsyncPlayerChatEvent event) {
+        Player player = event.getPlayer();
+        if (!awaitingShopSearch.remove(player.getUniqueId())) return;
+        event.setCancelled(true);
+        String query = event.getMessage().trim();
+        if (query.equalsIgnoreCase("cancel")) {
+            player.sendMessage(ChatColor.GRAY + "Shop search cancelled.");
+            return;
+        }
+        if (query.isEmpty()) {
+            player.sendMessage(ChatColor.RED + "Search cannot be empty.");
+            return;
+        }
+        Bukkit.getScheduler().runTask(plugin, () -> openSearchResults(player, query, 0));
+    }
+
+    private void openSearchResults(Player player, String query, int requestedPage) {
+        String needle = query.toLowerCase(Locale.ROOT).replace('_', ' ').trim();
+        List<Product> matches = products.stream()
+                .filter(p -> prettyProduct(p).toLowerCase(Locale.ROOT).contains(needle)
+                        || p.material().name().toLowerCase(Locale.ROOT).replace('_', ' ').contains(needle)
+                        || p.category().toLowerCase(Locale.ROOT).replace('-', ' ').contains(needle))
+                .sorted(java.util.Comparator.comparing((Product p) -> prettyProduct(p).toLowerCase(Locale.ROOT))
+                        .thenComparing(p -> p.material().name())
+                        .thenComparing(p -> p.potionType() == null ? "" : p.potionType().name())
+                        .thenComparingInt(Product::fireworkPower))
+                .toList();
+        int pages = Math.max(1, (matches.size() + 44) / 45);
+        int page = Math.max(0, Math.min(requestedPage, pages - 1));
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP: Search " + (page + 1));
+        int start = page * 45;
+        int end = Math.min(matches.size(), start + 45);
+        for (int index = start; index < end; index++) {
+            Product p = matches.get(index);
+            ItemStack item = createStack(p, 1);
+            if (p.category().equals("bounty-maps")) item.setType(Material.NETHERITE_SWORD);
+            ItemMeta meta = item.getItemMeta();
+            meta.setDisplayName(ChatColor.YELLOW + prettyProduct(p));
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.WHITE + "Buy: " + ChatColor.YELLOW + money(buyPrice(p)) + " coins each");
+            lore.add(ChatColor.WHITE + "Sell: " + ChatColor.RED + money(sellPrice(p)) + " coins each");
+            if (isFarmableSellItem(p.material())) lore.add(ChatColor.WHITE + "Your sell stock: " + ChatColor.AQUA + getSellStock(player, p.material()) + "/" + sellStockLimit(p.material()) + ChatColor.GRAY + " (personal restock)");
+            if (!p.category().equals("bounty-maps")) lore.add(ChatColor.WHITE + "Global buy stock: " + ChatColor.AQUA + getStock(p.material()) + "/" + stockLimit(p.material()));
+            lore.add(ChatColor.GRAY + "Click to choose quantity");
+            meta.setLore(lore);
+            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "product");
+            meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, p.material().name());
+            if (p.potionType() != null) meta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
+            if (p.fireworkPower() > 0) meta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
+            item.setItemMeta(meta);
+            inv.setItem(index - start, item);
+        }
+        if (matches.isEmpty()) add(inv, 22, Material.BARRIER, "No matching items", "shop-search", "prompt",
+                List.of(ChatColor.GRAY + "No shop items matched: " + query, ChatColor.YELLOW + "Click to search again."));
+        if (page > 0) add(inv, 45, Material.ARROW, "Previous page", "search-page", query + ":" + (page - 1));
+        add(inv, 48, Material.COMPASS, "Search again", "shop-search", "prompt");
+        add(inv, 49, Material.ARROW, "Back to Shop", "back", "main");
+        if (page + 1 < pages) add(inv, 53, Material.ARROW, "Next page", "search-page", query + ":" + (page + 1));
+        player.openInventory(inv);
     }
 
     private void openCategory(Player player, String category) {
@@ -721,6 +792,14 @@ public final class ShopManager implements Listener {
         if (action == null || value == null) return;
         switch (action) {
             case "category" -> openCategory(player, value);
+            case "shop-search" -> beginShopSearch(player);
+            case "search-page" -> {
+                int split = value.lastIndexOf(":");
+                if (split > 0) {
+                    try { openSearchResults(player, value.substring(0, split), Integer.parseInt(value.substring(split + 1))); }
+                    catch (NumberFormatException ignored) { openSearchResults(player, value.substring(0, split), 0); }
+                }
+            }
             case "books" -> plugin.getBookShopManager().open(player);
             case "quests" -> plugin.getQuestManager().open(player);
             case "deathinventory" -> plugin.getDeathRecoveryManager().open(player);
