@@ -817,13 +817,27 @@ public final class QuestManager implements Listener {
     @EventHandler
     public void onPickup(PlayerAttemptPickupItemEvent event) {
         if (event.isCancelled()) return;
-        Player p = event.getPlayer();
-        if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
-        // Player-dropped items can be dropped and picked up repeatedly, so they must not
-        // count as newly collected quest items.
-        if (event.getItem().getThrower() != null) return;
-        Material material = event.getItem().getItemStack().getType();
-        incrementTarget(p, "collect:" + material.name(), event.getItem().getItemStack().getAmount());
+        Player player = event.getPlayer();
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        // Player-dropped items can be recycled, so they never count as fresh collection.
+        org.bukkit.entity.Item dropped = event.getItem();
+        if (dropped.getThrower() != null) return;
+        ItemStack originalStack = dropped.getItemStack();
+        Material material = originalStack.getType();
+        int before = originalStack.getAmount();
+
+        // This event fires on an attempt, not proof of a successful pickup. Check next tick
+        // so cancelled pickups and full-inventory attempts cannot grant quest progress.
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!player.isOnline()
+                    || player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                    || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+            int collected = dropped.isValid()
+                    ? Math.max(0, before - dropped.getItemStack().getAmount())
+                    : before;
+            if (collected > 0) incrementTarget(player, "collect:" + material.name(), collected);
+        });
     }
 
     @EventHandler
