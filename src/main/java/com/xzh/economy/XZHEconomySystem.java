@@ -459,11 +459,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                     questManager.cancelActiveQuest(player);
                     return true;
                 }
-                if (args.length == 1 && args[0].equalsIgnoreCase("deliver")) {
-                    questManager.turnInDelivery(player);
-                    return true;
-                }
-                if (args.length != 0) { tell(sender, "Usage: /quest cancel, /quest deliver or /quests"); return true; }
+                if (args.length != 0) { tell(sender, "Usage: /quest cancel or /quests"); return true; }
                 questManager.open(player);
                 return true;
             }
@@ -526,7 +522,6 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 tell(sender, "§f/loan repay §7- repay an active loan (also available in /bank)");
                 tell(sender, "§f/quests §7- buy quest packs and track progress");
                 tell(sender, "§f/quest cancel §7- cancel for its listed 20–50% refund");
-                tell(sender, "§f/quest deliver §7- turn in items for delivery contracts");
                 tell(sender, "§f/deathinventory §7- recover your last death inventory");
                 tell(sender, "§f/books §7- enchantment book shop");
                 tell(sender, "§f/kit starter §7- claim starter kit");
@@ -631,7 +626,6 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             suggestions.add("set"); suggestions.add("add");
         } else if (command.getName().equalsIgnoreCase("quest") && args.length == 1) {
             suggestions.add("cancel");
-            suggestions.add("deliver");
         } else if ((command.getName().equalsIgnoreCase("tpa") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("pay") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("sendmoney") && args.length == 1)
