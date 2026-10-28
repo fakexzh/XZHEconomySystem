@@ -173,8 +173,9 @@ public final class QuestManager implements Listener {
         String[] tiers = {"easy", "hard", "master"};
         for (int tier = 0; tier < tiers.length; tier++) {
             for (int i = 0; i < 100; i++) {
+                int currentTier = tier;
                 List<Pack> tierTemplates = basePacks.stream()
-                        .filter(template -> templateEligibleForTier(template, tier))
+                        .filter(template -> templateEligibleForTier(template, currentTier))
                         .toList();
                 Pack template = tierTemplates.get((i * 7 + tier * 11) % tierTemplates.size());
                 String id = tiers[tier] + "_" + String.format(Locale.ROOT, "%03d", i + 1);
