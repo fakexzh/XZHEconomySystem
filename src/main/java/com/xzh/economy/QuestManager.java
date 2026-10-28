@@ -173,7 +173,10 @@ public final class QuestManager implements Listener {
         String[] tiers = {"easy", "hard", "master"};
         for (int tier = 0; tier < tiers.length; tier++) {
             for (int i = 0; i < 100; i++) {
-                Pack template = basePacks.get((i * 7 + tier * 11) % basePacks.size());
+                List<Pack> tierTemplates = basePacks.stream()
+                        .filter(template -> templateEligibleForTier(template, tier))
+                        .toList();
+                Pack template = tierTemplates.get((i * 7 + tier * 11) % tierTemplates.size());
                 String id = tiers[tier] + "_" + String.format(Locale.ROOT, "%03d", i + 1);
                 int cost = tier == 0
                         ? 100 + Math.floorMod(template.cost() + i * 17, 201)
@@ -202,6 +205,17 @@ public final class QuestManager implements Listener {
             }
         }
         return List.copyOf(result);
+    }
+
+    private boolean templateEligibleForTier(Pack template, int tier) {
+        String advancement = template.advancement();
+        boolean netherOrEnd = advancement.startsWith("minecraft:nether/")
+                || advancement.equals("minecraft:story/enter_the_end")
+                || advancement.startsWith("minecraft:end/");
+        if (tier == 0) return !netherOrEnd;
+        if (tier == 1) return !advancement.equals("minecraft:story/enter_the_end")
+                && !advancement.startsWith("minecraft:end/");
+        return true;
     }
 
     private String tierOf(Pack pack) {
@@ -340,7 +354,8 @@ public final class QuestManager implements Listener {
         int secretCost = data.getInt("single-shop.secret.cost", 500);
         int secretProfit = data.getInt("single-shop.secret.profit", 2500);
         int secretRefund = data.getInt("single-shop.secret.refund-percent", 35);
-        add(inv, 10, Material.ENDER_EYE, ChatColor.LIGHT_PURPLE + "??? Secret Quest", "risk-secret-buy", "secret",
+        add(inv, 10, Material.ENDER_EYE, ChatColor.LIGHT_PURPLE + "??? Secret Quest", "risk-secret-buy",
+                Long.toString(data.getLong("single-shop.secret.next-refresh", 0L)),
             List.of(ChatColor.YELLOW + "Entry fee: " + secretCost + " coins",
                     ChatColor.GREEN + "Completion reward: " + (secretCost + secretProfit) + " coins",
                     ChatColor.GOLD + "Net profit: +" + secretProfit + " coins",
@@ -361,7 +376,8 @@ public final class QuestManager implements Listener {
             lore.add(ChatColor.GOLD + "Net profit: +" + profit + " coins");
             lore.add(ChatColor.RED + "Cancel refund: " + refund + "% (" + (cost * refund / 100) + " coins)");
             lore.add(ChatColor.GRAY + "Time limit: 60 minutes");
-            add(inv, 11 + i, offer.icon(), ChatColor.YELLOW + "Risk Contract", "risk-buy", Integer.toString(i), lore);
+            add(inv, 11 + i, offer.icon(), ChatColor.YELLOW + "Risk Contract", "risk-buy",
+                    i + ":" + data.getInt("single-shop.refresh-id", 0), lore);
         }
         int legendaryCost = data.getInt("single-shop.legendary.cost", 3000);
         int legendaryProfit = data.getInt("single-shop.legendary.profit", 8000);
@@ -477,6 +493,38 @@ public final class QuestManager implements Listener {
             plugin.tellPublic(player, ChatColor.RED + "Quest cancelled. No fee was charged.");
         }
         return true;
+    }
+
+    private void buySecretQuest(Player player, String shownVersion) {
+        long shown;
+        try { shown = Long.parseLong(shownVersion); }
+        catch (NumberFormatException ignored) { openRiskQuests(player); return; }
+        if (shown != data.getLong("single-shop.secret.next-refresh", 0L)
+                || shown <= System.currentTimeMillis()) {
+            refreshSecretQuestIfDue();
+            openRiskQuests(player);
+            plugin.tellPublic(player, ChatColor.YELLOW + "Secret offer refreshed. Check the new details.");
+            return;
+        }
+        buyRiskQuest(player, 5);
+    }
+
+    private void buyRiskOffer(Player player, String value) {
+        String[] parts = value.split(":");
+        if (parts.length != 2) { openRiskQuests(player); return; }
+        try {
+            int slot = Integer.parseInt(parts[0]);
+            int shownRefresh = Integer.parseInt(parts[1]);
+            if (shownRefresh != data.getInt("single-shop.refresh-id", 0)) {
+                refreshRiskShopIfDue();
+                openRiskQuests(player);
+                plugin.tellPublic(player, ChatColor.YELLOW + "Risk offers refreshed. Check the new details.");
+                return;
+            }
+            buyRiskQuest(player, slot);
+        } catch (NumberFormatException ignored) {
+            openRiskQuests(player);
+        }
     }
 
     private void buyRiskQuest(Player player, int offerSlot) {
@@ -1314,11 +1362,11 @@ public final class QuestManager implements Listener {
             case "section-risk" -> openRiskQuests(player);
             case "section-packs" -> openPacks(player);
             case "section-community" -> openCommunity(player);
-            case "risk-buy" -> { try { buyRiskQuest(player, Integer.parseInt(value)); } catch (NumberFormatException ignored) { } }
-            case "risk-secret-buy" -> buyRiskQuest(player, 5);
+            case "risk-buy" -> buyRiskOffer(player, value);
+            case "risk-secret-buy" -> buySecretQuest(player, value);
             case "risk-legendary-buy" -> buyLegendaryRisk(player);
             case "risk-info" -> plugin.tellPublic(player, ChatColor.AQUA + "Risk contracts refresh every 2 hours; secret quests every 30 minutes.");
-            case "single-info" -> plugin.tellPublic(player, ChatColor.AQUA + "Risk contracts refresh every 2 hours.");
+
             case "pack-tier" -> openPacks(player, value, 0);
             case "tier-locked" -> {
                 plugin.tellPublic(player, tierUnlockDescription(value));
