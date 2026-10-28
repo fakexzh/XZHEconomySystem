@@ -272,9 +272,7 @@ public final class QuestManager implements Listener {
         new RandomQuest("Melon Shipment", Material.MELON_SLICE, 110, 165, new Objective("harvest:MELON_SLICE", 192, "Harvest 192 melons")),
         new RandomQuest("Copper Ore Contract", Material.RAW_COPPER, 145, 218, new Objective("break:COPPER_ORE", 64, "Mine 64 Copper Ore")),
         new RandomQuest("Lapis Prospecting", Material.LAPIS_LAZULI, 175, 263, new Objective("break:LAPIS_ORE", 32, "Mine 32 Lapis Lazuli Ore")),
-        new RandomQuest("Redstone Extraction", Material.REDSTONE, 165, 248, new Objective("break:REDSTONE_ORE", 48, "Mine 48 Redstone Ore")),
-        new RandomQuest("Bread Delivery", Material.BREAD, 160, 224, new Objective("deliver:BREAD", 64, "Deliver 64 Bread")),
-        new RandomQuest("Iron Supply Delivery", Material.IRON_INGOT, 300, 420, new Objective("deliver:IRON_INGOT", 48, "Deliver 48 Iron Ingots"))
+        new RandomQuest("Redstone Extraction", Material.REDSTONE, 165, 248, new Objective("break:REDSTONE_ORE", 48, "Mine 48 Redstone Ore"))
     );
 
     public QuestManager(XZHEconomySystem plugin) {
@@ -476,45 +474,6 @@ public final class QuestManager implements Listener {
         add(inv, 15, Material.FIRE_CHARGE, ChatColor.RED + "Cancel", "back-packs", pack.id());
         add(inv, 22, Material.ARROW, ChatColor.WHITE + "Back to packs", "back-packs", pack.id());
         player.openInventory(inv);
-    }
-
-    public void turnInDelivery(Player player) {
-        UUID id = player.getUniqueId();
-        if (data.getString(id + ".active", "").isBlank()) {
-            plugin.tellPublic(player, ChatColor.RED + "No active delivery quest.");
-            return;
-        }
-        int objectiveCount = data.getInt(id + ".objective-count", 0);
-        boolean hasDelivery = false;
-        int totalDelivered = 0;
-        for (int i = 0; i < objectiveCount; i++) {
-            String base = id + ".objectives." + i;
-            String target = data.getString(base + ".target", "");
-            if (!target.startsWith("deliver:")) continue;
-            hasDelivery = true;
-            Material material = Material.matchMaterial(target.substring("deliver:".length()));
-            if (material == null) continue;
-            int needed = Math.max(0, data.getInt(base + ".goal", 1) - data.getInt(base + ".progress", 0));
-            int remaining = needed;
-            var inventory = player.getInventory();
-            for (int slot = 0; slot < inventory.getStorageContents().length && remaining > 0; slot++) {
-                ItemStack stack = inventory.getItem(slot);
-                if (stack == null || stack.getType() != material) continue;
-                int take = Math.min(remaining, stack.getAmount());
-                remaining -= take;
-                totalDelivered += take;
-                if (take >= stack.getAmount()) inventory.setItem(slot, null);
-                else stack.setAmount(stack.getAmount() - take);
-            }
-            int delivered = needed - remaining;
-            if (delivered > 0) {
-                incrementTarget(player, target, delivered);
-                plugin.tellPublic(player, ChatColor.GREEN + "Delivered " + ChatColor.GOLD + delivered
-                        + " " + material.name().toLowerCase(Locale.ROOT).replace('_', ' ') + ".");
-            }
-        }
-        if (!hasDelivery) plugin.tellPublic(player, ChatColor.RED + "This quest has no delivery objective.");
-        else if (totalDelivered == 0) plugin.tellPublic(player, ChatColor.YELLOW + "No required delivery items found.");
     }
 
     public boolean cancelActiveQuest(Player player) {
@@ -1296,7 +1255,6 @@ public final class QuestManager implements Listener {
     private String questCategory(RandomQuest quest) {
         String target = quest.objective().target();
         String material = target.contains(":") ? target.substring(target.indexOf(':') + 1) : target;
-        if (target.startsWith("deliver:")) return "delivery";
         if (target.startsWith("fish:")) return "fishing";
         if (target.equals("travel")) return "travel";
         if (target.startsWith("feed:") || target.startsWith("breed:")) return "farming";
