@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
@@ -42,7 +43,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
-/** Random single quests, achievement-unlocked multi-objective packs, and shared global quests. */
+/** Achievement packs, risk contracts, secret challenges, and shared Community quests. */
 public final class QuestManager implements Listener {
     private record Objective(String target, int goal, String description) {}
     private record Pack(String id, String name, Material icon, int cost, int reward, String advancement, List<Objective> objectives) {}
@@ -75,6 +76,7 @@ public final class QuestManager implements Listener {
     private final YamlConfiguration data;
     private final NamespacedKey actionKey;
     private final NamespacedKey valueKey;
+    private final NamespacedKey excludedMobKey;
     private final Random random = new Random();
     private final Map<UUID, Double> travelRemainders = new HashMap<>();
 
@@ -173,9 +175,17 @@ public final class QuestManager implements Listener {
             for (int i = 0; i < 100; i++) {
                 Pack template = basePacks.get((i * 7 + tier * 11) % basePacks.size());
                 String id = tiers[tier] + "_" + String.format(Locale.ROOT, "%03d", i + 1);
-                int cost = Math.max(tier == 0 ? 50 : tier == 1 ? 250 : 700,
-                        (int) Math.round(template.cost() * (tier == 0 ? 0.70 : tier == 1 ? 1.20 : 1.80)));
-                int reward = (int) Math.ceil(cost * (tier == 0 ? 1.45 : tier == 1 ? 1.70 : 2.0));
+                int cost = tier == 0
+                        ? 100 + Math.floorMod(template.cost() + i * 17, 201)
+                        : tier == 1
+                            ? 300 + Math.floorMod(template.cost() + i * 31, 701)
+                            : 1000 + Math.floorMod(template.cost() + i * 47, 2001);
+                int profit = tier == 0
+                        ? 30 + Math.floorMod(template.cost() + i * 13, 71)
+                        : tier == 1
+                            ? 150 + Math.floorMod(template.cost() + i * 19, 351)
+                            : 3000 + Math.floorMod(template.cost() + i * 29, 3001);
+                int reward = cost + profit;
                 double scale = tier == 0 ? 0.80 + (i % 4) * 0.10
                         : tier == 1 ? 1.10 + (i % 4) * 0.15 : 1.50 + (i % 4) * 0.20;
                 List<Objective> objectives = new ArrayList<>();
@@ -270,10 +280,11 @@ public final class QuestManager implements Listener {
         }
         actionKey = new NamespacedKey(plugin, "quest_action");
         valueKey = new NamespacedKey(plugin, "quest_value");
+        excludedMobKey = new NamespacedKey(plugin, "quest_excluded_mob");
         Bukkit.getPluginManager().registerEvents(this, plugin);
         resetEventIfNeeded();
         Bukkit.getScheduler().runTaskTimer(plugin, this::resetEventIfNeeded, 20L * 60L, 20L * 60L);
-        Bukkit.getScheduler().runTaskTimer(plugin, this::refreshSingleShopIfDue, 20L * 60L, 20L * 60L);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::refreshRiskShopIfDue, 20L * 60L, 20L * 60L);
         Bukkit.getScheduler().runTaskTimer(plugin, this::refreshSecretQuestIfDue, 20L * 60L, 20L * 60L);
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) updateHud(player);
@@ -283,7 +294,7 @@ public final class QuestManager implements Listener {
         if (!data.contains("single-shop.next-refresh")) {
             data.set("single-shop.next-refresh", 0L);
             data.set("single-shop.refresh-id", 0);
-            refreshSingleShopIfDue();
+            refreshRiskShopIfDue();
         }
     }
 
@@ -308,51 +319,64 @@ public final class QuestManager implements Listener {
 
     public void open(Player player) {
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Quests");
-        add(inv, 10, Material.WRITABLE_BOOK, ChatColor.YELLOW + "Single Quests", "section-single", "single",
-            List.of(ChatColor.GRAY + "Random challenge generated on every purchase",
-                    ChatColor.GRAY + "Shop offer refreshes every 2 hours"));
-        add(inv, 13, Material.ENCHANTED_BOOK, ChatColor.LIGHT_PURPLE + "Achievement Quest Packs", "section-packs", "packs",
-            List.of(ChatColor.GRAY + "Hard multi-objective challenges",
-                    ChatColor.GRAY + "Each locked pack explains its unlock requirement"));
-        add(inv, 16, Material.NETHER_STAR, ChatColor.GOLD + "Global Quest", "section-global", "global",
-            List.of(ChatColor.GRAY + "Everyone contributes to shared progress",
-                    ChatColor.GRAY + "Server reminders every 15 minutes"));
+        add(inv, 10, Material.ENDER_EYE, ChatColor.LIGHT_PURPLE + "Secret & Risk Quests", "section-risk", "risk",
+            List.of(ChatColor.AQUA + "Risk contracts and secret challenges",
+                    ChatColor.YELLOW + "Fees, rewards and refunds shown before purchase"));
+        add(inv, 13, Material.ENCHANTED_BOOK, ChatColor.LIGHT_PURPLE + "Achievements", "section-packs", "packs",
+            List.of(ChatColor.AQUA + "Easy · Hard · Master",
+                    ChatColor.YELLOW + "100 lifetime packs per tier"));
+        add(inv, 16, Material.NETHER_STAR, ChatColor.GOLD + "Community", "section-community", "community",
+            List.of(ChatColor.AQUA + "Shared server-wide objectives",
+                    ChatColor.YELLOW + "Rewards depend on contribution"));
         add(inv, 22, Material.ARROW, ChatColor.WHITE + "Back to Shop", "back-shop", "");
         player.openInventory(inv);
     }
 
-    private void openSingle(Player player) {
-        refreshSingleShopIfDue();
-        ensureSingleOfferDiversity();
+    private void openRiskQuests(Player player) {
+        refreshRiskShopIfDue();
         refreshSecretQuestIfDue();
-        long next = data.getLong("single-shop.next-refresh", nextRefresh(System.currentTimeMillis()));
-        long mins = Math.max(0, (next - System.currentTimeMillis()) / 60000L);
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "XZH Single Quests");
-        // Secret Quest is intentionally the first item in the menu; its 30-minute cycle is unchanged.
-        add(inv, 10, Material.ENDER_EYE, ChatColor.LIGHT_PURPLE + "??? Secret Quest", "single-secret-buy", "secret",
-            List.of(ChatColor.WHITE + "Purchase price: " + ChatColor.YELLOW + data.getInt("single-shop.secret.cost", 250) + " coins",
-                    ChatColor.WHITE + "Profit: " + ChatColor.GREEN + "+" + data.getInt("single-shop.secret.margin", 40) + "%",
-                    ChatColor.GRAY + "Objective and reward details are hidden.",
-                    ChatColor.GRAY + "Refresh in " + Math.max(0, (data.getLong("single-shop.secret.next-refresh", System.currentTimeMillis()) - System.currentTimeMillis()) / 60000L) + " minute(s)"));
+        ensureRiskOfferDetails();
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "XZH Secret & Risk Quests");
+        int secretCost = data.getInt("single-shop.secret.cost", 500);
+        int secretProfit = data.getInt("single-shop.secret.profit", 2500);
+        int secretRefund = data.getInt("single-shop.secret.refund-percent", 35);
+        add(inv, 10, Material.ENDER_EYE, ChatColor.LIGHT_PURPLE + "??? Secret Quest", "risk-secret-buy", "secret",
+            List.of(ChatColor.YELLOW + "Entry fee: " + secretCost + " coins",
+                    ChatColor.GREEN + "Completion reward: " + (secretCost + secretProfit) + " coins",
+                    ChatColor.GOLD + "Net profit: +" + secretProfit + " coins",
+                    ChatColor.RED + "Cancel refund: " + secretRefund + "% (" + (secretCost * secretRefund / 100) + " coins)",
+                    ChatColor.GRAY + "Objective hidden until accepted"));
         for (int i = 0; i < 5; i++) {
-            int poolIndex = data.getInt("single-shop.offers." + i, i % randomPool.size());
-            RandomQuest offer = randomPool.get(Math.floorMod(poolIndex, randomPool.size()));
-            int cost = offer.cost();
-            int reward = (int) Math.ceil(cost * 1.4);
+            int poolIndex = Math.floorMod(data.getInt("single-shop.offers." + i, i % randomPool.size()), randomPool.size());
+            RandomQuest offer = randomPool.get(poolIndex);
+            int goal = data.getInt("single-shop.risk-goal." + i, offer.objective().goal() * 2);
+            int cost = data.getInt("single-shop.risk-cost." + i, 500);
+            int profit = data.getInt("single-shop.risk-profit." + i, 2000);
+            int refund = data.getInt("single-shop.risk-refund-percent." + i, 30);
+            String objective = offer.objective().description().replaceFirst("\\d[\\d,]*", Integer.toString(goal));
             List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.WHITE + "Job: " + offer.name());
-            lore.add(ChatColor.AQUA + offer.objective().description());
-            lore.add(ChatColor.WHITE + "Required amount: " + offer.objective().goal());
-            lore.add(ChatColor.WHITE + "Purchase price: " + ChatColor.YELLOW + cost + " coins");
-            lore.add(ChatColor.WHITE + "Completion reward: " + ChatColor.GREEN + reward + " coins");
-            lore.add(isTimedSingle(offer) ? ChatColor.RED + "Time limit: 30 minutes" : ChatColor.GRAY + "No time limit");
-            lore.add(ChatColor.GRAY + "Refresh in " + (mins / 60) + "h " + (mins % 60) + "m");
-            add(inv, 11 + i, offer.icon(), ChatColor.YELLOW + offer.name(), "single-buy", Integer.toString(i), lore);
+            lore.add(ChatColor.AQUA + objective);
+            lore.add(ChatColor.YELLOW + "Entry fee: " + cost + " coins");
+            lore.add(ChatColor.GREEN + "Completion reward: " + (cost + profit) + " coins");
+            lore.add(ChatColor.GOLD + "Net profit: +" + profit + " coins");
+            lore.add(ChatColor.RED + "Cancel refund: " + refund + "% (" + (cost * refund / 100) + " coins)");
+            lore.add(ChatColor.GRAY + "Time limit: 60 minutes");
+            add(inv, 11 + i, offer.icon(), ChatColor.YELLOW + "Risk Contract", "risk-buy", Integer.toString(i), lore);
         }
-        add(inv, 31, Material.CLOCK, ChatColor.AQUA + "Offer refresh", "single-info", "",
-            List.of(ChatColor.WHITE + "Five regular offers refresh every 2 hours.",
-                    ChatColor.WHITE + "The secret quest refreshes every 30 minutes.",
-                    ChatColor.GRAY + "Buying a quest reveals its objective."));
+        int legendaryCost = data.getInt("single-shop.legendary.cost", 3000);
+        int legendaryProfit = data.getInt("single-shop.legendary.profit", 8000);
+        int legendaryRefund = data.getInt("single-shop.legendary.refund-percent", 25);
+        add(inv, 16, Material.NETHER_STAR, ChatColor.GOLD + "Legendary Risk", "risk-legendary-buy", "legendary",
+            List.of(ChatColor.AQUA + "Defeat the Wither and collect its Nether Star",
+                    ChatColor.YELLOW + "Entry fee: " + legendaryCost + " coins",
+                    ChatColor.GREEN + "Completion reward: " + (legendaryCost + legendaryProfit) + " coins",
+                    ChatColor.GOLD + "Net profit: +" + legendaryProfit + " coins",
+                    ChatColor.RED + "Cancel refund: " + legendaryRefund + "% (" + (legendaryCost * legendaryRefund / 100) + " coins)",
+                    ChatColor.GRAY + "Time limit: 180 minutes"));
+        add(inv, 31, Material.CLOCK, ChatColor.AQUA + "Contract refresh", "risk-info", "",
+            List.of(ChatColor.GRAY + "Risk contracts refresh every 2 hours.",
+                    ChatColor.GRAY + "Secret quests refresh every 30 minutes.",
+                    ChatColor.GRAY + "Every quest has its own cancellation refund."));
         add(inv, 49, Material.ARROW, ChatColor.WHITE + "Back", "back", "");
         player.openInventory(inv);
     }
@@ -393,7 +417,9 @@ public final class QuestManager implements Listener {
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.WHITE + "Cost: " + ChatColor.YELLOW + pack.cost() + " coins");
             lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + rewardForPack(pack) + " coins");
-            lore.add(ChatColor.WHITE + "Profit: " + ChatColor.GOLD + "+" + (rewardForPack(pack) - pack.cost()) + " coins");
+            lore.add(ChatColor.GOLD + "Net profit: +" + (rewardForPack(pack) - pack.cost()) + " coins");
+            int refundPercent = refundPercentForId(pack.id());
+            lore.add(ChatColor.RED + "Cancel refund: " + refundPercent + "% (" + (pack.cost() * refundPercent / 100) + " coins)");
             lore.add(ChatColor.WHITE + "Objectives:");
             for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + "• " + objective.description());
             lore.add(done ? ChatColor.DARK_GRAY + "COMPLETED FOR LIFE — reward already claimed"
@@ -416,8 +442,11 @@ public final class QuestManager implements Listener {
     private void confirmPack(Player player, Pack pack) {
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Confirm quest pack");
         List<String> lore = new ArrayList<>();
-        lore.add(ChatColor.WHITE + "Cost: " + pack.cost() + " coins");
-        lore.add(ChatColor.WHITE + "Reward: " + rewardForPack(pack) + " coins");
+        lore.add(ChatColor.YELLOW + "Entry fee: " + pack.cost() + " coins");
+        lore.add(ChatColor.GREEN + "Completion reward: " + rewardForPack(pack) + " coins");
+        lore.add(ChatColor.GOLD + "Net profit: +" + (rewardForPack(pack) - pack.cost()) + " coins");
+        int refundPercent = refundPercentForId(pack.id());
+        lore.add(ChatColor.RED + "Cancel refund: " + refundPercent + "% (" + (pack.cost() * refundPercent / 100) + " coins)");
         for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + objective.description());
         int timerMinutes = packTimerLimitMinutes(pack.id());
         lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
@@ -432,55 +461,101 @@ public final class QuestManager implements Listener {
         UUID id = player.getUniqueId();
         String activeId = data.getString(id + ".active", "");
         if (activeId.isBlank()) {
-            plugin.tellPublic(player, "You do not have an active quest or mission to cancel.");
+            plugin.tellPublic(player, ChatColor.RED + "No active quest to cancel.");
             return false;
         }
         int originalCost = Math.max(0, data.getInt(id + ".cost", 0));
-        int refund = originalCost / 2;
-        // Clear the active record before refunding so this purchase can never be refunded twice.
+        int refundPercent = Math.max(20, Math.min(50, data.getInt(id + ".refund-percent", 30)));
+        int refund = originalCost * refundPercent / 100;
         data.set(id.toString(), null);
         save();
         plugin.getHudManager().hideActiveQuest(player);
-        if (refund > 0) plugin.setBalance(id, plugin.getBalance(id) + refund);
-        if (originalCost > 0) {
-            plugin.tellPublic(player, "Quest cancelled. Refunded 50% of its purchase price: " + refund
-                    + " coins (original price " + originalCost + "). No completion reward was paid.");
+        if (refund > 0) {
+            deliverQuestCoins(id, refund, player, "Cancel refund");
+            plugin.tellPublic(player, ChatColor.RED + "Refund rate: " + refundPercent + "%.");
         } else {
-            plugin.tellPublic(player, "Quest cancelled. It had no purchase price, so no refund or completion reward was paid.");
+            plugin.tellPublic(player, ChatColor.RED + "Quest cancelled. No fee was charged.");
         }
         return true;
     }
 
-    private void buyRandom(Player player, int offerSlot) {
+    private void buyRiskQuest(Player player, int offerSlot) {
+        if (offerSlot == 6) { buyLegendaryRisk(player); return; }
         UUID id = player.getUniqueId();
-        if (plugin.getLoanManager().isShopPurchaseRestricted(id)) { plugin.tellPublic(player, "Your loan is overdue. Quest purchases are locked; sell eligible items and repay your debt."); return; }
-        if (!data.getString(id + ".active", "").isBlank()) { plugin.tellPublic(player, "Finish your active quest before buying another."); return; }
+        if (plugin.getLoanManager().isShopPurchaseRestricted(id)) {
+            plugin.tellPublic(player, ChatColor.RED + "Overdue loan: quest purchases are locked.");
+            return;
+        }
+        if (!data.getString(id + ".active", "").isBlank()) {
+            plugin.tellPublic(player, ChatColor.RED + "Finish your active quest first.");
+            return;
+        }
         if (offerSlot < 0 || offerSlot > 5) return;
         boolean secret = offerSlot == 5;
         if (secret) refreshSecretQuestIfDue();
         int poolIndex = Math.floorMod(data.getInt(secret ? "single-shop.secret.offer" : "single-shop.offers." + offerSlot, offerSlot), randomPool.size());
         RandomQuest template = randomPool.get(poolIndex);
-        int difficultyScale = 85 + random.nextInt(51);
-        int goal = Math.max(1, (int) Math.ceil(template.objective().goal() * difficultyScale / 100.0));
-        Objective objective = new Objective(template.objective().target(), goal, template.objective().description().replaceFirst("\\d+", Integer.toString(goal)));
-        int cost = secret ? data.getInt("single-shop.secret.cost", 250) : Math.max(50, (int) Math.round(template.cost() * (0.90 + random.nextDouble() * 0.21)));
-        int margin = secret ? data.getInt("single-shop.secret.margin", 40) : 40 + random.nextInt(21);
-        int reward = (int) Math.ceil(cost * (1.0 + margin / 100.0));
-        if (plugin.getCombinedBalance(id) < cost || !plugin.spendAvailableFunds(id, cost)) { plugin.tellPublic(player, "You need " + cost + " coins to buy this random quest."); return; }
-        String questName = template.name() + " #" + (data.getInt("single-shop.quest-sequence", 0) + 1);
-        data.set("single-shop.quest-sequence", data.getInt("single-shop.quest-sequence", 0) + 1);
-        startQuest(player, "single:" + System.currentTimeMillis(), questName, cost, reward, List.of(objective));
-        data.set(id + ".profit-margin", margin);
-        if (!secret) data.set("single-shop.offers." + offerSlot, nextOfferForSlot(offerSlot));
-        save();
-        plugin.tellPublic(player, "Started " + questName + ": " + objective.description() + ". Cost " + cost + "; reward " + reward + " coins. " + (isTimedSingle(template) ? "Time limit: 30 minutes." : "No timer."));
+        int goal = secret
+                ? data.getInt("single-shop.secret.goal", Math.max(1, template.objective().goal() * 2))
+                : data.getInt("single-shop.risk-goal." + offerSlot, Math.max(1, template.objective().goal() * 2));
+        Objective objective = new Objective(template.objective().target(), goal,
+                template.objective().description().replaceFirst("\\d[\\d,]*", Integer.toString(goal)));
+        int cost = secret ? data.getInt("single-shop.secret.cost", 500) : data.getInt("single-shop.risk-cost." + offerSlot, 500);
+        int profit = secret ? data.getInt("single-shop.secret.profit", 2500) : data.getInt("single-shop.risk-profit." + offerSlot, 2000);
+        int refundPercent = secret ? data.getInt("single-shop.secret.refund-percent", 35) : data.getInt("single-shop.risk-refund-percent." + offerSlot, 30);
+        int reward = cost + profit;
+        if (plugin.getCombinedBalance(id) < cost || !plugin.spendAvailableFunds(id, cost)) {
+            plugin.tellPublic(player, ChatColor.RED + "Not enough coins for this quest.");
+            return;
+        }
+        String questName = secret ? "Secret Quest" : "Risk Contract: " + template.name();
+        startPaidQuest(player, "risk:" + (secret ? "secret:" : "contract:") + System.currentTimeMillis(),
+                questName, cost, reward, List.of(objective), refundPercent, secret ? "secret" : "risk");
         player.closeInventory();
     }
 
-    private boolean isTimedSingle(RandomQuest quest) {
-        return quest.name().equals("Ancient Debris Search") || quest.name().equals("Raid the Fortress")
-                || quest.name().equals("Fishing for Cod") || quest.name().equals("Travel Contract")
-                || quest.name().equals("Wither Skeleton Hunt");
+    private void buyLegendaryRisk(Player player) {
+        UUID id = player.getUniqueId();
+        if (plugin.getLoanManager().isShopPurchaseRestricted(id)) {
+            plugin.tellPublic(player, ChatColor.RED + "Overdue loan: quest purchases are locked.");
+            return;
+        }
+        if (!data.getString(id + ".active", "").isBlank()) {
+            plugin.tellPublic(player, ChatColor.RED + "Finish your active quest first.");
+            return;
+        }
+        int cost = data.getInt("single-shop.legendary.cost", 3000);
+        int profit = data.getInt("single-shop.legendary.profit", 8000);
+        int refund = data.getInt("single-shop.legendary.refund-percent", 25);
+        if (plugin.getCombinedBalance(id) < cost || !plugin.spendAvailableFunds(id, cost)) {
+            plugin.tellPublic(player, ChatColor.RED + "Not enough coins for Legendary Risk.");
+            return;
+        }
+        List<Objective> objectives = List.of(
+                new Objective("kill:WITHER", 1, "Defeat the Wither"),
+                new Objective("collect:NETHER_STAR", 1, "Collect 1 Nether Star"));
+        startPaidQuest(player, "risk:legendary:" + System.currentTimeMillis(), "Legendary Risk",
+                cost, cost + profit, objectives, refund, "legendary");
+        player.closeInventory();
+    }
+
+    private void startPaidQuest(Player player, String id, String name, int cost, int reward,
+                                List<Objective> objectives, int refundPercent, String tier) {
+        startQuest(player, id, name, cost, reward, objectives);
+        String playerPath = player.getUniqueId().toString();
+        data.set(playerPath + ".refund-percent", Math.max(20, Math.min(50, refundPercent)));
+        data.set(playerPath + ".risk-tier", tier);
+        save();
+        String publicTier = switch (tier) {
+            case "easy" -> "Easy Achievement";
+            case "hard" -> "Hard Achievement";
+            case "master" -> "Master Achievement";
+            case "secret" -> "Secret Quest";
+            case "legendary" -> "Legendary Risk";
+            default -> "Risk Quest";
+        };
+        Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH] " + ChatColor.YELLOW + player.getName()
+                + ChatColor.AQUA + " accepted a " + ChatColor.LIGHT_PURPLE + publicTier + ChatColor.AQUA + ".");
     }
 
     private void buyPack(Player player, Pack pack) {
@@ -506,9 +581,11 @@ public final class QuestManager implements Listener {
             plugin.tellPublic(player, "Not enough coins for this quest pack.");
             return;
         }
-        startQuest(player, "pack:" + pack.id(), pack.name(), pack.cost(), rewardForPack(pack), pack.objectives());
+        startPaidQuest(player, "pack:" + pack.id(), pack.name(), pack.cost(), rewardForPack(pack), pack.objectives(),
+                refundPercentForId(pack.id()), tierOf(pack));
         player.closeInventory();
-        plugin.tellPublic(player, "Quest pack started: " + pack.name() + ". Complete every objective to earn " + pack.reward() + " coins.");
+        plugin.tellPublic(player, ChatColor.GREEN + "Quest accepted: " + ChatColor.YELLOW + pack.name()
+                + ChatColor.GREEN + ". Reward: " + ChatColor.GOLD + rewardForPack(pack) + " coins.");
     }
 
     private void startQuest(Player player, String id, String name, int cost, int reward, List<Objective> objectives) {
@@ -526,6 +603,8 @@ public final class QuestManager implements Listener {
             data.set(uuid + ".objectives." + i + ".progress", 0);
         }
         data.set(uuid + ".started-at", System.currentTimeMillis());
+        data.set(uuid + ".refund-percent", 30);
+        data.set(uuid + ".risk-tier", id.startsWith("risk:") ? "risk" : "achievement");
         data.set(uuid + ".warned-5m", false);
         data.set(uuid + ".warned-1m", false);
         save();
@@ -537,6 +616,12 @@ public final class QuestManager implements Listener {
         if (event.isCancelled()) return;
         Player p = event.getPlayer();
         if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        String placedKey = placedBlockKey(event.getBlock());
+        if (data.getBoolean("placed-blocks." + placedKey, false)) {
+            data.set("placed-blocks." + placedKey, null);
+            save();
+            return;
+        }
         Material material = event.getBlock().getType();
         String id = material.name();
         incrementTarget(p, "break:" + id, 1);
@@ -580,7 +665,29 @@ public final class QuestManager implements Listener {
     }
 
     @EventHandler
+    public void onBlockPlace(BlockPlaceEvent event) {
+        if (event.isCancelled()) return;
+        data.set("placed-blocks." + placedBlockKey(event.getBlockPlaced()), true);
+        save();
+    }
+
+    private String placedBlockKey(org.bukkit.block.Block block) {
+        return block.getWorld().getUID() + "_" + block.getX() + "_" + block.getY() + "_" + block.getZ();
+    }
+
+    @EventHandler
+    public void onCreatureSpawn(org.bukkit.event.entity.CreatureSpawnEvent event) {
+        org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason reason = event.getSpawnReason();
+        if (reason == org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.SPAWNER
+                || reason == org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.SPAWNER_EGG
+                || reason == org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DISPENSE_EGG) {
+            event.getEntity().getPersistentDataContainer().set(excludedMobKey, PersistentDataType.BYTE, (byte) 1);
+        }
+    }
+
+    @EventHandler
     public void onKill(EntityDeathEvent event) {
+        if (event.getEntity().getPersistentDataContainer().has(excludedMobKey, PersistentDataType.BYTE)) return;
         Player p = event.getEntity().getKiller();
         if (p == null || p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         incrementTarget(p, "kill:" + event.getEntityType().name(), 1);
@@ -594,8 +701,28 @@ public final class QuestManager implements Listener {
                 || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         ItemStack result = event.getCurrentItem();
         if (result != null && result.getType() != Material.AIR) {
-            incrementTarget(player, "collect:" + result.getType().name(), result.getAmount());
+            incrementTarget(player, "collect:" + result.getType().name(), craftedOutputAmount(event, result));
         }
+    }
+
+    private int craftedOutputAmount(CraftItemEvent event, ItemStack result) {
+        if (!event.isShiftClick()) return result.getAmount();
+        int maxCrafts = Integer.MAX_VALUE;
+        boolean hasIngredient = false;
+        for (ItemStack ingredient : event.getInventory().getMatrix()) {
+            if (ingredient == null || ingredient.getType() == Material.AIR) continue;
+            hasIngredient = true;
+            maxCrafts = Math.min(maxCrafts, ingredient.getAmount());
+        }
+        if (!hasIngredient || maxCrafts == Integer.MAX_VALUE) return result.getAmount();
+        long possible = (long) maxCrafts * result.getAmount();
+        int capacity = 0;
+        int maxStack = result.getMaxStackSize();
+        for (ItemStack item : event.getWhoClicked().getInventory().getStorageContents()) {
+            if (item == null || item.getType() == Material.AIR) capacity += maxStack;
+            else if (item.isSimilar(result)) capacity += Math.max(0, maxStack - item.getAmount());
+        }
+        return (int) Math.max(result.getAmount(), Math.min(possible, capacity));
     }
 
     @EventHandler
@@ -665,10 +792,11 @@ public final class QuestManager implements Listener {
     @EventHandler
     public void onFeed(PlayerInteractEntityEvent event) {
         if (event.isCancelled() || event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) return;
-        if (!(event.getRightClicked() instanceof Animals animal) || animal.getAge() != 0) return;
+        if (!(event.getRightClicked() instanceof Animals animal) || animal.getAge() != 0
+                || animal.getLoveModeTicks() > 0) return;
         Player player = event.getPlayer();
         ItemStack held = player.getInventory().getItemInMainHand();
-        if (held == null) return;
+        if (held == null || held.getType() == Material.AIR) return;
         Material food = held.getType();
         boolean validFeed = switch (animal.getType()) {
             case COW, SHEEP, GOAT -> food == Material.WHEAT;
@@ -677,7 +805,16 @@ public final class QuestManager implements Listener {
             case RABBIT -> food == Material.CARROT || food == Material.GOLDEN_CARROT || food == Material.DANDELION;
             default -> false;
         };
-        if (validFeed) incrementTarget(player, "feed:" + animal.getType().name(), 1);
+        if (!validFeed) return;
+        int before = held.getAmount();
+        UUID animalId = animal.getUniqueId();
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!player.isOnline() || !animal.isValid() || !animal.getUniqueId().equals(animalId)
+                    || animal.getLoveModeTicks() <= 0) return;
+            ItemStack current = player.getInventory().getItemInMainHand();
+            int after = current != null && current.getType() == food ? current.getAmount() : 0;
+            if (after < before) incrementTarget(player, "feed:" + animal.getType().name(), 1);
+        });
     }
 
     private void incrementTarget(Player player, String target, int amount) {
@@ -696,17 +833,38 @@ public final class QuestManager implements Listener {
         }
         if (!changed) return;
         if (allComplete(id)) {
-            int reward = data.getInt(id + ".reward", 0);
+            int reward = Math.max(0, data.getInt(id + ".reward", 0));
             String activeQuestId = data.getString(id + ".active", "");
+            String tier = data.getString(id + ".risk-tier", "achievement");
             if (activeQuestId.startsWith("pack:")) {
                 String packId = activeQuestId.substring("pack:".length());
                 data.set("completed-packs." + id + "." + packId, true);
-                plugin.tellPublic(player, "§6Achievement pack permanently completed: §e" + packId + "§6. It is now marked with black stained glass and cannot be repeated.");
             }
-            plugin.setBalance(id, plugin.getBalance(id) + reward);
-            plugin.tellPublic(player, "Quest completed! Reward: " + reward + " coins.");
             data.set(id.toString(), null);
+            save();
             plugin.getHudManager().hideActiveQuest(player);
+            if (reward > 0) deliverQuestCoins(id, reward, player, "Quest reward");
+            String title = switch (tier) {
+                case "easy" -> "EASY QUEST COMPLETE";
+                case "hard" -> "HARD QUEST COMPLETE";
+                case "master" -> "MASTER QUEST COMPLETE";
+                case "secret" -> "SECRET QUEST COMPLETE";
+                case "legendary" -> "LEGENDARY RISK COMPLETE";
+                default -> activeQuestId.startsWith("pack:") ? "ACHIEVEMENT COMPLETE" : "RISK QUEST COMPLETE";
+            };
+            player.sendTitle(ChatColor.GREEN + "✦ " + title + " ✦",
+                    ChatColor.GOLD + "+" + reward + " coins", 10, 60, 15);
+            String publicLabel = switch (tier) {
+                case "easy" -> "an Easy Achievement";
+                case "hard" -> "a Hard Achievement";
+                case "master" -> "a Master Achievement";
+                case "secret" -> "a Secret Quest";
+                case "legendary" -> "a Legendary Risk Quest";
+                default -> activeQuestId.startsWith("pack:") ? "an Achievement" : "a Risk Quest";
+            };
+            Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH] " + ChatColor.YELLOW + player.getName()
+                    + ChatColor.GREEN + " completed " + ChatColor.AQUA + publicLabel
+                    + ChatColor.GREEN + "! " + ChatColor.GOLD + "+" + reward + " coins");
         } else updateHud(player);
         save();
     }
@@ -725,6 +883,10 @@ public final class QuestManager implements Listener {
             if (data.getInt(base + ".progress", 0) < data.getInt(base + ".goal", 1)) return false;
         }
         return true;
+    }
+
+    private int refundPercentForId(String id) {
+        return 20 + Math.floorMod(id.hashCode(), 31);
     }
 
     private int rewardForPack(Pack pack) {
@@ -766,13 +928,8 @@ public final class QuestManager implements Listener {
 
     private long timerLimitSeconds(UUID playerId, String activeId) {
         if (activeId == null || activeId.isBlank()) return 0L;
-        if (activeId.startsWith("single:")) {
-            String questName = data.getString(playerId + ".name", "");
-            return switch (questName.replaceFirst(" #\\d+$", "")) {
-                case "Ancient Debris Search", "Raid the Fortress", "Fishing for Cod", "Travel Contract", "Wither Skeleton Hunt" -> 30L * 60L;
-                default -> 0L;
-            };
-        }
+        if (activeId.startsWith("risk:legendary:")) return 180L * 60L;
+        if (activeId.startsWith("risk:")) return 60L * 60L;
         if (!activeId.startsWith("pack:")) return 0L;
         return packTimerLimitMinutes(activeId.substring("pack:".length())) * 60L;
     }
@@ -832,7 +989,7 @@ public final class QuestManager implements Listener {
                 display, total <= 0 ? 0 : Math.min(1.0, (double) done / total));
     }
 
-    private void openGlobal(Player player) {
+    private void openCommunity(Player player) {
         resetEventIfNeeded();
         UUID id = player.getUniqueId();
         int progress = data.getInt("event.progress", 0);
@@ -840,18 +997,19 @@ public final class QuestManager implements Listener {
         int contribution = data.getInt("event.contribution." + id, 0);
         long remaining = Math.max(0L, data.getLong("event.ends-at", System.currentTimeMillis()) - System.currentTimeMillis());
         boolean completed = data.getBoolean("event.completed", false);
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Global Quest");
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Community");
         add(inv, 13, Material.NETHER_STAR, ChatColor.GOLD + data.getString("event.name", "Global Quest"), "global-info", "global",
             List.of(ChatColor.WHITE + data.getString("event.description", "Work together to complete the objective."),
-                    ChatColor.WHITE + "Shared progress: " + progress + "/" + goal,
-                    ChatColor.WHITE + "Your contribution: " + contribution,
-                    ChatColor.WHITE + "Reward: " + data.getInt("event.reward", configuredEventReward()) + " coins each",
-                    ChatColor.WHITE + "Time left: " + formatGlobalTime(remaining),
+                    ChatColor.AQUA + "Progress: " + progress + "/" + goal,
+                    ChatColor.AQUA + "Your contribution: " + contribution,
+                    ChatColor.GOLD + "Reward: up to " + data.getInt("event.reward", configuredEventReward()) + " coins",
+                    ChatColor.YELLOW + "Minimum contribution: 5%",
+                    ChatColor.YELLOW + "Time left: " + formatGlobalTime(remaining),
                     completed ? ChatColor.GREEN + "Completed! Rewards have been paid." : ChatColor.GRAY + "Contribute before the deadline to earn the reward."));
         add(inv, 11, Material.GOLD_INGOT, ChatColor.GREEN + "Contributor rewards", "global-info", "global",
-            List.of(ChatColor.WHITE + "Rewards are paid automatically when",
-                    ChatColor.WHITE + "the community completes the objective.",
-                    ChatColor.GRAY + "Only players who contributed receive a reward."));
+            List.of(ChatColor.AQUA + "Rewards are paid automatically.",
+                    ChatColor.YELLOW + "5% minimum contribution required.",
+                    ChatColor.GRAY + "Higher contribution earns more."));
         add(inv, 15, Material.ARROW, ChatColor.WHITE + "Back", "back", "");
         player.openInventory(inv);
     }
@@ -864,10 +1022,13 @@ public final class QuestManager implements Listener {
         }
         if (!target.equals(data.getString("event.target", "ore"))) return;
         int goal = Math.max(1, data.getInt("event.goal", configuredEventGoal()));
-        int progress = Math.min(goal, data.getInt("event.progress", 0) + amount);
+        int previousProgress = Math.min(goal, data.getInt("event.progress", 0));
+        int credited = Math.min(amount, Math.max(0, goal - previousProgress));
+        if (credited <= 0) return;
+        int progress = previousProgress + credited;
         data.set("event.progress", progress);
         String contributionPath = "event.contribution." + player.getUniqueId();
-        data.set(contributionPath, data.getInt(contributionPath, 0) + amount);
+        data.set(contributionPath, data.getInt(contributionPath, 0) + credited);
         save();
         if (progress >= goal) completeGlobalQuest();
     }
@@ -876,7 +1037,8 @@ public final class QuestManager implements Listener {
         if (data.getBoolean("event.completed", false)) return;
         data.set("event.completed", true);
         save();
-        int reward = data.getInt("event.reward", configuredEventReward());
+        int baseReward = data.getInt("event.reward", configuredEventReward());
+        int goal = Math.max(1, data.getInt("event.goal", configuredEventGoal()));
         org.bukkit.configuration.ConfigurationSection contributors = data.getConfigurationSection("event.contribution");
         int paid = 0;
         if (contributors != null) {
@@ -884,19 +1046,36 @@ public final class QuestManager implements Listener {
                 try {
                     UUID id = UUID.fromString(rawId);
                     int contribution = data.getInt("event.contribution." + rawId, 0);
-                    if (contribution <= 0) continue;
-                    plugin.setBalance(id, plugin.getBalance(id) + reward);
+                    String paidPath = "event.paid." + rawId;
+                    if (data.getBoolean(paidPath, false)) continue;
+                    int minimum = Math.max(1, (int) Math.ceil(goal * 0.05));
+                    if (contribution < minimum) {
+                        Player online = Bukkit.getPlayer(id);
+                        if (online != null) plugin.tellPublic(online, ChatColor.RED + "Community reward missed: contribute at least 5% next time.");
+                        continue;
+                    }
+                    String date = LocalDate.now().toString();
+                    String dailyPath = "community-claims." + date + "." + rawId;
+                    int cap = configuredEventClaims();
+                    if (cap > 0 && data.getInt(dailyPath, 0) >= cap) {
+                        Player online = Bukkit.getPlayer(id);
+                        if (online != null) plugin.tellPublic(online, ChatColor.RED + "Daily Community reward limit reached.");
+                        continue;
+                    }
+                    double share = contribution >= Math.ceil(goal * 0.20) ? 1.0
+                            : contribution >= Math.ceil(goal * 0.10) ? 0.75 : 0.50;
+                    int payout = Math.max(1, (int) Math.floor(baseReward * share));
+                    data.set(paidPath, true);
+                    data.set(dailyPath, data.getInt(dailyPath, 0) + 1);
                     Player online = Bukkit.getPlayer(id);
-                    if (online != null) plugin.tellPublic(online, "§aGlobal quest reward received: " + reward + " coins for contributing to " + data.getString("event.name", "the global quest") + ".");
+                    deliverQuestCoins(id, payout, online, "Community reward");
                     paid++;
                 } catch (IllegalArgumentException ignored) { }
             }
         }
-        Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Global Quest] " + ChatColor.GREEN
-                + data.getString("event.name", "Global Quest") + " completed! " + paid
-                + " contributor(s) received " + reward + " coins each.");
         save();
-        // A successful early completion immediately opens the next four-hour community challenge.
+        Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH] " + ChatColor.GREEN + "Community quest completed! "
+                + ChatColor.YELLOW + paid + ChatColor.GREEN + " players rewarded.");
         startNewGlobalQuest(System.currentTimeMillis(), true);
     }
 
@@ -932,24 +1111,25 @@ public final class QuestManager implements Listener {
             case "crop" -> "Harvest " + progress + "/" + goal + " Crops";
             default -> data.getString("event.description", "Complete the community objective") + " (" + progress + "/" + goal + ")";
         };
-        return "§6Global Quest: §f" + objective + " §8(" + percent + "%, " + formatGlobalTime(remaining) + ")";
+        return "§6Community: §f" + objective + " §8(" + percent + "%, " + formatGlobalTime(remaining) + ")";
     }
 
     private void broadcastGlobalProgress() {
         resetEventIfNeeded();
         if (data.getBoolean("event.completed", false)) return;
-        String message = ChatColor.GOLD + "[XZH Global Quest] " + ChatColor.YELLOW
-            + data.getString("event.name", "Global Quest") + ": " + data.getInt("event.progress", 0) + "/"
-            + data.getInt("event.goal", configuredEventGoal()) + " — "
-            + data.getString("event.description", "Help complete the community objective.")
-            + " Time left: " + formatGlobalTime(Math.max(0L, data.getLong("event.ends-at", 0L) - System.currentTimeMillis())) + ".";
-        Bukkit.broadcastMessage(message);
+        Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH] " + ChatColor.AQUA + "Community: "
+                + ChatColor.YELLOW + data.getString("event.name", "Community quest")
+                + ChatColor.AQUA + " " + data.getInt("event.progress", 0) + "/"
+                + data.getInt("event.goal", configuredEventGoal())
+                + ChatColor.GRAY + " · " + formatGlobalTime(Math.max(0L,
+                data.getLong("event.ends-at", 0L) - System.currentTimeMillis())) + " left.");
     }
 
-    private void refreshSingleShopIfDue() {
+    private void refreshRiskShopIfDue() {
         long now = System.currentTimeMillis();
         long next = data.getLong("single-shop.next-refresh", 0L);
-        if (next <= 0 || now >= next) {
+        boolean refresh = next <= 0 || now >= next;
+        if (refresh) {
             data.set("single-shop.next-refresh", nextRefresh(now));
             data.set("single-shop.refresh-id", data.getInt("single-shop.refresh-id", 0) + 1);
             List<Integer> candidates = new ArrayList<>();
@@ -965,45 +1145,49 @@ public final class QuestManager implements Listener {
                 if (choices.size() == 5) break;
                 if (!choices.contains(candidate)) choices.add(candidate);
             }
-            for (int i = 0; i < choices.size(); i++) data.set("single-shop.offers." + i, choices.get(i));
+            for (int i = 0; i < choices.size(); i++) {
+                data.set("single-shop.offers." + i, choices.get(i));
+                createRiskOfferDetails(i);
+            }
+            data.set("single-shop.legendary.cost", 2000 + random.nextInt(3001));
+            data.set("single-shop.legendary.profit", 6000 + random.nextInt(4001));
+            data.set("single-shop.legendary.refund-percent", 20 + random.nextInt(31));
             save();
-            Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Quests] Five new random single-quest offers are available!");
+        } else {
+            ensureRiskOfferDetails();
         }
     }
 
-    private void ensureSingleOfferDiversity() {
-        Set<String> categories = new HashSet<>();
-        boolean diverse = true;
-        for (int i = 0; i < 5; i++) {
-            int index = Math.floorMod(data.getInt("single-shop.offers." + i, i), randomPool.size());
-            if (!categories.add(questCategory(randomPool.get(index)))) diverse = false;
-        }
-        if (diverse) return;
-        List<Integer> candidates = new ArrayList<>();
-        for (int i = 0; i < randomPool.size(); i++) candidates.add(i);
-        Collections.shuffle(candidates, random);
-        List<Integer> choices = new ArrayList<>();
-        Set<String> used = new HashSet<>();
-        for (int candidate : candidates) {
-            if (used.add(questCategory(randomPool.get(candidate)))) choices.add(candidate);
-            if (choices.size() == 5) break;
-        }
-        for (int i = 0; i < choices.size(); i++) data.set("single-shop.offers." + i, choices.get(i));
-        save();
+    private void createRiskOfferDetails(int slot) {
+        int poolIndex = Math.floorMod(data.getInt("single-shop.offers." + slot, slot), randomPool.size());
+        RandomQuest template = randomPool.get(poolIndex);
+        double scale = 1.5 + random.nextDouble();
+        data.set("single-shop.risk-goal." + slot, Math.max(1, (int) Math.ceil(template.objective().goal() * scale)));
+        data.set("single-shop.risk-cost." + slot, 500 + random.nextInt(1001));
+        data.set("single-shop.risk-profit." + slot, 2000 + random.nextInt(4001));
+        data.set("single-shop.risk-refund-percent." + slot, 20 + random.nextInt(31));
     }
 
-    private int nextOfferForSlot(int slot) {
-        Set<String> usedCategories = new HashSet<>();
+    private void ensureRiskOfferDetails() {
+        boolean changed = false;
         for (int i = 0; i < 5; i++) {
-            if (i == slot) continue;
-            int index = Math.floorMod(data.getInt("single-shop.offers." + i, i), randomPool.size());
-            usedCategories.add(questCategory(randomPool.get(index)));
+            if (!data.contains("single-shop.risk-goal." + i)
+                    || !data.contains("single-shop.risk-cost." + i)
+                    || !data.contains("single-shop.risk-profit." + i)
+                    || !data.contains("single-shop.risk-refund-percent." + i)) {
+                createRiskOfferDetails(i);
+                changed = true;
+            }
         }
-        List<Integer> eligible = new ArrayList<>();
-        for (int i = 0; i < randomPool.size(); i++) {
-            if (!usedCategories.contains(questCategory(randomPool.get(i)))) eligible.add(i);
+        if (!data.contains("single-shop.legendary.cost")
+                || !data.contains("single-shop.legendary.profit")
+                || !data.contains("single-shop.legendary.refund-percent")) {
+            data.set("single-shop.legendary.cost", 2000 + random.nextInt(3001));
+            data.set("single-shop.legendary.profit", 6000 + random.nextInt(4001));
+            data.set("single-shop.legendary.refund-percent", 20 + random.nextInt(31));
+            changed = true;
         }
-        return eligible.isEmpty() ? random.nextInt(randomPool.size()) : eligible.get(random.nextInt(eligible.size()));
+        if (changed) save();
     }
 
     private String questCategory(RandomQuest quest) {
@@ -1031,8 +1215,12 @@ public final class QuestManager implements Listener {
     private void refreshSecretQuestNow() {
         long now = System.currentTimeMillis();
         data.set("single-shop.secret.offer", random.nextInt(randomPool.size()));
-        data.set("single-shop.secret.cost", 150 + random.nextInt(351));
-        data.set("single-shop.secret.margin", 30 + random.nextInt(51));
+        data.set("single-shop.secret.cost", 300 + random.nextInt(501));
+        data.set("single-shop.secret.profit", 1500 + random.nextInt(3501));
+        data.set("single-shop.secret.refund-percent", 20 + random.nextInt(31));
+        int secretIndex = data.getInt("single-shop.secret.offer", 0);
+        RandomQuest secretTemplate = randomPool.get(Math.floorMod(secretIndex, randomPool.size()));
+        data.set("single-shop.secret.goal", Math.max(1, (int) Math.ceil(secretTemplate.objective().goal() * (1.5 + random.nextDouble()))));
         data.set("single-shop.secret.next-refresh", ((now / (30L * 60L * 1000L)) + 1L) * (30L * 60L * 1000L));
         save();
     }
@@ -1100,9 +1288,9 @@ public final class QuestManager implements Listener {
         data.set("event.started-at", now);
         save();
         if (announce) {
-            Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Global Quest] " + ChatColor.YELLOW
-                    + "New 4-hour community quest: " + selected.name() + " — " + selected.description()
-                    + ". Reward: " + reward + " coins for each contributor. Work together before the deadline!");
+            Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH] " + ChatColor.AQUA + "New Community quest: "
+                    + ChatColor.YELLOW + selected.name() + ChatColor.GRAY + ". Rewards up to "
+                    + ChatColor.GOLD + reward + " coins" + ChatColor.GRAY + ".");
         }
     }
 
@@ -1110,9 +1298,9 @@ public final class QuestManager implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (title == null || !(title.equals("XZH Quests") || title.equals("XZH Single Quests")
+        if (title == null || !(title.equals("XZH Quests") || title.equals("XZH Secret & Risk Quests")
                 || title.startsWith("XZH Achievement Packs") || title.equals("XZH Pack Tiers") || title.startsWith("XZH Easy Packs") || title.startsWith("XZH Hard Packs") || title.startsWith("XZH Master Packs") || title.equals("Confirm quest pack")
-                || title.equals("XZH Global Quest"))) return;
+                || title.equals("XZH Community"))) return;
         event.setCancelled(true);
         ItemStack item = event.getCurrentItem();
         if (item == null || !item.hasItemMeta()) return;
@@ -1123,12 +1311,14 @@ public final class QuestManager implements Listener {
         switch (action) {
             case "close" -> player.closeInventory();
             case "back-shop" -> plugin.getShopManager().openMain(player);
-            case "section-single" -> openSingle(player);
+            case "section-risk" -> openRiskQuests(player);
             case "section-packs" -> openPacks(player);
-            case "section-global" -> openGlobal(player);
-            case "single-buy" -> { try { buyRandom(player, Integer.parseInt(value)); } catch (NumberFormatException ignored) { } }
-            case "single-secret-buy" -> buyRandom(player, 5);
-            case "single-info" -> plugin.tellPublic(player, "Five random quests are available; each purchase replaces its offer slot.");
+            case "section-community" -> openCommunity(player);
+            case "risk-buy" -> { try { buyRiskQuest(player, Integer.parseInt(value)); } catch (NumberFormatException ignored) { } }
+            case "risk-secret-buy" -> buyRiskQuest(player, 5);
+            case "risk-legendary-buy" -> buyLegendaryRisk(player);
+            case "risk-info" -> plugin.tellPublic(player, ChatColor.AQUA + "Risk contracts refresh every 2 hours; secret quests every 30 minutes.");
+            case "single-info" -> plugin.tellPublic(player, ChatColor.AQUA + "Risk contracts refresh every 2 hours.");
             case "pack-tier" -> openPacks(player, value, 0);
             case "tier-locked" -> {
                 plugin.tellPublic(player, tierUnlockDescription(value));
@@ -1164,6 +1354,60 @@ public final class QuestManager implements Listener {
         meta.getPersistentDataContainer().set(valueKey, PersistentDataType.STRING, value);
         stack.setItemMeta(meta);
         inv.setItem(slot, stack);
+    }
+
+    private void deliverQuestCoins(UUID id, int amount, Player online, String label) {
+        if (amount <= 0) return;
+        if (online == null) {
+            if (plugin.getBankManager() != null) {
+                plugin.getBankManager().setBalance(id, plugin.getBankManager().getBalance(id) + amount);
+                data.set("pending-bank-notice." + id, data.getInt("pending-bank-notice." + id, 0) + amount);
+                save();
+            } else {
+                plugin.setBalance(id, plugin.getBalance(id) + amount);
+            }
+            return;
+        }
+        if (canFitPocketBalance(online, amount)) {
+            plugin.setBalance(id, plugin.getBalance(id) + amount);
+            plugin.tellPublic(online, ChatColor.GREEN + label + " added to " + ChatColor.YELLOW + "pocket"
+                    + ChatColor.GREEN + ": " + ChatColor.GOLD + "+" + amount + " coins");
+        } else {
+            plugin.getBankManager().setBalance(id, plugin.getBankManager().getBalance(id) + amount);
+            plugin.tellPublic(online, ChatColor.YELLOW + "Inventory full. " + ChatColor.GREEN + label
+                    + " added to " + ChatColor.GOLD + "bank" + ChatColor.GREEN + ": "
+                    + ChatColor.GOLD + "+" + amount + " coins");
+        }
+    }
+
+    private boolean canFitPocketBalance(Player player, int amount) {
+        long total = Math.round(plugin.getBalance(player.getUniqueId())) + (long) amount;
+        if (total > plugin.getPocketBalanceLimit()) return false;
+        int freeSlots = 0;
+        for (ItemStack item : player.getInventory().getStorageContents()) {
+            if (item == null || item.getType() == Material.AIR || plugin.getPocketCoinManager().isCoin(item)) freeSlots++;
+        }
+        long remaining = total;
+        int requiredSlots = 0;
+        for (int denomination : new int[]{1000, 100, 10, 1}) {
+            long count = remaining / denomination;
+            remaining %= denomination;
+            requiredSlots += (int) ((count + 63L) / 64L);
+        }
+        return requiredSlots <= freeSlots;
+    }
+
+    @EventHandler
+    public void onQuestRewardJoin(org.bukkit.event.player.PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        String path = "pending-bank-notice." + player.getUniqueId();
+        int amount = data.getInt(path, 0);
+        if (amount > 0) {
+            data.set(path, null);
+            save();
+            plugin.tellPublic(player, ChatColor.GREEN + "Quest reward added to " + ChatColor.GOLD
+                    + "bank" + ChatColor.GREEN + ": " + ChatColor.GOLD + "+" + amount + " coins");
+        }
     }
 
     private int configuredEventGoal() { return Math.max(1, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.goal", 500))); }
