@@ -520,7 +520,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 if (sender.hasPermission("xzh.admin")) tell(sender, "§f/shopadmin <restock|stock> §7- manage global shop stock");
                 tell(sender, "§f/loan repay §7- repay an active loan (also available in /bank)");
                 tell(sender, "§f/quests §7- buy quest packs and track progress");
-                tell(sender, "§f/quest cancel §7- cancel an active paid quest for a 50% purchase-price refund");
+                tell(sender, "§f/quest cancel §7- cancel an active quest for its listed 20–50% refund");
                 tell(sender, "§f/deathinventory §7- recover your last death inventory");
                 tell(sender, "§f/books §7- enchantment book shop");
                 tell(sender, "§f/kit starter §7- claim starter kit");
