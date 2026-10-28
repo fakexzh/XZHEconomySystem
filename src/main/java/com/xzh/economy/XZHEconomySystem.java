@@ -91,6 +91,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     @Override
     public void onDisable() {
         if (hudManager != null) hudManager.shutdown();
+        if (questManager != null) questManager.shutdown();
         if (villagerTradeManager != null) villagerTradeManager.shutdown();
         saveBalances();
     }

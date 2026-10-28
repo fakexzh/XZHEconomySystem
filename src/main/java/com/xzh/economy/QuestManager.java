@@ -305,6 +305,8 @@ public final class QuestManager implements Listener {
         }, 20L, 20L);
         // Shared global reminder and progress broadcast every 15 minutes while the event is active.
         Bukkit.getScheduler().runTaskTimer(plugin, this::broadcastGlobalProgress, 20L * 60L * 15L, 20L * 60L * 15L);
+        // Persist placed-block anti-farming markers in batches rather than writing YAML on every placement.
+        Bukkit.getScheduler().runTaskTimer(plugin, this::save, 20L * 60L, 20L * 60L);
         if (!data.contains("single-shop.next-refresh")) {
             data.set("single-shop.next-refresh", 0L);
             data.set("single-shop.refresh-id", 0);
@@ -487,8 +489,7 @@ public final class QuestManager implements Listener {
         save();
         plugin.getHudManager().hideActiveQuest(player);
         if (refund > 0) {
-            deliverQuestCoins(id, refund, player, "Cancel refund");
-            plugin.tellPublic(player, ChatColor.RED + "Refund rate: " + refundPercent + "%.");
+            deliverQuestCoins(id, refund, player, "Cancel refund (" + refundPercent + "%)");
         } else {
             plugin.tellPublic(player, ChatColor.RED + "Quest cancelled. No fee was charged.");
         }
@@ -667,7 +668,6 @@ public final class QuestManager implements Listener {
         String placedKey = placedBlockKey(event.getBlock());
         if (data.getBoolean("placed-blocks." + placedKey, false)) {
             data.set("placed-blocks." + placedKey, null);
-            save();
             return;
         }
         Material material = event.getBlock().getType();
@@ -716,7 +716,6 @@ public final class QuestManager implements Listener {
     public void onBlockPlace(BlockPlaceEvent event) {
         if (event.isCancelled()) return;
         data.set("placed-blocks." + placedBlockKey(event.getBlockPlaced()), true);
-        save();
     }
 
     private String placedBlockKey(org.bukkit.block.Block block) {
@@ -1475,6 +1474,8 @@ public final class QuestManager implements Listener {
     }
     private int configuredEventReward() { return Math.max(100, Math.min(10000, plugin.getConfig().getInt("quests.global-event.reward", 200))); }
     private int configuredEventClaims() { return Math.max(0, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.claims-per-day", 25))); }
+
+    public void shutdown() { save(); }
 
     private void save() {
         try { data.save(file); } catch (IOException e) { plugin.getLogger().severe("Could not save quests.yml: " + e.getMessage()); }
