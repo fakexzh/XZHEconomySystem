@@ -1343,7 +1343,7 @@ public final class ShopManager implements Listener {
 
     private int getStock(Material material) {
         restockIfDue();
-        return Math.max(0, stockData.getInt("items." + material.name().toLowerCase(Locale.ROOT), stockLimit(material)));
+        return Math.max(0, Math.min(stockLimit(material), stockData.getInt("items." + material.name().toLowerCase(Locale.ROOT), stockLimit(material))));
     }
 
     private boolean isFarmableSellItem(Material material) {
