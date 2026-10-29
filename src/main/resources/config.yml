@@ -382,3 +382,7 @@ premium-boats:
     basic: 0.25
     aura: 0.34
     super: 0.46
+
+# Custom menu icons from the XZH resource pack (xzh:gui/*). Players without the pack see normal items.
+gui:
+  custom-icons: true
