@@ -230,11 +230,14 @@ public final class QuestManager implements Listener {
     }
 
     private boolean eligibleTemplate(Pack pack, int tier) {
+        int templateIndex = basePacks.indexOf(pack);
+        if (templateIndex < 0 || Math.floorMod(templateIndex, 3) != tier) return false;
         if (tier == 0) return !pack.objectives().stream().anyMatch(o -> isBossObjective(o.target()));
         for (Objective objective : pack.objectives()) {
             String target = objective.target();
             if (target.equals("break:STONE") || target.equals("break:SAND") || target.equals("break:BASALT")
-                    || target.equals("break:SOUL_SAND") || (target.startsWith("break:") && target.endsWith("_LOG"))
+                    || target.equals("break:SOUL_SAND") || target.equals("break:DEEPSLATE")
+                    || (target.startsWith("break:") && target.endsWith("_LOG"))
                     || (target.startsWith("collect:") && target.endsWith("_PLANKS"))) return false;
         }
         double minutes = estimateMinutes(pack.objectives());
@@ -284,7 +287,11 @@ public final class QuestManager implements Listener {
             if (item.equals("ANY")) return 2.0;
             return 10.0;
         }
-        if (type.equals("fish")) return 4.0;
+        if (type.equals("fish")) {
+            if (item.equals("TROPICAL_FISH")) return 0.1;
+            if (item.equals("PUFFERFISH")) return 0.5;
+            return 4.0;
+        }
         if (type.equals("harvest")) return 60.0;
         if (type.equals("travel")) return 1000.0;
         if (type.equals("breed")) return 6.0;
@@ -337,7 +344,7 @@ public final class QuestManager implements Listener {
         new RandomQuest("Monster Cleanup", Material.IRON_SWORD, 140, 196, new Objective("kill:SKELETON", 30, "Kill 30 Skeletons")),
         new RandomQuest("Food Pantry", Material.BREAD, 90, 126, new Objective("collect:BREAD", 64, "Collect 64 Bread")),
         new RandomQuest("Quartz Shipment", Material.QUARTZ, 160, 224, new Objective("collect:QUARTZ", 96, "Collect 96 Nether Quartz")),
-        new RandomQuest("Tropical Catch", Material.TROPICAL_FISH, 150, 225, new Objective("fish:TROPICAL_FISH", 8, "Catch 8 Tropical Fish")),
+        new RandomQuest("Deepwater Catch", Material.TROPICAL_FISH, 150, 225, new Objective("fish:ANY", 60, "Catch 60 fish while fishing")),
         new RandomQuest("Pufferfish Watch", Material.PUFFERFISH, 135, 203, new Objective("fish:PUFFERFISH", 10, "Catch 10 Pufferfish")),
         new RandomQuest("Cod Fishing Run", Material.FISHING_ROD, 120, 180, new Objective("fish:COD", 16, "Catch 16 Cod")),
         new RandomQuest("Potato Harvest", Material.POTATO, 100, 150, new Objective("harvest:POTATO", 128, "Harvest 128 fully grown Potato crops")),
@@ -582,7 +589,7 @@ public final class QuestManager implements Listener {
             storeRegularOffer(offerSlot, nextOffer);
         }
         save();
-        plugin.tellPublic(player, "Started " + questName + ": " + objective.description() + ". Cost " + cost + "; reward " + reward + " coins. " + (isTimedSingle(template) ? "Time limit: 30 minutes." : "No timer."));
+        plugin.tellPublic(player, "Started " + questName + ": " + objective.description() + ". Cost " + cost + "; reward " + reward + " coins. " + (isTimedSingle(template, goal) ? "Time limit: " + timerMinutes(objective.target(), goal) + " minutes." : "No timer."));
         player.closeInventory();
     }
 
