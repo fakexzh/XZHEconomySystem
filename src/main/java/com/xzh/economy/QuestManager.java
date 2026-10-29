@@ -1158,6 +1158,7 @@ public final class QuestManager implements Listener {
         ItemMeta meta = stack.getItemMeta();
         meta.setDisplayName(name);
         meta.setLore(lore);
+        GuiIcons.apply(meta, action, value, name);
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         meta.getPersistentDataContainer().set(valueKey, PersistentDataType.STRING, value);
         stack.setItemMeta(meta);
