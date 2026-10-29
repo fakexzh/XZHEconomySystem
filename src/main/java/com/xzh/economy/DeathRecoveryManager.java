@@ -294,6 +294,7 @@ public final class DeathRecoveryManager implements Listener {
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(title);
         meta.setLore(lore);
+        GuiIcons.apply(meta, action, "", title);
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         item.setItemMeta(meta);
         inv.setItem(slot, item);
