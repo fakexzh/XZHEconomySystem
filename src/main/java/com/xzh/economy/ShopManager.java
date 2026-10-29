@@ -121,7 +121,7 @@ public final class ShopManager implements Listener {
         new Product("food-raw", Material.SALMON, 6, 3.5),
         new Product("food-raw", Material.MUTTON, 7, 2.1),
         new Product("food-raw", Material.RABBIT, 7, 2.1),
-        new Product("food-raw", Material.MILK_BUCKET, 15, 10),
+        new Product("food-raw", Material.MILK_BUCKET, 60, 50),
         new Product("equipment", Material.IRON_PICKAXE, 120, 36),
         new Product("equipment", Material.DIAMOND_PICKAXE, 450, 22),
         new Product("equipment", Material.IRON_CHESTPLATE, 300, 6),
@@ -265,6 +265,7 @@ public final class ShopManager implements Listener {
         for (Material drop : List.of(Material.ROTTEN_FLESH, Material.BONE, Material.STRING, Material.FEATHER, Material.GUNPOWDER, Material.SPIDER_EYE, Material.LEATHER, Material.RABBIT_HIDE, Material.INK_SAC, Material.GLOW_INK_SAC, Material.PRISMARINE_SHARD, Material.PRISMARINE_CRYSTALS, Material.SLIME_BALL, Material.MAGMA_CREAM, Material.BLAZE_ROD, Material.GHAST_TEAR)) {
             if (products.stream().noneMatch(p -> p.material() == drop && p.potionType() == null)) products.add(new Product("essentials", drop, mobDropBuyPrice(drop), mobDropSellPrice(drop)));
         }
+        products.add(new Product("essentials", Material.BONE_MEAL, 10.0, 5.0));
         products.add(new Product("essentials", Material.TNT, 70.0, 20.0));
         // Utility, lighting, crafting stations and bookshelves live in Essentials, not Blocks.
         for (Material material : Material.values()) {
@@ -274,7 +275,7 @@ public final class ShopManager implements Listener {
             }
         }
         for (int power = 1; power <= 3; power++) {
-            double price = switch (power) { case 1 -> 8.0; case 2 -> 18.0; default -> 35.0; };
+            double price = switch (power) { case 1 -> 2.0; case 2 -> 3.0; default -> 5.0; };
             products.add(new Product("essentials", Material.FIREWORK_ROCKET, price, 0.0, null, power));
         }
         // Split the former combined equipment category into clear Armor and Tools menus.
@@ -1377,7 +1378,11 @@ public final class ShopManager implements Listener {
     private int sellStockLimit(Material material) {
         String key = "shop.sell-stock-limits." + material.name().toLowerCase(Locale.ROOT);
         int configured = plugin.getConfig().getInt(key, -1);
-        if (configured >= 0) return Math.max(200, configured);
+        if (configured >= 0) {
+            // Explicit shop stock requests may intentionally be below the normal 200-item floor.
+            if (material == Material.BONE_MEAL || material == Material.MILK_BUCKET) return configured;
+            return Math.max(200, configured);
+        }
         String n = material.name();
         if (n.equals("DRIED_KELP") || n.equals("DRIED_KELP_BLOCK")) return 200;
         if (isFarmableCommonBlock(material)) return 1000;
