@@ -1010,29 +1010,65 @@ public final class QuestManager implements Listener {
     private void completeGlobalQuest() {
         if (data.getBoolean("event.completed", false)) return;
         data.set("event.completed", true);
-        save();
-        int reward = data.getInt("event.reward", configuredEventReward());
+        int goal = Math.max(1, data.getInt("event.goal", configuredEventGoal()));
+        int pool = Math.max(100, data.getInt("event.reward", configuredEventReward()));
         org.bukkit.configuration.ConfigurationSection contributors = data.getConfigurationSection("event.contribution");
-        int paid = 0;
+        Map<UUID, Integer> eligible = new HashMap<>();
         if (contributors != null) {
             for (String rawId : contributors.getKeys(false)) {
                 try {
                     UUID id = UUID.fromString(rawId);
                     int contribution = data.getInt("event.contribution." + rawId, 0);
-                    if (contribution <= 0) continue;
-                    plugin.setBalance(id, plugin.getBalance(id) + reward);
-                    Player online = Bukkit.getPlayer(id);
-                    if (online != null) plugin.tellPublic(online, "§aGlobal quest reward received: " + reward + " coins for contributing to " + data.getString("event.name", "the global quest") + ".");
-                    paid++;
+                    if (contribution >= Math.ceil(goal * 0.05)) eligible.put(id, contribution);
                 } catch (IllegalArgumentException ignored) { }
             }
         }
+        List<Map.Entry<UUID, Integer>> ranked = new ArrayList<>(eligible.entrySet());
+        ranked.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
+        Map<UUID, Double> weights = new HashMap<>();
+        double totalWeight = 0.0;
+        for (int i = 0; i < ranked.size(); i++) {
+            Map.Entry<UUID, Integer> entry = ranked.get(i);
+            double weight = entry.getValue() * (i < 3 ? 1.25 : 1.0);
+            weights.put(entry.getKey(), weight);
+            totalWeight += weight;
+        }
+
+        int paid = 0;
+        int distributed = 0;
+        for (Map.Entry<UUID, Integer> entry : ranked) {
+            UUID id = entry.getKey();
+            if (!canReceiveGlobalPayout(id) || totalWeight <= 0.0) continue;
+            int reward = Math.max(1, (int) Math.floor(pool * weights.get(id) / totalWeight));
+            plugin.setBalance(id, plugin.getBalance(id) + reward);
+            recordGlobalPayout(id);
+            distributed += reward;
+            paid++;
+            Player online = Bukkit.getPlayer(id);
+            if (online != null) plugin.tellPublic(online, "§aGlobal quest share: " + reward + " coins for " + data.getString("event.name", "the global quest") + ".");
+        }
         Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Global Quest] " + ChatColor.GREEN
                 + data.getString("event.name", "Global Quest") + " completed! " + paid
-                + " contributor(s) received " + reward + " coins each.");
+                + " eligible contributor(s) shared a " + pool + "-coin reward pool (distributed " + distributed
+                + "). Minimum contribution: 5% of the goal; top three receive a 25% weighting bonus. Daily payout cap: 3 events.");
         save();
-        // A successful early completion immediately opens the next four-hour community challenge.
         startNewGlobalQuest(System.currentTimeMillis(), true);
+    }
+
+    private boolean canReceiveGlobalPayout(UUID id) {
+        String today = LocalDate.now().toString();
+        String path = "global-payouts." + id;
+        if (!today.equals(data.getString(path + ".date", ""))) {
+            data.set(path + ".date", today);
+            data.set(path + ".count", 0);
+        }
+        return data.getInt(path + ".count", 0) < 3;
+    }
+
+    private void recordGlobalPayout(UUID id) {
+        String path = "global-payouts." + id;
+        data.set(path + ".date", LocalDate.now().toString());
+        data.set(path + ".count", data.getInt(path + ".count", 0) + 1);
     }
 
     private String formatGlobalTime(long millis) {
