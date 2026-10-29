@@ -5,31 +5,94 @@
     "index": 0,
     "entries": [
       {
-        "threshold": 1.0,
+        "threshold": 1,
         "model": {
           "type": "minecraft:model",
           "model": "xzh:item/coin_1"
         }
       },
       {
-        "threshold": 10.0,
+        "threshold": 10,
         "model": {
           "type": "minecraft:model",
           "model": "xzh:item/coin_10"
         }
       },
       {
-        "threshold": 100.0,
+        "threshold": 100,
         "model": {
           "type": "minecraft:model",
           "model": "xzh:item/coin_100"
         }
       },
       {
-        "threshold": 1000.0,
+        "threshold": 1000,
         "model": {
           "type": "minecraft:model",
           "model": "xzh:item/coin_1000"
+        }
+      },
+      {
+        "threshold": 2001,
+        "model": {
+          "type": "minecraft:model",
+          "model": "xzh:item/shop/trade"
+        }
+      },
+      {
+        "threshold": 2002,
+        "model": {
+          "type": "minecraft:model",
+          "model": "xzh:item/shop/chest"
+        }
+      },
+      {
+        "threshold": 2003,
+        "model": {
+          "type": "minecraft:model",
+          "model": "xzh:item/shop/pouch"
+        }
+      },
+      {
+        "threshold": 2004,
+        "model": {
+          "type": "minecraft:model",
+          "model": "xzh:item/shop/ore"
+        }
+      },
+      {
+        "threshold": 2005,
+        "model": {
+          "type": "minecraft:model",
+          "model": "xzh:item/shop/blocks"
+        }
+      },
+      {
+        "threshold": 2006,
+        "model": {
+          "type": "minecraft:model",
+          "model": "xzh:item/shop/armor"
+        }
+      },
+      {
+        "threshold": 2007,
+        "model": {
+          "type": "minecraft:model",
+          "model": "xzh:item/shop/tools"
+        }
+      },
+      {
+        "threshold": 2008,
+        "model": {
+          "type": "minecraft:model",
+          "model": "xzh:item/shop/food"
+        }
+      },
+      {
+        "threshold": 2009,
+        "model": {
+          "type": "minecraft:model",
+          "model": "xzh:item/shop/magic"
         }
       }
     ],
