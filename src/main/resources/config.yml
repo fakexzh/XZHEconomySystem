@@ -88,7 +88,8 @@ shop:
     cooked_cod: 256
     cooked_salmon: 256
     egg: 256
-    milk_bucket: 256
+    milk_bucket: 20
+    bone_meal: 128
     potion: 256
     splash_potion: 256
     lingering_potion: 256
@@ -167,6 +168,7 @@ shop:
     diamond_block: 10
     tnt: 128
     firework_rocket: 256
+    milk_bucket: 20
     bread: 1000
     cooked_beef: 1000
     iron_pickaxe: 100
