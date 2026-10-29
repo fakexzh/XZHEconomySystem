@@ -1464,7 +1464,7 @@ public final class QuestManager implements Listener {
         return Math.max(100, Math.min(ceiling, (int) Math.round(varied)));
     }
     private int configuredEventReward() { return Math.max(100, Math.min(10000, plugin.getConfig().getInt("quests.global-event.reward", 200))); }
-    private int configuredEventClaims() { return Math.max(1, Math.min(100, plugin.getConfig().getInt("quests.global-event.claims-per-day", 3))); }
+    private int configuredEventClaims() { return Math.max(1, Math.min(3, plugin.getConfig().getInt("quests.global-event.claims-per-day", 3))); }
 
     private void save() {
         try { data.save(file); } catch (IOException e) { plugin.getLogger().severe("Could not save quests.yml: " + e.getMessage()); }
