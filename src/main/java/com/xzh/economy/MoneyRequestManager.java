@@ -112,6 +112,7 @@ public final class MoneyRequestManager implements Listener {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(name);
+        GuiIcons.apply(meta, action, "", name);
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         item.setItemMeta(meta);
         inv.setItem(slot, item);
