@@ -980,7 +980,7 @@ public final class QuestManager implements Listener {
             List.of(ChatColor.WHITE + data.getString("event.description", "Work together to complete the objective."),
                     ChatColor.WHITE + "Shared progress: " + progress + "/" + goal,
                     ChatColor.WHITE + "Your contribution: " + contribution,
-                    ChatColor.WHITE + "Reward: " + data.getInt("event.reward", configuredEventReward()) + " coins each",
+                    ChatColor.WHITE + "Reward pool: " + data.getInt("event.reward", configuredEventReward()) + " coins",
                     ChatColor.WHITE + "Time left: " + formatGlobalTime(remaining),
                     completed ? ChatColor.GREEN + "Completed! Rewards have been paid." : ChatColor.GRAY + "Contribute before the deadline to earn the reward."));
         add(inv, 11, Material.GOLD_INGOT, ChatColor.GREEN + "Contributor rewards", "global-info", "global",
@@ -1273,7 +1273,7 @@ public final class QuestManager implements Listener {
         if (announce) {
             Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Global Quest] " + ChatColor.YELLOW
                     + "New 4-hour community quest: " + selected.name() + " — " + selected.description()
-                    + ". Reward: " + reward + " coins for each contributor. Work together before the deadline!");
+                    + ". Shared reward pool: " + reward + " coins. Payout is based on contribution; contribute at least 5% of the goal to qualify.");
         }
     }
 
@@ -1347,7 +1347,9 @@ public final class QuestManager implements Listener {
             case "crop" -> 0.75;
             default -> 1.0;
         };
-        double base = Math.max(100.0, Math.min(5000.0, goal * effort * 2.0));
+        // This is a shared pool, not a per-player payout. A 320-ore event therefore
+        // starts around a 320-coin pool rather than minting that amount for every participant.
+        double base = Math.max(100.0, Math.min(5000.0, goal * effort));
         double varied = base * (0.80 + random.nextDouble() * 0.40);
         int ceiling = Math.max(100, Math.min(10000, plugin.getConfig().getInt("quests.global-event.reward-ceiling", 5000)));
         return Math.max(100, Math.min(ceiling, (int) Math.round(varied)));
