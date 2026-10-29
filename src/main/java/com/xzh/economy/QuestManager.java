@@ -437,15 +437,19 @@ public final class QuestManager implements Listener {
         for (int i = 0; i < 5; i++) {
             int poolIndex = data.getInt("single-shop.offers." + i, i % randomPool.size());
             RandomQuest offer = randomPool.get(Math.floorMod(poolIndex, randomPool.size()));
-            int cost = offer.cost();
-            int reward = (int) Math.ceil(cost * 1.4);
+            int cost = data.getInt("single-shop.offer-cost." + i, offer.cost());
+            int goal = data.getInt("single-shop.offer-goal." + i, offer.objective().goal());
+            int margin = data.getInt("single-shop.offer-margin." + i, 50);
+            int reward = (int) Math.ceil(cost * (1.0 + margin / 100.0));
+            Objective displayed = new Objective(offer.objective().target(), goal,
+                    offer.objective().description().replaceFirst("\\d+", Integer.toString(goal)));
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.WHITE + "Job: " + offer.name());
-            lore.add(ChatColor.AQUA + offer.objective().description());
-            lore.add(ChatColor.WHITE + "Required amount: " + offer.objective().goal());
+            lore.add(ChatColor.AQUA + displayed.description());
+            lore.add(ChatColor.WHITE + "Required amount: " + goal);
             lore.add(ChatColor.WHITE + "Purchase price: " + ChatColor.YELLOW + cost + " coins");
             lore.add(ChatColor.WHITE + "Completion reward: " + ChatColor.GREEN + reward + " coins");
-            lore.add(isTimedSingle(offer) ? ChatColor.RED + "Time limit: 30 minutes" : ChatColor.GRAY + "No time limit");
+            lore.add(isTimedSingle(offer, goal) ? ChatColor.RED + "Time limit: " + timerMinutes(offer.objective().target(), goal) + " minutes" : ChatColor.GRAY + "No time limit");
             lore.add(ChatColor.GRAY + "Refresh in " + (mins / 60) + "h " + (mins % 60) + "m");
             add(inv, 11 + i, offer.icon(), ChatColor.YELLOW + offer.name(), "single-buy", Integer.toString(i), lore);
         }
@@ -560,18 +564,23 @@ public final class QuestManager implements Listener {
         if (secret) refreshSecretQuestIfDue();
         int poolIndex = Math.floorMod(data.getInt(secret ? "single-shop.secret.offer" : "single-shop.offers." + offerSlot, offerSlot), randomPool.size());
         RandomQuest template = randomPool.get(poolIndex);
-        int difficultyScale = 85 + random.nextInt(51);
-        int goal = Math.max(1, (int) Math.ceil(template.objective().goal() * difficultyScale / 100.0));
-        Objective objective = new Objective(template.objective().target(), goal, template.objective().description().replaceFirst("\\d+", Integer.toString(goal)));
-        int cost = secret ? data.getInt("single-shop.secret.cost", 250) : Math.max(50, (int) Math.round(template.cost() * (0.90 + random.nextDouble() * 0.21)));
-        int margin = secret ? data.getInt("single-shop.secret.margin", 40) : 40 + random.nextInt(21);
+        int goal = data.getInt(secret ? "single-shop.secret.goal" : "single-shop.offer-goal." + offerSlot,
+                template.objective().goal());
+        Objective objective = new Objective(template.objective().target(), goal,
+                template.objective().description().replaceFirst("\\d+", Integer.toString(goal)));
+        int cost = data.getInt(secret ? "single-shop.secret.cost" : "single-shop.offer-cost." + offerSlot, template.cost());
+        int margin = data.getInt(secret ? "single-shop.secret.margin" : "single-shop.offer-margin." + offerSlot, 50);
         int reward = (int) Math.ceil(cost * (1.0 + margin / 100.0));
         if (plugin.getCombinedBalance(id) < cost || !plugin.spendAvailableFunds(id, cost)) { plugin.tellPublic(player, "You need " + cost + " coins to buy this random quest."); return; }
         String questName = template.name() + " #" + (data.getInt("single-shop.quest-sequence", 0) + 1);
         data.set("single-shop.quest-sequence", data.getInt("single-shop.quest-sequence", 0) + 1);
         startQuest(player, "single:" + System.currentTimeMillis(), questName, cost, reward, List.of(objective));
         data.set(id + ".profit-margin", margin);
-        if (!secret) data.set("single-shop.offers." + offerSlot, nextOfferForSlot(offerSlot));
+        if (!secret) {
+            int nextOffer = nextOfferForSlot(offerSlot);
+            data.set("single-shop.offers." + offerSlot, nextOffer);
+            storeRegularOffer(offerSlot, nextOffer);
+        }
         save();
         plugin.tellPublic(player, "Started " + questName + ": " + objective.description() + ". Cost " + cost + "; reward " + reward + " coins. " + (isTimedSingle(template) ? "Time limit: 30 minutes." : "No timer."));
         player.closeInventory();
@@ -1117,6 +1126,17 @@ public final class QuestManager implements Listener {
         Bukkit.broadcastMessage(message);
     }
 
+    private void storeRegularOffer(int slot, int poolIndex) {
+        RandomQuest offer = randomPool.get(Math.floorMod(poolIndex, randomPool.size()));
+        int scale = 85 + random.nextInt(51);
+        int goal = Math.max(1, (int) Math.ceil(offer.objective().goal() * scale / 100.0));
+        int cost = Math.max(40, (int) Math.round(offer.cost() * (0.90 + random.nextDouble() * 0.21)));
+        int margin = 40 + random.nextInt(21);
+        data.set("single-shop.offer-goal." + slot, goal);
+        data.set("single-shop.offer-cost." + slot, cost);
+        data.set("single-shop.offer-margin." + slot, margin);
+    }
+
     private void refreshSingleShopIfDue() {
         long now = System.currentTimeMillis();
         long next = data.getLong("single-shop.next-refresh", 0L);
@@ -1136,7 +1156,10 @@ public final class QuestManager implements Listener {
                 if (choices.size() == 5) break;
                 if (!choices.contains(candidate)) choices.add(candidate);
             }
-            for (int i = 0; i < choices.size(); i++) data.set("single-shop.offers." + i, choices.get(i));
+            for (int i = 0; i < choices.size(); i++) {
+                data.set("single-shop.offers." + i, choices.get(i));
+                storeRegularOffer(i, choices.get(i));
+            }
             save();
             Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Quests] New Risk & Secret challenge offers are available!");
         }
@@ -1159,7 +1182,10 @@ public final class QuestManager implements Listener {
             if (used.add(questCategory(randomPool.get(candidate)))) choices.add(candidate);
             if (choices.size() == 5) break;
         }
-        for (int i = 0; i < choices.size(); i++) data.set("single-shop.offers." + i, choices.get(i));
+        for (int i = 0; i < choices.size(); i++) {
+            data.set("single-shop.offers." + i, choices.get(i));
+            storeRegularOffer(i, choices.get(i));
+        }
         save();
     }
 
@@ -1201,9 +1227,17 @@ public final class QuestManager implements Listener {
 
     private void refreshSecretQuestNow() {
         long now = System.currentTimeMillis();
-        data.set("single-shop.secret.offer", random.nextInt(randomPool.size()));
-        data.set("single-shop.secret.cost", 150 + random.nextInt(351));
-        data.set("single-shop.secret.margin", 30 + random.nextInt(51));
+        int secretOffer = random.nextInt(randomPool.size());
+        RandomQuest hidden = randomPool.get(secretOffer);
+        int scale = 85 + random.nextInt(51);
+        int goal = Math.max(1, (int) Math.ceil(hidden.objective().goal() * scale / 100.0));
+        int cost = Math.max(40, (int) Math.round(estimateMinutes(List.of(new Objective(
+                hidden.objective().target(), goal, hidden.objective().description()))) * 20.0));
+        int margin = 30 + random.nextInt(51);
+        data.set("single-shop.secret.offer", secretOffer);
+        data.set("single-shop.secret.goal", goal);
+        data.set("single-shop.secret.cost", cost);
+        data.set("single-shop.secret.margin", margin);
         data.set("single-shop.secret.next-refresh", ((now / (30L * 60L * 1000L)) + 1L) * (30L * 60L * 1000L));
         save();
     }
