@@ -376,9 +376,22 @@ public final class ShopManager implements Listener {
     private void applyShopIcon(Inventory inv, int slot, int customModelData) {
         ItemStack icon = inv.getItem(slot);
         if (icon == null) return;
+
+        // Preserve GUI routing metadata while switching the icon to the
+        // resource-pack carrier item (gold nugget).
+        ItemMeta previous = icon.getItemMeta();
+        String displayName = previous != null && previous.hasDisplayName() ? previous.getDisplayName() : null;
+        List<String> lore = previous != null && previous.hasLore() ? previous.getLore() : null;
+        String action = previous == null ? null : previous.getPersistentDataContainer().get(actionKey, PersistentDataType.STRING);
+        String target = previous == null ? null : previous.getPersistentDataContainer().get(materialKey, PersistentDataType.STRING);
+
         icon.setType(Material.GOLD_NUGGET);
         ItemMeta meta = icon.getItemMeta();
         if (meta == null) return;
+        if (displayName != null) meta.setDisplayName(displayName);
+        if (lore != null) meta.setLore(lore);
+        if (action != null) meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
+        if (target != null) meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, target);
         meta.setCustomModelData(customModelData);
         icon.setItemMeta(meta);
         inv.setItem(slot, icon);
