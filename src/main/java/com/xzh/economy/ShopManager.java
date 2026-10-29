@@ -694,6 +694,7 @@ public final class ShopManager implements Listener {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.WHITE + title);
+        GuiIcons.apply(meta, action, value, title);
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, value);
         item.setItemMeta(meta);
