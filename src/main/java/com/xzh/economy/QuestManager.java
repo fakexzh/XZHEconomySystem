@@ -359,6 +359,8 @@ public final class QuestManager implements Listener {
         this.plugin = plugin;
         file = new File(plugin.getDataFolder(), "quests.yml");
         data = YamlConfiguration.loadConfiguration(file);
+        org.bukkit.configuration.ConfigurationSection placedSection = data.getConfigurationSection("placed-blocks");
+        if (placedSection != null) placedBlocks.addAll(placedSection.getKeys(false));
         // Remove active quests from the retired system so old easy objectives cannot persist.
         boolean migratedOldQuests = false;
         for (String root : new ArrayList<>(data.getKeys(false))) {
@@ -385,6 +387,7 @@ public final class QuestManager implements Listener {
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) updateHud(player);
         }, 20L, 20L);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::save, 20L * 60L, 20L * 60L);
         // Shared global reminder and progress broadcast every 15 minutes while the event is active.
         Bukkit.getScheduler().runTaskTimer(plugin, this::broadcastGlobalProgress, 20L * 60L * 15L, 20L * 60L * 15L);
         if (!data.contains("single-shop.next-refresh")) {
@@ -652,7 +655,10 @@ public final class QuestManager implements Listener {
 
     @EventHandler
     public void onPlace(org.bukkit.event.block.BlockPlaceEvent event) {
-        if (!event.isCancelled()) placedBlocks.add(blockKey(event.getBlockPlaced()));
+        if (event.isCancelled()) return;
+        String key = blockKey(event.getBlockPlaced());
+        placedBlocks.add(key);
+        data.set("placed-blocks." + key, true);
     }
 
     private String blockKey(org.bukkit.block.Block block) {
@@ -664,7 +670,12 @@ public final class QuestManager implements Listener {
         if (event.isCancelled()) return;
         Player p = event.getPlayer();
         if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
-        if (placedBlocks.remove(blockKey(event.getBlock()))) return;
+        String placedKey = blockKey(event.getBlock());
+        if (placedBlocks.remove(placedKey)) {
+            data.set("placed-blocks." + placedKey, null);
+            save();
+            return;
+        }
         Material material = event.getBlock().getType();
         String id = material.name();
         incrementTarget(p, "break:" + id, 1);
