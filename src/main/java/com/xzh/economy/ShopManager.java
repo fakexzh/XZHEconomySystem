@@ -327,8 +327,8 @@ public final class ShopManager implements Listener {
         add(inv, 24, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
         add(inv, 25, Material.POTION, "Potions", "category", "potions");
 
-        add(inv, 31, Material.END_CRYSTAL, "Quest Packs", "quests", "quests");
-        add(inv, 32, Material.NETHERITE_SWORD, "Bounty Hunt", "category", "bounty-maps");
+        add(inv, 28, Material.END_CRYSTAL, "Quest Packs", "quests", "quests");
+        add(inv, 29, Material.NETHERITE_SWORD, "Bounty Hunt", "category", "bounty-maps");
 
         // Account tools share one compact row; no empty spacer row or decorative filler.
         ItemStack bankIcon = plugin.getPocketCoinManager().createCoin(1000, 1);
@@ -338,13 +338,13 @@ public final class ShopManager implements Listener {
         bankMeta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "bank");
         bankMeta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, "bank");
         bankIcon.setItemMeta(bankMeta);
-        inv.setItem(28, bankIcon);
+        inv.setItem(37, bankIcon);
 
-        add(inv, 29, Material.PAPER, "Purchase History", "transition", "history",
+        add(inv, 38, Material.PAPER, "Purchase History", "transition", "history",
                 List.of(ChatColor.GRAY + "View your recent shop purchases."));
-        add(inv, 30, Material.PLAYER_HEAD, "Players' Money", "players-money", "players-money");
-        add(inv, 33, Material.SCULK_SENSOR, "Death Inventory", "deathinventory", "deathinventory");
-        add(inv, 34, Material.BOOK, "Help", "help", "help");
+        add(inv, 39, Material.PLAYER_HEAD, "Players' Money", "players-money", "players-money");
+        add(inv, 41, Material.SCULK_SENSOR, "Death Inventory", "deathinventory", "deathinventory");
+        add(inv, 42, Material.BOOK, "Help", "help", "help");
         add(inv, 40, Material.CHEST, "Hand Sell", "sell-hand", "hand",
                 List.of(ChatColor.GRAY + "Place items in the sell slots.",
                         ChatColor.GRAY + "Eligible items are totaled automatically.",
