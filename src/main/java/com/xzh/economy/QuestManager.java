@@ -11,9 +11,11 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Monster;
+import org.bukkit.entity.Item;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockDispenseEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -79,6 +81,7 @@ public final class QuestManager implements Listener {
     private final NamespacedKey valueKey;
     private final NamespacedKey excludedMobKey;
     private final NamespacedKey monsterLevelKey;
+    private final NamespacedKey dispensedItemKey;
     private final Set<String> placedBlocks = new HashSet<>();
     private final Random random = new Random();
     private final Map<UUID, Double> travelRemainders = new HashMap<>();
@@ -379,6 +382,7 @@ public final class QuestManager implements Listener {
         valueKey = new NamespacedKey(plugin, "quest_value");
         excludedMobKey = new NamespacedKey(plugin, "quest_excluded_mob");
         monsterLevelKey = new NamespacedKey("xzhsurvivalplugin", "monster_level");
+        dispensedItemKey = new NamespacedKey(plugin, "quest_dispensed_item");
         Bukkit.getPluginManager().registerEvents(this, plugin);
         resetEventIfNeeded();
         Bukkit.getScheduler().runTaskTimer(plugin, this::resetEventIfNeeded, 20L * 60L, 20L * 60L);
@@ -773,8 +777,23 @@ public final class QuestManager implements Listener {
     }
 
     @EventHandler
+    public void onDispense(BlockDispenseEvent event) {
+        Material dispensedType = event.getItem().getType();
+        org.bukkit.block.Block source = event.getBlock();
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            for (org.bukkit.entity.Entity nearby : source.getWorld().getNearbyEntities(
+                    source.getLocation().add(0.5, 0.5, 0.5), 1.5, 1.5, 1.5,
+                    entity -> entity instanceof Item item && item.getTicksLived() <= 2
+                            && item.getItemStack().getType() == dispensedType)) {
+                nearby.getPersistentDataContainer().set(dispensedItemKey, PersistentDataType.BYTE, (byte) 1);
+            }
+        });
+    }
+
+    @EventHandler
     public void onPickup(PlayerAttemptPickupItemEvent event) {
         if (event.isCancelled()) return;
+        if (event.getItem().getPersistentDataContainer().has(dispensedItemKey, PersistentDataType.BYTE)) return;
         Player p = event.getPlayer();
         if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         // Player-dropped items can be dropped and picked up repeatedly, so they must not
