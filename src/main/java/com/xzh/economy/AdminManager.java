@@ -87,7 +87,7 @@ public final class AdminManager implements Listener {
             case "stock" -> prompt(player, "stock-material", "Type a material name in chat (for example ELYTRA).");
             case "price" -> prompt(player, "price-material", "Type a material name in chat to configure its buy or sell price.");
             case "book-cooldown" -> prompt(player, "book-cooldown-player", "Type the player's exact name to reset book cooldowns.");
-            case "reload" -> { plugin.reloadConfig(); player.sendMessage(ChatColor.GREEN + "config.yml reloaded."); player.closeInventory(); }
+            case "reload" -> { plugin.reloadConfig(); GuiIcons.setEnabled(plugin.getConfig().getBoolean("gui.custom-icons", true)); player.sendMessage(ChatColor.GREEN + "config.yml reloaded."); player.closeInventory(); }
             case "clear-loan" -> prompt(player, "clear-loan-player", "Type the player's exact name to clear their loan (or cancel).");
             case "clear-recovery" -> prompt(player, "clear-recovery-player", "Type the player's exact name to discard their death recovery (or cancel).");
             case "clear-quest" -> prompt(player, "clear-quest-player", "Type the player's exact name to clear their active quest (or cancel).");
