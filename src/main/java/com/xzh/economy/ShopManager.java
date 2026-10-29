@@ -428,9 +428,13 @@ public final class ShopManager implements Listener {
         add(inv, 23, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
         add(inv, 24, Material.POTION, "Potions", "category", "potions");
         ItemStack potionIcon = inv.getItem(24);
-        org.bukkit.inventory.meta.PotionMeta potionMeta = (org.bukkit.inventory.meta.PotionMeta) potionIcon.getItemMeta();
-        potionMeta.setBasePotionType(PotionType.HEALING);
-        potionIcon.setItemMeta(potionMeta);
+        // Custom GUI icons are PAPER with a model ID, so only set potion data when
+        // the icon is still a real potion item. Casting PAPER's ItemMeta to PotionMeta
+        // throws ClassCastException and prevents /shop from opening.
+        if (potionIcon.getItemMeta() instanceof org.bukkit.inventory.meta.PotionMeta potionMeta) {
+            potionMeta.setBasePotionType(PotionType.HEALING);
+            potionIcon.setItemMeta(potionMeta);
+        }
         add(inv, 25, Material.END_CRYSTAL, "Quest Packs", "quests", "quests");
         add(inv, 26, Material.NETHERITE_SWORD, "Bounty Hunt", "category", "bounty-maps");
 
