@@ -106,6 +106,10 @@ public final class ShopManager implements Listener {
             };
         }
         return switch (action) {
+            case "quests" -> "quests";
+            case "books" -> "books";
+            case "sell-hand" -> "hand_sell";
+            case "quantity-plus-64", "quantity-minus-64" -> "max";
             case "buy", "quantity-buy" -> title != null && title.toLowerCase(Locale.ROOT).contains("confirm") ? "accept" : "buy";
             case "sell", "confirm-sell", "sell-hand-confirm", "sell-hand" -> title != null && title.toLowerCase(Locale.ROOT).contains("confirm") ? "accept" : "sell";
             case "back" -> "back";
