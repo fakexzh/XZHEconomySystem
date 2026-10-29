@@ -504,7 +504,7 @@ public final class QuestManager implements Listener {
                     : !tierUnlocked(player, tierOf(pack)) ? ChatColor.RED + tierUnlockDescription(tierOf(pack))
                     : unlocked ? ChatColor.GREEN + "UNLOCKED"
                     : ChatColor.RED + "Complete the pack's progression achievement");
-            int timerMinutes = packTimerLimitMinutes(pack.id());
+            int timerMinutes = timerMinutes(pack.objectives());
             lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes"
                     : ChatColor.GRAY + "No time limit");
             Material icon = done ? Material.BLACK_STAINED_GLASS_PANE : unlocked ? pack.icon() : Material.BARRIER;
@@ -523,7 +523,7 @@ public final class QuestManager implements Listener {
         lore.add(ChatColor.WHITE + "Cost: " + pack.cost() + " coins");
         lore.add(ChatColor.WHITE + "Reward: " + rewardForPack(pack) + " coins");
         for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + objective.description());
-        int timerMinutes = packTimerLimitMinutes(pack.id());
+        int timerMinutes = timerMinutes(pack.objectives());
         lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
         add(inv, 13, pack.icon(), ChatColor.YELLOW + pack.name(), "pack-info", pack.id(), lore);
         add(inv, 11, Material.SLIME_BALL, ChatColor.GREEN + "Confirm purchase", "pack-buy", pack.id());
@@ -587,9 +587,11 @@ public final class QuestManager implements Listener {
     }
 
     private boolean isTimedSingle(RandomQuest quest) {
-        return quest.name().equals("Ancient Debris Search") || quest.name().equals("Raid the Fortress")
-                || quest.name().equals("Fishing for Cod") || quest.name().equals("Travel Contract")
-                || quest.name().equals("Wither Skeleton Hunt");
+        return isTimedSingle(quest, quest.objective().goal());
+    }
+
+    private boolean isTimedSingle(RandomQuest quest, int goal) {
+        return timerMinutes(quest.objective().target(), goal) > 0;
     }
 
     private void buyPack(Player player, Pack pack) {
@@ -910,15 +912,35 @@ public final class QuestManager implements Listener {
 
     private long timerLimitSeconds(UUID playerId, String activeId) {
         if (activeId == null || activeId.isBlank()) return 0L;
-        if (activeId.startsWith("single:")) {
-            String questName = data.getString(playerId + ".name", "");
-            return switch (questName.replaceFirst(" #\\d+$", "")) {
-                case "Ancient Debris Search", "Raid the Fortress", "Fishing for Cod", "Travel Contract", "Wither Skeleton Hunt" -> 30L * 60L;
-                default -> 0L;
-            };
+        int count = data.getInt(playerId + ".objective-count", 0);
+        List<Objective> activeObjectives = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            String base = playerId + ".objectives." + i;
+            activeObjectives.add(new Objective(data.getString(base + ".target", ""),
+                    Math.max(1, data.getInt(base + ".goal", 1)), ""));
         }
-        if (!activeId.startsWith("pack:")) return 0L;
-        return packTimerLimitMinutes(activeId.substring("pack:".length())) * 60L;
+        return timerMinutes(activeObjectives) * 60L;
+    }
+
+    private boolean isLuckBasedTarget(String target) {
+        return target.equals("break:ANCIENT_DEBRIS") || target.equals("fish:TROPICAL_FISH")
+                || target.equals("fish:PUFFERFISH") || target.equals("collect:WITHER_SKELETON_SKULL")
+                || isBossObjective(target);
+    }
+
+    private int timerMinutes(String target, int goal) {
+        return timerMinutes(List.of(new Objective(target, goal, "")));
+    }
+
+    private int timerMinutes(List<Objective> objectives) {
+        if (objectives.isEmpty()) return 0;
+        double minutes = 0.0;
+        for (Objective objective : objectives) {
+            if (isLuckBasedTarget(objective.target())) return 0;
+            minutes += objective.goal() / Math.max(0.01, ratePerMinute(objective.target()));
+        }
+        if (minutes < 8.0) return 0;
+        return Math.max(30, (int) Math.ceil(minutes * 2.5));
     }
 
     private void expireTimedQuestIfNeeded(Player player) {
