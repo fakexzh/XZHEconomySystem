@@ -751,9 +751,25 @@ public final class QuestManager implements Listener {
                 || player.getGameMode() == org.bukkit.GameMode.CREATIVE
                 || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         ItemStack result = event.getCurrentItem();
-        if (result != null && result.getType() != Material.AIR) {
-            incrementTarget(player, "collect:" + result.getType().name(), result.getAmount());
+        if (result == null || result.getType() == Material.AIR) return;
+        Material material = result.getType();
+        if (event.getAction() == org.bukkit.event.inventory.InventoryAction.MOVE_TO_OTHER_INVENTORY) {
+            int before = countMaterial(player, material);
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                int crafted = countMaterial(player, material) - before;
+                if (crafted > 0) incrementTarget(player, "collect:" + material.name(), crafted);
+            });
+        } else {
+            incrementTarget(player, "collect:" + material.name(), result.getAmount());
         }
+    }
+
+    private int countMaterial(Player player, Material material) {
+        int total = 0;
+        for (ItemStack stack : player.getInventory().getStorageContents()) {
+            if (stack != null && stack.getType() == material) total += stack.getAmount();
+        }
+        return total;
     }
 
     @EventHandler
