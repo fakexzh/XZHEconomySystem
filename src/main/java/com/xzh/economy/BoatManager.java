@@ -349,6 +349,7 @@ public final class BoatManager implements Listener {
         ItemStack back = new ItemStack(Material.ARROW);
         ItemMeta meta = back.getItemMeta();
         meta.setDisplayName(ChatColor.GRAY + "Back");
+        GuiIcons.apply(meta, "back", "", "Back");
         meta.getPersistentDataContainer().set(tierKey, PersistentDataType.STRING, "back");
         back.setItemMeta(meta);
         return back;
