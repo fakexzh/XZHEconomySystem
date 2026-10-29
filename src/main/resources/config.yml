@@ -309,7 +309,7 @@ quests:
   global-event:
     goal: 500
     reward: 200
-    claims-per-day: 25
+    claims-per-day: 3
 
 # Configurable gameplay restrictions.
 restrictions:
