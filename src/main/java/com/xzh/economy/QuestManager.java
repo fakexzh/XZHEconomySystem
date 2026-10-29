@@ -1146,7 +1146,7 @@ public final class QuestManager implements Listener {
             data.set(path + ".date", today);
             data.set(path + ".count", 0);
         }
-        return data.getInt(path + ".count", 0) < 3;
+        return data.getInt(path + ".count", 0) < Math.max(1, configuredEventClaims());
     }
 
     private void recordGlobalPayout(UUID id) {
@@ -1464,7 +1464,7 @@ public final class QuestManager implements Listener {
         return Math.max(100, Math.min(ceiling, (int) Math.round(varied)));
     }
     private int configuredEventReward() { return Math.max(100, Math.min(10000, plugin.getConfig().getInt("quests.global-event.reward", 200))); }
-    private int configuredEventClaims() { return Math.max(0, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.claims-per-day", 25))); }
+    private int configuredEventClaims() { return Math.max(1, Math.min(100, plugin.getConfig().getInt("quests.global-event.claims-per-day", 3))); }
 
     private void save() {
         try { data.save(file); } catch (IOException e) { plugin.getLogger().severe("Could not save quests.yml: " + e.getMessage()); }
