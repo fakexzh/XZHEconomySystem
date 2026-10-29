@@ -42,6 +42,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        GuiIcons.setEnabled(getConfig().getBoolean("gui.custom-icons", true));
         migrateEconomyConfig();
         transactionsFile = new File(getDataFolder(), "transactions.log");
         balancesFile = new File(getDataFolder(), "balances.yml");
