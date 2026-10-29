@@ -76,7 +76,7 @@ public final class ShopManager implements Listener {
         Map.entry("pocket", 2037), Map.entry("player", 2038), Map.entry("warning", 2039),
         Map.entry("info", 2040), Map.entry("success", 2041), Map.entry("rarity", 2042),
         Map.entry("reward", 2043), Map.entry("timer", 2044), Map.entry("locked", 2045),
-        Map.entry("settings", 2046), Map.entry("page", 2047), Map.entry("search", 2048)
+        Map.entry("settings", 2046)
     );
 
     private void applyGuiIcon(ItemStack item, String icon) {
@@ -106,10 +106,11 @@ public final class ShopManager implements Listener {
             };
         }
         return switch (action) {
-            case "buy", "quantity-buy" -> "buy";
-            case "sell", "confirm-sell", "sell-hand-confirm", "sell-hand" -> "sell";
-            case "back", "category-back" -> "back";
-            case "category-page", "search-page" -> value != null && value.startsWith("-") ? "previous" : "next";
+            case "buy", "quantity-buy" -> title != null && title.toLowerCase(Locale.ROOT).contains("confirm") ? "accept" : "buy";
+            case "sell", "confirm-sell", "sell-hand-confirm", "sell-hand" -> title != null && title.toLowerCase(Locale.ROOT).contains("confirm") ? "accept" : "sell";
+            case "back" -> "back";
+            case "category-back" -> title != null && title.toLowerCase(Locale.ROOT).contains("cancel") ? "cancel" : "back";
+            case "category-page", "search-page" -> title != null && title.toLowerCase(Locale.ROOT).contains("previous") ? "previous" : "next";
             case "search", "search-again", "shop-search" -> "search";
             case "bank" -> "bank";
             case "transition" -> "balance";
