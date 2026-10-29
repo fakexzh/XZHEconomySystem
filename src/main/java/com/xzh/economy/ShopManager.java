@@ -111,7 +111,7 @@ public final class ShopManager implements Listener {
             case "sell-hand" -> "hand_sell";
             case "quantity-plus-64", "quantity-minus-64" -> "max";
             case "buy", "quantity-buy" -> title != null && title.toLowerCase(Locale.ROOT).contains("confirm") ? "accept" : "buy";
-            case "sell", "confirm-sell", "sell-hand-confirm", "sell-hand" -> title != null && title.toLowerCase(Locale.ROOT).contains("confirm") ? "accept" : "sell";
+            case "sell", "confirm-sell", "sell-hand-confirm" -> title != null && title.toLowerCase(Locale.ROOT).contains("confirm") ? "accept" : "sell";
             case "back" -> "back";
             case "category-back" -> title != null && title.toLowerCase(Locale.ROOT).contains("cancel") ? "cancel" : "back";
             case "category-page", "search-page" -> title != null && title.toLowerCase(Locale.ROOT).contains("previous") ? "previous" : "next";
@@ -125,7 +125,7 @@ public final class ShopManager implements Listener {
             case "quantity-minus" -> "minus1";
             case "quantity-plus-10" -> "plus10";
             case "quantity-minus-10" -> "minus10";
-            case "quantity-plus-64", "quantity-minus-64" -> "max";
+
             case "hand-sell-confirm" -> "accept";
             default -> {
                 String t = title == null ? "" : title.toLowerCase(Locale.ROOT);
