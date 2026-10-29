@@ -259,6 +259,46 @@ shop:
 
 # Quest pack stock resets to these values each server-local day.
 quests:
+  # Estimated player effort rates used to derive generated pack goals, entry fees, and rewards.
+  # Tune these without changing Java code. Values are actions per minute.
+  rates:
+    break:
+      STONE: 120
+      SAND: 120
+      BASALT: 120
+      SOUL_SAND: 80
+      DEEPSLATE: 100
+      IRON_ORE: 6
+      COPPER_ORE: 6
+      GOLD_ORE: 3
+      DIAMOND_ORE: 0.5
+      ANCIENT_DEBRIS: 0.35
+      NETHER_QUARTZ_ORE: 12
+    collect:
+      BLAZE_ROD: 3
+      ENDER_PEARL: 6
+      WITHER_SKELETON_SKULL: 0.02
+      IRON_INGOT: 8
+      GOLD_INGOT: 5
+    kill:
+      ANY: 2
+      ZOMBIE: 10
+      SKELETON: 8
+      BLAZE: 3
+      WITHER_SKELETON: 2
+      GHAST: 2
+      ENDER_DRAGON: 0.0333
+      WITHER: 0.05
+    fish:
+      ANY: 4
+      COD: 4
+      SALMON: 4
+    harvest:
+      WHEAT: 60
+      CARROT: 60
+      POTATO: 60
+    travel:
+      ANY: 1000
   pack-stock:
     beginner: 50
     miner: 30
