@@ -172,7 +172,7 @@ public final class QuestManager implements Listener {
     );
 
     // Generate 100 one-time packs per progression tier from the expanded curated objective pool.
-    private final List<Pack> packs = buildPacks();
+    private final List<Pack> packs;
 
     private List<Pack> buildPacks() {
         List<Pack> result = new ArrayList<>(300);
@@ -360,6 +360,8 @@ public final class QuestManager implements Listener {
 
     public QuestManager(XZHEconomySystem plugin) {
         this.plugin = plugin;
+        // Generate packs only after the plugin reference is available; buildPacks reads config.
+        this.packs = buildPacks();
         file = new File(plugin.getDataFolder(), "quests.yml");
         data = YamlConfiguration.loadConfiguration(file);
         org.bukkit.configuration.ConfigurationSection placedSection = data.getConfigurationSection("placed-blocks");
