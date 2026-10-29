@@ -284,6 +284,7 @@ public final class BookShopManager implements Listener {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.WHITE + name);
+        GuiIcons.apply(meta, action, value, name);
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         meta.getPersistentDataContainer().set(bookKey, PersistentDataType.STRING, value);
         item.setItemMeta(meta);
