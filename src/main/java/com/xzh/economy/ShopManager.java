@@ -350,7 +350,38 @@ public final class ShopManager implements Listener {
                         ChatColor.GRAY + "Eligible items are totaled automatically.",
                         ChatColor.YELLOW + "Confirm to sell; other items are returned."));
 
+        // Custom compact pixel-art icons from the companion resource pack.
+        applyShopIcon(inv, 4, 2001);
+        applyShopIcon(inv, 10, 2004);
+        applyShopIcon(inv, 11, 2005);
+        applyShopIcon(inv, 12, 2006);
+        applyShopIcon(inv, 13, 2007);
+        applyShopIcon(inv, 14, 2008);
+        applyShopIcon(inv, 15, 2005);
+        applyShopIcon(inv, 16, 2002);
+        applyShopIcon(inv, 19, 2001);
+        applyShopIcon(inv, 20, 2008);
+        applyShopIcon(inv, 21, 2002);
+        applyShopIcon(inv, 22, 2005);
+        applyShopIcon(inv, 23, 2009);
+        applyShopIcon(inv, 24, 2003);
+        applyShopIcon(inv, 25, 2009);
+        applyShopIcon(inv, 28, 2002);
+        applyShopIcon(inv, 29, 2001);
+        applyShopIcon(inv, 40, 2001);
+
         player.openInventory(inv);
+    }
+
+    private void applyShopIcon(Inventory inv, int slot, int customModelData) {
+        ItemStack icon = inv.getItem(slot);
+        if (icon == null) return;
+        icon.setType(Material.GOLD_NUGGET);
+        ItemMeta meta = icon.getItemMeta();
+        if (meta == null) return;
+        meta.setCustomModelData(customModelData);
+        icon.setItemMeta(meta);
+        inv.setItem(slot, icon);
     }
 
     private void openOtherPlayersMoney(Player player) {
