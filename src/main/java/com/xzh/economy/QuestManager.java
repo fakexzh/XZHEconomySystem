@@ -175,7 +175,8 @@ public final class QuestManager implements Listener {
         List<Pack> result = new ArrayList<>(300);
         String[] tiers = {"easy", "hard", "master"};
         for (int tier = 0; tier < tiers.length; tier++) {
-            List<Pack> candidates = basePacks.stream().filter(pack -> eligibleTemplate(pack, tier)).toList();
+            final int tierIndex = tier;
+            List<Pack> candidates = basePacks.stream().filter(pack -> eligibleTemplate(pack, tierIndex)).toList();
             if (candidates.isEmpty()) candidates = basePacks;
             for (int i = 0; i < 100; i++) {
                 String id = tiers[tier] + "_" + String.format(Locale.ROOT, "%03d", i + 1);
