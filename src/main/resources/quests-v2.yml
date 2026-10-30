@@ -551,15 +551,15 @@ quests:
     tier: easy
     group: D
     group-name: "Animal Husbandry"
-    name: "Turtle Beach"
+    name: "Fox Den"
     objectives:
-      - "BREED:TURTLE:3"
+      - "BREED:FOX:3"
     unlock:
       - "husbandry/breed_an_animal"
     fee: 210
     profit: 260
     timer-minutes: 0
-    icon: TURTLE_SPAWN_EGG
+    icon: SWEET_BERRIES
     tier-gate: "story/mine_stone"
   - id: E041
     tier: easy
@@ -2678,15 +2678,15 @@ quests:
     tier: hard
     group: J
     group-name: "Boss & Elite Hunts"
-    name: "Elder Guardian Slayer"
+    name: "Monument Raider"
     objectives:
-      - "KILL:ELDER_GUARDIAN:1"
+      - "KILL:GUARDIAN:40"
     unlock:
       - "story/shiny_gear"
     fee: 700
     profit: 780
     timer-minutes: 0
-    icon: SPONGE
+    icon: PRISMARINE_SHARD
     tier-gate: "nether/find_fortress"
   - id: H092
     tier: hard
@@ -2881,7 +2881,7 @@ quests:
     group-name: "End Expeditions"
     name: "Shulker Shell Hunt"
     objectives:
-      - "KILL:SHULKER:16@END"
+      - "KILL:SHULKER:6@END"
     unlock:
       - "end/find_end_city"
     fee: 2350
@@ -3150,15 +3150,15 @@ quests:
     tier: master
     group: C
     group-name: "Boss Slayers"
-    name: "Elder Guardian Trio"
+    name: "Guardian Gauntlet"
     objectives:
-      - "KILL:ELDER_GUARDIAN:3"
+      - "KILL:GUARDIAN:120"
     unlock:
       - "story/shiny_gear"
     fee: 2800
     profit: 3850
     timer-minutes: 275
-    icon: SPONGE
+    icon: PRISMARINE_CRYSTALS
     tier-gate: "end/find_end_city"
   - id: M025
     tier: master
@@ -3236,16 +3236,16 @@ quests:
     group-name: "Boss Slayers"
     name: "Boss Rush"
     objectives:
-      - "KILL:ELDER_GUARDIAN:1"
       - "KILL:WITHER:1"
       - "KILL:ENDER_DRAGON:1@END"
+      - "KILL:@ROAMING_BOSS:1"
     unlock:
       - "end/respawn_dragon"
       - "nether/summon_wither"
     fee: 3000
     profit: 5000
     timer-minutes: 0
-    icon: SPONGE
+    icon: NETHER_STAR
     tier-gate: "end/find_end_city"
   - id: M031
     tier: master
@@ -3365,7 +3365,7 @@ quests:
     group-name: "Deep Dark & Depths"
     name: "Geode Gatherer"
     objectives:
-      - "MINE:AMETHYST_CLUSTER:80"
+      - "MINE:AMETHYST_CLUSTER:48"
     unlock:
       - "story/mine_diamond"
     fee: 2100
@@ -3688,15 +3688,16 @@ quests:
     tier: master
     group: G
     group-name: "Monuments & Sea Legends"
-    name: "Elder Duo"
+    name: "Monument Sweep"
     objectives:
-      - "KILL:ELDER_GUARDIAN:2"
+      - "KILL:GUARDIAN:80"
+      - "MINE:PRISMARINE|PRISMARINE_BRICKS|DARK_PRISMARINE:64"
     unlock:
       - "story/shiny_gear"
     fee: 2800
     profit: 3600
     timer-minutes: 0
-    icon: SPONGE
+    icon: PRISMARINE_BRICKS
     tier-gate: "end/find_end_city"
   - id: M063
     tier: master
@@ -3704,7 +3705,7 @@ quests:
     group-name: "Monuments & Sea Legends"
     name: "Sponge Collector"
     objectives:
-      - "MINE:WET_SPONGE|SPONGE:24"
+      - "MINE:WET_SPONGE|SPONGE:16"
     unlock:
       - "story/shiny_gear"
     fee: 2550
@@ -3947,7 +3948,7 @@ quests:
     name: "Dimension Hopper"
     objectives:
       - "MINE:ANCIENT_DEBRIS:8@NETHER"
-      - "KILL:SHULKER:8@END"
+      - "KILL:SHULKER:4@END"
       - "FISH:ANY:100@OVERWORLD"
     unlock:
       - "end/find_end_city"
@@ -4148,7 +4149,7 @@ quests:
     group-name: "Legendary Gauntlets"
     name: "End Game Gauntlet"
     objectives:
-      - "KILL:SHULKER:12@END"
+      - "KILL:SHULKER:5@END"
       - "LOOT:chests/end_city_treasure:6"
       - "KILL:ENDERMAN:40@END"
     unlock:
@@ -4210,9 +4211,8 @@ quests:
     group-name: "Legendary Gauntlets"
     name: "Ocean Overlord"
     objectives:
-      - "KILL:ELDER_GUARDIAN:2"
-      - "KILL:GUARDIAN:60"
-      - "MINE:SPONGE|WET_SPONGE:16"
+      - "KILL:GUARDIAN:100"
+      - "MINE:SPONGE|WET_SPONGE:10"
     unlock:
       - "story/shiny_gear"
     fee: 2800
@@ -4260,7 +4260,7 @@ quests:
     objectives:
       - "KILL:ENDER_DRAGON:1@END"
       - "KILL:WITHER:1"
-      - "KILL:ELDER_GUARDIAN:1"
+      - "KILL:@ROAMING_BOSS:1"
       - "KILL:WARDEN:1"
     unlock:
       - "end/respawn_dragon"
