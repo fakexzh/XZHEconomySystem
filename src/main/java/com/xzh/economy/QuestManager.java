@@ -923,6 +923,7 @@ public final class QuestManager implements Listener {
         Player player = event.getPlayer();
         if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
                 || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        data.set("activity." + player.getUniqueId(), System.currentTimeMillis());
         Material type = event.getHarvestedBlock().getType();
         if (type == Material.SWEET_BERRY_BUSH) {
             incrementTarget(player, "harvest:SWEET_BERRY_BUSH", 1);
