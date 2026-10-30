@@ -255,7 +255,7 @@ public final class PetManager implements Listener {
             if (hand.getAmount() <= 1) event.getPlayer().getInventory().setItem(event.getHand(), null);
             else hand.setAmount(hand.getAmount() - 1);
             event.getPlayer().sendMessage("§8[§dPET§8] §fYour pet is now named " + customName + ".");
-            event.getPlayer().playSound(entity.getLocation(), Sound.ITEM_NAME_TAG, 0.7f, 1.1f);
+            event.getPlayer().playSound(entity.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.7f, 1.1f);
             return;
         }
         event.setCancelled(true);
@@ -352,7 +352,7 @@ public final class PetManager implements Listener {
             String variant = activePets.getString(path + ".variant", "NORMAL");
             boolean sitting = activePets.getBoolean(path + ".sitting", false);
             String savedName = activePets.getString(path + ".name");
-            boolean customName = activePets.getBoolean(path + ".customName", false);
+            boolean customName = activePets.getInt(path + ".customName", 0) != 0;
 
             // A hard crash may have left the original entity in the world. Remove it by its stable identity first.
             for (org.bukkit.World world : Bukkit.getWorlds()) {
