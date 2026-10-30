@@ -17,8 +17,8 @@ import java.util.Set;
 /** Strict loader for the approved, CSV-derived 300-entry quest catalogue. */
 final class QuestCatalogue {
     record Entry(String id, String tier, String group, String groupName, String name,
-                 List<String> objectives, List<String> unlock, int fee, int profit,
-                 int timerMinutes, Material icon, String tierGate) {
+                 List<String> objectives, List<QuestObjectiveSpec> parsedObjectives, List<String> unlock,
+                 int fee, int profit, int timerMinutes, Material icon, String tierGate) {
         int reward() { return fee + profit; }
     }
 
@@ -57,8 +57,9 @@ final class QuestCatalogue {
                 List<String> objectives = strings(q.get("objectives"));
                 List<String> unlock = strings(q.get("unlock"));
                 if (objectives.isEmpty()) throw new IllegalStateException("Quest " + id + " has no objectives");
+                List<QuestObjectiveSpec> parsedObjectives = new ArrayList<>(objectives.size());
                 for (String objective : objectives) {
-                    try { QuestObjectiveSpec.parse(objective); }
+                    try { parsedObjectives.add(QuestObjectiveSpec.parse(objective)); }
                     catch (IllegalArgumentException ex) {
                         throw new IllegalStateException("Invalid objective grammar in " + id + ": " + ex.getMessage(), ex);
                     }
@@ -74,8 +75,8 @@ final class QuestCatalogue {
                 Material icon = Material.matchMaterial(required(q, "icon"));
                 if (icon == null || !icon.isItem()) throw new IllegalStateException("Invalid item icon in " + id);
                 String gate = required(q, "tier-gate");
-                loaded.add(new Entry(id, tier, group, groupName, name, objectives, unlock,
-                        fee, profit, timer, icon, gate));
+                loaded.add(new Entry(id, tier, group, groupName, name, List.copyOf(objectives),
+                        List.copyOf(parsedObjectives), unlock, fee, profit, timer, icon, gate));
             }
             if (tierCounts[0] != 100 || tierCounts[1] != 100 || tierCounts[2] != 100) {
                 throw new IllegalStateException("Expected 100 quests per tier; found "
