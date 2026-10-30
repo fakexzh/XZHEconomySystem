@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
@@ -81,6 +82,8 @@ public final class QuestManager implements Listener {
     private final QuestCatalogue v2Catalogue;
     private final NamespacedKey actionKey;
     private final NamespacedKey valueKey;
+    private final NamespacedKey mobSpawnReasonKey;
+    private final NamespacedKey mobSpawnerKey;
     private final Random random = new Random();
     private final Map<UUID, Double> travelRemainders = new HashMap<>();
 
@@ -296,6 +299,8 @@ public final class QuestManager implements Listener {
         }
         actionKey = new NamespacedKey(plugin, "quest_action");
         valueKey = new NamespacedKey(plugin, "quest_value");
+        mobSpawnReasonKey = new NamespacedKey(plugin, "quest_mob_spawn_reason");
+        mobSpawnerKey = new NamespacedKey(plugin, "quest_mob_spawner");
         Bukkit.getPluginManager().registerEvents(this, plugin);
         resetEventIfNeeded();
         Bukkit.getScheduler().runTaskTimer(plugin, this::resetEventIfNeeded, 20L * 60L, 20L * 60L);
@@ -724,9 +729,48 @@ public final class QuestManager implements Listener {
     }
 
     @EventHandler
+    public void onMobSpawn(CreatureSpawnEvent event) {
+        CreatureSpawnEvent.SpawnReason reason = event.getSpawnReason();
+        Set<CreatureSpawnEvent.SpawnReason> allowed = Set.of(
+                CreatureSpawnEvent.SpawnReason.NATURAL, CreatureSpawnEvent.SpawnReason.CHUNK_GEN,
+                CreatureSpawnEvent.SpawnReason.VILLAGE_INVASION, CreatureSpawnEvent.SpawnReason.PATROL,
+                CreatureSpawnEvent.SpawnReason.RAID, CreatureSpawnEvent.SpawnReason.REINFORCEMENTS,
+                CreatureSpawnEvent.SpawnReason.JOCKEY, CreatureSpawnEvent.SpawnReason.MOUNT,
+                CreatureSpawnEvent.SpawnReason.SPELL, CreatureSpawnEvent.SpawnReason.INFECTION,
+                CreatureSpawnEvent.SpawnReason.CURED, CreatureSpawnEvent.SpawnReason.LIGHTNING,
+                CreatureSpawnEvent.SpawnReason.SILVERFISH_BLOCK, CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER,
+                CreatureSpawnEvent.SpawnReason.SPAWNER);
+        if (!allowed.contains(reason)) return;
+        var pdc = event.getEntity().getPersistentDataContainer();
+        pdc.set(mobSpawnReasonKey, PersistentDataType.STRING, reason.name());
+        if (reason == CreatureSpawnEvent.SpawnReason.SPAWNER
+                || reason == CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER) {
+            org.bukkit.Location source = event.getLocation();
+            String key = source.getWorld().getUID() + ":" + source.getBlockX() + ":"
+                    + source.getBlockY() + ":" + source.getBlockZ();
+            pdc.set(mobSpawnerKey, PersistentDataType.STRING, key);
+        }
+    }
+
+    @EventHandler
     public void onKill(EntityDeathEvent event) {
         Player p = event.getEntity().getKiller();
-        if (p == null || p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        if (p == null || p.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        String spawnReason = event.getEntity().getPersistentDataContainer()
+                .get(mobSpawnReasonKey, PersistentDataType.STRING);
+        if (spawnReason == null) return; // Unclassified, command, egg, conversion and custom spawns never count.
+        String spawner = event.getEntity().getPersistentDataContainer()
+                .get(mobSpawnerKey, PersistentDataType.STRING);
+        if (spawner != null) {
+            UUID id = p.getUniqueId();
+            String questId = data.getString(id + ".active", "");
+            int limit = spawnReason.equals(CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER.name()) ? 20 : 10;
+            String countPath = id + ".spawner-counts." + questId + "." + spawner;
+            int used = data.getInt(countPath, 0);
+            if (used >= limit) return;
+            data.set(countPath, used + 1);
+        }
         incrementTarget(p, "kill:" + event.getEntityType().name(), 1);
         incrementTarget(p, "kill:KILL_" + event.getEntityType().name(), 1);
         if (event.getEntity() instanceof org.bukkit.entity.Monster) recordGlobalProgress(p, "mob", 1);
