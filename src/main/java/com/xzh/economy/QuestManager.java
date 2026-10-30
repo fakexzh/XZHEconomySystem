@@ -233,9 +233,13 @@ public final class QuestManager implements Listener {
                 String description = switch (spec.type()) {
                     case MINE -> target.equals("ANY") ? "Mine " + spec.quantity() + " blocks"
                             : "Mine " + spec.quantity() + " " + displayTarget;
-                    case HARVEST -> "Harvest " + spec.quantity() + " " + displayTarget;
+                    case HARVEST -> target.equals("ANY") || target.equals("ANY_CROP")
+                            ? "Harvest " + spec.quantity() + " crops"
+                            : "Harvest " + spec.quantity() + " " + displayTarget;
                     case KILL -> "Defeat " + spec.quantity() + " " + displayTarget;
                     case FISH -> target.equals("ANY") ? "Catch " + spec.quantity() + " fish"
+                            : target.equals("#FISH_JUNK") ? "Catch " + spec.quantity() + " junk fishing items"
+                            : target.equals("#FISH_TREASURE") ? "Catch " + spec.quantity() + " fishing treasure items"
                             : "Catch " + spec.quantity() + " " + displayTarget;
                     case BREED -> target.equals("ANY") ? "Breed " + spec.quantity() + " animals"
                             : "Breed " + spec.quantity() + " " + displayTarget;
@@ -247,12 +251,13 @@ public final class QuestManager implements Listener {
                             : "Smelt " + spec.quantity() + " " + displayTarget + " and collect the output";
                     case CRAFT -> target.equals("ANY") ? "Craft " + spec.quantity() + " items"
                             : "Craft " + spec.quantity() + " " + displayTarget;
-                    case ENCHANT -> "Use the third enchantment option " + spec.quantity() + " times";
+                    case ENCHANT -> "Enchant an item using the third option " + spec.quantity() + " times";
                     case BARTER -> "Complete " + spec.quantity() + " piglin trades by right-clicking with a gold ingot in your main hand";
                     case LOOT -> target.equals("ANY") ? "Find and open " + spec.quantity() + " unopened loot chests"
                             : "Find and open " + spec.quantity() + " unopened loot chests in " + lootTarget;
                     case VAULT -> "Unlock " + spec.quantity() + " different" + (target.equals("OMINOUS") ? " ominous trial vaults" : " trial vaults");
                     case TRAVEL -> target.equals("ELYTRA") ? "Fly " + spec.quantity() + " blocks using an elytra"
+                            : target.equals("ANY") ? "Travel " + spec.quantity() + " blocks on foot or with an elytra"
                             : "Travel " + spec.quantity() + " blocks without flying or riding a vehicle";
                     case BIOME -> spec.targets().size() == 1 && spec.targets().get(0).equals("ANY")
                             ? "Visit " + spec.quantity() + " different biomes"
