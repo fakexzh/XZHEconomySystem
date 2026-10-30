@@ -411,7 +411,7 @@ public final class ShopManager implements Listener {
     private void promptShopSearch(Player player) {
         pendingShopSearch.put(player.getUniqueId(), true);
         player.closeInventory();
-        player.sendMessage(ChatColor.GOLD + "[XZH SHOP] " + ChatColor.WHITE + "Type an item name to search. Type " + ChatColor.YELLOW + "cancel" + ChatColor.WHITE + " to stop.");
+        player.sendMessage(ChatColor.GOLD + "[SHOP] " + ChatColor.WHITE + "Type an item name to search. Type " + ChatColor.YELLOW + "cancel" + ChatColor.WHITE + " to stop.");
     }
 
     @EventHandler
@@ -424,12 +424,12 @@ public final class ShopManager implements Listener {
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (!player.isOnline()) return;
             if (query.equalsIgnoreCase("cancel")) {
-                player.sendMessage(ChatColor.GOLD + "[XZH SHOP] " + ChatColor.GRAY + "Search cancelled.");
+                player.sendMessage(ChatColor.GOLD + "[SHOP] " + ChatColor.GRAY + "Search cancelled.");
                 openMain(player);
                 return;
             }
             if (query.isBlank()) {
-                player.sendMessage(ChatColor.GOLD + "[XZH SHOP] " + ChatColor.RED + "Enter an item name to search.");
+                player.sendMessage(ChatColor.GOLD + "[SHOP] " + ChatColor.RED + "Enter an item name to search.");
                 promptShopSearch(player);
                 return;
             }
@@ -1057,7 +1057,7 @@ public final class ShopManager implements Listener {
                     if (p.category().equals("bounty-maps")) {
                         String tier = switch ((p.fireworkPower() - 1) % 3) { case 0 -> "Common"; case 1 -> "Rare"; default -> "Legendary"; };
                         String dimension = p.fireworkPower() >= 4 ? " Nether" : "";
-                        plugin.tellPublic(player, "§d§lXZH BOUNTY HUNT §8» §fRight-click your " + tier + dimension + " map to start the contract.");
+                        plugin.tellPublic(player, "§d§lBOUNTY HUNT §8» §fRight-click your " + tier + dimension + " map to start the contract.");
                         plugin.tellPublic(player, "§e➤ This tier is now on cooldown for 12 hours in both dimensions.");
                         plugin.tellPublic(player, "§e➤ Bow, arrows and a tracking compass are supplied when the contract starts.");
                     }
