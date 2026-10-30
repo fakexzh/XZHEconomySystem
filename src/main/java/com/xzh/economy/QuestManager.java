@@ -1416,8 +1416,9 @@ public final class QuestManager implements Listener {
                     "DEEPSLATE_DIAMOND_ORE", "DEEPSLATE_EMERALD_ORE").contains(actual);
             case "#STONE_TYPES" -> Set.of("STONE", "DEEPSLATE", "ANDESITE", "DIORITE", "GRANITE", "TUFF").contains(actual);
             case "#FISH_JUNK" -> Set.of("LILY_PAD", "BOWL", "LEATHER", "LEATHER_BOOTS", "ROTTEN_FLESH",
-                    "STICK", "STRING", "POTION", "BONE", "INK_SAC", "TRIPWIRE_HOOK", "FISHING_ROD").contains(actual);
-            case "#FISH_TREASURE" -> Set.of("BOW", "ENCHANTED_BOOK", "NAME_TAG",
+                    "STICK", "STRING", "POTION", "BONE", "INK_SAC", "TRIPWIRE_HOOK").contains(actual);
+            // Vanilla fishing rods in the treasure table are enchanted, not junk.
+            case "#FISH_TREASURE" -> Set.of("BOW", "ENCHANTED_BOOK", "FISHING_ROD", "NAME_TAG",
                     "NAUTILUS_SHELL", "SADDLE").contains(actual);
             case "#COOKED_FOOD" -> Set.of("COOKED_BEEF", "COOKED_PORKCHOP", "COOKED_CHICKEN",
                     "COOKED_MUTTON", "COOKED_RABBIT", "COOKED_COD", "COOKED_SALMON",
