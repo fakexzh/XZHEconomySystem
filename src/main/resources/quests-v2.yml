@@ -391,7 +391,7 @@ quests:
     fee: 130
     profit: 190
     timer-minutes: 0
-    icon: COCOA
+    icon: COCOA_BEANS
     tier-gate: "story/mine_stone"
   - id: E029
     tier: easy
