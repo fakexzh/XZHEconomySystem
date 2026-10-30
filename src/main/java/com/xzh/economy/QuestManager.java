@@ -22,6 +22,7 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.FurnaceExtractEvent;
 import org.bukkit.event.enchantment.EnchantItemEvent;
@@ -735,6 +736,20 @@ public final class QuestManager implements Listener {
     @EventHandler
     public void onQuestActivityEntityInteract(PlayerInteractEntityEvent event) {
         data.set("activity." + event.getPlayer().getUniqueId(), System.currentTimeMillis());
+    }
+
+    @EventHandler
+    public void onQuestActivityInventoryClick(InventoryClickEvent event) {
+        if (event.getWhoClicked() instanceof Player player) {
+            data.set("activity." + player.getUniqueId(), System.currentTimeMillis());
+        }
+    }
+
+    @EventHandler
+    public void onQuestActivityInventoryDrag(InventoryDragEvent event) {
+        if (event.getWhoClicked() instanceof Player player) {
+            data.set("activity." + player.getUniqueId(), System.currentTimeMillis());
+        }
     }
 
     private boolean isQuestActivityRecent(Player player) {
