@@ -651,6 +651,7 @@ public final class QuestManager implements Listener {
     private void startQuest(Player player, String id, String name, int cost, int reward, List<Objective> objectives) {
         UUID uuid = player.getUniqueId();
         data.set(uuid + ".active", id);
+        data.set(uuid + ".quest-id", id.startsWith("pack:") ? id.substring("pack:".length()) : id);
         data.set(uuid + ".name", name);
         data.set(uuid + ".cost", cost);
         data.set(uuid + ".reward", reward);
@@ -658,6 +659,16 @@ public final class QuestManager implements Listener {
         for (int i = 0; i < objectives.size(); i++) {
             Objective o = objectives.get(i);
             data.set(uuid + ".objectives." + i + ".target", o.target());
+            String[] objectiveParts = o.target().split(":", 3);
+            String objectiveType = objectiveParts.length > 0 ? objectiveParts[0] : "";
+            String objectiveDimension = objectiveParts.length > 1 && objectiveParts[1].startsWith("@")
+                    ? objectiveParts[1].substring(1) : "ANY";
+            String objectiveTargets = objectiveParts.length == 3
+                    ? (objectiveParts[1].startsWith("@") ? objectiveParts[2] : objectiveParts[1] + ":" + objectiveParts[2])
+                    : "";
+            data.set(uuid + ".objectives." + i + ".type", objectiveType);
+            data.set(uuid + ".objectives." + i + ".dimension", objectiveDimension);
+            if (objectiveType.equals("biome")) data.set(uuid + ".objectives." + i + ".biomes", objectiveTargets);
             data.set(uuid + ".objectives." + i + ".goal", o.goal());
             data.set(uuid + ".objectives." + i + ".description", o.description());
             data.set(uuid + ".objectives." + i + ".progress", 0);
