@@ -826,17 +826,37 @@ public final class QuestManager implements Listener {
             travelRemainders.remove(id);
             return;
         }
+        if (event.getFrom().getBlockX() == event.getTo().getBlockX()
+                && event.getFrom().getBlockY() == event.getTo().getBlockY()
+                && event.getFrom().getBlockZ() == event.getTo().getBlockZ()) return;
         if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR
                 || data.getString(id + ".active", "").isBlank() || !matchesTarget(id, "travel")) {
             travelRemainders.remove(id);
             return;
         }
-        double step = event.getFrom().distance(event.getTo());
-        if (step > 10) {
+        boolean elytra = p.isGliding();
+        if (p.isInsideVehicle() || p.isFlying() || (!elytra && (p.isGliding() || p.getFallDistance() > 3.0f))) {
             travelRemainders.remove(id);
             return;
         }
-        double accumulated = travelRemainders.getOrDefault(id, 0.0) + step;
+        double dx = event.getTo().getX() - event.getFrom().getX();
+        double dz = event.getTo().getZ() - event.getFrom().getZ();
+        double step = Math.sqrt(dx * dx + dz * dz);
+        if (step > 10.0) {
+            travelRemainders.remove(id);
+            return;
+        }
+        if (elytra && !matchesTarget(id, "travel:ELYTRA") && !matchesTarget(id, "travel:ANY")) return;
+        if (!elytra && matchesTarget(id, "travel:ELYTRA") && !matchesTarget(id, "travel:ANY")) return;
+        // PlayerMoveEvent is emitted synchronously; cap pathological movement packets to 12 blocks per second.
+        long now = System.currentTimeMillis();
+        String ratePath = id + ".travel-rate";
+        long last = data.getLong(ratePath + ".time", now);
+        double allowance = Math.max(0.0, 12.0 * Math.max(0L, now - last) / 1000.0);
+        double accepted = Math.min(step, allowance);
+        data.set(ratePath + ".time", now);
+        if (accepted <= 0.0) return;
+        double accumulated = travelRemainders.getOrDefault(id, 0.0) + accepted;
         int wholeBlocks = (int) Math.floor(accumulated);
         travelRemainders.put(id, accumulated - wholeBlocks);
         if (wholeBlocks > 0) incrementTarget(p, "travel", wholeBlocks);
@@ -853,7 +873,12 @@ public final class QuestManager implements Listener {
 
     @EventHandler
     public void onBreed(EntityBreedEvent event) {
-        if (!(event.getBreeder() instanceof Player player)) return;
+        if (!(event.getBreeder() instanceof Player player)
+                || player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        if (!(event.getMother() instanceof Animals mother) || !(event.getFather() instanceof Animals father)
+                || mother.getAge() != 0 || father.getAge() != 0) return;
+        incrementTarget(player, "breed:" + event.getEntityType().name(), 1);
         incrementTarget(player, "breed:ANY", 1);
     }
 
