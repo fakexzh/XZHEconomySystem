@@ -105,6 +105,7 @@ public final class QuestManager implements Listener {
     private final Map<UUID, Double> travelRemainders = new HashMap<>();
     private final Map<UUID, UUID> piglinOfferPlayers = new HashMap<>();
     private final Map<UUID, Long> piglinOfferTimes = new HashMap<>();
+    private boolean dirtyPlacedBlockData;
 
     private final List<Pack> basePacks = List.of(
         new Pack("stone_survey", "Stone Survey", Material.IRON_PICKAXE, 80, 112, "minecraft:story/iron_tools", List.of(new Objective("break:STONE", 256, "Mine 256 Stone"))),
@@ -346,6 +347,7 @@ public final class QuestManager implements Listener {
         feedCooldownKey = new NamespacedKey(plugin, "quest_feed_cooldown");
         roamingBossKey = NamespacedKey.fromString("xzhsurvivalplugin:roaming_boss");
         Bukkit.getPluginManager().registerEvents(this, plugin);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::flushPlacedBlockData, 100L, 100L);
         resetEventIfNeeded();
         Bukkit.getScheduler().runTaskTimer(plugin, this::resetEventIfNeeded, 20L * 60L, 20L * 60L);
         Bukkit.getScheduler().runTaskTimer(plugin, this::refreshSingleShopIfDue, 20L * 60L, 20L * 60L);
@@ -790,7 +792,7 @@ public final class QuestManager implements Listener {
         if (event.isCancelled()) return;
         if (!plugin.getConfig().getBoolean("quests.v2.placed-block-tracking", true)) return;
         data.set(placedBlockPath(event.getBlock().getLocation()), true);
-        save();
+        markPlacedBlockDataDirty();
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -800,7 +802,7 @@ public final class QuestManager implements Listener {
             data.set(placedBlockPath(moved.getLocation()), true);
             data.set(placedBlockPath(moved.getRelative(event.getDirection()).getLocation()), true);
         }
-        save();
+        markPlacedBlockDataDirty();
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -810,7 +812,7 @@ public final class QuestManager implements Listener {
             data.set(placedBlockPath(moved.getLocation()), true);
             data.set(placedBlockPath(moved.getRelative(event.getDirection().getOppositeFace()).getLocation()), true);
         }
-        save();
+        markPlacedBlockDataDirty();
     }
 
     @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
@@ -828,7 +830,7 @@ public final class QuestManager implements Listener {
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (block.getType() != originalType) {
                     data.set(placedPath, null);
-                    save();
+                    markPlacedBlockDataDirty();
                 }
             });
         }
@@ -1898,6 +1900,20 @@ public final class QuestManager implements Listener {
     }
     private int configuredEventReward() { return Math.max(100, Math.min(10000, plugin.getConfig().getInt("quests.global-event.reward", 200))); }
     private int configuredEventClaims() { return Math.max(0, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.claims-per-day", 25))); }
+
+    private void markPlacedBlockDataDirty() {
+        dirtyPlacedBlockData = true;
+    }
+
+    private void flushPlacedBlockData() {
+        if (!dirtyPlacedBlockData) return;
+        save();
+        dirtyPlacedBlockData = false;
+    }
+
+    public void shutdown() {
+        flushPlacedBlockData();
+    }
 
     private void save() {
         try { data.save(file); } catch (IOException e) { plugin.getLogger().severe("Could not save quests.yml: " + e.getMessage()); }
