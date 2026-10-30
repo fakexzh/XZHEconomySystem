@@ -882,15 +882,32 @@ public final class QuestManager implements Listener {
                 || player.getGameMode() == org.bukkit.GameMode.CREATIVE
                 || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         ItemStack result = event.getCurrentItem();
-        if (result != null && result.getType() != Material.AIR) {
-            incrementTarget(player, "collect:" + result.getType().name(), result.getAmount());
-            Set<Material> questCraftWhitelist = Set.of(Material.BREAD, Material.PUMPKIN_PIE, Material.CAKE,
-                    Material.COOKIE, Material.LANTERN, Material.SHIELD, Material.BUCKET, Material.BOOKSHELF,
-                    Material.IRON_HELMET, Material.IRON_CHESTPLATE, Material.IRON_LEGGINGS, Material.IRON_BOOTS);
-            if (questCraftWhitelist.contains(result.getType())) {
-                incrementTarget(player, "craft:" + result.getType().name(), result.getAmount());
+        if (result == null || result.getType() == Material.AIR) return;
+        Material output = result.getType();
+        Set<Material> questCraftWhitelist = Set.of(Material.BREAD, Material.PUMPKIN_PIE, Material.CAKE,
+                Material.COOKIE, Material.LANTERN, Material.SHIELD, Material.BUCKET, Material.BOOKSHELF,
+                Material.IRON_HELMET, Material.IRON_CHESTPLATE, Material.IRON_LEGGINGS, Material.IRON_BOOTS);
+        if (event.isShiftClick()) {
+            int before = 0;
+            for (ItemStack stack : player.getInventory().getStorageContents()) {
+                if (stack != null && stack.getType() == output) before += stack.getAmount();
             }
+            final int countBefore = before;
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                int after = 0;
+                for (ItemStack stack : player.getInventory().getStorageContents()) {
+                    if (stack != null && stack.getType() == output) after += stack.getAmount();
+                }
+                int produced = Math.max(0, after - countBefore);
+                if (produced > 0) {
+                    incrementTarget(player, "collect:" + output.name(), produced);
+                    if (questCraftWhitelist.contains(output)) incrementTarget(player, "craft:" + output.name(), produced);
+                }
+            });
+            return;
         }
+        incrementTarget(player, "collect:" + output.name(), result.getAmount());
+        if (questCraftWhitelist.contains(output)) incrementTarget(player, "craft:" + output.name(), result.getAmount());
     }
 
     @EventHandler
