@@ -60,7 +60,7 @@ public final class PetManager implements Listener {
         add("goat-normal", "Goat - Normal", EntityType.GOAT, "NORMAL", 2000, Material.GOAT_SPAWN_EGG);
         add("goat-screaming", "Goat - Screaming", EntityType.GOAT, "SCREAMING", 3500, Material.GOAT_SPAWN_EGG);
         Bukkit.getPluginManager().registerEvents(this, plugin);
-        followTask = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, this::tickFollowing, 20L, 20L);
+        followTask = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, this::tickPets, 1L, 1L);
     }
 
     private void add(String id, String display, EntityType type, String variant, int price, Material icon) {
@@ -154,6 +154,8 @@ public final class PetManager implements Listener {
             entity.setCustomName(ChatColor.LIGHT_PURPLE + "@" + player.getName() + "'s Pet");
             entity.setCustomNameVisible(true);
             mob.setCanPickupItems(false);
+            mob.setAware(false);
+            mob.getPathfinder().stopPathfinding();
         } catch (RuntimeException ex) {
             entity.remove();
             plugin.getLogger().warning("Could not initialize purchased pet " + option.id() + ": " + ex.getMessage());
@@ -231,10 +233,10 @@ public final class PetManager implements Listener {
         boolean sitting = isSitting(entity);
         boolean shouldSit = !sitting;
         entity.getPersistentDataContainer().set(sittingKey, PersistentDataType.BYTE, (byte) (shouldSit ? 1 : 0));
-        mob.setAI(true);
+        mob.setAware(false);
         mob.getPathfinder().stopPathfinding();
         entity.setPose(shouldSit ? Pose.SITTING : Pose.STANDING, true);
-        mob.setVelocity(mob.getVelocity().zero());
+        mob.setVelocity(new org.bukkit.util.Vector(0, mob.getVelocity().getY(), 0));
         player.sendMessage("§8[§dPET§8] §f" + (sitting ? "Your pet is standing and following mode will resume." : "Your pet is sitting. It will stay here until you stand it up."));
         player.playSound(entity.getLocation(), Sound.ENTITY_CAT_PURR, 0.5f, sitting ? 1.3f : 0.8f);
     }
@@ -340,48 +342,71 @@ public final class PetManager implements Listener {
         return result == null ? null : result.getHitEntity();
     }
 
-    private void tickFollowing() {
-        Iterator<Map.Entry<UUID, UUID>> iterator = following.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<UUID, UUID> entry = iterator.next();
-            Entity pet = Bukkit.getEntity(entry.getKey());
-            Player owner = Bukkit.getPlayer(entry.getValue());
-            if (pet == null || !pet.isValid() || owner == null || !owner.isOnline()) { iterator.remove(); continue; }
-            boolean nameVisible = Bukkit.getOnlinePlayers().stream()
-                    .anyMatch(viewer -> viewer.getWorld().equals(pet.getWorld())
-                            && viewer.getLocation().distanceSquared(pet.getLocation()) <= 256.0);
-            pet.setCustomNameVisible(nameVisible);
-            if (isSitting(pet)) {
-                if (pet instanceof Mob sittingMob) {
-                    sittingMob.getPathfinder().stopPathfinding();
-                    sittingMob.setVelocity(sittingMob.getVelocity().zero());
+    private void tickPets() {
+        for (org.bukkit.World world : Bukkit.getWorlds()) {
+            for (Entity pet : world.getEntities()) {
+                if (!isPet(pet) || !pet.isValid()) continue;
+
+                // Disable vanilla animal AI: this removes fox panic/flee behavior and autonomous wandering.
+                if (pet instanceof Mob mob) {
+                    mob.setAware(false);
+                    mob.getPathfinder().stopPathfinding();
+                }
+
+                boolean nameVisible = Bukkit.getOnlinePlayers().stream()
+                        .anyMatch(viewer -> viewer.getWorld().equals(pet.getWorld())
+                                && viewer.getLocation().distanceSquared(pet.getLocation()) <= 256.0);
+                pet.setCustomNameVisible(nameVisible);
+
+                if (isSitting(pet)) {
+                    if (pet instanceof Mob mob) {
+                        mob.setVelocity(new org.bukkit.util.Vector(0, mob.getVelocity().getY(), 0));
+                    }
                     Player lookAt = Bukkit.getOnlinePlayers().stream()
-                            .filter(p -> p.getWorld().equals(pet.getWorld()) && p.getLocation().distanceSquared(pet.getLocation()) <= 256.0)
+                            .filter(p -> p.getWorld().equals(pet.getWorld())
+                                    && p.getLocation().distanceSquared(pet.getLocation()) <= 256.0)
                             .min(Comparator.comparingDouble(p -> p.getLocation().distanceSquared(pet.getLocation())))
                             .orElse(null);
                     if (lookAt != null) {
-                        org.bukkit.util.Vector direction = lookAt.getEyeLocation().toVector().subtract(pet.getLocation().toVector());
+                        org.bukkit.util.Vector direction = lookAt.getEyeLocation().toVector()
+                                .subtract(pet.getLocation().toVector());
                         float yaw = (float) Math.toDegrees(Math.atan2(-direction.getX(), direction.getZ()));
                         pet.setRotation(yaw, pet.getLocation().getPitch());
                     }
+                    continue;
                 }
-                continue;
-            }
-            if (!isOwnedBy(pet, owner)) {
-                iterator.remove();
-                continue;
-            }
-            if (!pet.getWorld().equals(owner.getWorld())) {
-                pet.teleport(owner.getLocation().clone().add(1.0, 0.0, 1.0));
-                continue;
-            }
-            if (pet.getLocation().distanceSquared(owner.getLocation()) > 100.0) {
-                Location destination = owner.getLocation().clone().add(owner.getLocation().getDirection().multiply(-1.5));
-                destination.setY(owner.getLocation().getY());
-                pet.teleport(destination);
-            } else if (pet instanceof Mob mob && pet.getLocation().distanceSquared(owner.getLocation()) > 9.0) {
-                double ratio = Math.max(0.1, Math.min(5.0, owner.getWalkSpeed() / 0.2));
-                mob.getPathfinder().moveTo(owner.getLocation(), ratio * (owner.isSprinting() ? 1.3 : 1.0));
+
+                UUID ownerId = owner(pet);
+                Player owner = ownerId == null ? null : Bukkit.getPlayer(ownerId);
+                if (owner == null || !owner.isOnline() || !isOwnedBy(pet, owner)) continue;
+                if (!pet.getWorld().equals(owner.getWorld())) {
+                    pet.teleport(owner.getLocation().clone().add(1.0, 0.0, 1.0));
+                    continue;
+                }
+
+                org.bukkit.util.Vector offset = owner.getLocation().toVector().subtract(pet.getLocation().toVector());
+                offset.setY(0);
+                double distance = offset.length();
+                if (distance > 10.0) {
+                    Location destination = owner.getLocation().clone()
+                            .add(owner.getLocation().getDirection().multiply(-1.5));
+                    destination.setY(owner.getLocation().getY());
+                    pet.teleport(destination);
+                    continue;
+                }
+                if (distance > 2.5 && pet instanceof Mob mob) {
+                    // Follow using the owner's observed horizontal movement, rather than a pathfinder modifier.
+                    double ownerSpeed = owner.getVelocity().setY(0).length();
+                    double targetSpeed = Math.max(0.12, Math.min(0.55, ownerSpeed * 1.15));
+                    org.bukkit.util.Vector movement = offset.normalize().multiply(targetSpeed);
+                    org.bukkit.util.Vector current = pet.getVelocity();
+                    mob.setVelocity(new org.bukkit.util.Vector(movement.getX(), current.getY(), movement.getZ()));
+                    float yaw = (float) Math.toDegrees(Math.atan2(-movement.getX(), movement.getZ()));
+                    pet.setRotation(yaw, pet.getLocation().getPitch());
+                } else if (distance <= 2.5 && pet instanceof Mob mob) {
+                    org.bukkit.util.Vector current = pet.getVelocity();
+                    mob.setVelocity(new org.bukkit.util.Vector(0, current.getY(), 0));
+                }
             }
         }
     }
