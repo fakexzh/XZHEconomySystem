@@ -408,3 +408,8 @@ premium-boats:
     basic: 0.25
     aura: 0.34
     super: 0.46
+
+# Pixel-art menu icons from the XZH resource pack (items use minecraft:item_model -> xzh:gui/<icon>).
+# Set to false if players do not use the pack; menus then show the vanilla items again.
+gui-icons:
+  enabled: true
