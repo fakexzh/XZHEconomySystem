@@ -136,9 +136,9 @@ final class QuestCatalogue {
             if (!valid) throw new IllegalArgumentException("target '" + target + "' has no supported " + spec.type() + " mechanic");
         }
         if (spec.dimension() != QuestObjectiveSpec.Dimension.ANY
-                && !Set.of(QuestObjectiveSpec.Type.MINE, QuestObjectiveSpec.Type.KILL,
-                        QuestObjectiveSpec.Type.FISH, QuestObjectiveSpec.Type.TRAVEL,
-                        QuestObjectiveSpec.Type.BIOME).contains(spec.type())) {
+                && !Set.of(QuestObjectiveSpec.Type.MINE, QuestObjectiveSpec.Type.HARVEST,
+                        QuestObjectiveSpec.Type.KILL, QuestObjectiveSpec.Type.FISH,
+                        QuestObjectiveSpec.Type.TRAVEL, QuestObjectiveSpec.Type.BIOME).contains(spec.type())) {
             throw new IllegalArgumentException("dimension filters are not supported for " + spec.type());
         }
     }
