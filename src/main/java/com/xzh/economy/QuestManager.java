@@ -68,6 +68,7 @@ public final class QuestManager implements Listener {
         }
     }
     private record GlobalQuest(String name, Material icon, String target, int goal, String description) {}
+    private record LootOpenCredit(UUID playerId, long timestamp) {}
     private final List<GlobalQuest> globalQuestPool = List.of(
         new GlobalQuest("Community Ore Rush", Material.IRON_PICKAXE, "ore", 160, "Mine ores together"),
         new GlobalQuest("Deep Mining Expedition", Material.DEEPSLATE_DIAMOND_ORE, "ore", 320, "Mine deep ores together"),
@@ -98,13 +99,15 @@ public final class QuestManager implements Listener {
     private final NamespacedKey valueKey;
     private final NamespacedKey mobSpawnReasonKey;
     private final NamespacedKey mobSpawnerKey;
-    private final NamespacedKey directMeleeKillerKey;
     private final NamespacedKey feedCooldownKey;
+    private final NamespacedKey breedingCreditKey;
+    private final NamespacedKey breedingCreditTimeKey;
     private final NamespacedKey roamingBossKey;
     private final Random random = new Random();
     private final Map<UUID, Double> travelRemainders = new HashMap<>();
     private final Map<UUID, UUID> piglinOfferPlayers = new HashMap<>();
     private final Map<UUID, Long> piglinOfferTimes = new HashMap<>();
+    private final Map<String, LootOpenCredit> pendingLootOpeners = new HashMap<>();
     private boolean dirtyPlacedBlockData;
 
     private final List<Pack> basePacks = List.of(
@@ -350,8 +353,9 @@ public final class QuestManager implements Listener {
         valueKey = new NamespacedKey(plugin, "quest_value");
         mobSpawnReasonKey = new NamespacedKey(plugin, "quest_mob_spawn_reason");
         mobSpawnerKey = new NamespacedKey(plugin, "quest_mob_spawner");
-        directMeleeKillerKey = new NamespacedKey(plugin, "quest_direct_melee_killer");
         feedCooldownKey = new NamespacedKey(plugin, "quest_feed_cooldown");
+        breedingCreditKey = new NamespacedKey(plugin, "quest_breeding_credit");
+        breedingCreditTimeKey = new NamespacedKey(plugin, "quest_breeding_credit_time");
         roamingBossKey = NamespacedKey.fromString("xzhsurvivalplugin:roaming_boss");
         Bukkit.getPluginManager().registerEvents(this, plugin);
         Bukkit.getScheduler().runTaskTimer(plugin, this::flushPlacedBlockData, 100L, 100L);
@@ -761,7 +765,16 @@ public final class QuestManager implements Listener {
 
     @EventHandler
     public void onQuestActivityInteract(PlayerInteractEvent event) {
-        data.set("activity." + event.getPlayer().getUniqueId(), System.currentTimeMillis());
+        Player player = event.getPlayer();
+        long now = System.currentTimeMillis();
+        data.set("activity." + player.getUniqueId(), now);
+        if (event.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK
+                && event.getClickedBlock() != null
+                && event.getClickedBlock().getState() instanceof org.bukkit.block.Container) {
+            pendingLootOpeners.entrySet().removeIf(entry -> now - entry.getValue().timestamp() > 10_000L);
+            pendingLootOpeners.put(lootLocationKey(event.getClickedBlock().getLocation()),
+                    new LootOpenCredit(player.getUniqueId(), now));
+        }
     }
 
     @EventHandler
@@ -827,6 +840,7 @@ public final class QuestManager implements Listener {
         if (event.isCancelled()) return;
         Player p = event.getPlayer();
         if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        data.set("activity." + p.getUniqueId(), System.currentTimeMillis());
         org.bukkit.block.Block block = event.getBlock();
         Material material = block.getType();
         String placedPath = placedBlockPath(block.getLocation());
@@ -905,17 +919,28 @@ public final class QuestManager implements Listener {
         save();
     }
 
+    private String lootLocationKey(org.bukkit.Location location) {
+        return location.getWorld().getUID() + ":" + location.getBlockX() + ":"
+                + location.getBlockY() + ":" + location.getBlockZ();
+    }
+
     @EventHandler
     public void onLootGenerate(LootGenerateEvent event) {
-        if (event.isCancelled() || !(event.getEntity() instanceof Player player)
+        if (event.isCancelled()) return;
+        String table = event.getLootTable().getKey().getKey().toLowerCase(Locale.ROOT);
+        org.bukkit.Location location = event.getLootContext().getLocation();
+        String locationKey = lootLocationKey(location);
+        LootOpenCredit credit = pendingLootOpeners.remove(locationKey);
+        Player player = event.getEntity() instanceof Player entityPlayer ? entityPlayer
+                : event.getLootContext().getKiller() instanceof Player killer ? killer : null;
+        if (player == null && credit != null && System.currentTimeMillis() - credit.timestamp() <= 5_000L) {
+            player = Bukkit.getPlayer(credit.playerId());
+        }
+        if (player == null || !player.isOnline()
                 || player.getGameMode() == org.bukkit.GameMode.CREATIVE
                 || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
-        String table = event.getLootTable().getKey().getKey().toLowerCase(Locale.ROOT);
         String active = data.getString(player.getUniqueId() + ".active", "");
         if (active.isBlank()) return;
-        org.bukkit.Location location = event.getLootContext().getLocation();
-        String locationKey = location.getWorld().getUID() + ":"
-                + location.getBlockX() + ":" + location.getBlockY() + ":" + location.getBlockZ();
         String openedPath = player.getUniqueId() + ".loot-opened." + active + "." + locationKey.replace(':', '_');
         if (data.getBoolean(openedPath, false)) return;
         data.set(openedPath, true);
@@ -975,35 +1000,15 @@ public final class QuestManager implements Listener {
         }
     }
 
-    @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
-    public void onNonMeleeDamage(EntityDamageEvent event) {
-        if (event.isCancelled() || event instanceof EntityDamageByEntityEvent) return;
-        event.getEntity().getPersistentDataContainer().remove(directMeleeKillerKey);
-    }
-
-    @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
-    public void onDirectMeleeDamage(EntityDamageByEntityEvent event) {
-        if (event.isCancelled()) return;
-        var pdc = event.getEntity().getPersistentDataContainer();
-        if (event.getDamager() instanceof Player attacker) {
-            pdc.set(directMeleeKillerKey, PersistentDataType.STRING, attacker.getUniqueId().toString());
-        } else {
-            // Projectile, trident, pet, or other indirect damage invalidates melee credit.
-            pdc.remove(directMeleeKillerKey);
-        }
-    }
-
     @EventHandler
     public void onKill(EntityDeathEvent event) {
         Player p = event.getEntity().getKiller();
         if (p == null || p.getGameMode() == org.bukkit.GameMode.CREATIVE
                 || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        data.set("activity." + p.getUniqueId(), System.currentTimeMillis());
         String spawnReason = event.getEntity().getPersistentDataContainer()
                 .get(mobSpawnReasonKey, PersistentDataType.STRING);
         if (spawnReason == null) return; // Unclassified, command, egg, conversion and custom spawns never count.
-        String meleeKiller = event.getEntity().getPersistentDataContainer()
-                .get(directMeleeKillerKey, PersistentDataType.STRING);
-        if (meleeKiller == null || !meleeKiller.equals(p.getUniqueId().toString())) return;
         String spawner = event.getEntity().getPersistentDataContainer()
                 .get(mobSpawnerKey, PersistentDataType.STRING);
         if (spawner != null) {
@@ -1037,6 +1042,7 @@ public final class QuestManager implements Listener {
                 || player.getGameMode() == org.bukkit.GameMode.SPECTATOR
                 || event.whichButton() != 2) return;
         incrementTarget(player, "enchant:ANY", 1);
+        incrementTarget(player, "enchant:SLOT3", 1);
         incrementTarget(player, "enchant:" + event.getItem().getType().name(), 1);
     }
 
@@ -1079,6 +1085,7 @@ public final class QuestManager implements Listener {
         if (event.isCancelled()) return;
         Player p = event.getPlayer();
         if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        data.set("activity." + p.getUniqueId(), System.currentTimeMillis());
         // Player-dropped items can be dropped and picked up repeatedly, so they must not
         // count as newly collected quest items.
         if (event.getItem().getThrower() != null) return;
@@ -1176,13 +1183,14 @@ public final class QuestManager implements Listener {
 
     @EventHandler
     public void onFish(PlayerFishEvent event) {
-        if (event.isCancelled() || event.getState() != PlayerFishEvent.State.CAUGHT_FISH || !(event.getCaught() instanceof org.bukkit.entity.Item caught)) return;
+        if (event.isCancelled() || event.getState() != PlayerFishEvent.State.CAUGHT_FISH
+                || !(event.getCaught() instanceof org.bukkit.entity.Item caught)) return;
         Player player = event.getPlayer();
-        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        data.set("activity." + player.getUniqueId(), System.currentTimeMillis());
         String caughtType = caught.getItemStack().getType().name();
-        boolean enchantedRod = caught.getItemStack().getType() == Material.FISHING_ROD
-                && !caught.getItemStack().getEnchantments().isEmpty();
-        incrementTarget(player, "fish:" + (enchantedRod ? "FISHING_ROD_ENCHANTED" : caughtType), 1);
+        incrementTarget(player, "fish:" + caughtType, 1);
         incrementTarget(player, "fish:ANY", 1);
         recordGlobalProgress(player, "fish", 1);
     }
@@ -1198,11 +1206,33 @@ public final class QuestManager implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onBreed(EntityBreedEvent event) {
-        if (!(event.getBreeder() instanceof Player player)
-                || player.getGameMode() == org.bukkit.GameMode.CREATIVE
-                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         if (!(event.getMother() instanceof Animals mother) || !(event.getFather() instanceof Animals father)
                 || mother.getAge() != 0 || father.getAge() != 0) return;
+        Player player = event.getBreeder() instanceof Player breeder ? breeder : null;
+        if (player == null) {
+            long now = System.currentTimeMillis();
+            long newestCredit = now - 120_000L;
+            UUID creditedPlayer = null;
+            for (Animals parent : List.of(mother, father)) {
+                var pdc = parent.getPersistentDataContainer();
+                String rawId = pdc.get(breedingCreditKey, PersistentDataType.STRING);
+                long creditedAt = pdc.getOrDefault(breedingCreditTimeKey, PersistentDataType.LONG, 0L);
+                if (rawId == null || creditedAt < newestCredit || creditedAt > now) continue;
+                try {
+                    creditedPlayer = UUID.fromString(rawId);
+                    newestCredit = creditedAt;
+                } catch (IllegalArgumentException ignored) { }
+            }
+            if (creditedPlayer != null) player = Bukkit.getPlayer(creditedPlayer);
+        }
+        mother.getPersistentDataContainer().remove(breedingCreditKey);
+        mother.getPersistentDataContainer().remove(breedingCreditTimeKey);
+        father.getPersistentDataContainer().remove(breedingCreditKey);
+        father.getPersistentDataContainer().remove(breedingCreditTimeKey);
+        if (player == null || !player.isOnline()
+                || player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        data.set("activity." + player.getUniqueId(), System.currentTimeMillis());
         incrementTarget(player, "breed:" + event.getEntityType().name(), 1);
         incrementTarget(player, "breed:ANY", 1);
     }
@@ -1241,6 +1271,8 @@ public final class QuestManager implements Listener {
         Animals animal = event.getEntity();
         var pdc = animal.getPersistentDataContainer();
         long now = System.currentTimeMillis();
+        pdc.set(breedingCreditKey, PersistentDataType.STRING, player.getUniqueId().toString());
+        pdc.set(breedingCreditTimeKey, PersistentDataType.LONG, now);
         long last = pdc.getOrDefault(feedCooldownKey, PersistentDataType.LONG, 0L);
         if (now - last < 60_000L) return;
         pdc.set(feedCooldownKey, PersistentDataType.LONG, now);
@@ -1310,7 +1342,6 @@ public final class QuestManager implements Listener {
     }
 
     private boolean objectiveTagMatches(String tag, String actual) {
-        if (tag.equals("#FISH_TREASURE") && actual.equals("FISHING_ROD_ENCHANTED")) return true;
         if (actual.startsWith("KILL_") || actual.startsWith("TRIAL_KILL_")) {
             String entity = actual.startsWith("TRIAL_KILL_")
                     ? actual.substring("TRIAL_KILL_".length()) : actual.substring("KILL_".length());
