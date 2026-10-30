@@ -770,7 +770,7 @@ quests:
     fee: 90
     profit: 250
     timer-minutes: 70
-    icon: IRON_SWORD
+    icon: ROTTEN_FLESH
     tier-gate: "story/mine_stone"
   - id: E056
     tier: easy
@@ -1758,7 +1758,7 @@ quests:
     fee: 640
     profit: 650
     timer-minutes: 0
-    icon: GOLDEN_AXE
+    icon: GOLD_INGOT
     tier-gate: "nether/find_fortress"
   - id: H026
     tier: hard
@@ -1954,7 +1954,7 @@ quests:
     fee: 590
     profit: 650
     timer-minutes: 115
-    icon: CROSSBOW
+    icon: EMERALD
     tier-gate: "nether/find_fortress"
   - id: H040
     tier: hard
@@ -2588,7 +2588,7 @@ quests:
     fee: 530
     profit: 560
     timer-minutes: 0
-    icon: CROSSBOW
+    icon: EMERALD
     tier-gate: "nether/find_fortress"
   - id: H085
     tier: hard
@@ -2700,7 +2700,7 @@ quests:
     fee: 640
     profit: 740
     timer-minutes: 0
-    icon: DIAMOND_SWORD
+    icon: TOTEM_OF_UNDYING
     tier-gate: "nether/find_fortress"
   - id: H093
     tier: hard
@@ -2770,7 +2770,7 @@ quests:
     fee: 530
     profit: 620
     timer-minutes: 115
-    icon: IRON_SWORD
+    icon: ROTTEN_FLESH
     tier-gate: "nether/find_fortress"
   - id: H098
     tier: hard
@@ -2784,7 +2784,7 @@ quests:
     fee: 470
     profit: 590
     timer-minutes: 115
-    icon: CROSSBOW
+    icon: EMERALD
     tier-gate: "nether/find_fortress"
   - id: H099
     tier: hard
@@ -3186,7 +3186,7 @@ quests:
     fee: 2800
     profit: 4600
     timer-minutes: 0
-    icon: DIAMOND_SWORD
+    icon: TOTEM_OF_UNDYING
     tier-gate: "end/find_end_city"
   - id: M027
     tier: master
@@ -3200,7 +3200,7 @@ quests:
     fee: 2100
     profit: 3100
     timer-minutes: 200
-    icon: CROSSBOW
+    icon: EMERALD
     tier-gate: "end/find_end_city"
   - id: M028
     tier: master
@@ -3415,7 +3415,7 @@ quests:
     fee: 2550
     profit: 3500
     timer-minutes: 225
-    icon: IRON_AXE
+    icon: EMERALD
     tier-gate: "end/find_end_city"
   - id: M043
     tier: master
@@ -3430,7 +3430,7 @@ quests:
     fee: 2100
     profit: 3000
     timer-minutes: 175
-    icon: CROSSBOW
+    icon: EMERALD
     tier-gate: "end/find_end_city"
   - id: M044
     tier: master
@@ -3444,7 +3444,7 @@ quests:
     fee: 1900
     profit: 3000
     timer-minutes: 200
-    icon: CROSSBOW
+    icon: EMERALD
     tier-gate: "end/find_end_city"
   - id: M045
     tier: master
@@ -3458,7 +3458,7 @@ quests:
     fee: 2100
     profit: 3100
     timer-minutes: 200
-    icon: IRON_AXE
+    icon: EMERALD
     tier-gate: "end/find_end_city"
   - id: M046
     tier: master
@@ -3500,7 +3500,7 @@ quests:
     fee: 1900
     profit: 3250
     timer-minutes: 250
-    icon: CROSSBOW
+    icon: EMERALD
     tier-gate: "end/find_end_city"
   - id: M049
     tier: master
@@ -3514,7 +3514,7 @@ quests:
     fee: 2100
     profit: 3000
     timer-minutes: 175
-    icon: IRON_SWORD
+    icon: ROTTEN_FLESH
     tier-gate: "end/find_end_city"
   - id: M050
     tier: master
@@ -3528,7 +3528,7 @@ quests:
     fee: 2550
     profit: 4100
     timer-minutes: 0
-    icon: CROSSBOW
+    icon: EMERALD
     tier-gate: "end/find_end_city"
   - id: M051
     tier: master
@@ -3668,7 +3668,7 @@ quests:
     fee: 2550
     profit: 3600
     timer-minutes: 250
-    icon: IRON_SWORD
+    icon: ROTTEN_FLESH
     tier-gate: "end/find_end_city"
   - id: M061
     tier: master
@@ -4052,7 +4052,7 @@ quests:
     fee: 1650
     profit: 4150
     timer-minutes: 0
-    icon: IRON_SWORD
+    icon: ROTTEN_FLESH
     tier-gate: "end/find_end_city"
   - id: M087
     tier: master
