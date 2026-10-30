@@ -756,7 +756,7 @@ public final class QuestManager implements Listener {
         save();
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     public void onPistonExtend(BlockPistonExtendEvent event) {
         if (!plugin.getConfig().getBoolean("quests.v2.placed-block-tracking", true)) return;
         for (org.bukkit.block.Block moved : event.getBlocks()) {
@@ -766,7 +766,7 @@ public final class QuestManager implements Listener {
         save();
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     public void onPistonRetract(BlockPistonRetractEvent event) {
         if (!plugin.getConfig().getBoolean("quests.v2.placed-block-tracking", true)) return;
         for (org.bukkit.block.Block moved : event.getBlocks()) {
