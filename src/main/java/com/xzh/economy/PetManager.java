@@ -222,7 +222,8 @@ public final class PetManager implements Listener {
         ItemStack hand = event.getPlayer().getInventory().getItem(event.getHand());
         if (hand != null && hand.getType() == Material.NAME_TAG) return;
         event.setCancelled(true);
-        toggleSit(event.getPlayer(), entity);
+        if (event.getPlayer().isSneaking()) toggleFollowing(event.getPlayer(), entity);
+        else toggleSit(event.getPlayer(), entity);
     }
 
     private void toggleSit(Player player, Entity entity) {
@@ -230,7 +231,8 @@ public final class PetManager implements Listener {
         boolean sitting = isSitting(entity);
         boolean shouldSit = !sitting;
         entity.getPersistentDataContainer().set(sittingKey, PersistentDataType.BYTE, (byte) (shouldSit ? 1 : 0));
-        mob.setAI(!shouldSit);
+        mob.setAI(true);
+        mob.getPathfinder().stopPathfinding();
         entity.setPose(shouldSit ? Pose.SITTING : Pose.STANDING, true);
         mob.setVelocity(mob.getVelocity().zero());
         player.sendMessage("§8[§dPET§8] §f" + (sitting ? "Your pet is standing and following mode will resume." : "Your pet is sitting. It will stay here until you stand it up."));
@@ -273,11 +275,20 @@ public final class PetManager implements Listener {
             plugin.tellPublic(player, "Your pet stopped following you and will roam nearby.");
             return true;
         }
-        if (args.length == 1 && args[0].equalsIgnoreCase("call")) {
-            Entity active = following.entrySet().stream().filter(e -> e.getValue().equals(player.getUniqueId())).map(e -> Bukkit.getEntity(e.getKey())).filter(e -> e != null && e.isValid() && isOwnedBy(e, player)).findFirst().orElse(null);
-            if (active == null) { plugin.tellPublic(player, "You do not have an active pet. Look at a pet and use /pet first."); return true; }
-            Location destination = player.getLocation().clone().add(player.getLocation().getDirection().multiply(-1.5)); destination.setY(player.getLocation().getY());
-            active.teleport(destination); plugin.tellPublic(player, "Your active pet has been called to you."); return true;
+        if (args.length == 0) {
+            List<Entity> activePets = following.entrySet().stream()
+                    .filter(e -> e.getValue().equals(player.getUniqueId()))
+                    .map(e -> Bukkit.getEntity(e.getKey()))
+                    .filter(e -> e != null && e.isValid() && isOwnedBy(e, player)).toList();
+            if (activePets.isEmpty()) {
+                plugin.tellPublic(player, "You have no active pets. Shift + right-click a pet to enable following.");
+                return true;
+            }
+            Location destination = player.getLocation().clone().add(player.getLocation().getDirection().multiply(-1.5));
+            destination.setY(player.getLocation().getY());
+            for (Entity active : activePets) active.teleport(destination);
+            plugin.tellPublic(player, "Your active pets have been called to you.");
+            return true;
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("transfer")) {
             Entity target = getTargetPet(player);
@@ -305,18 +316,21 @@ public final class PetManager implements Listener {
             return true;
         }
         if (args.length != 0) {
-            plugin.tellPublic(player, "Usage: /pet [call|transfer <player>]");
+            plugin.tellPublic(player, "Usage: /pet [transfer <player>]");
             return true;
         }
-        Entity target = getTargetPet(player);
-        if (target == null || !isOwnedBy(target, player)) {
-            plugin.tellPublic(player, "Look directly at one of your own Baby Pets.");
-            return true;
-        }
-        following.entrySet().removeIf(entry -> entry.getValue().equals(player.getUniqueId()));
-        following.put(target.getUniqueId(), player.getUniqueId());
-        plugin.tellPublic(player, "Your pet is now following you. Any other pet will continue roaming independently.");
         return true;
+    }
+
+    private void toggleFollowing(Player player, Entity pet) {
+        UUID petId = pet.getUniqueId();
+        if (following.containsKey(petId) && following.get(petId).equals(player.getUniqueId())) {
+            following.remove(petId);
+            plugin.tellPublic(player, "Your pet stopped following you.");
+        } else {
+            following.put(petId, player.getUniqueId());
+            plugin.tellPublic(player, "Your pet will now follow you.");
+        }
     }
 
     private Entity getTargetPet(Player player) {
@@ -333,7 +347,22 @@ public final class PetManager implements Listener {
             Entity pet = Bukkit.getEntity(entry.getKey());
             Player owner = Bukkit.getPlayer(entry.getValue());
             if (pet == null || !pet.isValid() || owner == null || !owner.isOnline()) { iterator.remove(); continue; }
-            if (isSitting(pet)) continue;
+            if (isSitting(pet)) {
+                if (pet instanceof Mob sittingMob) {
+                    sittingMob.getPathfinder().stopPathfinding();
+                    sittingMob.setVelocity(sittingMob.getVelocity().zero());
+                    Player lookAt = Bukkit.getOnlinePlayers().stream()
+                            .filter(p -> p.getWorld().equals(pet.getWorld()) && p.getLocation().distanceSquared(pet.getLocation()) <= 256.0)
+                            .min(Comparator.comparingDouble(p -> p.getLocation().distanceSquared(pet.getLocation())))
+                            .orElse(null);
+                    if (lookAt != null) {
+                        org.bukkit.util.Vector direction = lookAt.getEyeLocation().toVector().subtract(pet.getLocation().toVector());
+                        float yaw = (float) Math.toDegrees(Math.atan2(-direction.getX(), direction.getZ()));
+                        pet.setRotation(yaw, pet.getLocation().getPitch());
+                    }
+                }
+                continue;
+            }
             if (!isOwnedBy(pet, owner)) {
                 iterator.remove();
                 continue;
@@ -347,7 +376,7 @@ public final class PetManager implements Listener {
                 destination.setY(owner.getLocation().getY());
                 pet.teleport(destination);
             } else if (pet instanceof Mob mob && pet.getLocation().distanceSquared(owner.getLocation()) > 9.0) {
-                double ratio = Math.max(0.1, Math.min(3.0, owner.getWalkSpeed() / 0.2));
+                double ratio = Math.max(0.1, Math.min(5.0, owner.getWalkSpeed() / 0.2));
                 mob.getPathfinder().moveTo(owner.getLocation(), ratio * (owner.isSprinting() ? 1.3 : 1.0));
             }
         }
