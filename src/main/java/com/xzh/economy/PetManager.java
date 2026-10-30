@@ -75,7 +75,7 @@ public final class PetManager implements Listener {
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName(ChatColor.YELLOW + option.display());
             List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.WHITE + "Price: " + ChatColor.GOLD + option.price() + " coins");
+            lore.add(ChatColor.WHITE + "Price: " + ChatColor.GOLD + String.valueOf(option.price()) + " coins");
             lore.add(ChatColor.GRAY + "Permanent baby pet - one-time purchase");
             lore.add(ChatColor.GRAY + "Right-click your pet to sit / stand");
             lore.add(ChatColor.GREEN + "Click to purchase");
@@ -156,7 +156,7 @@ public final class PetManager implements Listener {
             mob.setCanPickupItems(false);
         } catch (RuntimeException ex) {
             entity.remove();
-            plugin.getLogger().warning("Could not initialize purchased pet " + id + ": " + ex.getMessage());
+            plugin.getLogger().warning("Could not initialize purchased pet " + option.id() + ": " + ex.getMessage());
             plugin.tellPublic(player, "Pet creation failed. Your coins were not charged.");
             return;
         }
