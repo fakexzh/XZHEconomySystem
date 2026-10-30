@@ -706,6 +706,11 @@ public final class QuestManager implements Listener {
         data.set("activity." + event.getPlayer().getUniqueId(), System.currentTimeMillis());
     }
 
+    @EventHandler
+    public void onQuestActivityEntityInteract(PlayerInteractEntityEvent event) {
+        data.set("activity." + event.getPlayer().getUniqueId(), System.currentTimeMillis());
+    }
+
     private boolean isQuestActivityRecent(Player player) {
         int seconds = Math.max(1, plugin.getConfig().getInt("quests.activity-seconds", 90));
         long last = data.getLong("activity." + player.getUniqueId(), 0L);
