@@ -99,7 +99,7 @@ public final class QuestManager implements Listener {
     private final NamespacedKey valueKey;
     private final NamespacedKey mobSpawnReasonKey;
     private final NamespacedKey mobSpawnerKey;
-    private final NamespacedKey playerCombatKillerKey;
+    private final NamespacedKey directMeleeKillerKey;
     private final NamespacedKey feedCooldownKey;
     private final NamespacedKey breedingCreditKey;
     private final NamespacedKey breedingCreditTimeKey;
@@ -375,7 +375,7 @@ public final class QuestManager implements Listener {
         valueKey = new NamespacedKey(plugin, "quest_value");
         mobSpawnReasonKey = new NamespacedKey(plugin, "quest_mob_spawn_reason");
         mobSpawnerKey = new NamespacedKey(plugin, "quest_mob_spawner");
-        playerCombatKillerKey = new NamespacedKey(plugin, "quest_player_combat_killer");
+        directMeleeKillerKey = new NamespacedKey(plugin, "quest_direct_melee_killer");
         feedCooldownKey = new NamespacedKey(plugin, "quest_feed_cooldown");
         breedingCreditKey = new NamespacedKey(plugin, "quest_breeding_credit");
         breedingCreditTimeKey = new NamespacedKey(plugin, "quest_breeding_credit_time");
@@ -1045,22 +1045,17 @@ public final class QuestManager implements Listener {
     @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
     public void onNonMeleeDamage(EntityDamageEvent event) {
         if (event.isCancelled() || event instanceof EntityDamageByEntityEvent) return;
-        event.getEntity().getPersistentDataContainer().remove(playerCombatKillerKey);
+        event.getEntity().getPersistentDataContainer().remove(directMeleeKillerKey);
     }
 
     @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
-    public void onPlayerCombatDamage(EntityDamageByEntityEvent event) {
+    public void onDirectMeleeDamage(EntityDamageByEntityEvent event) {
         if (event.isCancelled()) return;
         var pdc = event.getEntity().getPersistentDataContainer();
-        Player attacker = event.getDamager() instanceof Player direct ? direct
-                : event.getDamager() instanceof org.bukkit.entity.Projectile projectile
-                    && projectile.getShooter() instanceof Player shooter ? shooter : null;
-        if (attacker != null) {
-            // Credit direct melee and player-fired projectiles (bows, crossbows, tridents).
-            // Non-player damage still clears the credit in onNonMeleeDamage().
-            pdc.set(playerCombatKillerKey, PersistentDataType.STRING, attacker.getUniqueId().toString());
+        if (event.getDamager() instanceof Player attacker) {
+            pdc.set(directMeleeKillerKey, PersistentDataType.STRING, attacker.getUniqueId().toString());
         } else {
-            pdc.remove(playerCombatKillerKey);
+            pdc.remove(directMeleeKillerKey);
         }
     }
 
@@ -1074,7 +1069,7 @@ public final class QuestManager implements Listener {
                 .get(mobSpawnReasonKey, PersistentDataType.STRING);
         if (spawnReason == null) return; // Unclassified, command, egg, conversion and custom spawns never count.
         String meleeKiller = event.getEntity().getPersistentDataContainer()
-                .get(playerCombatKillerKey, PersistentDataType.STRING);
+                .get(directMeleeKillerKey, PersistentDataType.STRING);
         if (meleeKiller == null || !meleeKiller.equals(p.getUniqueId().toString())) return;
         String spawner = event.getEntity().getPersistentDataContainer()
                 .get(mobSpawnerKey, PersistentDataType.STRING);
@@ -1424,7 +1419,7 @@ public final class QuestManager implements Listener {
                     EntityType type;
                     try { type = EntityType.valueOf(entity); } catch (IllegalArgumentException ex) { yield false; }
                     Class<? extends org.bukkit.entity.Entity> entityClass = type.getEntityClass();
-                    yield entityClass != null && org.bukkit.entity.Enemy.class.isAssignableFrom(entityClass)
+                    yield entityClass != null && org.bukkit.entity.Monster.class.isAssignableFrom(entityClass)
                             && type != EntityType.ENDER_DRAGON && type != EntityType.WITHER
                             && type != EntityType.ELDER_GUARDIAN && type != EntityType.WARDEN;
                 }
