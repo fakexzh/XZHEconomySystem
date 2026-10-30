@@ -671,7 +671,24 @@ public final class QuestManager implements Listener {
             Objective o = objectives.get(i);
             data.set(uuid + ".objectives." + i + ".target", o.target());
             String[] objectiveParts = o.target().split(":", 3);
-            String objectiveType = objectiveParts.length > 0 ? objectiveParts[0] : "";
+            String objectiveType = objectiveParts.length > 0 ? switch (objectiveParts[0]) {
+                case "break" -> "MINE";
+                case "harvest" -> "HARVEST";
+                case "kill" -> "KILL";
+                case "fish" -> "FISH";
+                case "breed" -> "BREED";
+                case "feed" -> "FEED";
+                case "tame" -> "TAME";
+                case "smelt" -> "SMELT";
+                case "craft" -> "CRAFT";
+                case "enchant" -> "ENCHANT";
+                case "barter" -> "BARTER";
+                case "loot" -> "LOOT";
+                case "vault" -> "VAULT";
+                case "travel" -> "TRAVEL";
+                case "biome" -> "BIOME";
+                default -> objectiveParts[0].toUpperCase(Locale.ROOT);
+            } : "";
             String objectiveDimension = objectiveParts.length > 1 && objectiveParts[1].startsWith("@")
                     ? objectiveParts[1].substring(1) : "ANY";
             String objectiveTargets = objectiveParts.length == 3
@@ -1042,7 +1059,7 @@ public final class QuestManager implements Listener {
                     int objectiveCount = data.getInt(id + ".objective-count", 0);
                     for (int objectiveIndex = 0; objectiveIndex < objectiveCount; objectiveIndex++) {
                         String objectivePath = id + ".objectives." + objectiveIndex;
-                        if (!"biome".equals(data.getString(objectivePath + ".type", ""))) continue;
+                        if (!"BIOME".equals(data.getString(objectivePath + ".type", ""))) continue;
                         List<String> visited = new ArrayList<>(data.getStringList(objectivePath + ".biomes"));
                         if (!visited.contains(toBiome.name())) {
                             visited.add(toBiome.name());
