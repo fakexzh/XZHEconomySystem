@@ -1124,7 +1124,7 @@ public final class QuestManager implements Listener {
             return;
         }
         boolean elytra = p.isGliding();
-        if (p.isInsideVehicle() || p.isFlying() || (!elytra && (p.isGliding() || p.getFallDistance() > 3.0f))) {
+        if (p.isInsideVehicle() || p.isFlying() || (!elytra && (p.isGliding() || p.getFallDistance() > 0.0f))) {
             travelRemainders.remove(id);
             return;
         }
