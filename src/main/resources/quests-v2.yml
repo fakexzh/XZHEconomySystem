@@ -2221,7 +2221,7 @@ quests:
     fee: 470
     profit: 470
     timer-minutes: 0
-    icon: COCOA
+    icon: COCOA_BEANS
     tier-gate: "nether/find_fortress"
   - id: H059
     tier: hard
