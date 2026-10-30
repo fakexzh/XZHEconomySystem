@@ -252,6 +252,11 @@ public final class PetManager implements Listener {
         if (isPet(event.getEntity())) event.setCancelled(true);
     }
 
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void preventPetAttacks(org.bukkit.event.entity.EntityDamageByEntityEvent event) {
+        if (isPet(event.getDamager())) event.setCancelled(true);
+    }
+
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         following.entrySet().removeIf(entry -> entry.getValue().equals(event.getPlayer().getUniqueId()));
@@ -308,7 +313,7 @@ public final class PetManager implements Listener {
             plugin.tellPublic(player, "Look directly at one of your own Baby Pets.");
             return true;
         }
-                following.entrySet().removeIf(entry -> entry.getValue().equals(player.getUniqueId()));
+        following.entrySet().removeIf(entry -> entry.getValue().equals(player.getUniqueId()));
         following.put(target.getUniqueId(), player.getUniqueId());
         plugin.tellPublic(player, "Your pet is now following you. Any other pet will continue roaming independently.");
         return true;
