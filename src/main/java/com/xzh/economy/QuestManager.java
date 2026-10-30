@@ -610,8 +610,9 @@ public final class QuestManager implements Listener {
         UUID id = player.getUniqueId();
         long cooldown = data.getLong("cooldowns." + id, 0L);
         if (System.currentTimeMillis() < cooldown) {
-            long minutes = Math.max(1L, (cooldown - System.currentTimeMillis() + 59_999L) / 60_000L);
-            plugin.tellPublic(player, "Tier cooldown active. You can buy another " + tier + " pack in " + minutes + " minute(s).");
+            long totalSeconds = Math.max(1L, (cooldown - System.currentTimeMillis() + 999L) / 1000L);
+            String left = (totalSeconds / 60L) + ":" + String.format(Locale.ROOT, "%02d", totalSeconds % 60L);
+            plugin.tellPublic(player, "Quest cooldown: " + left + " left.");
             return false;
         }
         int cap = configuredTierValue(tier, "daily-profit-cap", tier.equals("easy") ? 2500 : tier.equals("hard") ? 5000 : 12000);
