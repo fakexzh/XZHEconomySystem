@@ -260,6 +260,7 @@ public final class QuestManager implements Listener {
         file = new File(plugin.getDataFolder(), "quests.yml");
         data = YamlConfiguration.loadConfiguration(file);
         v2Catalogue = QuestCatalogue.load(plugin);
+        validateCatalogueAdvancements();
         // One-time v2 migration: refund retired active achievement packs in full.
         boolean migratedOldQuests = false;
         for (String root : new ArrayList<>(data.getKeys(false))) {
@@ -295,6 +296,23 @@ public final class QuestManager implements Listener {
             data.set("single-shop.next-refresh", 0L);
             data.set("single-shop.refresh-id", 0);
             refreshSingleShopIfDue();
+        }
+    }
+
+    private void validateCatalogueAdvancements() {
+        Set<String> checked = new HashSet<>();
+        for (QuestCatalogue.Entry entry : v2Catalogue.entries()) {
+            List<String> keys = new ArrayList<>(entry.unlock());
+            keys.add(entry.tierGate());
+            for (String raw : keys) {
+                String key = raw.contains(":") ? raw : "minecraft:" + raw;
+                if (!checked.add(key)) continue;
+                NamespacedKey namespaced = NamespacedKey.fromString(key);
+                if (namespaced == null || Bukkit.getAdvancement(namespaced) == null) {
+                    plugin.getLogger().warning("Quest catalogue references missing advancement '" + key
+                            + "' (used by " + entry.id() + ").");
+                }
+            }
         }
     }
 
