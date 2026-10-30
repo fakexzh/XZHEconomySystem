@@ -833,7 +833,7 @@ public final class ShopManager implements Listener {
         if (action.equals("category")) {
             return switch (value) {
                 case "ores", "blocks" -> "ore_chunk";
-                case "equipment" -> "sword";
+                case "equipment" -> "shield";
                 case "food", "food-cooked" -> "bread";
                 case "food-raw", "seeds" -> "wheat";
                 case "flowers-dyes" -> "flower";
