@@ -14,6 +14,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.BlockPistonExtendEvent;
+import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.block.BlockDispenseLootEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
@@ -719,6 +721,24 @@ public final class QuestManager implements Listener {
     public void onPlace(BlockPlaceEvent event) {
         if (event.isCancelled()) return;
         data.set(placedBlockPath(event.getBlock().getLocation()), true);
+        save();
+    }
+
+    @EventHandler
+    public void onPistonExtend(BlockPistonExtendEvent event) {
+        for (org.bukkit.block.Block moved : event.getBlocks()) {
+            data.set(placedBlockPath(moved.getLocation()), true);
+            data.set(placedBlockPath(moved.getRelative(event.getDirection()).getLocation()), true);
+        }
+        save();
+    }
+
+    @EventHandler
+    public void onPistonRetract(BlockPistonRetractEvent event) {
+        for (org.bukkit.block.Block moved : event.getBlocks()) {
+            data.set(placedBlockPath(moved.getLocation()), true);
+            data.set(placedBlockPath(moved.getRelative(event.getDirection().getOppositeFace()).getLocation()), true);
+        }
         save();
     }
 
