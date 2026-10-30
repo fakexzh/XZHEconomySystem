@@ -316,7 +316,7 @@ public final class AdminManager implements Listener {
     }
 
     private void diagnostics(Player player) {
-        player.sendMessage(ChatColor.GOLD + "XZHEconomySystem diagnostics");
+        player.sendMessage(ChatColor.GOLD + "Economy diagnostics");
         player.sendMessage(ChatColor.GRAY + "Online players: " + Bukkit.getOnlinePlayers().size());
         for (String name : List.of("balances.yml", "loans.yml", "quests.yml", "shop-stock.yml", "death-recovery.yml", "locations.yml", "transactions.log")) {
             File f = new File(plugin.getDataFolder(), name);
