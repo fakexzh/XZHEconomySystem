@@ -955,8 +955,6 @@ public final class QuestManager implements Listener {
     }
 
     private boolean objectiveTagMatches(String tag, String actual) {
-        Material material = Material.matchMaterial(actual);
-        if (material == null) return false;
         if (actual.startsWith("KILL_")) {
             String entity = actual.substring("KILL_".length());
             return switch (tag) {
@@ -965,6 +963,7 @@ public final class QuestManager implements Listener {
                     try { type = EntityType.valueOf(entity); } catch (IllegalArgumentException ex) { yield false; }
                     yield type != EntityType.ENDER_DRAGON && type != EntityType.WITHER
                             && type != EntityType.ELDER_GUARDIAN && type != EntityType.WARDEN
+                            && type != EntityType.BREEZE && type != EntityType.BOGGED
                             && switch (type) {
                                 case ZOMBIE, HUSK, DROWNED, SKELETON, STRAY, CREEPER, SPIDER, CAVE_SPIDER,
                                      ENDERMAN, WITCH, SLIME, PHANTOM, BLAZE, GHAST, MAGMA_CUBE,
@@ -974,13 +973,28 @@ public final class QuestManager implements Listener {
                             };
                 }
                 case "#RAIDERS" -> Set.of("PILLAGER", "VINDICATOR", "EVOKER", "RAVAGER", "WITCH", "VEX").contains(entity);
+                case "#TRIAL_SPAWN_MOBS" -> Set.of("ZOMBIE", "SKELETON", "STRAY", "SPIDER", "CAVE_SPIDER",
+                        "SLIME", "SILVERFISH", "BREEZE", "BOGGED").contains(entity);
                 default -> false;
             };
         }
+        Material material = Material.matchMaterial(actual);
+        if (material == null) return false;
         return switch (tag) {
             case "#LOGS" -> actual.endsWith("_LOG") || actual.endsWith("_STEM");
-            case "#OVERWORLD_ORES" -> actual.endsWith("_ORE") && !actual.startsWith("NETHER_");
+            case "#OVERWORLD_ORES" -> Set.of("COAL_ORE", "COPPER_ORE", "IRON_ORE", "GOLD_ORE",
+                    "REDSTONE_ORE", "LAPIS_ORE", "DIAMOND_ORE", "EMERALD_ORE",
+                    "DEEPSLATE_COAL_ORE", "DEEPSLATE_COPPER_ORE", "DEEPSLATE_IRON_ORE",
+                    "DEEPSLATE_GOLD_ORE", "DEEPSLATE_REDSTONE_ORE", "DEEPSLATE_LAPIS_ORE",
+                    "DEEPSLATE_DIAMOND_ORE", "DEEPSLATE_EMERALD_ORE").contains(actual);
             case "#STONE_TYPES" -> Set.of("STONE", "DEEPSLATE", "ANDESITE", "DIORITE", "GRANITE", "TUFF").contains(actual);
+            case "#FISH_JUNK" -> Set.of("LILY_PAD", "BOWL", "LEATHER", "LEATHER_BOOTS", "ROTTEN_FLESH",
+                    "STICK", "STRING", "POTION", "BONE", "INK_SAC", "TRIPWIRE_HOOK").contains(actual);
+            case "#FISH_TREASURE" -> Set.of("BOW", "ENCHANTED_BOOK", "FISHING_ROD", "NAME_TAG",
+                    "NAUTILUS_SHELL", "SADDLE").contains(actual);
+            case "#COOKED_FOOD" -> Set.of("COOKED_BEEF", "COOKED_PORKCHOP", "COOKED_CHICKEN",
+                    "COOKED_MUTTON", "COOKED_RABBIT", "COOKED_COD", "COOKED_SALMON",
+                    "BAKED_POTATO", "DRIED_KELP").contains(actual);
             default -> false;
         };
     }
