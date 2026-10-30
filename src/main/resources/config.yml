@@ -273,6 +273,8 @@ quests:
       easy: 2500
       hard: 5000
       master: 12000
+    # false = melee final hit only; true also credits player-fired projectiles.
+    projectile-kill-credit: false
     spawner-kill-cap: 10
     trial-spawner-kill-cap: 20
     travel-max-blocks-per-second: 12
