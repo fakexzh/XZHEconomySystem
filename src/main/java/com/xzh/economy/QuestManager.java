@@ -170,7 +170,7 @@ public final class QuestManager implements Listener {
     );
 
     // Generate 100 one-time packs per progression tier from the expanded curated objective pool.
-    private final List<Pack> packs = buildPacks();
+    private final List<Pack> packs;
 
     private List<Pack> buildPacks() {
         List<Pack> result = new ArrayList<>(v2Catalogue.entries().size());
@@ -273,6 +273,7 @@ public final class QuestManager implements Listener {
         data = YamlConfiguration.loadConfiguration(file);
         v2Catalogue = QuestCatalogue.load(plugin);
         validateCatalogueAdvancements();
+        packs = buildPacks();
         // One-time v2 migration: refund retired active achievement packs in full.
         boolean migratedOldQuests = false;
         for (String root : new ArrayList<>(data.getKeys(false))) {
