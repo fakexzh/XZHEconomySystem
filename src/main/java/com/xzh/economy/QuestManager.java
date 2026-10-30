@@ -488,7 +488,6 @@ public final class QuestManager implements Listener {
             } else {
                 List<String> missing = catalogueEntryFor(pack.id())
                         .map(entry -> missingCatalogueUnlocks(player, entry)).orElse(List.of());
-                if (!tierUnlocked(player, tierOf(pack))) lore.add(ChatColor.RED + tierUnlockDescription(tierOf(pack)));
                 for (String key : missing) {
                     String normalized = key.contains(":") ? key : "minecraft:" + key;
                     NamespacedKey advancementKey = NamespacedKey.fromString(normalized);
