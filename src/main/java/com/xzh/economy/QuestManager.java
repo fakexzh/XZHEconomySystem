@@ -485,9 +485,17 @@ public final class QuestManager implements Listener {
     private void confirmPack(Player player, Pack pack) {
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Confirm quest pack");
         List<String> lore = new ArrayList<>();
-        lore.add(ChatColor.WHITE + "Cost: " + pack.cost() + " coins");
-        lore.add(ChatColor.WHITE + "Reward: " + rewardForPack(pack) + " coins");
-        for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + objective.description());
+        lore.add(ChatColor.WHITE + "Fee: " + ChatColor.YELLOW + pack.cost() + " coins");
+        lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + rewardForPack(pack) + " coins");
+        lore.add(ChatColor.WHITE + "Profit: " + ChatColor.GOLD + "+" + (rewardForPack(pack) - pack.cost()) + " coins");
+        lore.add(ChatColor.AQUA + "Objectives:");
+        for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + "• " + objective.description());
+        catalogueEntryFor(pack.id()).ifPresent(entry -> {
+            for (String key : missingCatalogueUnlocks(player, entry)) {
+                String normalized = key.contains(":") ? key : "minecraft:" + key;
+                lore.add(ChatColor.RED + "Locked: requires " + normalized);
+            }
+        });
         int timerMinutes = packTimerLimitMinutes(pack.id());
         lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
         add(inv, 13, pack.icon(), ChatColor.YELLOW + pack.name(), "pack-info", pack.id(), lore);
