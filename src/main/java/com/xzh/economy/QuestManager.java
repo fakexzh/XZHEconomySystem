@@ -99,6 +99,7 @@ public final class QuestManager implements Listener {
     private final NamespacedKey valueKey;
     private final NamespacedKey mobSpawnReasonKey;
     private final NamespacedKey mobSpawnerKey;
+    private final NamespacedKey directMeleeKillerKey;
     private final NamespacedKey feedCooldownKey;
     private final NamespacedKey breedingCreditKey;
     private final NamespacedKey breedingCreditTimeKey;
@@ -353,6 +354,7 @@ public final class QuestManager implements Listener {
         valueKey = new NamespacedKey(plugin, "quest_value");
         mobSpawnReasonKey = new NamespacedKey(plugin, "quest_mob_spawn_reason");
         mobSpawnerKey = new NamespacedKey(plugin, "quest_mob_spawner");
+        directMeleeKillerKey = new NamespacedKey(plugin, "quest_direct_melee_killer");
         feedCooldownKey = new NamespacedKey(plugin, "quest_feed_cooldown");
         breedingCreditKey = new NamespacedKey(plugin, "quest_breeding_credit");
         breedingCreditTimeKey = new NamespacedKey(plugin, "quest_breeding_credit_time");
@@ -1000,6 +1002,23 @@ public final class QuestManager implements Listener {
         }
     }
 
+    @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
+    public void onNonMeleeDamage(EntityDamageEvent event) {
+        if (event.isCancelled() || event instanceof EntityDamageByEntityEvent) return;
+        event.getEntity().getPersistentDataContainer().remove(directMeleeKillerKey);
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
+    public void onDirectMeleeDamage(EntityDamageByEntityEvent event) {
+        if (event.isCancelled()) return;
+        var pdc = event.getEntity().getPersistentDataContainer();
+        if (event.getDamager() instanceof Player attacker) {
+            pdc.set(directMeleeKillerKey, PersistentDataType.STRING, attacker.getUniqueId().toString());
+        } else {
+            pdc.remove(directMeleeKillerKey);
+        }
+    }
+
     @EventHandler
     public void onKill(EntityDeathEvent event) {
         Player p = event.getEntity().getKiller();
@@ -1009,6 +1028,9 @@ public final class QuestManager implements Listener {
         String spawnReason = event.getEntity().getPersistentDataContainer()
                 .get(mobSpawnReasonKey, PersistentDataType.STRING);
         if (spawnReason == null) return; // Unclassified, command, egg, conversion and custom spawns never count.
+        String meleeKiller = event.getEntity().getPersistentDataContainer()
+                .get(directMeleeKillerKey, PersistentDataType.STRING);
+        if (meleeKiller == null || !meleeKiller.equals(p.getUniqueId().toString())) return;
         String spawner = event.getEntity().getPersistentDataContainer()
                 .get(mobSpawnerKey, PersistentDataType.STRING);
         if (spawner != null) {
