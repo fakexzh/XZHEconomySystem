@@ -420,6 +420,9 @@ public final class PetManager implements Listener {
                 return true;
             }
             following.remove(target.getUniqueId());
+            String transferredIdentity = target.getPersistentDataContainer().get(identityKey, PersistentDataType.STRING);
+            if (transferredIdentity != null) activePets.set("pets." + transferredIdentity, null);
+            saveActivePets();
             target.getPersistentDataContainer().set(ownerKey, PersistentDataType.STRING, recipient.getUniqueId().toString());
             target.setCustomName(petName(target));
             target.setCustomNameVisible(true);
