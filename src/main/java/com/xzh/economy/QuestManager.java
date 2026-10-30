@@ -1424,7 +1424,7 @@ public final class QuestManager implements Listener {
                     EntityType type;
                     try { type = EntityType.valueOf(entity); } catch (IllegalArgumentException ex) { yield false; }
                     Class<? extends org.bukkit.entity.Entity> entityClass = type.getEntityClass();
-                    yield entityClass != null && org.bukkit.entity.Monster.class.isAssignableFrom(entityClass)
+                    yield entityClass != null && org.bukkit.entity.Enemy.class.isAssignableFrom(entityClass)
                             && type != EntityType.ENDER_DRAGON && type != EntityType.WITHER
                             && type != EntityType.ELDER_GUARDIAN && type != EntityType.WARDEN;
                 }
