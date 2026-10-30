@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -688,11 +689,30 @@ public final class QuestManager implements Listener {
         return last > 0L && System.currentTimeMillis() - last <= seconds * 1000L;
     }
 
+    private String placedBlockPath(org.bukkit.Location location) {
+        return "placed-blocks." + location.getWorld().getUID() + "."
+                + location.getBlockX() + "." + location.getBlockY() + "." + location.getBlockZ();
+    }
+
+    @EventHandler
+    public void onPlace(BlockPlaceEvent event) {
+        if (event.isCancelled()) return;
+        data.set(placedBlockPath(event.getBlock().getLocation()), true);
+        save();
+    }
+
     @EventHandler
     public void onBreak(BlockBreakEvent event) {
         if (event.isCancelled()) return;
         Player p = event.getPlayer();
         if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        String placedPath = placedBlockPath(event.getBlock().getLocation());
+        boolean playerPlaced = data.getBoolean(placedPath, false);
+        if (playerPlaced) {
+            data.set(placedPath, null);
+            save();
+            return;
+        }
         Material material = event.getBlock().getType();
         String id = material.name();
         incrementTarget(p, "break:" + id, 1);
