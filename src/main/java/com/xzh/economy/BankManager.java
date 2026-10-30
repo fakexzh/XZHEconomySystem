@@ -77,8 +77,8 @@ public final class BankManager implements Listener {
         boolean open = isOpenNow();
         if (previousOpenState != null && previousOpenState != open) {
             Bukkit.broadcastMessage(open
-                    ? ChatColor.GOLD + "[XZH BANK] " + ChatColor.GREEN + "The bank is now OPEN."
-                    : ChatColor.GOLD + "[XZH BANK] " + ChatColor.RED + "The bank is now CLOSED.");
+                    ? ChatColor.GOLD + "[BANK] " + ChatColor.GREEN + "The bank is now OPEN."
+                    : ChatColor.GOLD + "[BANK] " + ChatColor.RED + "The bank is now CLOSED.");
             if (open) { openingWarned = false; closingWarned = false; }
         }
         previousOpenState = open;
@@ -89,13 +89,13 @@ public final class BankManager implements Listener {
             double seconds = secondsUntil(now, closeTick);
             if (!closingWarned && seconds > 0 && seconds <= 300) {
                 closingWarned = true;
-                Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH BANK] " + ChatColor.YELLOW + "The bank will close in about 5 minutes.");
+                Bukkit.broadcastMessage(ChatColor.GOLD + "[BANK] " + ChatColor.YELLOW + "The bank will close in about 5 minutes.");
             }
         } else {
             double seconds = secondsUntil(now, openTick);
             if (!openingWarned && seconds > 0 && seconds <= 300) {
                 openingWarned = true;
-                Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH BANK] " + ChatColor.YELLOW + "The bank will open in about 5 minutes.");
+                Bukkit.broadcastMessage(ChatColor.GOLD + "[BANK] " + ChatColor.YELLOW + "The bank will open in about 5 minutes.");
             }
         }
     }
