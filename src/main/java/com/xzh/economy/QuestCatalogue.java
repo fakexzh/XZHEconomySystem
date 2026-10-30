@@ -60,8 +60,9 @@ final class QuestCatalogue {
                 List<String> unlock = q.getStringList("unlock");
                 if (objectives.isEmpty()) throw new IllegalStateException("Quest " + id + " has no objectives");
                 for (String objective : objectives) {
-                    if (objective == null || !objective.matches("[A-Z]+:[^:]+:[1-9][0-9]*(?:@(?:OVERWORLD|NETHER|END))?")) {
-                        throw new IllegalStateException("Invalid objective grammar in " + id + ": " + objective);
+                    try { QuestObjectiveSpec.parse(objective); }
+                    catch (IllegalArgumentException ex) {
+                        throw new IllegalStateException("Invalid objective grammar in " + id + ": " + ex.getMessage(), ex);
                     }
                 }
                 int fee = q.getInt("fee", -1);
