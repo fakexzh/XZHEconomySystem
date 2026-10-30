@@ -920,13 +920,13 @@ public final class QuestManager implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
     public void onNonMeleeDamage(EntityDamageEvent event) {
         if (event.isCancelled() || event instanceof EntityDamageByEntityEvent) return;
         event.getEntity().getPersistentDataContainer().remove(directMeleeKillerKey);
     }
 
-    @EventHandler
+    @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
     public void onDirectMeleeDamage(EntityDamageByEntityEvent event) {
         if (event.isCancelled()) return;
         var pdc = event.getEntity().getPersistentDataContainer();
