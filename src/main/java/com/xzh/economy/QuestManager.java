@@ -690,7 +690,7 @@ public final class QuestManager implements Listener {
                 default -> objectiveParts[0].toUpperCase(Locale.ROOT);
             } : "";
             String objectiveDimension = objectiveParts.length > 1 && objectiveParts[1].startsWith("@")
-                    ? objectiveParts[1].substring(1) : "ANY";
+                    && !objectiveParts[1].equals("@ROAMING_BOSS") ? objectiveParts[1].substring(1) : "ANY";
             String objectiveTargets = objectiveParts.length == 3
                     ? (objectiveParts[1].startsWith("@") ? objectiveParts[2] : objectiveParts[1] + ":" + objectiveParts[2])
                     : "";
