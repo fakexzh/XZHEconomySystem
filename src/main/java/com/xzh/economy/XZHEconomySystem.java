@@ -38,6 +38,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     private MoneyRequestManager moneyRequestManager;
     private BoatManager boatManager;
     private VillagerTradeManager villagerTradeManager;
+    private PetManager petManager;
 
     @Override
     public void onEnable() {
@@ -60,6 +61,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         bankManager = new BankManager(this);
         hudManager = new HudManager(this);
         hudManager.start();
+        petManager = new PetManager(this);
         shopManager = new ShopManager(this);
         boatManager = new BoatManager(this);
         bookShopManager = new BookShopManager(this);
@@ -78,7 +80,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
-        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quest", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "warp", "setwarp", "delwarp", "tpa", "tpasend", "tpacancel", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit", "gmc", "gms", "gma", "gmsp", "day", "night", "gamemode", "heal", "feed", "fly", "weather", "helpxzh")) {
+        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quest", "quests", "deathinventory", "shopadmin", "pet", "unpet", "spawn", "setspawn", "home", "warp", "setwarp", "delwarp", "tpa", "tpasend", "tpacancel", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit", "gmc", "gms", "gma", "gmsp", "day", "night", "gamemode", "heal", "feed", "fly", "weather", "helpxzh")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
@@ -91,6 +93,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     @Override
     public void onDisable() {
         if (hudManager != null) hudManager.shutdown();
+        if (petManager != null) petManager.shutdown();
         if (villagerTradeManager != null) villagerTradeManager.shutdown();
         saveBalances();
     }
@@ -208,6 +211,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     public BankManager getBankManager() { return bankManager; }
     public LoanManager getLoanManager() { return loanManager; }
     public ShopManager getShopManager() { return shopManager; }
+    public PetManager getPetManager() { return petManager; }
     public BookShopManager getBookShopManager() { return bookShopManager; }
     public QuestManager getQuestManager() { return questManager; }
     public DeathRecoveryManager getDeathRecoveryManager() { return deathRecoveryManager; }
@@ -504,6 +508,10 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 tell(sender, "Usage: /shopadmin <restock|stock <MATERIAL> <amount>>");
                 return true;
             }
+            case "pet", "unpet" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can control pets."); return true; }
+                return petManager != null && petManager.handleCommand(player, command.getName(), args);
+            }
             case "shop" -> {
                 if (!(sender instanceof Player player)) { tell(sender, "Only players can open the shop."); return true; }
                 if (shopManager != null) shopManager.openMain(player);
@@ -516,6 +524,8 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 tell(sender, "§f/sendmoney <player> <amount> §7- request a confirmed transfer to them");
                 tell(sender, "§f/askmoney <player> <amount> §7- ask them for a confirmed payment");
                 tell(sender, "§f/shop §7- open XZH SHOP");
+                tell(sender, "§f/pet [transfer <player>] §7- command or transfer your targeted Baby Pet");
+                tell(sender, "§f/unpet §7- stop your targeted pet from following");
                 tell(sender, "§f/bank §7- open XZH BANK, deposits, withdrawals and loans");
                 if (sender.hasPermission("xzh.admin")) tell(sender, "§f/shopadmin <restock|stock> §7- manage global shop stock");
                 tell(sender, "§f/loan repay §7- repay an active loan (also available in /bank)");
@@ -625,7 +635,10 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             suggestions.add("set"); suggestions.add("add");
         } else if (command.getName().equalsIgnoreCase("quest") && args.length == 1) {
             suggestions.add("cancel");
-        } else if ((command.getName().equalsIgnoreCase("tpa") && args.length == 1)
+        } else if (command.getName().equalsIgnoreCase("pet") && args.length == 1) {
+            suggestions.add("transfer");
+        } else if ((command.getName().equalsIgnoreCase("pet") && args.length == 2 && args[0].equalsIgnoreCase("transfer"))
+                || (command.getName().equalsIgnoreCase("tpa") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("pay") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("sendmoney") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("askmoney") && args.length == 1)
