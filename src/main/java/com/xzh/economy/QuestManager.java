@@ -1525,7 +1525,7 @@ public final class QuestManager implements Listener {
     }
 
     private void recordGlobalProgress(Player player, String target, int amount) {
-        if (amount <= 0 || data.getBoolean("event.completed", false)) return;
+        if (amount <= 0 || !isQuestActivityRecent(player) || data.getBoolean("event.completed", false)) return;
         if (data.getLong("event.ends-at", 0L) <= System.currentTimeMillis()) {
             resetEventIfNeeded();
             if (data.getBoolean("event.completed", false)) return;
