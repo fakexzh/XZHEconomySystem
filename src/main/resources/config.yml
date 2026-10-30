@@ -387,3 +387,26 @@ premium-boats:
     basic: 0.25
     aura: 0.34
     super: 0.46
+
+# Quest rework v2 defaults. Existing quest settings above are retained for migration.
+quests:
+  v2:
+    enabled: true
+    activity-seconds: 90
+    placed-block-tracking: true
+    cooldown-minutes:
+      easy: 5
+      hard: 10
+      master: 15
+    daily-profit-cap:
+      easy: 2500
+      hard: 5000
+      master: 12000
+    spawner-kill-cap: 10
+    trial-spawner-kill-cap: 20
+    travel-max-blocks-per-second: 12
+  global-event:
+    min-contribution-percent: 3
+    full-reward-percent: 10
+    max-completions-per-day: 3
+    cooldown-minutes: 30
