@@ -251,7 +251,7 @@ public final class PetManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void protectPetTarget(EntityTargetEvent event) {
-        if (isPet(event.getEntity())) event.setCancelled(true);
+        if (isPet(event.getEntity()) || isPet(event.getTarget())) event.setCancelled(true);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -347,6 +347,10 @@ public final class PetManager implements Listener {
             Entity pet = Bukkit.getEntity(entry.getKey());
             Player owner = Bukkit.getPlayer(entry.getValue());
             if (pet == null || !pet.isValid() || owner == null || !owner.isOnline()) { iterator.remove(); continue; }
+            boolean nameVisible = Bukkit.getOnlinePlayers().stream()
+                    .anyMatch(viewer -> viewer.getWorld().equals(pet.getWorld())
+                            && viewer.getLocation().distanceSquared(pet.getLocation()) <= 256.0);
+            pet.setCustomNameVisible(nameVisible);
             if (isSitting(pet)) {
                 if (pet instanceof Mob sittingMob) {
                     sittingMob.getPathfinder().stopPathfinding();
