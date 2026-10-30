@@ -115,7 +115,7 @@ public final class PetManager implements Listener {
         ItemStack yes = new ItemStack(Material.LIME_CONCRETE);
         ItemMeta ym = yes.getItemMeta();
         ym.setDisplayName(ChatColor.GREEN + "Confirm purchase");
-        ym.setLore(List.of(ChatColor.GRAY + option.display(), ChatColor.GOLD + option.price() + " coins"));
+        ym.setLore(List.of(ChatColor.GRAY + option.display(), ChatColor.GOLD.toString() + option.price() + " coins"));
         ym.getPersistentDataContainer().set(new NamespacedKey(plugin, "pet_confirm"), PersistentDataType.STRING, option.id());
         yes.setItemMeta(ym); inv.setItem(11, yes);
         ItemStack no = new ItemStack(Material.RED_CONCRETE);
