@@ -41,6 +41,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import java.io.File;
 import java.io.IOException;
@@ -492,7 +493,9 @@ public final class QuestManager implements Listener {
                     String normalized = key.contains(":") ? key : "minecraft:" + key;
                     NamespacedKey advancementKey = NamespacedKey.fromString(normalized);
                     Advancement required = advancementKey == null ? null : Bukkit.getAdvancement(advancementKey);
-                    String title = required == null ? "(invalid key)" : required.getKey().getKey().replace('_', ' ');
+                    String title = required == null ? "(invalid key)" : required.getDisplay() == null
+                            ? required.getKey().getKey().replace('_', ' ')
+                            : PlainTextComponentSerializer.plainText().serialize(required.getDisplay().title());
                     lore.add(ChatColor.RED + "Locked: requires " + title + " (" + normalized + ")");
                 }
                 if (missing.isEmpty()) lore.add(ChatColor.GREEN + "UNLOCKED");
