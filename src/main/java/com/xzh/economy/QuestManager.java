@@ -876,17 +876,30 @@ public final class QuestManager implements Listener {
 
     private void completeGlobalQuest() {
         if (data.getBoolean("event.completed", false)) return;
+        long now = System.currentTimeMillis();
+        String today = LocalDate.now().toString();
+        if (!today.equals(data.getString("event.completion-day", ""))) {
+            data.set("event.completion-day", today);
+            data.set("event.completions-today", 0);
+        }
+        data.set("event.completions-today", data.getInt("event.completions-today", 0) + 1);
         data.set("event.completed", true);
-        save();
-        int reward = data.getInt("event.reward", configuredEventReward());
+        data.set("event.cooldown-until", now + configuredGlobalCooldownMinutes() * 60_000L);
+        int goal = Math.max(1, data.getInt("event.goal", configuredEventGoal()));
+        int baseReward = data.getInt("event.reward", configuredEventReward());
+        int minContribution = Math.max(10, (int) Math.ceil(goal * configuredGlobalMinContributionPercent() / 100.0));
+        int fullContribution = Math.max(minContribution, (int) Math.ceil(goal * configuredGlobalFullRewardPercent() / 100.0));
         org.bukkit.configuration.ConfigurationSection contributors = data.getConfigurationSection("event.contribution");
         int paid = 0;
+        int skipped = 0;
         if (contributors != null) {
             for (String rawId : contributors.getKeys(false)) {
                 try {
                     UUID id = UUID.fromString(rawId);
                     int contribution = data.getInt("event.contribution." + rawId, 0);
-                    if (contribution <= 0) continue;
+                    if (contribution < minContribution) { skipped++; continue; }
+                    double scale = Math.max(0.5, Math.min(1.0, (double) contribution / fullContribution));
+                    int reward = Math.max(1, (int) Math.round(baseReward * scale));
                     plugin.setBalance(id, plugin.getBalance(id) + reward);
                     Player online = Bukkit.getPlayer(id);
                     if (online != null) plugin.tellPublic(online, "§aGlobal quest reward received: " + reward + " coins for contributing to " + data.getString("event.name", "the global quest") + ".");
@@ -896,10 +909,9 @@ public final class QuestManager implements Listener {
         }
         Bukkit.broadcastMessage(ChatColor.GOLD + "[Global Quest] " + ChatColor.GREEN
                 + data.getString("event.name", "Global Quest") + " completed! " + paid
-                + " contributor(s) received " + reward + " coins each.");
+                + " qualified contributor(s) paid; " + skipped + " below the contribution threshold. Next event in "
+                + configuredGlobalCooldownMinutes() + " minutes.");
         save();
-        // A successful early completion immediately opens the next four-hour community challenge.
-        startNewGlobalQuest(System.currentTimeMillis(), true);
     }
 
     private String formatGlobalTime(long millis) {
@@ -1075,8 +1087,17 @@ public final class QuestManager implements Listener {
 
     private void resetEventIfNeeded() {
         long now = System.currentTimeMillis();
+        String today = LocalDate.now().toString();
+        String eventName = data.getString("event.name", "");
+        if (data.getBoolean("event.completed", false)) {
+            if (data.getString("event.completion-day", "").equals(today)
+                    && data.getInt("event.completions-today", 0) >= configuredGlobalMaxCompletions()) return;
+            if (now < data.getLong("event.cooldown-until", 0L)) return;
+            startNewGlobalQuest(now, true);
+            return;
+        }
         long endAt = data.getLong("event.ends-at", 0L);
-        if (data.getString("event.name", "").isBlank() || endAt <= now) {
+        if (eventName.isBlank() || endAt <= now) {
             startNewGlobalQuest(now, true);
             return;
         }
@@ -1100,6 +1121,7 @@ public final class QuestManager implements Listener {
         data.set("event.ends-at", now + 4L * 60L * 60L * 1000L);
         data.set("event.completed", false);
         data.set("event.started-at", now);
+        data.set("event.cooldown-until", 0L);
         save();
         if (announce) {
             Bukkit.broadcastMessage(ChatColor.GOLD + "[Global Quest] " + ChatColor.YELLOW
@@ -1168,6 +1190,10 @@ public final class QuestManager implements Listener {
         inv.setItem(slot, stack);
     }
 
+    private int configuredGlobalMinContributionPercent() { return Math.max(0, Math.min(100, plugin.getConfig().getInt("quests.global-event.min-contribution-percent", 3))); }
+    private int configuredGlobalFullRewardPercent() { return Math.max(1, Math.min(100, plugin.getConfig().getInt("quests.global-event.full-reward-percent", 10))); }
+    private int configuredGlobalMaxCompletions() { return Math.max(1, plugin.getConfig().getInt("quests.global-event.max-completions-per-day", 3)); }
+    private int configuredGlobalCooldownMinutes() { return Math.max(0, plugin.getConfig().getInt("quests.global-event.cooldown-minutes", 30)); }
     private int configuredEventGoal() { return Math.max(1, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.goal", 500))); }
     private int rewardForGlobalQuest(GlobalQuest quest, int goal) {
         double effort = switch (quest.target()) {
