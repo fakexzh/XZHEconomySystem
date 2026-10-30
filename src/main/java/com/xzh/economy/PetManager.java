@@ -165,8 +165,7 @@ public final class PetManager implements Listener {
             entity.setCustomName(ChatColor.LIGHT_PURPLE + "@" + player.getName() + "'s Pet");
             entity.setCustomNameVisible(true);
             mob.setCanPickupItems(false);
-            mob.setAware(false);
-            mob.getPathfinder().stopPathfinding();
+            mob.setAware(true);
         } catch (RuntimeException ex) {
             entity.remove();
             plugin.getLogger().warning("Could not initialize purchased pet " + option.id() + ": " + ex.getMessage());
@@ -244,8 +243,8 @@ public final class PetManager implements Listener {
         boolean sitting = isSitting(entity);
         boolean shouldSit = !sitting;
         entity.getPersistentDataContainer().set(sittingKey, PersistentDataType.BYTE, (byte) (shouldSit ? 1 : 0));
-        mob.setAware(false);
-        mob.getPathfinder().stopPathfinding();
+        mob.setAware(!shouldSit);
+        if (shouldSit) mob.getPathfinder().stopPathfinding();
         entity.setPose(shouldSit ? Pose.SITTING : Pose.STANDING, true);
         mob.setVelocity(new org.bukkit.util.Vector(0, mob.getVelocity().getY(), 0));
         player.sendMessage("§8[§dPET§8] §f" + (sitting ? "Your pet is standing and following mode will resume." : "Your pet is sitting. It will stay here until you stand it up."));
@@ -351,8 +350,8 @@ public final class PetManager implements Listener {
                 entity.setCustomName(savedName == null ? ChatColor.LIGHT_PURPLE + "@" + player.getName() + "'s Pet" : savedName);
                 entity.setCustomNameVisible(true);
                 mob.setCanPickupItems(false);
-                mob.setAware(false);
-                mob.getPathfinder().stopPathfinding();
+                mob.setAware(!sitting);
+                if (sitting) mob.getPathfinder().stopPathfinding();
                 entity.setPose(sitting ? Pose.SITTING : Pose.STANDING, true);
                 following.put(entity.getUniqueId(), player.getUniqueId());
                 activePets.set(path, null);
@@ -453,21 +452,17 @@ public final class PetManager implements Listener {
             for (Entity pet : world.getEntities()) {
                 if (!isPet(pet) || !pet.isValid()) continue;
 
-                // Disable vanilla animal AI: this removes fox panic/flee behavior and autonomous wandering.
-                if (pet instanceof Mob mob) {
-                    mob.setAware(false);
-                    mob.getPathfinder().stopPathfinding();
-                }
-
                 boolean nameVisible = Bukkit.getOnlinePlayers().stream()
                         .anyMatch(viewer -> viewer.getWorld().equals(pet.getWorld())
                                 && viewer.getLocation().distanceSquared(pet.getLocation()) <= 256.0);
                 pet.setCustomNameVisible(nameVisible);
 
+                if (!(pet instanceof Mob mob)) continue;
+
                 if (isSitting(pet)) {
-                    if (pet instanceof Mob mob) {
-                        mob.setVelocity(new org.bukkit.util.Vector(0, mob.getVelocity().getY(), 0));
-                    }
+                    mob.setAware(false);
+                    mob.getPathfinder().stopPathfinding();
+                    mob.setVelocity(new org.bukkit.util.Vector(0, mob.getVelocity().getY(), 0));
                     Player lookAt = Bukkit.getOnlinePlayers().stream()
                             .filter(p -> p.getWorld().equals(pet.getWorld())
                                     && p.getLocation().distanceSquared(pet.getLocation()) <= 256.0)
@@ -482,36 +477,38 @@ public final class PetManager implements Listener {
                     continue;
                 }
 
-                UUID ownerId = owner(pet);
-                Player owner = ownerId == null ? null : Bukkit.getPlayer(ownerId);
-                if (owner == null || !owner.isOnline() || !isOwnedBy(pet, owner)) continue;
+                // Pets not explicitly marked as following retain ordinary animal AI and never chase their owner.
+                UUID activeOwnerId = following.get(pet.getUniqueId());
+                if (activeOwnerId == null) {
+                    mob.setAware(true);
+                    continue;
+                }
+
+                Player owner = Bukkit.getPlayer(activeOwnerId);
+                if (owner == null || !owner.isOnline() || !isOwnedBy(pet, owner)) {
+                    mob.setAware(true);
+                    mob.getPathfinder().stopPathfinding();
+                    continue;
+                }
+
+                mob.setAware(true);
                 if (!pet.getWorld().equals(owner.getWorld())) {
                     pet.teleport(owner.getLocation().clone().add(1.0, 0.0, 1.0));
                     continue;
                 }
 
-                org.bukkit.util.Vector offset = owner.getLocation().toVector().subtract(pet.getLocation().toVector());
-                offset.setY(0);
-                double distance = offset.length();
+                double distance = pet.getLocation().distance(owner.getLocation());
                 if (distance > 10.0) {
                     Location destination = owner.getLocation().clone()
                             .add(owner.getLocation().getDirection().multiply(-1.5));
                     destination.setY(owner.getLocation().getY());
                     pet.teleport(destination);
-                    continue;
-                }
-                if (distance > 2.5 && pet instanceof Mob mob) {
-                    // Follow using the owner's observed horizontal movement, rather than a pathfinder modifier.
-                    double ownerSpeed = owner.getVelocity().setY(0).length();
-                    double targetSpeed = Math.max(0.12, Math.min(0.55, ownerSpeed * 1.15));
-                    org.bukkit.util.Vector movement = offset.normalize().multiply(targetSpeed);
-                    org.bukkit.util.Vector current = pet.getVelocity();
-                    mob.setVelocity(new org.bukkit.util.Vector(movement.getX(), current.getY(), movement.getZ()));
-                    float yaw = (float) Math.toDegrees(Math.atan2(-movement.getX(), movement.getZ()));
-                    pet.setRotation(yaw, pet.getLocation().getPitch());
-                } else if (distance <= 2.5 && pet instanceof Mob mob) {
-                    org.bukkit.util.Vector current = pet.getVelocity();
-                    mob.setVelocity(new org.bukkit.util.Vector(0, current.getY(), 0));
+                } else if (distance > 3.0) {
+                    // Use vanilla pathfinding and default mob speed, rather than forcing owner-matched velocity.
+                    mob.getPathfinder().moveTo(owner.getLocation(), 1.0);
+                } else {
+                    // Close enough: release the pathfinder so normal idle wandering can happen nearby.
+                    mob.getPathfinder().stopPathfinding();
                 }
             }
         }
