@@ -37,6 +37,8 @@ public final class PetManager implements Listener {
     private final NamespacedKey variantKey;
     private final NamespacedKey sittingKey;
     private final NamespacedKey identityKey;
+    private final NamespacedKey displayNameKey;
+    private final NamespacedKey customNameKey;
     private final File activePetsFile;
     private final YamlConfiguration activePets;
     private final Map<UUID, UUID> following = new HashMap<>();
@@ -53,6 +55,8 @@ public final class PetManager implements Listener {
         variantKey = new NamespacedKey(plugin, "pet_variant");
         sittingKey = new NamespacedKey(plugin, "pet_sitting");
         identityKey = new NamespacedKey(plugin, "pet_identity");
+        displayNameKey = new NamespacedKey(plugin, "pet_display_name");
+        customNameKey = new NamespacedKey(plugin, "pet_custom_name");
         activePetsFile = new File(plugin.getDataFolder(), "active-pets.yml");
         activePets = YamlConfiguration.loadConfiguration(activePetsFile);
         add("panda-normal", "Panda - Normal", EntityType.PANDA, "NORMAL", 3000, Material.PANDA_SPAWN_EGG);
@@ -163,7 +167,9 @@ public final class PetManager implements Listener {
             pdc.set(variantKey, PersistentDataType.STRING, option.variant());
             pdc.set(sittingKey, PersistentDataType.BYTE, (byte) 0);
             pdc.set(identityKey, PersistentDataType.STRING, UUID.randomUUID().toString());
-            entity.setCustomName(ChatColor.LIGHT_PURPLE + "@" + player.getName() + "'s Pet");
+            pdc.set(displayNameKey, PersistentDataType.STRING, "@" + player.getName() + "'s pet");
+            pdc.set(customNameKey, PersistentDataType.BYTE, (byte) 0);
+            entity.setCustomName(ChatColor.LIGHT_PURPLE + "@" + player.getName() + "'s pet");
             entity.setCustomNameVisible(true);
             mob.setCanPickupItems(false);
             mob.setAware(true);
@@ -233,7 +239,25 @@ public final class PetManager implements Listener {
         }
         if (event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) return;
         ItemStack hand = event.getPlayer().getInventory().getItem(event.getHand());
-        if (hand != null && hand.getType() == Material.NAME_TAG) return;
+        if (hand != null && hand.getType() == Material.NAME_TAG) {
+            event.setCancelled(true);
+            ItemMeta tagMeta = hand.getItemMeta();
+            if (tagMeta == null || !tagMeta.hasDisplayName()) {
+                plugin.tellPublic(event.getPlayer(), "Rename the Name Tag in an anvil first.");
+                return;
+            }
+            String customName = ChatColor.stripColor(tagMeta.getDisplayName());
+            if (customName == null || customName.isBlank()) return;
+            entity.getPersistentDataContainer().set(displayNameKey, PersistentDataType.STRING, customName);
+            entity.getPersistentDataContainer().set(customNameKey, PersistentDataType.BYTE, (byte) 1);
+            entity.setCustomName(nameColor(entity) + customName);
+            entity.setCustomNameVisible(true);
+            if (hand.getAmount() <= 1) event.getPlayer().getInventory().setItem(event.getHand(), null);
+            else hand.setAmount(hand.getAmount() - 1);
+            event.getPlayer().sendMessage("§8[§dPET§8] §fYour pet is now named " + customName + ".");
+            event.getPlayer().playSound(entity.getLocation(), Sound.ITEM_NAME_TAG, 0.7f, 1.1f);
+            return;
+        }
         event.setCancelled(true);
         if (event.getPlayer().isSneaking()) toggleFollowing(event.getPlayer(), entity);
         else toggleSit(event.getPlayer(), entity);
@@ -303,7 +327,8 @@ public final class PetManager implements Listener {
         activePets.set(path + ".type", pet.getType().name());
         activePets.set(path + ".variant", pet.getPersistentDataContainer().getOrDefault(variantKey, PersistentDataType.STRING, "NORMAL"));
         activePets.set(path + ".sitting", isSitting(pet));
-        activePets.set(path + ".name", pet.getCustomName());
+        activePets.set(path + ".name", pet.getPersistentDataContainer().get(displayNameKey, PersistentDataType.STRING));
+        activePets.set(path + ".customName", pet.getPersistentDataContainer().getOrDefault(customNameKey, PersistentDataType.BYTE, (byte) 0));
     }
 
     private void saveActivePets() {
@@ -327,6 +352,7 @@ public final class PetManager implements Listener {
             String variant = activePets.getString(path + ".variant", "NORMAL");
             boolean sitting = activePets.getBoolean(path + ".sitting", false);
             String savedName = activePets.getString(path + ".name");
+            boolean customName = activePets.getBoolean(path + ".customName", false);
 
             // A hard crash may have left the original entity in the world. Remove it by its stable identity first.
             for (org.bukkit.World world : Bukkit.getWorlds()) {
@@ -348,7 +374,10 @@ public final class PetManager implements Listener {
                 pdc.set(variantKey, PersistentDataType.STRING, variant);
                 pdc.set(sittingKey, PersistentDataType.BYTE, (byte) (sitting ? 1 : 0));
                 pdc.set(identityKey, PersistentDataType.STRING, identity);
-                entity.setCustomName(savedName == null ? ChatColor.LIGHT_PURPLE + "@" + player.getName() + "'s Pet" : savedName);
+                String restoredName = savedName == null ? "@" + player.getName() + "'s pet" : savedName;
+                pdc.set(displayNameKey, PersistentDataType.STRING, restoredName);
+                pdc.set(customNameKey, PersistentDataType.BYTE, (byte) (customName ? 1 : 0));
+                entity.setCustomName(nameColor(entity) + restoredName);
                 entity.setCustomNameVisible(true);
                 mob.setCanPickupItems(false);
                 mob.setAware(!sitting);
@@ -424,7 +453,11 @@ public final class PetManager implements Listener {
             if (transferredIdentity != null) activePets.set("pets." + transferredIdentity, null);
             saveActivePets();
             target.getPersistentDataContainer().set(ownerKey, PersistentDataType.STRING, recipient.getUniqueId().toString());
-            target.setCustomName(petName(target));
+            if (target.getPersistentDataContainer().getOrDefault(customNameKey, PersistentDataType.BYTE, (byte) 0) == 0) {
+                String newDefaultName = "@" + recipient.getName() + "'s pet";
+                target.getPersistentDataContainer().set(displayNameKey, PersistentDataType.STRING, newDefaultName);
+                target.setCustomName(nameColor(target) + newDefaultName);
+            }
             target.setCustomNameVisible(true);
             plugin.tellPublic(player, "You transferred this pet to " + recipient.getName() + ".");
             plugin.tellPublic(recipient, player.getName() + " transferred a Baby Pet to you. You are now its owner.");
@@ -476,7 +509,14 @@ public final class PetManager implements Listener {
                         .anyMatch(viewer -> viewer.getWorld().equals(pet.getWorld())
                                 && viewer.getLocation().distanceSquared(pet.getLocation()) <= 256.0);
                 ChatColor nameColor = isSitting(pet) ? ChatColor.RED : following.containsKey(pet.getUniqueId()) ? ChatColor.LIGHT_PURPLE : ChatColor.WHITE;
-                pet.setCustomName(nameColor + petName(pet));
+                String shownName = pet.getPersistentDataContainer().get(displayNameKey, PersistentDataType.STRING);
+                if (shownName == null || shownName.isBlank()) {
+                    UUID ownerId = owner(pet);
+                    String ownerName = ownerId == null ? null : Bukkit.getOfflinePlayer(ownerId).getName();
+                    shownName = "@" + (ownerName == null ? "owner" : ownerName) + "'s pet";
+                    pet.getPersistentDataContainer().set(displayNameKey, PersistentDataType.STRING, shownName);
+                }
+                pet.setCustomName(nameColor + shownName);
                 pet.setCustomNameVisible(nameVisible);
 
                 if (!(pet instanceof Mob mob)) continue;
@@ -538,8 +578,18 @@ public final class PetManager implements Listener {
         }
     }
 
+    private ChatColor nameColor(Entity entity) {
+        return isSitting(entity) ? ChatColor.RED
+                : following.containsKey(entity.getUniqueId()) ? ChatColor.LIGHT_PURPLE : ChatColor.WHITE;
+    }
+
     private String petName(Entity entity) {
         if (entity == null) return "Pet";
+        String displayName = entity.getPersistentDataContainer().get(displayNameKey, PersistentDataType.STRING);
+        if (displayName != null && !displayName.isBlank()) return displayName;
+        UUID ownerId = owner(entity);
+        String ownerName = ownerId == null ? null : Bukkit.getOfflinePlayer(ownerId).getName();
+        if (ownerName != null) return "@" + ownerName + "'s pet";
         String variant = entity.getPersistentDataContainer().get(variantKey, PersistentDataType.STRING);
         String species = switch (entity.getType()) { case PANDA -> "Panda"; case FOX -> "Fox"; case PIG -> "Pig"; case CHICKEN -> "Chicken"; case GOAT -> "Goat"; default -> "Pet"; };
         if (variant == null || variant.isBlank()) return species;
