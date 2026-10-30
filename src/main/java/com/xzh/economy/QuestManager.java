@@ -18,6 +18,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.FurnaceExtractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.entity.EntityBreedEvent;
@@ -641,6 +642,29 @@ public final class QuestManager implements Listener {
     }
 
     @EventHandler
+    public void onQuestActivityMove(PlayerMoveEvent event) {
+        if (event.getTo() == null) return;
+        var from = event.getFrom();
+        var to = event.getTo();
+        if (from.getWorld() != to.getWorld()
+                || from.getX() != to.getX() || from.getY() != to.getY() || from.getZ() != to.getZ()
+                || from.getYaw() != to.getYaw() || from.getPitch() != to.getPitch()) {
+            data.set("activity." + event.getPlayer().getUniqueId(), System.currentTimeMillis());
+        }
+    }
+
+    @EventHandler
+    public void onQuestActivityInteract(PlayerInteractEvent event) {
+        data.set("activity." + event.getPlayer().getUniqueId(), System.currentTimeMillis());
+    }
+
+    private boolean isQuestActivityRecent(Player player) {
+        int seconds = Math.max(1, plugin.getConfig().getInt("quests.activity-seconds", 90));
+        long last = data.getLong("activity." + player.getUniqueId(), 0L);
+        return last > 0L && System.currentTimeMillis() - last <= seconds * 1000L;
+    }
+
+    @EventHandler
     public void onBreak(BlockBreakEvent event) {
         if (event.isCancelled()) return;
         Player p = event.getPlayer();
@@ -865,7 +889,7 @@ public final class QuestManager implements Listener {
     }
 
     private void incrementTarget(Player player, String target, int amount) {
-        if (amount <= 0) return;
+        if (amount <= 0 || !isQuestActivityRecent(player)) return;
         UUID id = player.getUniqueId();
         if (data.getString(id + ".active", "").isBlank()) return;
         int count = data.getInt(id + ".objective-count", 0);
