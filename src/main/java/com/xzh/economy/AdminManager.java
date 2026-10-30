@@ -300,6 +300,25 @@ public final class AdminManager implements Listener {
                 + ", Miner: " + quests.getInt("stock.miner", 0) + ", Hunter: " + quests.getInt("stock.hunter", 0)
                 + ", Explorer: " + quests.getInt("stock.explorer", 0) + ", Nether: " + quests.getInt("stock.nether", 0)
                 + ", End: " + quests.getInt("stock.end", 0) + ".");
+        player.sendMessage(ChatColor.GOLD + "Invalid quest unlock keys:");
+        List<String> invalid = new java.util.ArrayList<>();
+        try {
+            for (QuestCatalogue.Entry entry : QuestCatalogue.load(plugin).entries()) {
+                List<String> keys = new java.util.ArrayList<>(entry.unlock());
+                if (entry.tierGate() != null && !entry.tierGate().isBlank()) keys.add(0, entry.tierGate());
+                for (String key : keys) {
+                    NamespacedKey advancementKey = NamespacedKey.fromString(key);
+                    if (advancementKey == null || Bukkit.getAdvancement(advancementKey) == null) {
+                        invalid.add(entry.id() + ": " + key);
+                    }
+                }
+            }
+        } catch (RuntimeException ex) {
+            player.sendMessage(ChatColor.RED + "Could not inspect quest catalogue: " + ex.getMessage());
+            return;
+        }
+        if (invalid.isEmpty()) player.sendMessage(ChatColor.GREEN + "None.");
+        else for (String entry : invalid) player.sendMessage(ChatColor.RED + entry + " (invalid key)");
     }
 
     private void recoveryOverview(Player player) {
