@@ -681,6 +681,7 @@ public final class QuestManager implements Listener {
         Player p = event.getEntity().getKiller();
         if (p == null || p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         incrementTarget(p, "kill:" + event.getEntityType().name(), 1);
+        incrementTarget(p, "kill:KILL_" + event.getEntityType().name(), 1);
         if (event.getEntity() instanceof org.bukkit.entity.Monster) recordGlobalProgress(p, "mob", 1);
     }
 
@@ -824,13 +825,30 @@ public final class QuestManager implements Listener {
     private boolean objectiveTagMatches(String tag, String actual) {
         Material material = Material.matchMaterial(actual);
         if (material == null) return false;
+        if (actual.startsWith("KILL_")) {
+            String entity = actual.substring("KILL_".length());
+            return switch (tag) {
+                case "#HOSTILES" -> {
+                    EntityType type;
+                    try { type = EntityType.valueOf(entity); } catch (IllegalArgumentException ex) { yield false; }
+                    yield type != EntityType.ENDER_DRAGON && type != EntityType.WITHER
+                            && type != EntityType.ELDER_GUARDIAN && type != EntityType.WARDEN
+                            && switch (type) {
+                                case ZOMBIE, HUSK, DROWNED, SKELETON, STRAY, CREEPER, SPIDER, CAVE_SPIDER,
+                                     ENDERMAN, WITCH, SLIME, PHANTOM, BLAZE, GHAST, MAGMA_CUBE,
+                                     PILLAGER, VINDICATOR, EVOKER, RAVAGER, VEX, SILVERFISH,
+                                     ZOMBIFIED_PIGLIN, HOGLIN, ZOGLIN, PIGLIN, PIGLIN_BRUTE -> true;
+                                default -> false;
+                            };
+                }
+                case "#RAIDERS" -> Set.of("PILLAGER", "VINDICATOR", "EVOKER", "RAVAGER", "WITCH", "VEX").contains(entity);
+                default -> false;
+            };
+        }
         return switch (tag) {
             case "#LOGS" -> actual.endsWith("_LOG") || actual.endsWith("_STEM");
-            case "#OVERWORLD_ORES" -> (actual.endsWith("_ORE") && !actual.startsWith("NETHER_")
-                    && !actual.equals("NETHER_QUARTZ_ORE") && !actual.equals("NETHER_GOLD_ORE"));
+            case "#OVERWORLD_ORES" -> actual.endsWith("_ORE") && !actual.startsWith("NETHER_");
             case "#STONE_TYPES" -> Set.of("STONE", "DEEPSLATE", "ANDESITE", "DIORITE", "GRANITE", "TUFF").contains(actual);
-            case "#HOSTILES" -> material.isItem() ? false : false;
-            case "#RAIDERS" -> Set.of("PILLAGER", "VINDICATOR", "EVOKER", "RAVAGER", "WITCH", "VEX").contains(actual);
             default -> false;
         };
     }
