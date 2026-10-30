@@ -157,31 +157,7 @@ public final class ShopManager implements Listener {
         new Product("food-cooked", Material.GOLDEN_APPLE, 400, 40),
         new Product("food-cooked", Material.ENCHANTED_GOLDEN_APPLE, 2000, 400),
         new Product("food-cooked", Material.COOKED_MUTTON, 10, 3),
-        new Product("eggs-heads", Material.CREEPER_HEAD, 500, 150),
-        new Product("eggs-heads", Material.SKELETON_SKULL, 350, 105),
-        new Product("eggs-heads", Material.WITHER_SKELETON_SKULL, 1000, 300),
-        new Product("eggs-heads", Material.CAT_SPAWN_EGG, 2200, 0),
-        new Product("eggs-heads", Material.WOLF_SPAWN_EGG, 2200, 0),
-        new Product("eggs-heads", Material.FOX_SPAWN_EGG, 2500, 0),
-        new Product("eggs-heads", Material.PARROT_SPAWN_EGG, 2800, 0),
-        new Product("eggs-heads", Material.BEE_SPAWN_EGG, 2000, 0),
-        new Product("eggs-heads", Material.PANDA_SPAWN_EGG, 2800, 0),
-        new Product("eggs-heads", Material.GOAT_SPAWN_EGG, 2300, 0),
-        new Product("eggs-heads", Material.MOOSHROOM_SPAWN_EGG, 3000, 0),
         new Product("xp", Material.EXPERIENCE_BOTTLE, 25, 7.5),
-        new Product("eggs-heads", Material.ZOMBIE_HEAD, 400, 120),
-        new Product("eggs-heads", Material.CHICKEN_SPAWN_EGG, 1000, 0),
-        new Product("eggs-heads", Material.COW_SPAWN_EGG, 1500, 0),
-        new Product("eggs-heads", Material.SHEEP_SPAWN_EGG, 1500, 0),
-        new Product("eggs-heads", Material.PIG_SPAWN_EGG, 1500, 0),
-                new Product("eggs-heads", Material.RABBIT_SPAWN_EGG, 1800, 0),
-        new Product("eggs-heads", Material.TURTLE_SPAWN_EGG, 2200, 0),
-        new Product("eggs-heads", Material.AXOLOTL_SPAWN_EGG, 2800, 0),
-        new Product("eggs-heads", Material.CAMEL_SPAWN_EGG, 3000, 0),
-        new Product("eggs-heads", Material.ARMADILLO_SPAWN_EGG, 2500, 0),
-        new Product("eggs-heads", Material.SNIFFER_SPAWN_EGG, 3500, 0),
-        new Product("eggs-heads", Material.FROG_SPAWN_EGG, 2200, 0),
-        new Product("eggs-heads", Material.EGG, 2, 0.6),
         new Product("special", Material.SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE, 600, 0),
         new Product("special", Material.DUNE_ARMOR_TRIM_SMITHING_TEMPLATE, 700, 0),
         new Product("special", Material.COAST_ARMOR_TRIM_SMITHING_TEMPLATE, 700, 0),
@@ -320,7 +296,7 @@ public final class ShopManager implements Listener {
         inv.getItem(17).addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.UNBREAKING, 1);
 
         add(inv, 18, Material.POPPY, "Flowers & Dyes", "category", "flowers-dyes");
-        add(inv, 19, Material.BEE_SPAWN_EGG, "Eggs & Heads", "category", "eggs-heads");
+        add(inv, 19, Material.PANDA_SPAWN_EGG, "Baby Pets", "pets", "baby-pets", List.of(ChatColor.GRAY + "Permanent baby pets with owner controls.", ChatColor.YELLOW + "Click to browse pets."));
         add(inv, 20, Material.PALE_OAK_BOAT, "Travel", "category", "travel");
         ItemStack travelIcon = inv.getItem(20);
         ItemMeta travelMeta = travelIcon.getItemMeta();
@@ -412,6 +388,10 @@ public final class ShopManager implements Listener {
         }
         add(inv, 22, Material.ARROW, "Back to Shop", "back", "main");
         player.openInventory(inv);
+    }
+
+    public void recordExternalPurchase(Player player, String itemName, double spent) {
+        recordPurchase(player, itemName, 1, spent);
     }
 
     private void recordPurchase(Player player, String itemName, int quantity, double spent) {
@@ -871,6 +851,7 @@ public final class ShopManager implements Listener {
         if (action == null || value == null) return;
         switch (action) {
             case "category" -> openCategory(player, value);
+            case "pets" -> plugin.getPetManager().openShop(player);
             case "shop-search", "search-again" -> promptShopSearch(player);
             case "search-page" -> {
                 String[] bits = value.split("\\|", 2);
