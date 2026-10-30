@@ -1284,7 +1284,11 @@ public final class QuestManager implements Listener {
         String actual = eventTarget.substring(eventSplit + 1);
         for (String candidate : alternatives) {
             if (candidate.equals(actual)) return true;
-            if (candidate.endsWith("*") && actual.startsWith(candidate.substring(0, candidate.length() - 1))) return true;
+            if (candidate.endsWith("*")) {
+                String prefix = candidate.substring(0, candidate.length() - 1);
+                if (actual.startsWith(prefix)
+                        || (actual.startsWith("chests/") && actual.substring("chests/".length()).startsWith(prefix))) return true;
+            }
             if (candidate.equals("@ROAMING_BOSS") && actual.equals("ROAMING_BOSS")) return true;
             if (candidate.startsWith("#") && objectiveTagMatches(candidate, actual)) return true;
         }
