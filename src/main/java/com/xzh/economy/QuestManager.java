@@ -892,7 +892,7 @@ public final class QuestManager implements Listener {
                 } catch (IllegalArgumentException ignored) { }
             }
         }
-        Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Global Quest] " + ChatColor.GREEN
+        Bukkit.broadcastMessage(ChatColor.GOLD + "[Global Quest] " + ChatColor.GREEN
                 + data.getString("event.name", "Global Quest") + " completed! " + paid
                 + " contributor(s) received " + reward + " coins each.");
         save();
@@ -938,7 +938,7 @@ public final class QuestManager implements Listener {
     private void broadcastGlobalProgress() {
         resetEventIfNeeded();
         if (data.getBoolean("event.completed", false)) return;
-        String message = ChatColor.GOLD + "[XZH Global Quest] " + ChatColor.YELLOW
+        String message = ChatColor.GOLD + "[Global Quest] " + ChatColor.YELLOW
             + data.getString("event.name", "Global Quest") + ": " + data.getInt("event.progress", 0) + "/"
             + data.getInt("event.goal", configuredEventGoal()) + " — "
             + data.getString("event.description", "Help complete the community objective.")
@@ -967,7 +967,7 @@ public final class QuestManager implements Listener {
             }
             for (int i = 0; i < choices.size(); i++) data.set("single-shop.offers." + i, choices.get(i));
             save();
-            Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Quests] Five new random single-quest offers are available!");
+            Bukkit.broadcastMessage(ChatColor.GOLD + "[Quests] Five new random single-quest offers are available!");
         }
     }
 
@@ -1100,7 +1100,7 @@ public final class QuestManager implements Listener {
         data.set("event.started-at", now);
         save();
         if (announce) {
-            Bukkit.broadcastMessage(ChatColor.GOLD + "[XZH Global Quest] " + ChatColor.YELLOW
+            Bukkit.broadcastMessage(ChatColor.GOLD + "[Global Quest] " + ChatColor.YELLOW
                     + "New 4-hour community quest: " + selected.name() + " — " + selected.description()
                     + ". Reward: " + reward + " coins for each contributor. Work together before the deadline!");
         }
