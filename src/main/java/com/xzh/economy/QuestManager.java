@@ -785,8 +785,14 @@ public final class QuestManager implements Listener {
         boolean playerPlaced = plugin.getConfig().getBoolean("quests.v2.placed-block-tracking", true)
                 && data.getBoolean(placedPath, false);
         if (playerPlaced) {
-            data.set(placedPath, null);
-            save();
+            org.bukkit.block.Block placedBlock = event.getBlock();
+            Material originalType = placedBlock.getType();
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (placedBlock.getType() != originalType) {
+                    data.set(placedPath, null);
+                    save();
+                }
+            });
             return;
         }
         Material material = event.getBlock().getType();
