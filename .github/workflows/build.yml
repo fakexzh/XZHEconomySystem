@@ -20,6 +20,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build with Gradle
         run: gradle clean build
+      - name: Install GUI icon resource-pack assets
+        run: |
+          tar -xzf resource-pack/gui-icons-assets.tar.gz -C resource-pack
+          rm resource-pack/gui-icons-assets.tar.gz
       - name: Package source archive
         run: git archive --format=zip --output=build/XZHEconomySystem-source.zip HEAD
       - name: Upload plugin JAR
