@@ -887,6 +887,8 @@ public final class QuestManager implements Listener {
         // Count only the items actually extracted from furnace-family output slots.
         // FurnaceExtractEvent covers furnaces, blast furnaces, and smokers, including shift-click extraction.
         incrementTarget(player, "collect:" + material.name(), amount);
+        incrementTarget(player, "smelt:" + material.name(), amount);
+        incrementTarget(player, "smelt:ANY", amount);
     }
 
     @EventHandler
