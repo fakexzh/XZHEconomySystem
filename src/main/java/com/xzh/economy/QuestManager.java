@@ -1326,13 +1326,7 @@ public final class QuestManager implements Listener {
 
     private long timerLimitSeconds(UUID playerId, String activeId) {
         if (activeId == null || activeId.isBlank()) return 0L;
-        if (activeId.startsWith("single:")) {
-            String questName = data.getString(playerId + ".name", "");
-            return switch (questName.replaceFirst(" #\\d+$", "")) {
-                case "Ancient Debris Search", "Raid the Fortress", "Fishing for Cod", "Travel Contract", "Wither Skeleton Hunt" -> 30L * 60L;
-                default -> 0L;
-            };
-        }
+        if (activeId.startsWith("single:")) return 0L; // Single-quest timing is persisted explicitly at purchase.
         if (!activeId.startsWith("pack:")) return 0L;
         return packTimerLimitMinutes(activeId.substring("pack:".length())) * 60L;
     }
