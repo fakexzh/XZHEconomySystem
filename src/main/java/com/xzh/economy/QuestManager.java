@@ -1120,6 +1120,9 @@ public final class QuestManager implements Listener {
         Player player = event.getPlayer();
         if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
                 || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        // Taking a smelted result is itself valid quest activity. Refresh this before
+        // incrementTarget(), which intentionally ignores stale activity timestamps.
+        data.set("activity." + player.getUniqueId(), System.currentTimeMillis());
         Material material = event.getItemType();
         int amount = event.getItemAmount();
         if (material == null || material == Material.AIR || amount <= 0) return;
