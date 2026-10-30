@@ -1034,7 +1034,9 @@ public final class QuestManager implements Listener {
             }
         }
         if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR
-                || data.getString(id + ".active", "").isBlank() || !matchesTarget(id, "travel")) {
+                || data.getString(id + ".active", "").isBlank()
+                || !(matchesTarget(id, "travel") || matchesTarget(id, "travel:FOOT")
+                    || matchesTarget(id, "travel:ELYTRA") || matchesTarget(id, "travel:ANY"))) {
             travelRemainders.remove(id);
             return;
         }
@@ -1051,7 +1053,7 @@ public final class QuestManager implements Listener {
             return;
         }
         if (elytra && !matchesTarget(id, "travel:ELYTRA") && !matchesTarget(id, "travel:ANY")) return;
-        if (!elytra && matchesTarget(id, "travel:ELYTRA") && !matchesTarget(id, "travel:ANY")) return;
+        if (!elytra && !matchesTarget(id, "travel:FOOT") && !matchesTarget(id, "travel:ANY")) return;
         // PlayerMoveEvent is emitted synchronously; cap pathological movement packets to 12 blocks per second.
         long now = System.currentTimeMillis();
         String ratePath = id + ".travel-rate";
@@ -1063,7 +1065,11 @@ public final class QuestManager implements Listener {
         double accumulated = travelRemainders.getOrDefault(id, 0.0) + accepted;
         int wholeBlocks = (int) Math.floor(accumulated);
         travelRemainders.put(id, accumulated - wholeBlocks);
-        if (wholeBlocks > 0) { incrementTarget(p, "travel", wholeBlocks); incrementTarget(p, "travel:ANY", wholeBlocks); }
+        if (wholeBlocks > 0) {
+            incrementTarget(p, "travel", wholeBlocks);
+            incrementTarget(p, elytra ? "travel:ELYTRA" : "travel:FOOT", wholeBlocks);
+            incrementTarget(p, "travel:ANY", wholeBlocks);
+        }
     }
 
     @EventHandler
