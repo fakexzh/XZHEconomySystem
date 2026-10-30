@@ -1016,9 +1016,6 @@ public final class QuestManager implements Listener {
             travelRemainders.remove(id);
             return;
         }
-        if (event.getFrom().getBlockX() == event.getTo().getBlockX()
-                && event.getFrom().getBlockY() == event.getTo().getBlockY()
-                && event.getFrom().getBlockZ() == event.getTo().getBlockZ()) return;
         if (p.getGameMode() != org.bukkit.GameMode.CREATIVE
                 && p.getGameMode() != org.bukkit.GameMode.SPECTATOR) {
             org.bukkit.block.Biome fromBiome = event.getFrom().getBlock().getBiome();
