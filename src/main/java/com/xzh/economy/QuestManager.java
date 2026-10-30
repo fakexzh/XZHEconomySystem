@@ -774,6 +774,29 @@ public final class QuestManager implements Listener {
     }
 
     @EventHandler
+    public void onLootableChestOpen(PlayerInteractEvent event) {
+        if (event.isCancelled() || event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND
+                || event.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK
+                || event.getClickedBlock() == null) return;
+        Player player = event.getPlayer();
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        if (!(event.getClickedBlock().getState() instanceof org.bukkit.loot.Lootable lootable)
+                || lootable.getLootTable() == null) return;
+        String table = lootable.getLootTable().getKey().getKey().toLowerCase(Locale.ROOT);
+        String active = data.getString(player.getUniqueId() + ".active", "");
+        if (active.isBlank()) return;
+        String locationKey = event.getClickedBlock().getWorld().getUID() + ":"
+                + event.getClickedBlock().getX() + ":" + event.getClickedBlock().getY() + ":"
+                + event.getClickedBlock().getZ();
+        String openedPath = player.getUniqueId() + ".loot-opened." + active + "." + locationKey.replace(':', '_');
+        if (data.getBoolean(openedPath, false)) return;
+        data.set(openedPath, true);
+        incrementTarget(player, "loot:" + table, 1);
+        save();
+    }
+
+    @EventHandler
     public void onBerryHarvest(PlayerInteractEvent event) {
         if (event.isCancelled() || event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND
                 || event.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK
@@ -1100,6 +1123,7 @@ public final class QuestManager implements Listener {
         String actual = eventTarget.substring(eventSplit + 1);
         for (String candidate : alternatives) {
             if (candidate.equals(actual)) return true;
+            if (candidate.endsWith("*") && actual.startsWith(candidate.substring(0, candidate.length() - 1))) return true;
             if (candidate.equals("@ROAMING_BOSS") && actual.equals("ROAMING_BOSS")) return true;
             if (candidate.startsWith("#") && objectiveTagMatches(candidate, actual)) return true;
         }
