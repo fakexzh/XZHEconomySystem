@@ -283,6 +283,7 @@ public final class QuestManager implements Listener {
     }
 
     private String lootTargetLabel(String target) {
+        target = target.toLowerCase(Locale.ROOT);
         return switch (target) {
             case "chests/village/*" -> "villages";
             case "chests/simple_dungeon" -> "dungeons";
@@ -1426,8 +1427,12 @@ public final class QuestManager implements Listener {
             targetExpression = targetExpression.substring(dimensionSplit + 1);
         }
         if (!objectiveType.equals(eventTarget.substring(0, eventSplit))) return false;
+        // Minecraft loot-table keys are lowercase, while the quest parser normalizes
+        // configured targets to uppercase. Compare LOOT expressions case-insensitively.
+        if (objectiveType.equals("loot")) targetExpression = targetExpression.toLowerCase(Locale.ROOT);
         String[] alternatives = targetExpression.split("\\|");
         String actual = eventTarget.substring(eventSplit + 1);
+        if (objectiveType.equals("loot")) actual = actual.toLowerCase(Locale.ROOT);
         for (String candidate : alternatives) {
             if (candidate.equals(actual)) return true;
             if (candidate.endsWith("*")) {
