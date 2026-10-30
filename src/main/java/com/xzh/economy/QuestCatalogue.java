@@ -57,6 +57,15 @@ final class QuestCatalogue {
                 List<String> objectives = strings(q.get("objectives"));
                 List<String> unlock = strings(q.get("unlock"));
                 if (objectives.isEmpty()) throw new IllegalStateException("Quest " + id + " has no objectives");
+                if (unlock.isEmpty() || unlock.size() > 3) {
+                    throw new IllegalStateException("Quest " + id + " must have 1-3 advancement unlock requirements");
+                }
+                Set<String> uniqueUnlocks = new HashSet<>();
+                for (String key : unlock) {
+                    if (key == null || key.isBlank() || !uniqueUnlocks.add(key)) {
+                        throw new IllegalStateException("Quest " + id + " has a blank or duplicate unlock key");
+                    }
+                }
                 List<QuestObjectiveSpec> parsedObjectives = new ArrayList<>(objectives.size());
                 for (String objective : objectives) {
                     try { parsedObjectives.add(QuestObjectiveSpec.parse(objective)); }
