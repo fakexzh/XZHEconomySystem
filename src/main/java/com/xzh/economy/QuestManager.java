@@ -25,6 +25,7 @@ import org.bukkit.event.inventory.FurnaceExtractEvent;
 import org.bukkit.event.enchantment.EnchantItemEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerHarvestBlockEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.entity.EntityBreedEvent;
@@ -833,22 +834,18 @@ public final class QuestManager implements Listener {
     }
 
     @EventHandler
-    public void onBerryHarvest(PlayerInteractEvent event) {
-        if (event.isCancelled() || event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND
-                || event.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK
-                || event.getClickedBlock() == null) return;
+    public void onBerryHarvest(PlayerHarvestBlockEvent event) {
+        if (event.isCancelled() || event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) return;
         Player player = event.getPlayer();
         if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
                 || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
-        Material type = event.getClickedBlock().getType();
-        if (type == Material.SWEET_BERRY_BUSH
-                && event.getClickedBlock().getBlockData() instanceof Ageable ageable
-                && ageable.getAge() >= 2) {
+        Material type = event.getHarvestedBlock().getType();
+        if (type == Material.SWEET_BERRY_BUSH) {
             incrementTarget(player, "harvest:SWEET_BERRIES", 1);
-        } else if ((type == Material.CAVE_VINES || type == Material.CAVE_VINES_PLANT)
-                && event.getClickedBlock().getBlockData().getAsString().contains("berries=true")) {
+        } else if (type == Material.CAVE_VINES || type == Material.CAVE_VINES_PLANT) {
             incrementTarget(player, "harvest:GLOW_BERRIES", 1);
         }
+        recordGlobalProgress(player, "crop", 1);
     }
 
     @EventHandler
