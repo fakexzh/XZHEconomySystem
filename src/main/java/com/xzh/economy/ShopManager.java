@@ -322,10 +322,6 @@ public final class ShopManager implements Listener {
         add(inv, 18, Material.POPPY, "Flowers & Dyes", "category", "flowers-dyes");
         add(inv, 19, Material.BEE_SPAWN_EGG, "Eggs & Heads", "category", "eggs-heads");
         add(inv, 20, Material.PALE_OAK_BOAT, "Travel", "category", "travel");
-        ItemStack travelIcon = inv.getItem(20);
-        ItemMeta travelMeta = travelIcon.getItemMeta();
-        travelMeta.setCustomModelData(1002);
-        travelIcon.setItemMeta(travelMeta);
         add(inv, 21, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
         add(inv, 23, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
         add(inv, 24, Material.POTION, "Potions", "category", "potions");
@@ -831,10 +827,57 @@ public final class ShopManager implements Listener {
         player.openInventory(inv);
     }
 
+    /** Uses the original XZH GUI item models supplied in the resource-pack ZIP. */
+    private String guiIconFor(String action, String value, String title) {
+        if (action.equals("category")) {
+            return switch (value) {
+                case "ores", "blocks" -> "ore_chunk";
+                case "equipment" -> "sword";
+                case "food", "food-cooked" -> "bread";
+                case "food-raw", "seeds" -> "wheat";
+                case "flowers-dyes" -> "flower";
+                case "eggs-heads" -> "mob_head";
+                case "travel" -> "compass";
+                case "books" -> "ench_book";
+                case "xp" -> "xp_orb";
+                case "potions" -> "potion_jar";
+                case "bounty-maps" -> "bounty_skull";
+                default -> null;
+            };
+        }
+        return switch (action) {
+            case "back", "category-back" -> "arrow_left";
+            case "bank" -> "vault";
+            case "transition" -> "ledger";
+            case "players-money", "player-money-view" -> "player_coins";
+            case "deathinventory" -> "recovery_chest";
+            case "sell-hand" -> "hand_sell";
+            case "loans" -> "loan_doc";
+            case "deposit", "deposit-all" -> "deposit";
+            case "withdraw", "withdraw-all" -> "withdraw";
+            case "help" -> "guide_book";
+            case "search", "search-again" -> "magnifier";
+            case "search-page" -> value.startsWith("0|") ? "chev_left" : "chev_right";
+            case "quests" -> "quest_scroll";
+            case "books" -> "ench_book";
+            default -> {
+                String normalized = title.toLowerCase(Locale.ROOT);
+                if (normalized.contains("confirm")) yield "check";
+                if (normalized.contains("cancel")) yield "cross";
+                if (normalized.contains("plus")) yield "plus";
+                if (normalized.contains("minus")) yield "minus";
+                if (normalized.contains("back")) yield "arrow_left";
+                yield null;
+            }
+        };
+    }
+
     private void add(Inventory inv, int slot, Material material, String title, String action, String value) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.WHITE + title);
+        String guiIcon = guiIconFor(action, value, title);
+        if (guiIcon != null) meta.setItemModel(new NamespacedKey("xzh", "gui/" + guiIcon));
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, value);
         item.setItemMeta(meta);
