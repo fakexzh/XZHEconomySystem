@@ -547,6 +547,10 @@ public final class QuestManager implements Listener {
             data.set(uuid + ".objectives." + i + ".description", o.description());
             data.set(uuid + ".objectives." + i + ".progress", 0);
         }
+        long timeLimit = timerLimitSeconds(uuid, id);
+        data.set(uuid + ".time-limit-seconds", timeLimit);
+        data.set(uuid + ".remaining-seconds", timeLimit);
+        data.set(uuid + ".last-online-tick", System.currentTimeMillis());
         data.set(uuid + ".started-at", System.currentTimeMillis());
         data.set(uuid + ".warned-5m", false);
         data.set(uuid + ".warned-1m", false);
@@ -818,10 +822,17 @@ public final class QuestManager implements Listener {
     private void expireTimedQuestIfNeeded(Player player) {
         UUID id = player.getUniqueId();
         String active = data.getString(id + ".active", "");
-        long limit = timerLimitSeconds(id, active);
+        long limit = data.getLong(id + ".time-limit-seconds", timerLimitSeconds(id, active));
         if (limit <= 0) return;
-        long started = data.getLong(id + ".started-at", System.currentTimeMillis());
-        long remaining = limit - Math.max(0L, (System.currentTimeMillis() - started) / 1000L);
+        long now = System.currentTimeMillis();
+        long lastTick = data.getLong(id + ".last-online-tick", now);
+        long elapsed = Math.max(0L, Math.min(30L, (now - lastTick) / 1000L));
+        long remaining = data.getLong(id + ".remaining-seconds", limit);
+        if (elapsed > 0L) {
+            remaining = Math.max(0L, remaining - elapsed);
+            data.set(id + ".remaining-seconds", remaining);
+            data.set(id + ".last-online-tick", now);
+        }
         if (remaining <= 0L) {
             data.set(id.toString(), null);
             save();
@@ -858,10 +869,9 @@ public final class QuestManager implements Listener {
             descriptions.add(data.getString(base + ".description", "Objective") + " " + progress + "/" + goal);
         }
         String display = String.join(" | ", descriptions);
-        long limit = timerLimitSeconds(id, active);
+        long limit = data.getLong(id + ".time-limit-seconds", timerLimitSeconds(id, active));
         if (limit > 0) {
-            long started = data.getLong(id + ".started-at", System.currentTimeMillis());
-            long remaining = Math.max(0L, limit - Math.max(0L, (System.currentTimeMillis() - started) / 1000L));
+            long remaining = Math.max(0L, data.getLong(id + ".remaining-seconds", limit));
             long minutes = remaining / 60L;
             long seconds = remaining % 60L;
             display += " | " + ChatColor.YELLOW + "Time " + String.format(Locale.ROOT, "%02d:%02d", minutes, seconds) + " left";
