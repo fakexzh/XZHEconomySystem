@@ -769,8 +769,7 @@ public final class QuestManager implements Listener {
                 && ageable.getAge() >= 2) {
             incrementTarget(player, "harvest:SWEET_BERRIES", 1);
         } else if ((type == Material.CAVE_VINES || type == Material.CAVE_VINES_PLANT)
-                && event.getClickedBlock().getBlockData() instanceof org.bukkit.block.data.type.CaveVines vines
-                && vines.hasBerries()) {
+                && event.getClickedBlock().getBlockData().getAsString().contains("berries=true")) {
             incrementTarget(player, "harvest:GLOW_BERRIES", 1);
         }
     }
