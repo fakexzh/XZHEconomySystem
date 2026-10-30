@@ -197,8 +197,15 @@ public final class PetManager implements Listener {
     private void toggleSit(Player player, Entity entity) {
         if (!(entity instanceof Mob mob)) return;
         boolean sitting = isSitting(entity);
-        entity.getPersistentDataContainer().set(sittingKey, PersistentDataType.BYTE, (byte) (sitting ? 0 : 1));
-        mob.setAI(sitting);
+        boolean shouldSit = !sitting;
+        entity.getPersistentDataContainer().set(sittingKey, PersistentDataType.BYTE, (byte) (shouldSit ? 1 : 0));
+        if (entity instanceof Sittable sittable) {
+            sittable.setSitting(shouldSit);
+            mob.setAI(true);
+        } else {
+            entity.setPose(shouldSit ? Pose.SITTING : Pose.STANDING, true);
+            mob.setAI(!shouldSit);
+        }
         mob.setVelocity(mob.getVelocity().zero());
         following.remove(entity.getUniqueId());
         player.sendMessage("§8[§dXZH PETS§8] §f" + (sitting ? "Your pet is standing and roaming again." : "Your pet is sitting and will stay here."));
