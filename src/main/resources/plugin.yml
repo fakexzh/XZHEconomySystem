@@ -45,7 +45,7 @@ commands:
     usage: /deathinventory
   pet:
     description: Control or transfer your owned Baby Pets.
-    usage: /pet [call|transfer <player>]
+    usage: /pet [transfer <player>]
   unpet:
     description: Stop your targeted Baby Pet from following you.
     usage: /unpet
