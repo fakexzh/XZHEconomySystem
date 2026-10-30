@@ -26,7 +26,6 @@ import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.entity.EntityBreedEvent;
 import org.bukkit.event.entity.EntityTameEvent;
-import io.papermc.paper.event.entity.EntityEnterLoveModeEvent;
 import org.bukkit.entity.Animals;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.inventory.Inventory;
@@ -925,16 +924,29 @@ public final class QuestManager implements Listener {
     }
 
     @EventHandler
-    public void onFeed(EntityEnterLoveModeEvent event) {
-        if (!(event.getHumanEntity() instanceof Player player)
-                || player.getGameMode() == org.bukkit.GameMode.CREATIVE
+    public void onFeed(PlayerInteractEntityEvent event) {
+        if (event.isCancelled() || event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND
+                || !(event.getRightClicked() instanceof Animals animal) || animal.getAge() != 0) return;
+        Player player = event.getPlayer();
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
                 || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
-        var pdc = event.getAnimal().getPersistentDataContainer();
+        Material food = player.getInventory().getItemInMainHand().getType();
+        boolean validFeed = switch (animal.getType()) {
+            case COW, SHEEP, GOAT -> food == Material.WHEAT;
+            case PIG -> food == Material.CARROT || food == Material.POTATO || food == Material.BEETROOT;
+            case CHICKEN -> food == Material.WHEAT_SEEDS || food == Material.BEETROOT_SEEDS
+                    || food == Material.MELON_SEEDS || food == Material.PUMPKIN_SEEDS
+                    || food == Material.TORCHFLOWER_SEEDS;
+            case RABBIT -> food == Material.CARROT || food == Material.GOLDEN_CARROT || food == Material.DANDELION;
+            default -> false;
+        };
+        if (!validFeed) return;
         long now = System.currentTimeMillis();
+        var pdc = animal.getPersistentDataContainer();
         long last = pdc.getOrDefault(feedCooldownKey, PersistentDataType.LONG, 0L);
         if (now - last < 60_000L) return;
         pdc.set(feedCooldownKey, PersistentDataType.LONG, now);
-        incrementTarget(player, "feed:" + event.getAnimal().getType().name(), 1);
+        incrementTarget(player, "feed:" + animal.getType().name(), 1);
         incrementTarget(player, "feed:ANY", 1);
     }
 
