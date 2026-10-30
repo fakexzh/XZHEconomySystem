@@ -476,7 +476,9 @@ public final class QuestManager implements Listener {
             boolean unlocked = catalogueEntryFor(pack.id()).map(entry -> catalogueEntryUnlocked(player, entry))
                     .orElseGet(() -> tierUnlocked(player, tierOf(pack)) && hasAdvancement(player, pack.advancement()));
             List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.WHITE + "Cost: " + ChatColor.YELLOW + pack.cost() + " coins");
+            String groupName = catalogueEntryFor(pack.id()).map(QuestCatalogue.Entry::groupName).orElse("General");
+            lore.add(ChatColor.WHITE + "Group: " + groupName);
+            lore.add(ChatColor.WHITE + "Fee: " + ChatColor.YELLOW + pack.cost() + " coins");
             lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + rewardForPack(pack) + " coins");
             lore.add(ChatColor.WHITE + "Profit: " + ChatColor.GOLD + "+" + (rewardForPack(pack) - pack.cost()) + " coins");
             lore.add(ChatColor.WHITE + "Objectives:");
