@@ -15,6 +15,10 @@ import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.configuration.file.YamlConfiguration;
+import java.io.File;
+import java.io.IOException;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -32,6 +36,9 @@ public final class PetManager implements Listener {
     private final NamespacedKey petKey;
     private final NamespacedKey variantKey;
     private final NamespacedKey sittingKey;
+    private final NamespacedKey identityKey;
+    private final File activePetsFile;
+    private final YamlConfiguration activePets;
     private final Map<UUID, UUID> following = new HashMap<>();
     private final Map<String, PetOption> options = new LinkedHashMap<>();
     private final int followTask;
@@ -44,6 +51,9 @@ public final class PetManager implements Listener {
         petKey = new NamespacedKey(plugin, "xzh_baby_pet");
         variantKey = new NamespacedKey(plugin, "pet_variant");
         sittingKey = new NamespacedKey(plugin, "pet_sitting");
+        identityKey = new NamespacedKey(plugin, "pet_identity");
+        activePetsFile = new File(plugin.getDataFolder(), "active-pets.yml");
+        activePets = YamlConfiguration.loadConfiguration(activePetsFile);
         add("panda-normal", "Panda - Normal", EntityType.PANDA, "NORMAL", 3000, Material.PANDA_SPAWN_EGG);
         add("panda-lazy", "Panda - Lazy", EntityType.PANDA, "LAZY", 4000, Material.PANDA_SPAWN_EGG);
         add("panda-worried", "Panda - Worried", EntityType.PANDA, "WORRIED", 4000, Material.PANDA_SPAWN_EGG);
@@ -151,6 +161,7 @@ public final class PetManager implements Listener {
             pdc.set(ownerKey, PersistentDataType.STRING, player.getUniqueId().toString());
             pdc.set(variantKey, PersistentDataType.STRING, option.variant());
             pdc.set(sittingKey, PersistentDataType.BYTE, (byte) 0);
+            pdc.set(identityKey, PersistentDataType.STRING, UUID.randomUUID().toString());
             entity.setCustomName(ChatColor.LIGHT_PURPLE + "@" + player.getName() + "'s Pet");
             entity.setCustomNameVisible(true);
             mob.setCanPickupItems(false);
@@ -263,7 +274,94 @@ public final class PetManager implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        following.entrySet().removeIf(entry -> entry.getValue().equals(event.getPlayer().getUniqueId()));
+        UUID ownerId = event.getPlayer().getUniqueId();
+        for (org.bukkit.World world : Bukkit.getWorlds()) {
+            for (Entity pet : new ArrayList<>(world.getEntities())) {
+                if (!isPet(pet) || !ownerId.equals(owner(pet)) || !ownerId.equals(following.get(pet.getUniqueId()))) continue;
+                saveActivePet(pet, ownerId);
+                following.remove(pet.getUniqueId());
+                pet.remove();
+            }
+        }
+        saveActivePets();
+    }
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        UUID ownerId = event.getPlayer().getUniqueId();
+        Bukkit.getScheduler().runTask(plugin, () -> restoreActivePets(event.getPlayer()));
+    }
+
+    private void saveActivePet(Entity pet, UUID ownerId) {
+        String identity = pet.getPersistentDataContainer().get(identityKey, PersistentDataType.STRING);
+        if (identity == null) {
+            identity = UUID.randomUUID().toString();
+            pet.getPersistentDataContainer().set(identityKey, PersistentDataType.STRING, identity);
+        }
+        String path = "pets." + identity;
+        activePets.set(path + ".owner", ownerId.toString());
+        activePets.set(path + ".type", pet.getType().name());
+        activePets.set(path + ".variant", pet.getPersistentDataContainer().getOrDefault(variantKey, PersistentDataType.STRING, "NORMAL"));
+        activePets.set(path + ".sitting", isSitting(pet));
+        activePets.set(path + ".name", pet.getCustomName());
+    }
+
+    private void saveActivePets() {
+        try {
+            plugin.getDataFolder().mkdirs();
+            activePets.save(activePetsFile);
+        } catch (IOException ex) {
+            plugin.getLogger().severe("Could not save active Baby Pets: " + ex.getMessage());
+        }
+    }
+
+    private void restoreActivePets(Player player) {
+        String ownerPath = player.getUniqueId().toString();
+        for (String identity : new ArrayList<>(activePets.getConfigurationSection("pets") == null
+                ? Collections.emptySet() : activePets.getConfigurationSection("pets").getKeys(false))) {
+            String path = "pets." + identity;
+            if (!ownerPath.equals(activePets.getString(path + ".owner"))) continue;
+            EntityType type;
+            try { type = EntityType.valueOf(activePets.getString(path + ".type", "")); }
+            catch (IllegalArgumentException ex) { plugin.getLogger().warning("Skipping saved Baby Pet with unknown type: " + identity); continue; }
+            String variant = activePets.getString(path + ".variant", "NORMAL");
+            boolean sitting = activePets.getBoolean(path + ".sitting", false);
+            String savedName = activePets.getString(path + ".name");
+
+            // A hard crash may have left the original entity in the world. Remove it by its stable identity first.
+            for (org.bukkit.World world : Bukkit.getWorlds()) {
+                for (Entity existing : new ArrayList<>(world.getEntities())) {
+                    if (identity.equals(existing.getPersistentDataContainer().get(identityKey, PersistentDataType.STRING))) existing.remove();
+                }
+            }
+
+            Location spawn = player.getLocation().clone().add(player.getLocation().getDirection().multiply(-1.5));
+            spawn.setY(player.getLocation().getY());
+            Entity entity = player.getWorld().spawnEntity(spawn, type);
+            if (!(entity instanceof Animals animal) || !(entity instanceof Mob mob)) { entity.remove(); continue; }
+            try {
+                applyVariant(entity, variant);
+                if (animal instanceof Ageable ageable) { ageable.setAge(-24000); ageable.setAgeLock(true); }
+                PersistentDataContainer pdc = entity.getPersistentDataContainer();
+                pdc.set(petKey, PersistentDataType.BYTE, (byte) 1);
+                pdc.set(ownerKey, PersistentDataType.STRING, ownerPath);
+                pdc.set(variantKey, PersistentDataType.STRING, variant);
+                pdc.set(sittingKey, PersistentDataType.BYTE, (byte) (sitting ? 1 : 0));
+                pdc.set(identityKey, PersistentDataType.STRING, identity);
+                entity.setCustomName(savedName == null ? ChatColor.LIGHT_PURPLE + "@" + player.getName() + "'s Pet" : savedName);
+                entity.setCustomNameVisible(true);
+                mob.setCanPickupItems(false);
+                mob.setAware(false);
+                mob.getPathfinder().stopPathfinding();
+                entity.setPose(sitting ? Pose.SITTING : Pose.STANDING, true);
+                following.put(entity.getUniqueId(), player.getUniqueId());
+                activePets.set(path, null);
+            } catch (RuntimeException ex) {
+                entity.remove();
+                plugin.getLogger().warning("Could not restore Baby Pet " + identity + ": " + ex.getMessage());
+            }
+        }
+        saveActivePets();
     }
 
     public boolean handleCommand(Player player, String command, String[] args) {
@@ -274,6 +372,9 @@ public final class PetManager implements Listener {
                 return true;
             }
             following.remove(target.getUniqueId());
+            String identity = target.getPersistentDataContainer().get(identityKey, PersistentDataType.STRING);
+            if (identity != null) activePets.set("pets." + identity, null);
+            saveActivePets();
             plugin.tellPublic(player, "Your pet stopped following you and will roam nearby.");
             return true;
         }
@@ -328,9 +429,14 @@ public final class PetManager implements Listener {
         UUID petId = pet.getUniqueId();
         if (following.containsKey(petId) && following.get(petId).equals(player.getUniqueId())) {
             following.remove(petId);
+            String identity = pet.getPersistentDataContainer().get(identityKey, PersistentDataType.STRING);
+            if (identity != null) activePets.set("pets." + identity, null);
+            saveActivePets();
             plugin.tellPublic(player, "Your pet stopped following you.");
         } else {
             following.put(petId, player.getUniqueId());
+            saveActivePet(pet, player.getUniqueId());
+            saveActivePets();
             plugin.tellPublic(player, "Your pet will now follow you.");
         }
     }
@@ -432,6 +538,17 @@ public final class PetManager implements Listener {
 
     public void shutdown() {
         Bukkit.getScheduler().cancelTask(followTask);
+        for (org.bukkit.World world : Bukkit.getWorlds()) {
+            for (Entity pet : new ArrayList<>(world.getEntities())) {
+                if (!isPet(pet)) continue;
+                UUID ownerId = following.get(pet.getUniqueId());
+                if (ownerId != null && ownerId.equals(owner(pet))) {
+                    saveActivePet(pet, ownerId);
+                    pet.remove();
+                }
+            }
+        }
+        saveActivePets();
         following.clear();
     }
 }
