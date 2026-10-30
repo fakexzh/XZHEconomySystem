@@ -229,9 +229,7 @@ public final class QuestManager implements Listener {
                         .replace("#stone types", "basic stone, deepslate, granite, diorite, andesite or tuff").replace("#fish junk", "fishing junk")
                         .replace("#fish treasure", "fishing treasure").replace("#cooked food", "cooked food")
                         .replace("#trial spawn mobs", "trial-spawner mobs");
-                String lootTarget = target.replace("chests/", "").replace("*", "")
-                        .replace('_', ' ').replace('/', ' ').trim();
-                if (lootTarget.isBlank()) lootTarget = "structure";
+                String lootTarget = lootTargetLabel(target);
                 String description = switch (spec.type()) {
                     case MINE -> target.equals("ANY") ? "Mine " + spec.quantity() + " blocks"
                             : "Mine " + spec.quantity() + " " + displayTarget;
@@ -250,7 +248,7 @@ public final class QuestManager implements Listener {
                     case CRAFT -> target.equals("ANY") ? "Craft " + spec.quantity() + " items"
                             : "Craft " + spec.quantity() + " " + displayTarget;
                     case ENCHANT -> "Use the third enchantment option " + spec.quantity() + " times";
-                    case BARTER -> "Complete " + spec.quantity() + " piglin trades by right-clicking with gold ingots";
+                    case BARTER -> "Complete " + spec.quantity() + " piglin trades by right-clicking with a gold ingot in your main hand";
                     case LOOT -> target.equals("ANY") ? "Find and open " + spec.quantity() + " unopened loot chests"
                             : "Find and open " + spec.quantity() + " unopened loot chests in " + lootTarget;
                     case VAULT -> "Unlock " + spec.quantity() + " different" + (target.equals("OMINOUS") ? " ominous trial vaults" : " trial vaults");
@@ -277,6 +275,34 @@ public final class QuestManager implements Listener {
         if (id.startsWith("H") && id.length() == 4) return "hard";
         if (id.startsWith("E") && id.length() == 4) return "easy";
         return pack.id().startsWith("master_") ? "master" : pack.id().startsWith("hard_") ? "hard" : "easy";
+    }
+
+    private String lootTargetLabel(String target) {
+        return switch (target) {
+            case "chests/village/*" -> "villages";
+            case "chests/simple_dungeon" -> "dungeons";
+            case "chests/abandoned_mineshaft" -> "abandoned mineshafts";
+            case "chests/shipwreck_*" -> "shipwrecks";
+            case "chests/buried_treasure" -> "buried treasure";
+            case "chests/ruined_portal" -> "ruined portals";
+            case "chests/desert_pyramid" -> "desert temples";
+            case "chests/jungle_temple" -> "jungle temples";
+            case "chests/*" -> "any structure";
+            case "chests/underwater_ruin_*" -> "underwater ruins";
+            case "chests/bastion_*" -> "bastions";
+            case "chests/nether_bridge" -> "Nether fortresses";
+            case "chests/bastion_treasure" -> "bastion treasure rooms";
+            case "chests/stronghold_*" -> "strongholds";
+            case "chests/pillager_outpost" -> "pillager outposts";
+            case "chests/woodland_mansion" -> "woodland mansions";
+            case "chests/end_city_treasure" -> "End cities";
+            case "chests/ancient_city" -> "ancient cities";
+            case "chests/ancient_city_ice_box" -> "ancient city ice-box chests";
+            case "chests/trial_chambers/*" -> "trial chambers";
+            case "chests/shipwreck_*|underwater_ruin_*" -> "shipwrecks or underwater ruins";
+            default -> target.replace("chests/", "").replace("*", "")
+                    .replace('_', ' ').replace('/', ' ').trim();
+        };
     }
 
     private String numberedPackName(Pack pack) {
