@@ -652,7 +652,11 @@ public final class QuestManager implements Listener {
         }
         startQuest(player, "pack:" + pack.id(), pack.name(), pack.cost(), rewardForPack(pack), pack.objectives());
         player.closeInventory();
-        plugin.tellPublic(player, "Quest pack started: " + pack.name() + ". Complete every objective to earn " + pack.reward() + " coins.");
+        int reward = rewardForPack(pack);
+        int timerMinutes = packTimerLimitMinutes(pack.id());
+        plugin.tellPublic(player, "Quest started: " + pack.name() + ". Fee " + pack.cost()
+                + ", reward " + reward + " coins. "
+                + (timerMinutes > 0 ? "Time limit: " + timerMinutes + " minutes." : "No time limit."));
     }
 
     private void startQuest(Player player, String id, String name, int cost, int reward, List<Objective> objectives) {
