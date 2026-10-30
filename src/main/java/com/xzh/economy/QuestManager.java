@@ -715,11 +715,25 @@ public final class QuestManager implements Listener {
     @EventHandler
     public void onQuestMigrationJoin(org.bukkit.event.player.PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        String path = "v2-migration-notice." + player.getUniqueId();
-        if (!data.getBoolean(path, false)) return;
-        data.set(path, null);
-        save();
-        plugin.tellPublic(player, "Quest system updated - your active quest was cancelled and fully refunded.");
+        UUID id = player.getUniqueId();
+        if (!data.getString(id + ".active", "").isBlank() && data.getLong(id + ".time-limit-seconds", 0L) > 0L) {
+            data.set(id + ".last-online-tick", System.currentTimeMillis());
+        }
+        String path = "v2-migration-notice." + id;
+        if (data.getBoolean(path, false)) {
+            data.set(path, null);
+            save();
+            plugin.tellPublic(player, "Quest system updated - your active quest was cancelled and fully refunded.");
+        }
+    }
+
+    @EventHandler
+    public void onQuestMigrationQuit(org.bukkit.event.player.PlayerQuitEvent event) {
+        UUID id = event.getPlayer().getUniqueId();
+        if (!data.getString(id + ".active", "").isBlank() && data.getLong(id + ".time-limit-seconds", 0L) > 0L) {
+            data.set(id + ".last-online-tick", System.currentTimeMillis());
+            save();
+        }
     }
 
     private void incrementTarget(Player player, String target, int amount) {
