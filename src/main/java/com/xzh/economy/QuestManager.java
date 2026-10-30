@@ -968,7 +968,7 @@ public final class QuestManager implements Listener {
         if (event.getEntity() instanceof org.bukkit.entity.Monster) recordGlobalProgress(p, "mob", 1);
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     public void onEnchant(EnchantItemEvent event) {
         Player player = event.getEnchanter();
         if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
@@ -978,7 +978,7 @@ public final class QuestManager implements Listener {
         incrementTarget(player, "enchant:" + event.getItem().getType().name(), 1);
     }
 
-    @EventHandler
+    @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
     public void onCraft(CraftItemEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)
                 || player.getGameMode() == org.bukkit.GameMode.CREATIVE
@@ -1126,7 +1126,7 @@ public final class QuestManager implements Listener {
         recordGlobalProgress(player, "fish", 1);
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     public void onTame(EntityTameEvent event) {
         if (!(event.getOwner() instanceof Player player)
                 || player.getGameMode() == org.bukkit.GameMode.CREATIVE
@@ -1135,7 +1135,7 @@ public final class QuestManager implements Listener {
         incrementTarget(player, "tame:ANY", 1);
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     public void onBreed(EntityBreedEvent event) {
         if (!(event.getBreeder() instanceof Player player)
                 || player.getGameMode() == org.bukkit.GameMode.CREATIVE
