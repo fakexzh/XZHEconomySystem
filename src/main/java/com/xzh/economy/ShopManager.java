@@ -59,104 +59,6 @@ public final class ShopManager implements Listener {
     private final YamlConfiguration bountyCooldownData;
     private final Map<java.util.UUID, Boolean> pendingShopSearch = new java.util.concurrent.ConcurrentHashMap<>();
 
-    // Pixel-art GUI item models supplied by the matching XZH GUI resource pack.
-    private static final Map<String, Integer> GUI_ICON_IDS = Map.ofEntries(
-        Map.entry("ores_blocks", 2001), Map.entry("armor_tools", 2002), Map.entry("food_seeds", 2003),
-        Map.entry("quests", 2004), Map.entry("travel", 2005), Map.entry("essentials", 2006),
-        Map.entry("treasure_bounty", 2007), Map.entry("books", 2008), Map.entry("xp", 2009),
-        Map.entry("potions", 2010), Map.entry("buy", 2011), Map.entry("sell", 2012),
-        Map.entry("accept", 2013), Map.entry("cancel", 2014), Map.entry("back", 2015),
-        Map.entry("next", 2016), Map.entry("previous", 2017), Map.entry("page", 2018),
-        Map.entry("search", 2019), Map.entry("bank", 2020), Map.entry("balance", 2021),
-        Map.entry("players", 2022), Map.entry("death_inventory", 2023), Map.entry("help", 2024),
-        Map.entry("hand_sell", 2025), Map.entry("plus1", 2026), Map.entry("minus1", 2027),
-        Map.entry("plus10", 2028), Map.entry("minus10", 2029), Map.entry("max", 2030),
-        Map.entry("close", 2031), Map.entry("deposit", 2032), Map.entry("withdraw", 2033),
-        Map.entry("claim", 2034), Map.entry("stock", 2035), Map.entry("refresh", 2036),
-        Map.entry("pocket", 2037), Map.entry("player", 2038), Map.entry("warning", 2039),
-        Map.entry("info", 2040), Map.entry("success", 2041), Map.entry("rarity", 2042),
-        Map.entry("reward", 2043), Map.entry("timer", 2044), Map.entry("locked", 2045),
-        Map.entry("settings", 2046)
-    );
-
-    private void applyGuiIcon(ItemStack item, String icon) {
-        Integer id = GUI_ICON_IDS.get(icon);
-        if (id == null || item == null) return;
-        item.setType(Material.PAPER);
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) return;
-        meta.setCustomModelData(id);
-        item.setItemMeta(meta);
-    }
-
-    private String guiIconFor(String action, String value, String title) {
-        if ("category".equals(action)) {
-            return switch (value) {
-                case "ores", "blocks" -> "ores_blocks";
-                case "armor", "tools", "equipment" -> "armor_tools";
-                case "food", "food-cooked", "food-raw", "seeds" -> "food_seeds";
-                case "quests" -> "quests";
-                case "travel" -> "travel";
-                case "essentials" -> "essentials";
-                case "special", "bounty-maps", "eggs-heads", "flowers-dyes" -> "treasure_bounty";
-                case "books" -> "books";
-                case "xp" -> "xp";
-                case "potions" -> "potions";
-                default -> null;
-            };
-        }
-        return switch (action) {
-            case "quests" -> "quests";
-            case "books" -> "books";
-            case "sell-hand" -> "hand_sell";
-            case "quantity-plus-64", "quantity-minus-64" -> "max";
-            case "buy", "quantity-buy" -> title != null && title.toLowerCase(Locale.ROOT).contains("confirm") ? "accept" : "buy";
-            case "sell", "confirm-sell", "sell-hand-confirm" -> title != null && title.toLowerCase(Locale.ROOT).contains("confirm") ? "accept" : "sell";
-            case "back" -> "back";
-            case "category-back" -> title != null && title.toLowerCase(Locale.ROOT).contains("cancel") ? "cancel" : "back";
-            case "category-page", "search-page" -> title != null && title.toLowerCase(Locale.ROOT).contains("previous") ? "previous" : "next";
-            case "search", "search-again", "shop-search" -> "search";
-            case "bank" -> "bank";
-            case "transition" -> "balance";
-            case "players-money", "player-money-view" -> "players";
-            case "deathinventory" -> "death_inventory";
-            case "help" -> "help";
-            case "quantity-plus" -> "plus1";
-            case "quantity-minus" -> "minus1";
-            case "quantity-plus-10" -> "plus10";
-            case "quantity-minus-10" -> "minus10";
-
-            case "hand-sell-confirm" -> "accept";
-            default -> {
-                String t = title == null ? "" : title.toLowerCase(Locale.ROOT);
-                if (t.contains("accept") || t.contains("confirm")) yield "accept";
-                if (t.contains("cancel")) yield "cancel";
-                if (t.contains("close")) yield "close";
-                if (t.contains("deposit")) yield "deposit";
-                if (t.contains("withdraw")) yield "withdraw";
-                if (t.contains("claim")) yield "claim";
-                if (t.contains("stock")) yield "stock";
-                if (t.contains("refresh")) yield "refresh";
-                if (t.contains("pocket")) yield "pocket";
-                if (t.contains("bank")) yield "bank";
-                if (t.contains("player")) yield "player";
-                if (t.contains("warning") || t.contains("no players")) yield "warning";
-                if (t.contains("info") || t.contains("search items")) yield "info";
-                if (t.contains("success")) yield "success";
-                if (t.contains("rarity")) yield "rarity";
-                if (t.contains("reward")) yield "reward";
-                if (t.contains("timer")) yield "timer";
-                if (t.contains("locked")) yield "locked";
-                if (t.contains("settings")) yield "settings";
-                if (t.contains("next")) yield "next";
-                if (t.contains("previous")) yield "previous";
-                if (t.contains("page")) yield "page";
-                yield null;
-            }
-        };
-    }
-
-
     private record Product(String category, Material material, double buy, double sell, PotionType potionType, int fireworkPower) {
         Product(String category, Material material, double buy, double sell) { this(category, material, buy, sell, null, 0); }
         Product(String category, Material material, double buy, double sell, PotionType potionType) { this(category, material, buy, sell, potionType, 0); }
@@ -420,17 +322,11 @@ public final class ShopManager implements Listener {
         add(inv, 18, Material.POPPY, "Flowers & Dyes", "category", "flowers-dyes");
         add(inv, 19, Material.BEE_SPAWN_EGG, "Eggs & Heads", "category", "eggs-heads");
         add(inv, 20, Material.PALE_OAK_BOAT, "Travel", "category", "travel");
-        ItemStack travelIcon = inv.getItem(20);
-        ItemMeta travelMeta = travelIcon.getItemMeta();
-        travelMeta.setCustomModelData(1002);
-        travelIcon.setItemMeta(travelMeta);
         add(inv, 21, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
         add(inv, 23, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
         add(inv, 24, Material.POTION, "Potions", "category", "potions");
         ItemStack potionIcon = inv.getItem(24);
-        // Custom GUI icons are PAPER with a model ID, so only set potion data when
-        // the icon is still a real potion item. Casting PAPER's ItemMeta to PotionMeta
-        // throws ClassCastException and prevents /shop from opening.
+        // Set potion data only when the icon remains a real potion item.
         if (potionIcon.getItemMeta() instanceof org.bukkit.inventory.meta.PotionMeta potionMeta) {
             potionMeta.setBasePotionType(PotionType.HEALING);
             potionIcon.setItemMeta(potionMeta);
@@ -441,7 +337,6 @@ public final class ShopManager implements Listener {
         // Row 4 (slots 27–35) intentionally stays empty.
         // Row 5: account, history, player balances, recovery, and help grouped in the center.
         ItemStack bankIcon = new ItemStack(Material.PAPER);
-        applyGuiIcon(bankIcon, "bank");
         ItemMeta bankMeta = bankIcon.getItemMeta();
         bankMeta.setDisplayName(ChatColor.WHITE + "XZH BANK");
         bankMeta.setLore(List.of(ChatColor.GRAY + "Open your bank account."));
@@ -866,7 +761,6 @@ public final class ShopManager implements Listener {
         inv.setItem(22, buy);
         if (!p.category().equals("bounty-maps")) {
             ItemStack sell = new ItemStack(Material.PAPER);
-            applyGuiIcon(sell, "sell");
             ItemMeta sm = sell.getItemMeta();
             sm.setDisplayName(ChatColor.RED + "Sell all of this item in inventory");
             sm.setLore(List.of(ChatColor.WHITE + "Value: " + ChatColor.RED + money(sellPrice(p)) + " coins each",
@@ -885,7 +779,6 @@ public final class ShopManager implements Listener {
 
     private ItemStack quantityControl(Product p, int quantity, Material icon, String title, String action) {
         ItemStack item = new ItemStack(Material.PAPER);
-        applyGuiIcon(item, guiIconFor(action, null, title));
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.WHITE + title);
         meta.setLore(List.of(ChatColor.GRAY + "Selected quantity: " + quantity));
@@ -942,7 +835,6 @@ public final class ShopManager implements Listener {
 
     private void add(Inventory inv, int slot, Material material, String title, String action, String value) {
         ItemStack item = new ItemStack(material);
-        applyGuiIcon(item, guiIconFor(action, value, title));
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.WHITE + title);
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
