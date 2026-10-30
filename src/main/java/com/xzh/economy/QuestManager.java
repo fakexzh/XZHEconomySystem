@@ -28,6 +28,7 @@ import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.entity.EntityBreedEvent;
 import org.bukkit.event.entity.EntityTameEvent;
+import org.bukkit.event.entity.PiglinBarterEvent;
 import org.bukkit.entity.Animals;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.inventory.Inventory;
@@ -94,6 +95,8 @@ public final class QuestManager implements Listener {
     private final NamespacedKey roamingBossKey;
     private final Random random = new Random();
     private final Map<UUID, Double> travelRemainders = new HashMap<>();
+    private final Map<UUID, UUID> piglinOfferPlayers = new HashMap<>();
+    private final Map<UUID, Long> piglinOfferTimes = new HashMap<>();
 
     private final List<Pack> basePacks = List.of(
         new Pack("stone_survey", "Stone Survey", Material.IRON_PICKAXE, 80, 112, "minecraft:story/iron_tools", List.of(new Objective("break:STONE", 256, "Mine 256 Stone"))),
@@ -1045,6 +1048,32 @@ public final class QuestManager implements Listener {
                 || mother.getAge() != 0 || father.getAge() != 0) return;
         incrementTarget(player, "breed:" + event.getEntityType().name(), 1);
         incrementTarget(player, "breed:ANY", 1);
+    }
+
+    @EventHandler
+    public void onPiglinGoldOffer(PlayerInteractEntityEvent event) {
+        if (event.isCancelled() || event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND
+                || !(event.getRightClicked() instanceof org.bukkit.entity.Piglin piglin)) return;
+        Player player = event.getPlayer();
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR
+                || player.getInventory().getItemInMainHand().getType() != Material.GOLD_INGOT) return;
+        piglinOfferPlayers.put(piglin.getUniqueId(), player.getUniqueId());
+        piglinOfferTimes.put(piglin.getUniqueId(), System.currentTimeMillis());
+    }
+
+    @EventHandler
+    public void onPiglinBarter(PiglinBarterEvent event) {
+        if (event.isCancelled() || event.getInput().getType() != Material.GOLD_INGOT) return;
+        UUID piglinId = event.getEntity().getUniqueId();
+        Long offeredAt = piglinOfferTimes.remove(piglinId);
+        UUID playerId = piglinOfferPlayers.remove(piglinId);
+        if (offeredAt == null || playerId == null || System.currentTimeMillis() - offeredAt > 3_000L) return;
+        Player player = Bukkit.getPlayer(playerId);
+        if (player == null || !player.isOnline()
+                || player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        incrementTarget(player, "barter:ANY", 1);
     }
 
     @EventHandler
