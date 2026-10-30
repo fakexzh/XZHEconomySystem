@@ -1177,7 +1177,7 @@ quests:
     fee: 170
     profit: 270
     timer-minutes: 0
-    icon: CHEST_BOAT
+    icon: OAK_BOAT
     tier-gate: "story/mine_stone"
   - id: E085
     tier: easy
@@ -2108,7 +2108,7 @@ quests:
     fee: 530
     profit: 620
     timer-minutes: 0
-    icon: CHEST_BOAT
+    icon: OAK_BOAT
     tier-gate: "nether/find_fortress"
   - id: H051
     tier: hard
