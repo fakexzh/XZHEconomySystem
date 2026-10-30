@@ -602,7 +602,7 @@ public final class QuestManager implements Listener {
     private boolean tierPurchaseLimitsAllow(Player player, String tier) {
         if (tier.isBlank()) return true;
         UUID id = player.getUniqueId();
-        long cooldown = data.getLong(id + ".cooldown-until." + tier, 0L);
+        long cooldown = data.getLong("cooldowns." + id + "." + tier, 0L);
         if (System.currentTimeMillis() < cooldown) {
             long minutes = Math.max(1L, (cooldown - System.currentTimeMillis() + 59_999L) / 60_000L);
             plugin.tellPublic(player, "Tier cooldown active. You can buy another " + tier + " pack in " + minutes + " minute(s).");
@@ -1252,7 +1252,7 @@ public final class QuestManager implements Listener {
                 data.set(dailyPath, data.getInt(dailyPath, 0) + profit);
                 int cooldownMinutes = configuredTierValue(completedTier, "cooldown-minutes",
                         completedTier.equals("easy") ? 5 : completedTier.equals("hard") ? 10 : 15);
-                data.set(id + ".cooldown-until." + completedTier,
+                data.set("cooldowns." + id + "." + completedTier,
                         System.currentTimeMillis() + cooldownMinutes * 60_000L);
             }
             if (activeQuestId.startsWith("pack:")) {
