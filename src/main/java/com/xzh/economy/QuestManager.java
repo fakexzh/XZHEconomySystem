@@ -608,7 +608,7 @@ public final class QuestManager implements Listener {
     private boolean tierPurchaseLimitsAllow(Player player, String tier) {
         if (tier.isBlank()) return true;
         UUID id = player.getUniqueId();
-        long cooldown = data.getLong("cooldowns." + id + "." + tier, 0L);
+        long cooldown = data.getLong("cooldowns." + id, 0L);
         if (System.currentTimeMillis() < cooldown) {
             long minutes = Math.max(1L, (cooldown - System.currentTimeMillis() + 59_999L) / 60_000L);
             plugin.tellPublic(player, "Tier cooldown active. You can buy another " + tier + " pack in " + minutes + " minute(s).");
@@ -616,7 +616,7 @@ public final class QuestManager implements Listener {
         }
         int cap = configuredTierValue(tier, "daily-profit-cap", tier.equals("easy") ? 2500 : tier.equals("hard") ? 5000 : 12000);
         String day = LocalDate.now().toString();
-        int earned = data.getInt("daily." + tier + "." + day + ".profit", 0);
+        int earned = data.getInt("daily." + id + "." + tier + "." + day + ".profit", 0);
         if (cap > 0 && earned >= cap) {
             plugin.tellPublic(player, "You have reached today's " + tier + " quest profit cap (" + cap + " coins).");
             return false;
@@ -1288,11 +1288,11 @@ public final class QuestManager implements Listener {
                 int cost = Math.max(0, data.getInt(id + ".cost", 0));
                 int profit = Math.max(0, reward - cost);
                 String day = LocalDate.now().toString();
-                String dailyPath = "daily." + completedTier + "." + day + ".profit";
+                String dailyPath = "daily." + id + "." + completedTier + "." + day + ".profit";
                 data.set(dailyPath, data.getInt(dailyPath, 0) + profit);
                 int cooldownMinutes = configuredTierValue(completedTier, "cooldown-minutes",
                         completedTier.equals("easy") ? 5 : completedTier.equals("hard") ? 10 : 15);
-                data.set("cooldowns." + id + "." + completedTier,
+                data.set("cooldowns." + id,
                         System.currentTimeMillis() + cooldownMinutes * 60_000L);
             }
             if (activeQuestId.startsWith("pack:")) {
