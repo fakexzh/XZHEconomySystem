@@ -803,12 +803,13 @@ public final class QuestManager implements Listener {
                 CreatureSpawnEvent.SpawnReason.SPELL, CreatureSpawnEvent.SpawnReason.INFECTION,
                 CreatureSpawnEvent.SpawnReason.CURED, CreatureSpawnEvent.SpawnReason.LIGHTNING,
                 CreatureSpawnEvent.SpawnReason.SILVERFISH_BLOCK, CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER,
-                CreatureSpawnEvent.SpawnReason.SPAWNER);
+                CreatureSpawnEvent.SpawnReason.OMINOUS_ITEM_SPAWNER, CreatureSpawnEvent.SpawnReason.SPAWNER);
         if (!allowed.contains(reason)) return;
         var pdc = event.getEntity().getPersistentDataContainer();
         pdc.set(mobSpawnReasonKey, PersistentDataType.STRING, reason.name());
         if (reason == CreatureSpawnEvent.SpawnReason.SPAWNER
-                || reason == CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER) {
+                || reason == CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER
+                || reason == CreatureSpawnEvent.SpawnReason.OMINOUS_ITEM_SPAWNER) {
             org.bukkit.Location source = event.getLocation();
             String key = source.getWorld().getUID() + ":" + source.getBlockX() + ":"
                     + source.getBlockY() + ":" + source.getBlockZ();
@@ -850,7 +851,8 @@ public final class QuestManager implements Listener {
         if (spawner != null) {
             UUID id = p.getUniqueId();
             String questId = data.getString(id + ".active", "");
-            int limit = spawnReason.equals(CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER.name()) ? 20 : 10;
+            int limit = (spawnReason.equals(CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER.name())
+                    || spawnReason.equals(CreatureSpawnEvent.SpawnReason.OMINOUS_ITEM_SPAWNER.name())) ? 20 : 10;
             String countPath = id + ".spawner-counts." + questId + "." + spawner;
             int used = data.getInt(countPath, 0);
             if (used >= limit) return;
