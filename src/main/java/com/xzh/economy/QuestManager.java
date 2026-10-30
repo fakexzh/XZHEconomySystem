@@ -450,10 +450,21 @@ public final class QuestManager implements Listener {
             lore.add(ChatColor.WHITE + "Profit: " + ChatColor.GOLD + "+" + (rewardForPack(pack) - pack.cost()) + " coins");
             lore.add(ChatColor.WHITE + "Objectives:");
             for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + "• " + objective.description());
-            lore.add(done ? ChatColor.DARK_GRAY + "COMPLETED FOR LIFE — reward already claimed"
-                    : !tierUnlocked(player, tierOf(pack)) ? ChatColor.RED + tierUnlockDescription(tierOf(pack))
-                    : unlocked ? ChatColor.GREEN + "UNLOCKED"
-                    : ChatColor.RED + "Complete the pack's progression achievement");
+            if (done) {
+                lore.add(ChatColor.DARK_GRAY + "COMPLETED FOR LIFE — reward already claimed");
+            } else {
+                List<String> missing = catalogueEntryFor(pack.id())
+                        .map(entry -> missingCatalogueUnlocks(player, entry)).orElse(List.of());
+                if (!tierUnlocked(player, tierOf(pack))) lore.add(ChatColor.RED + tierUnlockDescription(tierOf(pack)));
+                for (String key : missing) {
+                    String normalized = key.contains(":") ? key : "minecraft:" + key;
+                    NamespacedKey advancementKey = NamespacedKey.fromString(normalized);
+                    Advancement required = advancementKey == null ? null : Bukkit.getAdvancement(advancementKey);
+                    String title = required == null ? "(invalid key)" : required.getKey().getKey().replace('_', ' ');
+                    lore.add(ChatColor.RED + "Locked: requires " + title + " (" + normalized + ")");
+                }
+                if (missing.isEmpty()) lore.add(ChatColor.GREEN + "UNLOCKED");
+            }
             int timerMinutes = packTimerLimitMinutes(pack.id());
             lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes"
                     : ChatColor.GRAY + "No time limit");
