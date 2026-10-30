@@ -217,7 +217,7 @@ public final class QuestManager implements Listener {
                     case TRAVEL -> "travel:";
                     case BIOME -> "biome:";
                 };
-                String displayTarget = target.toLowerCase(Locale.ROOT).replace('_', ' ')
+                String displayTarget = target.toLowerCase(Locale.ROOT).replace('_', ' ').replace("|", " or ")
                         .replace("#hostiles", "hostile mobs").replace("#raiders", "raiders")
                         .replace("#logs", "logs").replace("#overworld ores", "overworld ores")
                         .replace("#stone types", "stone types").replace("#fish junk", "fishing junk")
