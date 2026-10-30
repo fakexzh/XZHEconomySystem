@@ -316,6 +316,13 @@ public final class QuestManager implements Listener {
         this.plugin = plugin;
         file = new File(plugin.getDataFolder(), "quests.yml");
         data = YamlConfiguration.loadConfiguration(file);
+        if (!data.contains("global-event.completion-day") && data.contains("event.completion-day")) {
+            data.set("global-event.completion-day", data.getString("event.completion-day"));
+            data.set("global-event.completions-today", data.getInt("event.completions-today", 0));
+            data.set("global-event.cooldown-until", data.getLong("event.cooldown-until", 0L));
+            try { data.save(file); }
+            catch (IOException ex) { plugin.getLogger().warning("Could not migrate global quest cooldown state: " + ex.getMessage()); }
+        }
         v2Catalogue = QuestCatalogue.load(plugin);
         validateCatalogueAdvancements();
         packs = buildPacks();
