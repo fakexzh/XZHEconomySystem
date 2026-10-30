@@ -91,6 +91,7 @@ public final class QuestManager implements Listener {
     private final NamespacedKey mobSpawnerKey;
     private final NamespacedKey directMeleeKillerKey;
     private final NamespacedKey feedCooldownKey;
+    private final NamespacedKey roamingBossKey;
     private final Random random = new Random();
     private final Map<UUID, Double> travelRemainders = new HashMap<>();
 
@@ -310,6 +311,7 @@ public final class QuestManager implements Listener {
         mobSpawnerKey = new NamespacedKey(plugin, "quest_mob_spawner");
         directMeleeKillerKey = new NamespacedKey(plugin, "quest_direct_melee_killer");
         feedCooldownKey = new NamespacedKey(plugin, "quest_feed_cooldown");
+        roamingBossKey = NamespacedKey.fromString("xzhsurvivalplugin:roaming_boss");
         Bukkit.getPluginManager().registerEvents(this, plugin);
         resetEventIfNeeded();
         Bukkit.getScheduler().runTaskTimer(plugin, this::resetEventIfNeeded, 20L * 60L, 20L * 60L);
@@ -854,6 +856,9 @@ public final class QuestManager implements Listener {
             if (used >= limit) return;
             data.set(countPath, used + 1);
         }
+        boolean roamingBoss = event.getEntity().getPersistentDataContainer()
+                .getOrDefault(roamingBossKey, PersistentDataType.BYTE, (byte) 0) == (byte) 1;
+        if (roamingBoss) incrementTarget(p, "kill:ROAMING_BOSS", 1);
         incrementTarget(p, "kill:" + event.getEntityType().name(), 1);
         incrementTarget(p, "kill:KILL_" + event.getEntityType().name(), 1);
         if (event.getEntity() instanceof org.bukkit.entity.Monster) recordGlobalProgress(p, "mob", 1);
@@ -1076,6 +1081,7 @@ public final class QuestManager implements Listener {
         String actual = eventTarget.substring(eventSplit + 1);
         for (String candidate : alternatives) {
             if (candidate.equals(actual)) return true;
+            if (candidate.equals("@ROAMING_BOSS") && actual.equals("ROAMING_BOSS")) return true;
             if (candidate.startsWith("#") && objectiveTagMatches(candidate, actual)) return true;
         }
         return false;
