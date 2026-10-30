@@ -265,6 +265,7 @@ public final class LoanManager implements Listener {
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         meta.getPersistentDataContainer().set(amountKey, PersistentDataType.INTEGER, amount);
         meta.getPersistentDataContainer().set(termKey, PersistentDataType.INTEGER, term);
+        GuiIcons.apply(meta, action, name, null);
         stack.setItemMeta(meta);
         inv.setItem(slot, stack);
     }

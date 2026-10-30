@@ -170,6 +170,7 @@ public final class BankManager implements Listener {
         meta.setLore(lore);
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         meta.getPersistentDataContainer().set(amountKey, PersistentDataType.INTEGER, amount);
+        GuiIcons.apply(meta, action, name, null);
         stack.setItemMeta(meta);
         inv.setItem(slot, stack);
     }

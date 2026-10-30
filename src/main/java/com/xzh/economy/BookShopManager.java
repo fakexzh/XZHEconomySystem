@@ -287,6 +287,7 @@ public final class BookShopManager implements Listener {
         meta.setDisplayName(ChatColor.WHITE + name);
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         meta.getPersistentDataContainer().set(bookKey, PersistentDataType.STRING, value);
+        GuiIcons.apply(meta, action, name, value);
         item.setItemMeta(meta);
         inv.setItem(slot, item);
     }

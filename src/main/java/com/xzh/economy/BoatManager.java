@@ -266,8 +266,17 @@ public final class BoatManager implements Listener {
         meta.getPersistentDataContainer().set(chestKey, PersistentDataType.BYTE, (byte) (chest ? 1 : 0));
         meta.getPersistentDataContainer().set(quantityKey, PersistentDataType.INTEGER, quantity);
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
+        GuiIcons.apply(meta, quantityIcon(action, name));
         item.setItemMeta(meta);
         return item;
+    }
+
+    private static String quantityIcon(String action, String name) {
+        if (action.equals("quantity-minus")) return "minus_1";
+        if (action.equals("quantity-plus")) return "plus_1";
+        if (action.equals("quantity-buy")) return "basket";
+        if (action.equals("quantity-back")) return "arrow_left";
+        return null;
     }
 
     private void purchaseBoats(Player player, BoatOffer offer, boolean chest, int quantity) {
@@ -348,6 +357,7 @@ public final class BoatManager implements Listener {
         ItemMeta meta = back.getItemMeta();
         meta.setDisplayName(ChatColor.GRAY + "Back");
         meta.getPersistentDataContainer().set(tierKey, PersistentDataType.STRING, "back");
+        GuiIcons.apply(meta, "arrow_left");
         back.setItemMeta(meta);
         return back;
     }

@@ -1162,6 +1162,7 @@ public final class QuestManager implements Listener {
         meta.setLore(lore);
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         meta.getPersistentDataContainer().set(valueKey, PersistentDataType.STRING, value);
+        GuiIcons.apply(meta, action, name, value);
         stack.setItemMeta(meta);
         inv.setItem(slot, stack);
     }
