@@ -1162,11 +1162,9 @@ public final class QuestManager implements Listener {
         Player player = event.getPlayer();
         if (player.getGameMode() == org.bukkit.GameMode.CREATIVE || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         String caughtType = caught.getItemStack().getType().name();
-        incrementTarget(player, "fish:" + caughtType, 1);
-        if (caught.getItemStack().getType() == Material.FISHING_ROD
-                && caught.getItemStack().getEnchantments().size() > 0) {
-            incrementTarget(player, "fish:FISHING_ROD_ENCHANTED", 1);
-        }
+        boolean enchantedRod = caught.getItemStack().getType() == Material.FISHING_ROD
+                && !caught.getItemStack().getEnchantments().isEmpty();
+        incrementTarget(player, "fish:" + (enchantedRod ? "FISHING_ROD_ENCHANTED" : caughtType), 1);
         incrementTarget(player, "fish:ANY", 1);
         recordGlobalProgress(player, "fish", 1);
     }
