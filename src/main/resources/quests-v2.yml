@@ -153,7 +153,7 @@ quests:
     fee: 50
     profit: 160
     timer-minutes: 30
-    icon: IRON_AXE
+    icon: OAK_LOG
     tier-gate: "story/mine_stone"
   - id: E012
     tier: easy
@@ -1463,7 +1463,7 @@ quests:
     fee: 360
     profit: 360
     timer-minutes: 50
-    icon: PAPER
+    icon: DEEPSLATE
     tier-gate: "nether/find_fortress"
   - id: H005
     tier: hard
@@ -1519,7 +1519,7 @@ quests:
     fee: 590
     profit: 530
     timer-minutes: 0
-    icon: PAPER
+    icon: AMETHYST_CLUSTER
     tier-gate: "nether/find_fortress"
   - id: H009
     tier: hard
@@ -1533,7 +1533,7 @@ quests:
     fee: 470
     profit: 490
     timer-minutes: 0
-    icon: IRON_AXE
+    icon: RAW_IRON
     tier-gate: "nether/find_fortress"
   - id: H010
     tier: hard
@@ -1576,7 +1576,7 @@ quests:
     fee: 410
     profit: 390
     timer-minutes: 50
-    icon: PAPER
+    icon: GLOWSTONE
     tier-gate: "nether/find_fortress"
   - id: H013
     tier: hard
@@ -1590,7 +1590,7 @@ quests:
     fee: 360
     profit: 360
     timer-minutes: 50
-    icon: PAPER
+    icon: SOUL_SAND
     tier-gate: "nether/find_fortress"
   - id: H014
     tier: hard
@@ -1618,7 +1618,7 @@ quests:
     fee: 360
     profit: 360
     timer-minutes: 50
-    icon: PAPER
+    icon: BASALT
     tier-gate: "nether/find_fortress"
   - id: H016
     tier: hard
@@ -1632,7 +1632,7 @@ quests:
     fee: 410
     profit: 420
     timer-minutes: 60
-    icon: PAPER
+    icon: CRIMSON_STEM
     tier-gate: "nether/find_fortress"
   - id: H017
     tier: hard
@@ -1646,7 +1646,7 @@ quests:
     fee: 410
     profit: 420
     timer-minutes: 60
-    icon: PAPER
+    icon: WARPED_STEM
     tier-gate: "nether/find_fortress"
   - id: H018
     tier: hard
@@ -1660,7 +1660,7 @@ quests:
     fee: 470
     profit: 440
     timer-minutes: 0
-    icon: PAPER
+    icon: NETHER_WART
     tier-gate: "nether/find_fortress"
   - id: H019
     tier: hard
@@ -1674,7 +1674,7 @@ quests:
     fee: 700
     profit: 670
     timer-minutes: 0
-    icon: PAPER
+    icon: ANCIENT_DEBRIS
     tier-gate: "nether/find_fortress"
   - id: H020
     tier: hard
@@ -1688,7 +1688,7 @@ quests:
     fee: 590
     profit: 530
     timer-minutes: 0
-    icon: PAPER
+    icon: CRYING_OBSIDIAN
     tier-gate: "nether/find_fortress"
   - id: H021
     tier: hard
@@ -1996,7 +1996,7 @@ quests:
     fee: 470
     profit: 470
     timer-minutes: 70
-    icon: PAPER
+    icon: PRISMARINE
     tier-gate: "nether/find_fortress"
   - id: H043
     tier: hard
@@ -2010,7 +2010,7 @@ quests:
     fee: 590
     profit: 550
     timer-minutes: 0
-    icon: PAPER
+    icon: SEA_LANTERN
     tier-gate: "nether/find_fortress"
   - id: H044
     tier: hard
@@ -2207,7 +2207,7 @@ quests:
     fee: 530
     profit: 500
     timer-minutes: 0
-    icon: PAPER
+    icon: GLOW_BERRIES
     tier-gate: "nether/find_fortress"
   - id: H058
     tier: hard
@@ -2800,7 +2800,7 @@ quests:
     fee: 700
     profit: 770
     timer-minutes: 0
-    icon: PAPER
+    icon: ANCIENT_DEBRIS
     tier-gate: "nether/find_fortress"
   - id: H100
     tier: hard
@@ -2845,7 +2845,7 @@ quests:
     fee: 1200
     profit: 2000
     timer-minutes: 0
-    icon: PAPER
+    icon: END_STONE
     tier-gate: "end/find_end_city"
   - id: M003
     tier: master
@@ -2859,7 +2859,7 @@ quests:
     fee: 1650
     profit: 2500
     timer-minutes: 100
-    icon: PAPER
+    icon: PURPUR_BLOCK
     tier-gate: "end/find_end_city"
   - id: M004
     tier: master
@@ -2873,7 +2873,7 @@ quests:
     fee: 1450
     profit: 2300
     timer-minutes: 90
-    icon: PAPER
+    icon: CHORUS_PLANT
     tier-gate: "end/find_end_city"
   - id: M005
     tier: master
@@ -2915,7 +2915,7 @@ quests:
     fee: 2800
     profit: 3250
     timer-minutes: 0
-    icon: PAPER
+    icon: DRAGON_HEAD
     tier-gate: "end/find_end_city"
   - id: M008
     tier: master
@@ -2973,7 +2973,7 @@ quests:
     fee: 2800
     profit: 3450
     timer-minutes: 0
-    icon: PAPER
+    icon: ANCIENT_DEBRIS
     tier-gate: "end/find_end_city"
   - id: M012
     tier: master
@@ -3029,7 +3029,7 @@ quests:
     fee: 2100
     profit: 2700
     timer-minutes: 100
-    icon: PAPER
+    icon: GILDED_BLACKSTONE
     tier-gate: "end/find_end_city"
   - id: M016
     tier: master
@@ -3259,7 +3259,7 @@ quests:
     fee: 1650
     profit: 2500
     timer-minutes: 100
-    icon: PAPER
+    icon: SCULK
     tier-gate: "end/find_end_city"
   - id: M032
     tier: master
@@ -3301,7 +3301,7 @@ quests:
     fee: 1200
     profit: 2350
     timer-minutes: 120
-    icon: PAPER
+    icon: DEEPSLATE
     tier-gate: "end/find_end_city"
   - id: M035
     tier: master
@@ -3371,7 +3371,7 @@ quests:
     fee: 2100
     profit: 3000
     timer-minutes: 140
-    icon: PAPER
+    icon: AMETHYST_CLUSTER
     tier-gate: "end/find_end_city"
   - id: M040
     tier: master
@@ -3385,7 +3385,7 @@ quests:
     fee: 1900
     profit: 3100
     timer-minutes: 0
-    icon: IRON_AXE
+    icon: RAW_IRON
     tier-gate: "end/find_end_city"
   - id: M041
     tier: master
@@ -3710,7 +3710,7 @@ quests:
     fee: 2550
     profit: 3050
     timer-minutes: 0
-    icon: PAPER
+    icon: SPONGE
     tier-gate: "end/find_end_city"
   - id: M064
     tier: master
@@ -3724,7 +3724,7 @@ quests:
     fee: 1650
     profit: 2750
     timer-minutes: 140
-    icon: PAPER
+    icon: PRISMARINE
     tier-gate: "end/find_end_city"
   - id: M065
     tier: master
@@ -3738,7 +3738,7 @@ quests:
     fee: 2100
     profit: 3000
     timer-minutes: 140
-    icon: PAPER
+    icon: SEA_LANTERN
     tier-gate: "end/find_end_city"
   - id: M066
     tier: master
@@ -3954,7 +3954,7 @@ quests:
     fee: 2800
     profit: 4100
     timer-minutes: 0
-    icon: PAPER
+    icon: ANCIENT_DEBRIS
     tier-gate: "end/find_end_city"
   - id: M080
     tier: master
@@ -3982,7 +3982,7 @@ quests:
     fee: 1000
     profit: 2500
     timer-minutes: 0
-    icon: IRON_AXE
+    icon: STONE
     tier-gate: "end/find_end_city"
   - id: M082
     tier: master
@@ -3996,7 +3996,7 @@ quests:
     fee: 1900
     profit: 3600
     timer-minutes: 0
-    icon: IRON_AXE
+    icon: RAW_IRON
     tier-gate: "end/find_end_city"
   - id: M083
     tier: master
@@ -4010,7 +4010,7 @@ quests:
     fee: 1200
     profit: 2750
     timer-minutes: 0
-    icon: IRON_AXE
+    icon: OAK_LOG
     tier-gate: "end/find_end_city"
   - id: M084
     tier: master
@@ -4024,7 +4024,7 @@ quests:
     fee: 1200
     profit: 3000
     timer-minutes: 0
-    icon: PAPER
+    icon: WHEAT
     tier-gate: "end/find_end_city"
   - id: M085
     tier: master
@@ -4140,7 +4140,7 @@ quests:
     fee: 2800
     profit: 4100
     timer-minutes: 0
-    icon: PAPER
+    icon: ANCIENT_DEBRIS
     tier-gate: "end/find_end_city"
   - id: M093
     tier: master
