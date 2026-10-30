@@ -73,6 +73,7 @@ public final class QuestManager implements Listener {
     private final XZHEconomySystem plugin;
     private final File file;
     private final YamlConfiguration data;
+    private final QuestCatalogue v2Catalogue;
     private final NamespacedKey actionKey;
     private final NamespacedKey valueKey;
     private final Random random = new Random();
@@ -254,6 +255,7 @@ public final class QuestManager implements Listener {
         this.plugin = plugin;
         file = new File(plugin.getDataFolder(), "quests.yml");
         data = YamlConfiguration.loadConfiguration(file);
+        v2Catalogue = QuestCatalogue.load(plugin);
         // Remove active quests from the retired system so old easy objectives cannot persist.
         boolean migratedOldQuests = false;
         for (String root : new ArrayList<>(data.getKeys(false))) {
