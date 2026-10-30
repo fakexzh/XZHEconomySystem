@@ -41,7 +41,7 @@ quests:
     fee: 90
     profit: 170
     timer-minutes: 0
-    icon: COPPER_INGOT
+    icon: RAW_COPPER
     tier-gate: "story/mine_stone"
   - id: E004
     tier: easy
@@ -55,7 +55,7 @@ quests:
     fee: 130
     profit: 210
     timer-minutes: 40
-    icon: IRON_INGOT
+    icon: RAW_IRON
     tier-gate: "story/mine_stone"
   - id: E005
     tier: easy
@@ -1407,7 +1407,7 @@ quests:
     fee: 250
     profit: 300
     timer-minutes: 0
-    icon: IRON_INGOT
+    icon: RAW_IRON
     tier-gate: "story/mine_stone"
   - id: H001
     tier: hard
@@ -1449,7 +1449,7 @@ quests:
     fee: 530
     profit: 500
     timer-minutes: 0
-    icon: GOLD_INGOT
+    icon: RAW_GOLD
     tier-gate: "nether/find_fortress"
   - id: H004
     tier: hard
@@ -1505,7 +1505,7 @@ quests:
     fee: 410
     profit: 440
     timer-minutes: 70
-    icon: COPPER_INGOT
+    icon: RAW_COPPER
     tier-gate: "nether/find_fortress"
   - id: H008
     tier: hard
@@ -4124,7 +4124,7 @@ quests:
     fee: 2550
     profit: 4000
     timer-minutes: 325
-    icon: IRON_INGOT
+    icon: RAW_IRON
     tier-gate: "end/find_end_city"
   - id: M092
     tier: master
