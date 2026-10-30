@@ -14,6 +14,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.BlockDispenseLootEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -774,6 +775,26 @@ public final class QuestManager implements Listener {
                 }
             });
         }
+    }
+
+    @EventHandler
+    public void onVaultLoot(BlockDispenseLootEvent event) {
+        if (event.isCancelled() || event.getBlock().getType() != Material.VAULT) return;
+        Player player = event.getPlayer();
+        if (player == null || !player.isOnline()
+                || player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        String active = data.getString(player.getUniqueId() + ".active", "");
+        if (active.isBlank()) return;
+        String locationKey = event.getBlock().getWorld().getUID() + ":"
+                + event.getBlock().getX() + ":" + event.getBlock().getY() + ":" + event.getBlock().getZ();
+        String openedPath = player.getUniqueId() + ".vault-opened." + active + "." + locationKey.replace(':', '_');
+        if (data.getBoolean(openedPath, false)) return;
+        data.set(openedPath, true);
+        String lootTable = event.getLootTable().getKey().getKey().toLowerCase(Locale.ROOT);
+        if (lootTable.contains("ominous")) incrementTarget(player, "vault:OMINOUS", 1);
+        incrementTarget(player, "vault:ANY", 1);
+        save();
     }
 
     @EventHandler
