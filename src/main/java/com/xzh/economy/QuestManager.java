@@ -24,6 +24,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.entity.EntityBreedEvent;
+import io.papermc.paper.event.entity.EntityEnterLoveModeEvent;
 import org.bukkit.entity.Animals;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.inventory.Inventory;
@@ -86,6 +87,7 @@ public final class QuestManager implements Listener {
     private final NamespacedKey mobSpawnReasonKey;
     private final NamespacedKey mobSpawnerKey;
     private final NamespacedKey directMeleeKillerKey;
+    private final NamespacedKey feedCooldownKey;
     private final Random random = new Random();
     private final Map<UUID, Double> travelRemainders = new HashMap<>();
 
@@ -304,6 +306,7 @@ public final class QuestManager implements Listener {
         mobSpawnReasonKey = new NamespacedKey(plugin, "quest_mob_spawn_reason");
         mobSpawnerKey = new NamespacedKey(plugin, "quest_mob_spawner");
         directMeleeKillerKey = new NamespacedKey(plugin, "quest_direct_melee_killer");
+        feedCooldownKey = new NamespacedKey(plugin, "quest_feed_cooldown");
         Bukkit.getPluginManager().registerEvents(this, plugin);
         resetEventIfNeeded();
         Bukkit.getScheduler().runTaskTimer(plugin, this::resetEventIfNeeded, 20L * 60L, 20L * 60L);
@@ -901,21 +904,17 @@ public final class QuestManager implements Listener {
     }
 
     @EventHandler
-    public void onFeed(PlayerInteractEntityEvent event) {
-        if (event.isCancelled() || event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) return;
-        if (!(event.getRightClicked() instanceof Animals animal) || animal.getAge() != 0) return;
-        Player player = event.getPlayer();
-        ItemStack held = player.getInventory().getItemInMainHand();
-        if (held == null) return;
-        Material food = held.getType();
-        boolean validFeed = switch (animal.getType()) {
-            case COW, SHEEP, GOAT -> food == Material.WHEAT;
-            case PIG -> food == Material.CARROT || food == Material.POTATO || food == Material.BEETROOT;
-            case CHICKEN -> food == Material.WHEAT_SEEDS || food == Material.BEETROOT_SEEDS || food == Material.MELON_SEEDS || food == Material.PUMPKIN_SEEDS || food == Material.TORCHFLOWER_SEEDS;
-            case RABBIT -> food == Material.CARROT || food == Material.GOLDEN_CARROT || food == Material.DANDELION;
-            default -> false;
-        };
-        if (validFeed) incrementTarget(player, "feed:" + animal.getType().name(), 1);
+    public void onFeed(EntityEnterLoveModeEvent event) {
+        if (!(event.getHumanEntity() instanceof Player player)
+                || player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        var pdc = event.getAnimal().getPersistentDataContainer();
+        long now = System.currentTimeMillis();
+        long last = pdc.getOrDefault(feedCooldownKey, PersistentDataType.LONG, 0L);
+        if (now - last < 60_000L) return;
+        pdc.set(feedCooldownKey, PersistentDataType.LONG, now);
+        incrementTarget(player, "feed:" + event.getAnimal().getType().name(), 1);
+        incrementTarget(player, "feed:ANY", 1);
     }
 
     @EventHandler
