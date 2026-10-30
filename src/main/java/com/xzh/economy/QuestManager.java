@@ -747,7 +747,7 @@ public final class QuestManager implements Listener {
         save();
     }
 
-    @EventHandler
+    @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
     public void onBreak(BlockBreakEvent event) {
         if (event.isCancelled()) return;
         Player p = event.getPlayer();
