@@ -250,12 +250,12 @@ public final class QuestManager implements Listener {
                     case CRAFT -> target.equals("ANY") ? "Craft " + spec.quantity() + " items"
                             : "Craft " + spec.quantity() + " " + displayTarget;
                     case ENCHANT -> "Use the third enchantment option " + spec.quantity() + " times";
-                    case BARTER -> "Trade " + spec.quantity() + " gold ingots with piglins";
+                    case BARTER -> "Right-click piglins while holding " + spec.quantity() + " gold ingots to complete the trades";
                     case LOOT -> target.equals("ANY") ? "Open " + spec.quantity() + " loot chests"
                             : "Open " + spec.quantity() + " loot chests in " + lootTarget;
                     case VAULT -> "Unlock " + spec.quantity() + (target.equals("OMINOUS") ? " ominous trial vaults" : " trial vaults");
                     case TRAVEL -> target.equals("ELYTRA") ? "Fly " + spec.quantity() + " blocks using an elytra"
-                            : "Walk " + spec.quantity() + " blocks";
+                            : "Move " + spec.quantity() + " blocks on foot";
                     case BIOME -> spec.targets().size() == 1 && spec.targets().get(0).equals("ANY")
                             ? "Visit " + spec.quantity() + " different biomes"
                             : "Visit " + spec.quantity() + " different biomes from " + displayTarget;
@@ -715,7 +715,7 @@ public final class QuestManager implements Listener {
             plugin.tellPublic(player, "Not enough coins for this quest pack.");
             return;
         }
-        startQuest(player, "pack:" + pack.id(), pack.name(), pack.cost(), rewardForPack(pack), pack.objectives());
+        startQuest(player, "pack:" + pack.id(), numberedPackName(pack), pack.cost(), rewardForPack(pack), pack.objectives());
         player.closeInventory();
         int reward = rewardForPack(pack);
         int timerMinutes = packTimerLimitMinutes(pack.id());
@@ -764,6 +764,23 @@ public final class QuestManager implements Listener {
             data.set(uuid + ".objectives." + i + ".goal", o.goal());
             data.set(uuid + ".objectives." + i + ".description", o.description());
             data.set(uuid + ".objectives." + i + ".progress", 0);
+        }
+        // Count the biome the player is already standing in when a biome quest begins.
+        boolean hasBiomeObjective = objectives.stream().anyMatch(objective -> objective.target().startsWith("biome:"));
+        if (hasBiomeObjective) {
+            String currentBiome = player.getLocation().getBlock().getBiome().name();
+            data.set(uuid + ".biome-visited." + id + "." + currentBiome, true);
+            for (int i = 0; i < objectives.size(); i++) {
+                String objectivePath = uuid + ".objectives." + i;
+                if (!"BIOME".equals(data.getString(objectivePath + ".type", ""))) continue;
+                String target = data.getString(objectivePath + ".target", "");
+                if (!objectiveTargetMatches(target, "biome:" + currentBiome, player.getWorld().getEnvironment())) continue;
+                List<String> visited = new ArrayList<>(data.getStringList(objectivePath + ".biomes"));
+                if (!visited.contains(currentBiome)) visited.add(currentBiome);
+                data.set(objectivePath + ".biomes", visited);
+            }
+            data.set("activity." + uuid, System.currentTimeMillis());
+            incrementTarget(player, "biome:" + currentBiome, 1);
         }
         long timeLimit = timerLimitSeconds(uuid, id);
         data.set(uuid + ".time-limit-seconds", timeLimit);
@@ -1174,7 +1191,11 @@ public final class QuestManager implements Listener {
                 && p.getGameMode() != org.bukkit.GameMode.SPECTATOR) {
             org.bukkit.block.Biome fromBiome = event.getFrom().getBlock().getBiome();
             org.bukkit.block.Biome toBiome = event.getTo().getBlock().getBiome();
-            if (fromBiome != toBiome) {
+            double biomeDx = event.getTo().getX() - event.getFrom().getX();
+            double biomeDy = event.getTo().getY() - event.getFrom().getY();
+            double biomeDz = event.getTo().getZ() - event.getFrom().getZ();
+            boolean continuousMovement = Math.sqrt(biomeDx * biomeDx + biomeDy * biomeDy + biomeDz * biomeDz) <= 10.0;
+            if (continuousMovement && fromBiome != toBiome) {
                 String activeQuest = data.getString(id + ".active", "");
                 String biomePath = id + ".biome-visited." + activeQuest + "." + toBiome.name();
                 if (!data.getBoolean(biomePath, false)) {
