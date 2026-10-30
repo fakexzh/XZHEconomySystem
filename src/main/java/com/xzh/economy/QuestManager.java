@@ -392,7 +392,7 @@ public final class QuestManager implements Listener {
         new RandomQuest("Raid the Fortress", Material.BLAZE_ROD, 220, 330, new Objective("kill:BLAZE", 18, "Kill 18 Blazes in the Nether"), true),
         new RandomQuest("Undead Patrol", Material.BOW, 150, 210, new Objective("kill:ZOMBIE", 35, "Kill 35 Zombies")),
         new RandomQuest("Ocean Treasure Hunt", Material.PRISMARINE_SHARD, 200, 300, new Objective("break:PRISMARINE", 96, "Mine 96 Prismarine blocks")),
-        new RandomQuest("Ender Pearl Collection", Material.ENDER_PEARL, 240, 360, new Objective("kill:ENDERMAN", 24, "Kill 24 Endermen")),
+        new RandomQuest("Ender Pearl Collection", Material.ENDER_PEARL, 240, 360, new Objective("collect:ENDER_PEARL", 24, "Collect 24 Ender Pearls")),
         new RandomQuest("Iron Supply Contract", Material.RAW_IRON, 130, 182, new Objective("break:IRON_ORE", 64, "Mine 64 Iron Ore")),
         new RandomQuest("Wither Skeleton Hunt", Material.WITHER_SKELETON_SKULL, 350, 525, new Objective("kill:WITHER_SKELETON", 16, "Kill 16 Wither Skeletons"), true),
         new RandomQuest("Fishing for Cod", Material.COD, 90, 126, new Objective("fish:COD", 20, "Catch 20 Cod"), true),
@@ -402,7 +402,7 @@ public final class QuestManager implements Listener {
         new RandomQuest("Travel Contract", Material.COMPASS, 100, 140, new Objective("travel", 2500, "Travel 2,500 blocks"), true),
         new RandomQuest("Woodcutting Contract", Material.OAK_LOG, 100, 140, new Objective("break:OAK_LOG", 128, "Chop 128 Oak Logs")),
         new RandomQuest("Crop Delivery", Material.CARROT, 85, 119, new Objective("harvest:CARROT", 96, "Harvest 96 fully grown Carrot crops")),
-        new RandomQuest("Blaze Rod Shipment", Material.BLAZE_ROD, 190, 266, new Objective("kill:@NETHER:BLAZE", 32, "Kill 32 Blazes in the Nether")),
+        new RandomQuest("Blaze Rod Shipment", Material.BLAZE_ROD, 190, 266, new Objective("collect:@NETHER:BLAZE_ROD", 32, "Collect 32 Blaze Rods in the Nether")),
         new RandomQuest("Sand Quarry", Material.SAND, 75, 105, new Objective("break:SAND", 256, "Mine 256 Sand")),
         new RandomQuest("Monster Cleanup", Material.IRON_SWORD, 140, 196, new Objective("kill:SKELETON", 30, "Kill 30 Skeletons")),
         new RandomQuest("Food Pantry", Material.BREAD, 90, 126, new Objective("craft:BREAD", 64, "Craft 64 Bread")),
@@ -1529,7 +1529,7 @@ public final class QuestManager implements Listener {
                 }
                 case "#RAIDERS" -> Set.of("PILLAGER", "VINDICATOR", "EVOKER", "RAVAGER", "WITCH", "VEX").contains(entity);
                 case "#TRIAL_SPAWN_MOBS" -> actual.startsWith("TRIAL_KILL_")
-                        && Set.of("BREEZE", "BOGGED", "ZOMBIE", "SKELETON", "SPIDER",
+                        && Set.of("BREEZE", "BOGGED", "ZOMBIE", "HUSK", "SKELETON", "STRAY", "SPIDER",
                                 "CAVE_SPIDER", "SILVERFISH", "SLIME").contains(entity);
                 default -> false;
             };
@@ -1546,7 +1546,7 @@ public final class QuestManager implements Listener {
                     "DEEPSLATE_DIAMOND_ORE", "DEEPSLATE_EMERALD_ORE").contains(actual);
             case "#STONE_TYPES" -> Set.of("STONE", "DEEPSLATE", "ANDESITE", "DIORITE", "GRANITE", "TUFF").contains(actual);
             case "#FISH_JUNK" -> Set.of("LILY_PAD", "BOWL", "LEATHER", "LEATHER_BOOTS", "ROTTEN_FLESH", "DAMAGED_FISHING_ROD", "BAMBOO",
-                    "STICK", "STRING", "POTION", "BONE", "INK_SAC", "TRIPWIRE_HOOK").contains(actual);
+                    "STICK", "STRING", "POTION", "BONE", "INK_SAC", "COCOA_BEANS", "TRIPWIRE_HOOK").contains(actual);
             // Vanilla fishing rods in the treasure table are enchanted, not junk.
             case "#FISH_TREASURE" -> Set.of("BOW", "ENCHANTED_BOOK", "FISHING_ROD", "NAME_TAG",
                     "NAUTILUS_SHELL", "SADDLE").contains(actual);
