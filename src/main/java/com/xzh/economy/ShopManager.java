@@ -337,6 +337,7 @@ public final class ShopManager implements Listener {
         ItemStack bankIcon = plugin.getPocketCoinManager().createCoin(1000, 1);
         ItemMeta bankMeta = bankIcon.getItemMeta();
         bankMeta.setDisplayName(ChatColor.WHITE + "XZH BANK");
+        bankMeta.setItemModel(new NamespacedKey("xzh", "gui/vault"));
         bankMeta.setLore(List.of(ChatColor.GRAY + "Open your bank account."));
         bankMeta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "bank");
         bankMeta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, "bank");
