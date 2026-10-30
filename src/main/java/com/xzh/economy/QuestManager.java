@@ -266,7 +266,7 @@ public final class QuestManager implements Listener {
             try {
                 UUID playerId = UUID.fromString(root);
                 String active = data.getString(root + ".active", "");
-                if (active.isBlank() || data.contains(root + ".objective-count")) continue;
+                if (active.isBlank()) continue;
                 boolean legacyPack = active.startsWith("pack:") || !active.startsWith("single:");
                 if (!legacyPack) continue;
                 int refund = Math.max(0, data.getInt(root + ".cost", 0));
