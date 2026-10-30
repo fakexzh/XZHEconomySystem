@@ -644,10 +644,13 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 || (command.getName().equalsIgnoreCase("askmoney") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("balance") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("eco") && args.length == 2 && sender.hasPermission("xzh.admin"))) {
-            for (Player player : Bukkit.getOnlinePlayers()) suggestions.add(player.getName());
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                suggestions.add(command.getName().equalsIgnoreCase("pet") ? "@" + player.getName() : player.getName());
+            }
         }
         String prefix = args.length == 0 ? "" : args[args.length - 1].toLowerCase(Locale.ROOT);
-        suggestions.removeIf(s -> !s.toLowerCase(Locale.ROOT).startsWith(prefix));
+        if (command.getName().equalsIgnoreCase("pet") && args.length == 2 && prefix.startsWith("@")) prefix = prefix.substring(1);
+        suggestions.removeIf(s -> !(s.startsWith("@") ? s.substring(1) : s).toLowerCase(Locale.ROOT).startsWith(prefix));
         return suggestions;
     }
 
