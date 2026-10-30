@@ -225,7 +225,7 @@ public final class QuestManager implements Listener {
         new RandomQuest("Raid the Fortress", Material.BLAZE_ROD, 220, 330, new Objective("kill:BLAZE", 18, "Kill 18 Blazes in the Nether")),
         new RandomQuest("Undead Patrol", Material.BOW, 150, 210, new Objective("kill:ZOMBIE", 35, "Kill 35 Zombies")),
         new RandomQuest("Ocean Treasure Hunt", Material.PRISMARINE_SHARD, 200, 300, new Objective("break:PRISMARINE", 96, "Mine 96 Prismarine blocks")),
-        new RandomQuest("Ender Pearl Collection", Material.ENDER_PEARL, 240, 360, new Objective("collect:ENDER_PEARL", 24, "Collect 24 Ender Pearls")),
+        new RandomQuest("Ender Pearl Collection", Material.ENDER_PEARL, 240, 360, new Objective("kill:ENDERMAN", 24, "Kill 24 Endermen")),
         new RandomQuest("Iron Supply Contract", Material.RAW_IRON, 130, 182, new Objective("break:IRON_ORE", 64, "Mine 64 Iron Ore")),
         new RandomQuest("Wither Skeleton Hunt", Material.WITHER_SKELETON_SKULL, 350, 525, new Objective("kill:WITHER_SKELETON", 16, "Kill 16 Wither Skeletons")),
         new RandomQuest("Fishing for Cod", Material.COD, 90, 126, new Objective("fish:COD", 20, "Catch 20 Cod")),
@@ -235,11 +235,11 @@ public final class QuestManager implements Listener {
         new RandomQuest("Travel Contract", Material.COMPASS, 100, 140, new Objective("travel", 2500, "Travel 2,500 blocks")),
         new RandomQuest("Woodcutting Contract", Material.OAK_LOG, 100, 140, new Objective("break:OAK_LOG", 128, "Chop 128 Oak Logs")),
         new RandomQuest("Crop Delivery", Material.CARROT, 85, 119, new Objective("harvest:CARROT", 96, "Harvest 96 fully grown Carrot crops")),
-        new RandomQuest("Blaze Rod Shipment", Material.BLAZE_ROD, 190, 266, new Objective("collect:BLAZE_ROD", 32, "Collect 32 Blaze Rods")),
+        new RandomQuest("Blaze Rod Shipment", Material.BLAZE_ROD, 190, 266, new Objective("kill:BLAZE", 32, "Kill 32 Blazes in the Nether")),
         new RandomQuest("Sand Quarry", Material.SAND, 75, 105, new Objective("break:SAND", 256, "Mine 256 Sand")),
         new RandomQuest("Monster Cleanup", Material.IRON_SWORD, 140, 196, new Objective("kill:SKELETON", 30, "Kill 30 Skeletons")),
-        new RandomQuest("Food Pantry", Material.BREAD, 90, 126, new Objective("collect:BREAD", 64, "Collect 64 Bread")),
-        new RandomQuest("Quartz Shipment", Material.QUARTZ, 160, 224, new Objective("collect:QUARTZ", 96, "Collect 96 Nether Quartz")),
+        new RandomQuest("Food Pantry", Material.BREAD, 90, 126, new Objective("craft:BREAD", 64, "Craft 64 Bread")),
+        new RandomQuest("Quartz Shipment", Material.QUARTZ, 160, 224, new Objective("break:NETHER_QUARTZ_ORE", 96, "Mine 96 Nether Quartz Ore in the Nether")),
         new RandomQuest("Tropical Catch", Material.TROPICAL_FISH, 150, 225, new Objective("fish:TROPICAL_FISH", 8, "Catch 8 Tropical Fish")),
         new RandomQuest("Pufferfish Watch", Material.PUFFERFISH, 135, 203, new Objective("fish:PUFFERFISH", 10, "Catch 10 Pufferfish")),
         new RandomQuest("Cod Fishing Run", Material.FISHING_ROD, 120, 180, new Objective("fish:COD", 16, "Catch 16 Cod")),
@@ -612,6 +612,12 @@ public final class QuestManager implements Listener {
         ItemStack result = event.getCurrentItem();
         if (result != null && result.getType() != Material.AIR) {
             incrementTarget(player, "collect:" + result.getType().name(), result.getAmount());
+            Set<Material> questCraftWhitelist = Set.of(Material.BREAD, Material.PUMPKIN_PIE, Material.CAKE,
+                    Material.COOKIE, Material.LANTERN, Material.SHIELD, Material.BUCKET, Material.BOOKSHELF,
+                    Material.IRON_HELMET, Material.IRON_CHESTPLATE, Material.IRON_LEGGINGS, Material.IRON_BOOTS);
+            if (questCraftWhitelist.contains(result.getType())) {
+                incrementTarget(player, "craft:" + result.getType().name(), result.getAmount());
+            }
         }
     }
 
