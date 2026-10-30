@@ -756,6 +756,26 @@ public final class QuestManager implements Listener {
     }
 
     @EventHandler
+    public void onBerryHarvest(PlayerInteractEvent event) {
+        if (event.isCancelled() || event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND
+                || event.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK
+                || event.getClickedBlock() == null) return;
+        Player player = event.getPlayer();
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        Material type = event.getClickedBlock().getType();
+        if (type == Material.SWEET_BERRY_BUSH
+                && event.getClickedBlock().getBlockData() instanceof Ageable ageable
+                && ageable.getAge() >= 2) {
+            incrementTarget(player, "harvest:SWEET_BERRIES", 1);
+        } else if ((type == Material.CAVE_VINES || type == Material.CAVE_VINES_PLANT)
+                && event.getClickedBlock().getBlockData() instanceof org.bukkit.block.data.type.CaveVines vines
+                && vines.hasBerries()) {
+            incrementTarget(player, "harvest:GLOW_BERRIES", 1);
+        }
+    }
+
+    @EventHandler
     public void onMobSpawn(CreatureSpawnEvent event) {
         CreatureSpawnEvent.SpawnReason reason = event.getSpawnReason();
         Set<CreatureSpawnEvent.SpawnReason> allowed = Set.of(
