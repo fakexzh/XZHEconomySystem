@@ -170,7 +170,7 @@ public final class ShopManager implements Listener {
         new Product("special", Material.FLOW_ARMOR_TRIM_SMITHING_TEMPLATE, 1200, 0),
         new Product("special", Material.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE, 1200, 0),
         new Product("special", Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE, 1500, 0),
-        new Product("special", Material.ELYTRA, 10000, 0),
+        new Product("special", Material.ELYTRA, 10000, 0)
     ));
 
     public ShopManager(XZHEconomySystem plugin) {
