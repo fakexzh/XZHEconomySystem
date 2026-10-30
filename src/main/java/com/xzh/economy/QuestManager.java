@@ -251,11 +251,11 @@ public final class QuestManager implements Listener {
         new RandomQuest("Travel Contract", Material.COMPASS, 100, 140, new Objective("travel", 2500, "Travel 2,500 blocks"), true),
         new RandomQuest("Woodcutting Contract", Material.OAK_LOG, 100, 140, new Objective("break:OAK_LOG", 128, "Chop 128 Oak Logs")),
         new RandomQuest("Crop Delivery", Material.CARROT, 85, 119, new Objective("harvest:CARROT", 96, "Harvest 96 fully grown Carrot crops")),
-        new RandomQuest("Blaze Rod Shipment", Material.BLAZE_ROD, 190, 266, new Objective("kill:BLAZE", 32, "Kill 32 Blazes in the Nether")),
+        new RandomQuest("Blaze Rod Shipment", Material.BLAZE_ROD, 190, 266, new Objective("kill:@NETHER:BLAZE", 32, "Kill 32 Blazes in the Nether")),
         new RandomQuest("Sand Quarry", Material.SAND, 75, 105, new Objective("break:SAND", 256, "Mine 256 Sand")),
         new RandomQuest("Monster Cleanup", Material.IRON_SWORD, 140, 196, new Objective("kill:SKELETON", 30, "Kill 30 Skeletons")),
         new RandomQuest("Food Pantry", Material.BREAD, 90, 126, new Objective("craft:BREAD", 64, "Craft 64 Bread")),
-        new RandomQuest("Quartz Shipment", Material.QUARTZ, 160, 224, new Objective("break:NETHER_QUARTZ_ORE", 96, "Mine 96 Nether Quartz Ore in the Nether")),
+        new RandomQuest("Quartz Shipment", Material.QUARTZ, 160, 224, new Objective("break:@NETHER:NETHER_QUARTZ_ORE", 96, "Mine 96 Nether Quartz Ore in the Nether")),
         new RandomQuest("Tropical Catch", Material.TROPICAL_FISH, 150, 225, new Objective("fish:TROPICAL_FISH", 8, "Catch 8 Tropical Fish")),
         new RandomQuest("Pufferfish Watch", Material.PUFFERFISH, 135, 203, new Objective("fish:PUFFERFISH", 10, "Catch 10 Pufferfish")),
         new RandomQuest("Cod Fishing Run", Material.FISHING_ROD, 120, 180, new Objective("fish:COD", 16, "Catch 16 Cod")),
@@ -274,24 +274,25 @@ public final class QuestManager implements Listener {
         v2Catalogue = QuestCatalogue.load(plugin);
         validateCatalogueAdvancements();
         packs = buildPacks();
-        // One-time v2 migration: refund retired active achievement packs in full.
-        boolean migratedOldQuests = false;
-        for (String root : new ArrayList<>(data.getKeys(false))) {
-            try {
-                UUID playerId = UUID.fromString(root);
-                String active = data.getString(root + ".active", "");
-                if (active.isBlank()) continue;
-                boolean legacyPack = active.startsWith("pack:") || !active.startsWith("single:");
-                if (!legacyPack) continue;
-                int refund = Math.max(0, data.getInt(root + ".cost", 0));
-                if (refund > 0) plugin.setBalance(playerId, plugin.getBalance(playerId) + refund);
-                data.set(root, null);
-                data.set("v2-migration-notice." + playerId, true);
-                migratedOldQuests = true;
-            } catch (IllegalArgumentException ignored) { }
-        }
-        if (migratedOldQuests) {
-            try { data.save(file); } catch (IOException e) { plugin.getLogger().severe("Could not migrate old quest data: " + e.getMessage()); }
+        // Run the legacy-pack refund exactly once. Without this marker, every restart
+        // would cancel and refund a currently active v2 pack.
+        if (!data.getBoolean("v2-migration-complete", false)) {
+            for (String root : new ArrayList<>(data.getKeys(false))) {
+                try {
+                    UUID playerId = UUID.fromString(root);
+                    String active = data.getString(root + ".active", "");
+                    if (active.isBlank()) continue;
+                    boolean legacyPack = active.startsWith("pack:") || !active.startsWith("single:");
+                    if (!legacyPack) continue;
+                    int refund = Math.max(0, data.getInt(root + ".cost", 0));
+                    if (refund > 0) plugin.setBalance(playerId, plugin.getBalance(playerId) + refund);
+                    data.set(root, null);
+                    data.set("v2-migration-notice." + playerId, true);
+                } catch (IllegalArgumentException ignored) { }
+            }
+            data.set("v2-migration-complete", true);
+            try { data.save(file); }
+            catch (IOException e) { plugin.getLogger().severe("Could not save one-time quest migration: " + e.getMessage()); }
         }
         actionKey = new NamespacedKey(plugin, "quest_action");
         valueKey = new NamespacedKey(plugin, "quest_value");
