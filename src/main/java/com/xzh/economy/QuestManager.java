@@ -196,7 +196,9 @@ public final class QuestManager implements Listener {
                     case BIOME -> "biome:";
                 };
                 String description = spec.quantity() + " " + target.toLowerCase(Locale.ROOT).replace('_', ' ');
-                objectives.add(new Objective(prefix + target, spec.quantity(), description));
+                String dimension = spec.dimension() == QuestObjectiveSpec.Dimension.ANY ? ""
+                        : "@" + spec.dimension().name();
+                objectives.add(new Objective(prefix + dimension + ":" + target, spec.quantity(), description));
             }
             String advancement = entry.unlock().isEmpty() ? entry.tierGate() : entry.unlock().get(0);
             result.add(new Pack(entry.id(), entry.name(), entry.icon(), entry.fee(),
@@ -843,12 +845,28 @@ public final class QuestManager implements Listener {
         }
     }
 
-    private boolean objectiveTargetMatches(String stored, String eventTarget) {
+    private boolean objectiveTargetMatches(String stored, String eventTarget, World.Environment environment) {
         if (stored.equals(eventTarget)) return true;
         int split = stored.indexOf(':');
         int eventSplit = eventTarget.indexOf(':');
-        if (split <= 0 || eventSplit <= 0 || !stored.substring(0, split).equals(eventTarget.substring(0, eventSplit))) return false;
-        String[] alternatives = stored.substring(split + 1).split("\\|");
+        if (split <= 0 || eventSplit <= 0) return false;
+        String objectiveType = stored.substring(0, split);
+        String targetExpression = stored.substring(split + 1);
+        if (targetExpression.startsWith("@")) {
+            int dimensionSplit = targetExpression.indexOf(':');
+            if (dimensionSplit < 0) return false;
+            String dimension = targetExpression.substring(1, dimensionSplit);
+            String expected = switch (dimension) {
+                case "OVERWORLD" -> "NORMAL";
+                case "NETHER" -> "NETHER";
+                case "END" -> "THE_END";
+                default -> "";
+            };
+            if (!environment.name().equals(expected)) return false;
+            targetExpression = targetExpression.substring(dimensionSplit + 1);
+        }
+        if (!objectiveType.equals(eventTarget.substring(0, eventSplit))) return false;
+        String[] alternatives = targetExpression.split("\\|");
         String actual = eventTarget.substring(eventSplit + 1);
         for (String candidate : alternatives) {
             if (candidate.equals(actual)) return true;
@@ -896,7 +914,7 @@ public final class QuestManager implements Listener {
         boolean changed = false;
         for (int i = 0; i < count; i++) {
             String base = id + ".objectives." + i;
-            if (!objectiveTargetMatches(data.getString(base + ".target", ""), target)) continue;
+            if (!objectiveTargetMatches(data.getString(base + ".target", ""), target, player.getWorld().getEnvironment())) continue;
             int goal = data.getInt(base + ".goal", 1);
             int progress = Math.min(goal, data.getInt(base + ".progress", 0) + amount);
             data.set(base + ".progress", progress);
