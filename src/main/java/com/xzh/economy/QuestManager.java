@@ -226,7 +226,7 @@ public final class QuestManager implements Listener {
                         .replace("@roaming boss", "roaming boss")
                         .replace("#hostiles", "hostile mobs").replace("#raiders", "raiders")
                         .replace("#logs", "logs").replace("#overworld ores", "overworld ores")
-                        .replace("#stone types", "stone types").replace("#fish junk", "fishing junk")
+                        .replace("#stone types", "basic stone, deepslate, granite, diorite, andesite or tuff").replace("#fish junk", "fishing junk")
                         .replace("#fish treasure", "fishing treasure").replace("#cooked food", "cooked food")
                         .replace("#trial spawn mobs", "trial-spawner mobs");
                 String lootTarget = target.replace("chests/", "").replace("*", "")
@@ -250,12 +250,12 @@ public final class QuestManager implements Listener {
                     case CRAFT -> target.equals("ANY") ? "Craft " + spec.quantity() + " items"
                             : "Craft " + spec.quantity() + " " + displayTarget;
                     case ENCHANT -> "Use the third enchantment option " + spec.quantity() + " times";
-                    case BARTER -> "Right-click piglins while holding " + spec.quantity() + " gold ingots to complete the trades";
-                    case LOOT -> target.equals("ANY") ? "Open " + spec.quantity() + " loot chests"
-                            : "Open " + spec.quantity() + " loot chests in " + lootTarget;
-                    case VAULT -> "Unlock " + spec.quantity() + (target.equals("OMINOUS") ? " ominous trial vaults" : " trial vaults");
+                    case BARTER -> "Complete " + spec.quantity() + " piglin trades by right-clicking with gold ingots";
+                    case LOOT -> target.equals("ANY") ? "Find and open " + spec.quantity() + " unopened loot chests"
+                            : "Find and open " + spec.quantity() + " unopened loot chests in " + lootTarget;
+                    case VAULT -> "Unlock " + spec.quantity() + " different" + (target.equals("OMINOUS") ? " ominous trial vaults" : " trial vaults");
                     case TRAVEL -> target.equals("ELYTRA") ? "Fly " + spec.quantity() + " blocks using an elytra"
-                            : "Move " + spec.quantity() + " blocks on foot";
+                            : "Travel " + spec.quantity() + " blocks without flying or riding a vehicle";
                     case BIOME -> spec.targets().size() == 1 && spec.targets().get(0).equals("ANY")
                             ? "Visit " + spec.quantity() + " different biomes"
                             : "Visit " + spec.quantity() + " different biomes from " + displayTarget;
