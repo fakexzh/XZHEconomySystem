@@ -17,6 +17,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.FurnaceExtractEvent;
@@ -811,6 +812,12 @@ public final class QuestManager implements Listener {
                     + source.getBlockY() + ":" + source.getBlockZ();
             pdc.set(mobSpawnerKey, PersistentDataType.STRING, key);
         }
+    }
+
+    @EventHandler
+    public void onNonMeleeDamage(EntityDamageEvent event) {
+        if (event.isCancelled() || event instanceof EntityDamageByEntityEvent) return;
+        event.getEntity().getPersistentDataContainer().remove(directMeleeKillerKey);
     }
 
     @EventHandler
