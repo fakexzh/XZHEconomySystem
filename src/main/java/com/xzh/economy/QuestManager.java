@@ -364,6 +364,7 @@ public final class QuestManager implements Listener {
         String name = material.name();
         if (!(name.endsWith("_LOG") || name.endsWith("_STEM"))) return;
         incrementTarget(player, "break:" + name, amount);
+        incrementTarget(player, "break:ANY", amount);
         recordGlobalProgress(player, "wood", amount);
     }
 
