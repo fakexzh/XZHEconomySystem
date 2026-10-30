@@ -1236,17 +1236,21 @@ public final class QuestManager implements Listener {
         if (questCraftWhitelist.contains(output)) { incrementTarget(player, "craft:" + output.name(), result.getAmount()); incrementTarget(player, "craft:ANY", result.getAmount()); }
     }
 
-    @EventHandler
+    @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
     public void onPickup(PlayerAttemptPickupItemEvent event) {
-        if (event.isCancelled()) return;
         Player p = event.getPlayer();
         if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         data.set("activity." + p.getUniqueId(), System.currentTimeMillis());
         // Player-dropped items can be dropped and picked up repeatedly, so they must not
         // count as newly collected quest items.
-        if (event.getItem().getThrower() != null) return;
-        Material material = event.getItem().getItemStack().getType();
-        incrementTarget(p, "collect:" + material.name(), event.getItem().getItemStack().getAmount());
+        var item = event.getItem();
+        if (item.getThrower() != null) return;
+        // A partially filled inventory may pick up only part of the ground stack.
+        // Credit only the amount that will actually leave the ground.
+        int collected = Math.max(0, item.getItemStack().getAmount() - event.getRemaining());
+        if (collected <= 0) return;
+        Material material = item.getItemStack().getType();
+        incrementTarget(p, "collect:" + material.name(), collected);
     }
 
     @EventHandler
@@ -1306,8 +1310,8 @@ public final class QuestManager implements Listener {
         }
         if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR
                 || data.getString(id + ".active", "").isBlank()
-                || !(matchesTarget(id, "travel") || matchesTarget(id, "travel:FOOT")
-                    || matchesTarget(id, "travel:ELYTRA") || matchesTarget(id, "travel:ANY"))) {
+                || !(matchesTarget(p, "travel") || matchesTarget(p, "travel:FOOT")
+                    || matchesTarget(p, "travel:ELYTRA") || matchesTarget(p, "travel:ANY"))) {
             travelRemainders.remove(id);
             return;
         }
@@ -1323,8 +1327,8 @@ public final class QuestManager implements Listener {
             travelRemainders.remove(id);
             return;
         }
-        if (elytra && !matchesTarget(id, "travel:ELYTRA") && !matchesTarget(id, "travel:ANY")) return;
-        if (!elytra && !matchesTarget(id, "travel:FOOT") && !matchesTarget(id, "travel:ANY")) return;
+        if (elytra && !matchesTarget(p, "travel:ELYTRA") && !matchesTarget(p, "travel:ANY")) return;
+        if (!elytra && !matchesTarget(p, "travel:FOOT") && !matchesTarget(p, "travel:ANY")) return;
         // PlayerMoveEvent is emitted synchronously; cap pathological movement packets to 12 blocks per second.
         long now = System.currentTimeMillis();
         String ratePath = id + ".travel-rate";
@@ -1523,7 +1527,7 @@ public final class QuestManager implements Listener {
                     EntityType type;
                     try { type = EntityType.valueOf(entity); } catch (IllegalArgumentException ex) { yield false; }
                     Class<? extends org.bukkit.entity.Entity> entityClass = type.getEntityClass();
-                    yield entityClass != null && org.bukkit.entity.Monster.class.isAssignableFrom(entityClass)
+                    yield entityClass != null && org.bukkit.entity.Enemy.class.isAssignableFrom(entityClass)
                             && type != EntityType.ENDER_DRAGON && type != EntityType.WITHER
                             && type != EntityType.ELDER_GUARDIAN && type != EntityType.WARDEN;
                 }
@@ -1600,9 +1604,14 @@ public final class QuestManager implements Listener {
         save();
     }
 
-    private boolean matchesTarget(UUID id, String target) {
+    private boolean matchesTarget(Player player, String target) {
+        UUID id = player.getUniqueId();
         int count = data.getInt(id + ".objective-count", 0);
-        for (int i = 0; i < count; i++) if (target.equals(data.getString(id + ".objectives." + i + ".target", ""))) return true;
+        World.Environment environment = player.getWorld().getEnvironment();
+        for (int i = 0; i < count; i++) {
+            String stored = data.getString(id + ".objectives." + i + ".target", "");
+            if (objectiveTargetMatches(stored, target, environment)) return true;
+        }
         return false;
     }
 
