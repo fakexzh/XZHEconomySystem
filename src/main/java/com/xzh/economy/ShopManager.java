@@ -310,6 +310,7 @@ public final class ShopManager implements Listener {
         bankMeta.setLore(List.of(ChatColor.GRAY + "Open your bank account."));
         bankMeta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "bank");
         bankMeta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, "bank");
+        GuiIcons.apply(bankMeta, "vault");
         bankIcon.setItemMeta(bankMeta);
         inv.setItem(38, bankIcon);
         add(inv, 39, Material.PAPER, "Transition", "transition", "history", List.of(ChatColor.GRAY + "Your recent shop purchases."));
@@ -365,6 +366,7 @@ public final class ShopManager implements Listener {
             meta.setLore(List.of(ChatColor.GRAY + "Quantity: " + parts[2],
                     ChatColor.YELLOW + "Spent: " + parts[3] + " coins",
                     ChatColor.DARK_GRAY + parts[0]));
+            GuiIcons.apply(meta, "receipt");
             entry.setItemMeta(meta);
             inv.setItem(slots[i], entry);
         }
@@ -724,6 +726,7 @@ public final class ShopManager implements Listener {
             sm.setLore(List.of(ChatColor.WHITE + "Value: " + ChatColor.RED + money(sellPrice(p)) + " coins each",
                     ChatColor.GRAY + "You will confirm before selling."));
             sm.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "confirm-sell");
+            GuiIcons.apply(sm, "sell_coin");
             sm.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, p.material().name());
             if (p.potionType() != null) sm.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
             if (p.fireworkPower() > 0) sm.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
@@ -744,6 +747,7 @@ public final class ShopManager implements Listener {
         meta.getPersistentDataContainer().set(quantityKey, PersistentDataType.INTEGER, quantity);
         if (p.potionType() != null) meta.getPersistentDataContainer().set(potionTypeKey, PersistentDataType.STRING, p.potionType().name());
         if (p.fireworkPower() > 0) meta.getPersistentDataContainer().set(fireworkPowerKey, PersistentDataType.INTEGER, p.fireworkPower());
+        GuiIcons.apply(meta, action, title, null);
         item.setItemMeta(meta);
         return item;
     }
@@ -795,6 +799,7 @@ public final class ShopManager implements Listener {
         meta.setDisplayName(ChatColor.WHITE + title);
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, value);
+        GuiIcons.apply(meta, action, title, value);
         item.setItemMeta(meta);
         inv.setItem(slot, item);
     }
