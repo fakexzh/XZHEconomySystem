@@ -650,7 +650,8 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         }
         String prefix = args.length == 0 ? "" : args[args.length - 1].toLowerCase(Locale.ROOT);
         if (command.getName().equalsIgnoreCase("pet") && args.length == 2 && prefix.startsWith("@")) prefix = prefix.substring(1);
-        suggestions.removeIf(s -> !(s.startsWith("@") ? s.substring(1) : s).toLowerCase(Locale.ROOT).startsWith(prefix));
+        final String filterPrefix = prefix;
+        suggestions.removeIf(s -> !(s.startsWith("@") ? s.substring(1) : s).toLowerCase(Locale.ROOT).startsWith(filterPrefix));
         return suggestions;
     }
 
