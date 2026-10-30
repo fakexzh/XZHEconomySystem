@@ -228,7 +228,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         boolean progression = getConfig().getStringList("announcements.shop.progression-items").stream()
                 .anyMatch(name -> name.equalsIgnoreCase(material.name()));
         if (!expensive && !rare && !progression) return;
-        String prefix = "§8[§6XZH SHOP§8] §r";
+        String prefix = "§8[§6SHOP§8] §r";
         if (progression) {
             Bukkit.broadcastMessage(prefix + "§e" + player.getName() + " §funlocked a progression item: §b"
                     + item + " §7(" + money(total) + " coins).");
@@ -240,14 +240,14 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
 
     public void announceLoanBorrow(Player player, int principal, double repayment, int days) {
         if (!getConfig().getBoolean("announcements.loan.borrowing", true)) return;
-        Bukkit.broadcastMessage("§8[§bXZH BANK§8] §e" + player.getName() + " §fborrowed §6"
+        Bukkit.broadcastMessage("§8[§bBANK§8] §e" + player.getName() + " §fborrowed §6"
                 + money(principal) + " coins§f. Repayment: §c" + money(repayment)
                 + " coins §fover §b" + days + " days§f.");
     }
 
     public void announceLoanRepaid(String playerName, double amount, boolean automatic) {
         if (!getConfig().getBoolean("announcements.loan.full-repayment", true)) return;
-        Bukkit.broadcastMessage("§8[§bXZH BANK§8] §e" + playerName + " §ffully repaid their loan of §6"
+        Bukkit.broadcastMessage("§8[§bBANK§8] §e" + playerName + " §ffully repaid their loan of §6"
                 + money(amount) + " coins§f" + (automatic ? " §7(automatic repayment)." : "."));
     }
 
@@ -523,10 +523,10 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 tell(sender, "§f/pay <player> <amount> §7- send coins");
                 tell(sender, "§f/sendmoney <player> <amount> §7- request a confirmed transfer to them");
                 tell(sender, "§f/askmoney <player> <amount> §7- ask them for a confirmed payment");
-                tell(sender, "§f/shop §7- open XZH SHOP");
+                tell(sender, "§f/shop §7- open Shop");
                 tell(sender, "§f/pet [transfer <player>] §7- command or transfer your targeted Baby Pet");
                 tell(sender, "§f/unpet §7- stop your targeted pet from following");
-                tell(sender, "§f/bank §7- open XZH BANK, deposits, withdrawals and loans");
+                tell(sender, "§f/bank §7- open Bank, deposits, withdrawals and loans");
                 if (sender.hasPermission("xzh.admin")) tell(sender, "§f/shopadmin <restock|stock> §7- manage global shop stock");
                 tell(sender, "§f/loan repay §7- repay an active loan (also available in /bank)");
                 tell(sender, "§f/quests §7- buy quest packs and track progress");
