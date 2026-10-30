@@ -679,7 +679,6 @@ public final class QuestManager implements Listener {
                     : "";
             data.set(uuid + ".objectives." + i + ".type", objectiveType);
             data.set(uuid + ".objectives." + i + ".dimension", objectiveDimension);
-            if (objectiveType.equals("biome")) data.set(uuid + ".objectives." + i + ".biomes", objectiveTargets);
             data.set(uuid + ".objectives." + i + ".goal", o.goal());
             data.set(uuid + ".objectives." + i + ".description", o.description());
             data.set(uuid + ".objectives." + i + ".progress", 0);
@@ -1043,6 +1042,16 @@ public final class QuestManager implements Listener {
                 String biomePath = id + ".biome-visited." + activeQuest + "." + toBiome.name();
                 if (!data.getBoolean(biomePath, false)) {
                     data.set(biomePath, true);
+                    int objectiveCount = data.getInt(id + ".objective-count", 0);
+                    for (int objectiveIndex = 0; objectiveIndex < objectiveCount; objectiveIndex++) {
+                        String objectivePath = id + ".objectives." + objectiveIndex;
+                        if (!"biome".equals(data.getString(objectivePath + ".type", ""))) continue;
+                        List<String> visited = new ArrayList<>(data.getStringList(objectivePath + ".biomes"));
+                        if (!visited.contains(toBiome.name())) {
+                            visited.add(toBiome.name());
+                            data.set(objectivePath + ".biomes", visited);
+                        }
+                    }
                     incrementTarget(p, "biome:" + toBiome.name(), 1);
                     incrementTarget(p, "biome:ANY", 1);
                 }
