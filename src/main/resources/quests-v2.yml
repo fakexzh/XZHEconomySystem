@@ -377,7 +377,7 @@ quests:
     fee: 130
     profit: 190
     timer-minutes: 0
-    icon: SWEET_BERRY_BUSH
+    icon: SWEET_BERRIES
     tier-gate: "story/mine_stone"
   - id: E028
     tier: easy
@@ -1519,7 +1519,7 @@ quests:
     fee: 590
     profit: 530
     timer-minutes: 0
-    icon: AMETHYST_CLUSTER
+    icon: AMETHYST_SHARD
     tier-gate: "nether/find_fortress"
   - id: H009
     tier: hard
@@ -2193,7 +2193,7 @@ quests:
     fee: 410
     profit: 440
     timer-minutes: 0
-    icon: SWEET_BERRY_BUSH
+    icon: SWEET_BERRIES
     tier-gate: "nether/find_fortress"
   - id: H057
     tier: hard
@@ -2873,7 +2873,7 @@ quests:
     fee: 1450
     profit: 2300
     timer-minutes: 90
-    icon: CHORUS_PLANT
+    icon: CHORUS_FLOWER
     tier-gate: "end/find_end_city"
   - id: M005
     tier: master
@@ -3371,7 +3371,7 @@ quests:
     fee: 2100
     profit: 3000
     timer-minutes: 140
-    icon: AMETHYST_CLUSTER
+    icon: AMETHYST_SHARD
     tier-gate: "end/find_end_city"
   - id: M040
     tier: master
