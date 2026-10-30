@@ -728,6 +728,7 @@ public final class QuestManager implements Listener {
             recordGlobalProgress(p, "wood", 1);
         }
         boolean matureCrop = false;
+        Material cropToReplant = null;
         if (event.getBlock().getBlockData() instanceof Ageable ageable
                 && ageable.getAge() >= ageable.getMaximumAge()) {
             Material harvested = switch (material) {
@@ -742,6 +743,8 @@ public final class QuestManager implements Listener {
             if (harvested != null) {
                 incrementTarget(p, "harvest:" + harvested.name(), 1);
                 matureCrop = true;
+                if (Set.of(Material.WHEAT, Material.CARROTS, Material.POTATOES,
+                        Material.BEETROOTS, Material.NETHER_WART).contains(material)) cropToReplant = material;
             }
         }
         // Melons and pumpkins are harvestable blocks rather than Ageable crops.
@@ -753,6 +756,18 @@ public final class QuestManager implements Listener {
             matureCrop = true;
         }
         if (matureCrop) recordGlobalProgress(p, "crop", 1);
+        if (cropToReplant != null) {
+            org.bukkit.Location cropLocation = event.getBlock().getLocation();
+            Material cropMaterial = cropToReplant;
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (cropLocation.getBlock().getType() != Material.AIR) return;
+                cropLocation.getBlock().setType(cropMaterial, false);
+                if (cropLocation.getBlock().getBlockData() instanceof Ageable ageable) {
+                    ageable.setAge(0);
+                    cropLocation.getBlock().setBlockData(ageable, false);
+                }
+            });
+        }
     }
 
     @EventHandler
