@@ -1069,7 +1069,12 @@ public final class QuestManager implements Listener {
         if (event.isCancelled() || event.getState() != PlayerFishEvent.State.CAUGHT_FISH || !(event.getCaught() instanceof org.bukkit.entity.Item caught)) return;
         Player player = event.getPlayer();
         if (player.getGameMode() == org.bukkit.GameMode.CREATIVE || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
-        incrementTarget(player, "fish:" + caught.getItemStack().getType().name(), 1);
+        String caughtType = caught.getItemStack().getType().name();
+        incrementTarget(player, "fish:" + caughtType, 1);
+        if (caught.getItemStack().getType() == Material.FISHING_ROD
+                && caught.getItemStack().getEnchantments().size() > 0) {
+            incrementTarget(player, "fish:FISHING_ROD_ENCHANTED", 1);
+        }
         incrementTarget(player, "fish:ANY", 1);
         recordGlobalProgress(player, "fish", 1);
     }
@@ -1193,6 +1198,7 @@ public final class QuestManager implements Listener {
     }
 
     private boolean objectiveTagMatches(String tag, String actual) {
+        if (tag.equals("#FISH_TREASURE") && actual.equals("FISHING_ROD_ENCHANTED")) return true;
         if (actual.startsWith("KILL_") || actual.startsWith("TRIAL_KILL_")) {
             String entity = actual.startsWith("TRIAL_KILL_")
                     ? actual.substring("TRIAL_KILL_".length()) : actual.substring("KILL_".length());
