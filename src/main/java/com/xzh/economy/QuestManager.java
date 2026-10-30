@@ -917,6 +917,20 @@ public final class QuestManager implements Listener {
         if (event.getFrom().getBlockX() == event.getTo().getBlockX()
                 && event.getFrom().getBlockY() == event.getTo().getBlockY()
                 && event.getFrom().getBlockZ() == event.getTo().getBlockZ()) return;
+        if (p.getGameMode() != org.bukkit.GameMode.CREATIVE
+                && p.getGameMode() != org.bukkit.GameMode.SPECTATOR) {
+            org.bukkit.block.Biome fromBiome = event.getFrom().getBlock().getBiome();
+            org.bukkit.block.Biome toBiome = event.getTo().getBlock().getBiome();
+            if (fromBiome != toBiome) {
+                String activeQuest = data.getString(id + ".active", "");
+                String biomePath = id + ".biome-visited." + activeQuest + "." + toBiome.name();
+                if (!data.getBoolean(biomePath, false)) {
+                    data.set(biomePath, true);
+                    incrementTarget(p, "biome:" + toBiome.name(), 1);
+                    incrementTarget(p, "biome:ANY", 1);
+                }
+            }
+        }
         if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR
                 || data.getString(id + ".active", "").isBlank() || !matchesTarget(id, "travel")) {
             travelRemainders.remove(id);
