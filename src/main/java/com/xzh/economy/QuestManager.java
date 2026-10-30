@@ -99,7 +99,7 @@ public final class QuestManager implements Listener {
     private final NamespacedKey valueKey;
     private final NamespacedKey mobSpawnReasonKey;
     private final NamespacedKey mobSpawnerKey;
-    private final NamespacedKey directMeleeKillerKey;
+    private final NamespacedKey playerCombatKillerKey;
     private final NamespacedKey feedCooldownKey;
     private final NamespacedKey breedingCreditKey;
     private final NamespacedKey breedingCreditTimeKey;
@@ -228,22 +228,28 @@ public final class QuestManager implements Listener {
                         .replace("#stone types", "stone types").replace("#fish junk", "fishing junk")
                         .replace("#fish treasure", "fishing treasure").replace("#cooked food", "cooked food")
                         .replace("#trial spawn mobs", "trial-spawner mobs");
+                String lootTarget = target.replace("chests/", "").replace("*", "")
+                        .replace('_', ' ').replace('/', ' ').trim();
+                if (lootTarget.isBlank()) lootTarget = "structure";
                 String description = switch (spec.type()) {
                     case MINE -> "Mine " + spec.quantity() + " " + displayTarget;
                     case HARVEST -> "Harvest " + spec.quantity() + " " + displayTarget;
-                    case KILL -> "Kill " + spec.quantity() + " " + displayTarget;
+                    case KILL -> "Defeat " + spec.quantity() + " " + displayTarget;
                     case FISH -> "Catch " + spec.quantity() + " " + displayTarget;
                     case BREED -> "Breed " + spec.quantity() + " " + displayTarget;
-                    case FEED -> "Feed " + spec.quantity() + " " + displayTarget;
+                    case FEED -> "Feed " + spec.quantity() + " " + displayTarget + " until they enter love mode";
                     case TAME -> "Tame " + spec.quantity() + " " + displayTarget;
-                    case SMELT -> "Smelt " + spec.quantity() + " " + displayTarget;
+                    case SMELT -> "Smelt " + spec.quantity() + " " + displayTarget + " and collect the output";
                     case CRAFT -> "Craft " + spec.quantity() + " " + displayTarget;
-                    case ENCHANT -> "Enchant " + spec.quantity() + " " + displayTarget;
-                    case BARTER -> "Complete " + spec.quantity() + " piglin barters";
-                    case LOOT -> "Open " + spec.quantity() + " loot containers (" + displayTarget + ")";
-                    case VAULT -> "Open " + spec.quantity() + " vaults (" + displayTarget + ")";
-                    case TRAVEL -> "Travel " + spec.quantity() + " blocks " + (target.equals("FOOT") ? "on foot" : target.equals("ELYTRA") ? "with elytra" : "");
-                    case BIOME -> "Visit " + spec.quantity() + " distinct biomes";
+                    case ENCHANT -> "Use the third enchantment option " + spec.quantity() + " times";
+                    case BARTER -> "Trade " + spec.quantity() + " gold ingots with piglins";
+                    case LOOT -> "Open " + spec.quantity() + " loot chests in " + lootTarget;
+                    case VAULT -> "Unlock " + spec.quantity() + (target.equals("OMINOUS") ? " ominous trial vaults" : " trial vaults");
+                    case TRAVEL -> target.equals("ELYTRA") ? "Fly " + spec.quantity() + " blocks using an elytra"
+                            : "Walk " + spec.quantity() + " blocks";
+                    case BIOME -> spec.targets().size() == 1 && spec.targets().get(0).equals("ANY")
+                            ? "Visit " + spec.quantity() + " different biomes"
+                            : "Visit " + spec.quantity() + " different biomes from " + displayTarget;
                 };
                 String dimension = spec.dimension() == QuestObjectiveSpec.Dimension.ANY ? ""
                         : "@" + spec.dimension().name();
@@ -262,6 +268,12 @@ public final class QuestManager implements Listener {
         if (id.startsWith("H") && id.length() == 4) return "hard";
         if (id.startsWith("E") && id.length() == 4) return "easy";
         return pack.id().startsWith("master_") ? "master" : pack.id().startsWith("hard_") ? "hard" : "easy";
+    }
+
+    private String numberedPackName(Pack pack) {
+        List<Pack> tierPacks = packs.stream().filter(candidate -> tierOf(candidate).equals(tierOf(pack))).toList();
+        int index = tierPacks.indexOf(pack);
+        return String.format(Locale.ROOT, "(%02d) %s", Math.max(0, index + 1), pack.name());
     }
 
     private boolean tierUnlocked(Player player, String tier) {
@@ -354,7 +366,7 @@ public final class QuestManager implements Listener {
         valueKey = new NamespacedKey(plugin, "quest_value");
         mobSpawnReasonKey = new NamespacedKey(plugin, "quest_mob_spawn_reason");
         mobSpawnerKey = new NamespacedKey(plugin, "quest_mob_spawner");
-        directMeleeKillerKey = new NamespacedKey(plugin, "quest_direct_melee_killer");
+        playerCombatKillerKey = new NamespacedKey(plugin, "quest_player_combat_killer");
         feedCooldownKey = new NamespacedKey(plugin, "quest_feed_cooldown");
         breedingCreditKey = new NamespacedKey(plugin, "quest_breeding_credit");
         breedingCreditTimeKey = new NamespacedKey(plugin, "quest_breeding_credit_time");
@@ -516,12 +528,13 @@ public final class QuestManager implements Listener {
                     .orElseGet(() -> tierUnlocked(player, tierOf(pack)) && hasAdvancement(player, pack.advancement()));
             List<String> lore = new ArrayList<>();
             String groupName = catalogueEntryFor(pack.id()).map(QuestCatalogue.Entry::groupName).orElse("General");
-            lore.add(ChatColor.WHITE + "Group: " + groupName);
-            lore.add(ChatColor.WHITE + "Fee: " + ChatColor.YELLOW + pack.cost() + " coins");
-            lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + rewardForPack(pack) + " coins");
-            lore.add(ChatColor.WHITE + "Profit: " + ChatColor.GOLD + "+" + (rewardForPack(pack) - pack.cost()) + " coins");
-            lore.add(ChatColor.WHITE + "Objectives:");
-            for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + "• " + objective.description());
+            lore.add(ChatColor.GOLD + numberedPackName(pack));
+            lore.add(ChatColor.GRAY + "Group: " + ChatColor.WHITE + groupName);
+            lore.add(ChatColor.GRAY + "Fee: " + ChatColor.YELLOW + pack.cost() + " coins");
+            lore.add(ChatColor.GRAY + "Reward: " + ChatColor.GREEN + rewardForPack(pack) + " coins");
+            lore.add(ChatColor.GRAY + "Profit: " + ChatColor.GOLD + "+" + (rewardForPack(pack) - pack.cost()) + " coins");
+            lore.add(ChatColor.AQUA + "What to do:");
+            for (Objective objective : pack.objectives()) lore.add(ChatColor.YELLOW + "• " + ChatColor.WHITE + objective.description());
             if (done) {
                 lore.add(ChatColor.DARK_GRAY + "COMPLETED FOR LIFE — reward already claimed");
             } else {
@@ -543,7 +556,7 @@ public final class QuestManager implements Listener {
                     : ChatColor.GRAY + "No time limit");
             Material icon = done ? Material.BLACK_STAINED_GLASS_PANE : unlocked ? pack.icon() : Material.BARRIER;
             add(inv, i - pg * 45, icon, (done ? ChatColor.DARK_GRAY : unlocked ? ChatColor.YELLOW : ChatColor.RED)
-                    + pack.name(), done ? "pack-completed" : unlocked ? "pack-select" : "locked", pack.id(), lore);
+                    + numberedPackName(pack), done ? "pack-completed" : unlocked ? "pack-select" : "locked", pack.id(), lore);
         }
         if (pg > 0) add(inv, 45, Material.PAPER, ChatColor.WHITE + "Previous page", "pack-page", tier + ":" + (pg - 1));
         add(inv, 49, Material.ARROW, ChatColor.WHITE + "Difficulties", "back-tiers", "");
@@ -554,11 +567,12 @@ public final class QuestManager implements Listener {
     private void confirmPack(Player player, Pack pack) {
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Confirm quest pack");
         List<String> lore = new ArrayList<>();
-        lore.add(ChatColor.WHITE + "Fee: " + ChatColor.YELLOW + pack.cost() + " coins");
-        lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + rewardForPack(pack) + " coins");
-        lore.add(ChatColor.WHITE + "Profit: " + ChatColor.GOLD + "+" + (rewardForPack(pack) - pack.cost()) + " coins");
-        lore.add(ChatColor.AQUA + "Objectives:");
-        for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + "• " + objective.description());
+        lore.add(ChatColor.GOLD + numberedPackName(pack));
+        lore.add(ChatColor.GRAY + "Fee: " + ChatColor.YELLOW + pack.cost() + " coins");
+        lore.add(ChatColor.GRAY + "Reward: " + ChatColor.GREEN + rewardForPack(pack) + " coins");
+        lore.add(ChatColor.GRAY + "Profit: " + ChatColor.GOLD + "+" + (rewardForPack(pack) - pack.cost()) + " coins");
+        lore.add(ChatColor.AQUA + "What to do:");
+        for (Objective objective : pack.objectives()) lore.add(ChatColor.YELLOW + "• " + ChatColor.WHITE + objective.description());
         catalogueEntryFor(pack.id()).ifPresent(entry -> {
             for (String key : missingCatalogueUnlocks(player, entry)) {
                 String normalized = key.contains(":") ? key : "minecraft:" + key;
@@ -567,7 +581,7 @@ public final class QuestManager implements Listener {
         });
         int timerMinutes = packTimerLimitMinutes(pack.id());
         lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
-        add(inv, 13, pack.icon(), ChatColor.YELLOW + pack.name(), "pack-info", pack.id(), lore);
+        add(inv, 13, pack.icon(), ChatColor.YELLOW + numberedPackName(pack), "pack-info", pack.id(), lore);
         add(inv, 11, Material.SLIME_BALL, ChatColor.GREEN + "Confirm purchase", "pack-buy", pack.id());
         add(inv, 15, Material.FIRE_CHARGE, ChatColor.RED + "Cancel", "back-packs", pack.id());
         add(inv, 22, Material.ARROW, ChatColor.WHITE + "Back to packs", "back-packs", pack.id());
@@ -1005,17 +1019,22 @@ public final class QuestManager implements Listener {
     @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
     public void onNonMeleeDamage(EntityDamageEvent event) {
         if (event.isCancelled() || event instanceof EntityDamageByEntityEvent) return;
-        event.getEntity().getPersistentDataContainer().remove(directMeleeKillerKey);
+        event.getEntity().getPersistentDataContainer().remove(playerCombatKillerKey);
     }
 
     @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
-    public void onDirectMeleeDamage(EntityDamageByEntityEvent event) {
+    public void onPlayerCombatDamage(EntityDamageByEntityEvent event) {
         if (event.isCancelled()) return;
         var pdc = event.getEntity().getPersistentDataContainer();
-        if (event.getDamager() instanceof Player attacker) {
-            pdc.set(directMeleeKillerKey, PersistentDataType.STRING, attacker.getUniqueId().toString());
+        Player attacker = event.getDamager() instanceof Player direct ? direct
+                : event.getDamager() instanceof org.bukkit.entity.Projectile projectile
+                    && projectile.getShooter() instanceof Player shooter ? shooter : null;
+        if (attacker != null) {
+            // Credit direct melee and player-fired projectiles (bows, crossbows, tridents).
+            // Non-player damage still clears the credit in onNonMeleeDamage().
+            pdc.set(playerCombatKillerKey, PersistentDataType.STRING, attacker.getUniqueId().toString());
         } else {
-            pdc.remove(directMeleeKillerKey);
+            pdc.remove(playerCombatKillerKey);
         }
     }
 
@@ -1029,7 +1048,7 @@ public final class QuestManager implements Listener {
                 .get(mobSpawnReasonKey, PersistentDataType.STRING);
         if (spawnReason == null) return; // Unclassified, command, egg, conversion and custom spawns never count.
         String meleeKiller = event.getEntity().getPersistentDataContainer()
-                .get(directMeleeKillerKey, PersistentDataType.STRING);
+                .get(playerCombatKillerKey, PersistentDataType.STRING);
         if (meleeKiller == null || !meleeKiller.equals(p.getUniqueId().toString())) return;
         String spawner = event.getEntity().getPersistentDataContainer()
                 .get(mobSpawnerKey, PersistentDataType.STRING);
