@@ -128,7 +128,7 @@ final class QuestCatalogue {
                         "IRON_LEGGINGS", "IRON_BOOTS", "ANY").contains(target);
                 case ENCHANT -> Set.of("ANY", "SLOT3").contains(target) || isItem(target);
                 case BARTER -> target.equals("ANY");
-                case LOOT -> target.equals("ANY") || target.startsWith("chests/") || target.startsWith("underwater_ruin_");
+                case LOOT -> target.equals("ANY") || target.toLowerCase(Locale.ROOT).startsWith("chests/") || target.toLowerCase(Locale.ROOT).startsWith("underwater_ruin_");
                 case VAULT -> Set.of("ANY", "OMINOUS").contains(target);
                 case TRAVEL -> Set.of("ANY", "FOOT", "ELYTRA").contains(target);
                 case BIOME -> target.equals("ANY") || isBiome(target);
