@@ -172,29 +172,34 @@ public final class QuestManager implements Listener {
     private final List<Pack> packs = buildPacks();
 
     private List<Pack> buildPacks() {
-        List<Pack> result = new ArrayList<>(300);
-        String[] tiers = {"easy", "hard", "master"};
-        for (int tier = 0; tier < tiers.length; tier++) {
-            for (int i = 0; i < 100; i++) {
-                Pack template = basePacks.get((i * 7 + tier * 11) % basePacks.size());
-                String id = tiers[tier] + "_" + String.format(Locale.ROOT, "%03d", i + 1);
-                int cost = Math.max(tier == 0 ? 50 : tier == 1 ? 250 : 700,
-                        (int) Math.round(template.cost() * (tier == 0 ? 0.70 : tier == 1 ? 1.20 : 1.80)));
-                int reward = (int) Math.ceil(cost * (tier == 0 ? 1.45 : tier == 1 ? 1.70 : 2.0));
-                double scale = tier == 0 ? 0.80 + (i % 4) * 0.10
-                        : tier == 1 ? 1.10 + (i % 4) * 0.15 : 1.50 + (i % 4) * 0.20;
-                List<Objective> objectives = new ArrayList<>();
-                for (Objective objective : template.objectives()) {
-                    int goal = Math.max(1, (int) Math.ceil(objective.goal() * scale));
-                    objectives.add(new Objective(objective.target(), goal,
-                            objective.description().replaceFirst("\\d+", Integer.toString(goal))));
-                }
-                String advancement = tier == 0 ? template.advancement()
-                        : tier == 1 ? "minecraft:story/mine_diamond" : "minecraft:end/kill_dragon";
-                String label = tiers[tier].substring(0, 1).toUpperCase(Locale.ROOT) + tiers[tier].substring(1);
-                result.add(new Pack(id, label + " Pack " + String.format(Locale.ROOT, "%03d", i + 1)
-                        + " - " + template.name(), template.icon(), cost, reward, advancement, List.copyOf(objectives)));
+        List<Pack> result = new ArrayList<>(v2Catalogue.entries().size());
+        for (QuestCatalogue.Entry entry : v2Catalogue.entries()) {
+            List<Objective> objectives = new ArrayList<>(entry.parsedObjectives().size());
+            for (QuestObjectiveSpec spec : entry.parsedObjectives()) {
+                String target = spec.targets().get(0);
+                String prefix = switch (spec.type()) {
+                    case MINE -> "break:";
+                    case HARVEST -> "harvest:";
+                    case KILL -> "kill:";
+                    case FISH -> "fish:";
+                    case BREED -> "breed:";
+                    case FEED -> "feed:";
+                    case TAME -> "tame:";
+                    case SMELT -> "smelt:";
+                    case CRAFT -> "craft:";
+                    case ENCHANT -> "enchant:";
+                    case BARTER -> "barter:";
+                    case LOOT -> "loot:";
+                    case VAULT -> "vault:";
+                    case TRAVEL -> "travel:";
+                    case BIOME -> "biome:";
+                };
+                String description = spec.quantity() + " " + target.toLowerCase(Locale.ROOT).replace('_', ' ');
+                objectives.add(new Objective(prefix + target, spec.quantity(), description));
             }
+            String advancement = entry.unlock().isEmpty() ? entry.tierGate() : entry.unlock().get(0);
+            result.add(new Pack(entry.id(), entry.name(), entry.icon(), entry.fee(),
+                    entry.reward(), advancement, List.copyOf(objectives)));
         }
         return List.copyOf(result);
     }
@@ -437,7 +442,8 @@ public final class QuestManager implements Listener {
         for (int i = pg * 45; i < Math.min(list.size(), pg * 45 + 45); i++) {
             Pack pack = list.get(i);
             boolean done = completedPack(player.getUniqueId(), pack.id());
-            boolean unlocked = tierUnlocked(player, tierOf(pack)) && hasAdvancement(player, pack.advancement());
+            boolean unlocked = catalogueEntryFor(pack.id()).map(entry -> catalogueEntryUnlocked(player, entry))
+                    .orElseGet(() -> tierUnlocked(player, tierOf(pack)) && hasAdvancement(player, pack.advancement()));
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.WHITE + "Cost: " + ChatColor.YELLOW + pack.cost() + " coins");
             lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + rewardForPack(pack) + " coins");
@@ -580,7 +586,8 @@ public final class QuestManager implements Listener {
             return;
         }
         if (!tierPurchaseLimitsAllow(player, tierOf(pack))) return;
-        if (!tierUnlocked(player, tierOf(pack)) || !hasAdvancement(player, pack.advancement())) {
+        if (!catalogueEntryFor(pack.id()).map(entry -> catalogueEntryUnlocked(player, entry))
+                .orElseGet(() -> tierUnlocked(player, tierOf(pack)) && hasAdvancement(player, pack.advancement()))) {
             plugin.tellPublic(player, "Complete the required advancement to unlock this quest pack.");
             return;
         }
@@ -1223,6 +1230,10 @@ public final class QuestManager implements Listener {
         Advancement advancement = Bukkit.getAdvancement(key);
         if (advancement == null) return false;
         return player.getAdvancementProgress(advancement).isDone();
+    }
+
+    private java.util.Optional<QuestCatalogue.Entry> catalogueEntryFor(String id) {
+        return v2Catalogue.entries().stream().filter(entry -> entry.id().equalsIgnoreCase(id)).findFirst();
     }
 
     private boolean catalogueEntryUnlocked(Player player, QuestCatalogue.Entry entry) {
