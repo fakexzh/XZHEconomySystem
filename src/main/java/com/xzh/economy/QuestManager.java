@@ -176,7 +176,7 @@ public final class QuestManager implements Listener {
         for (QuestCatalogue.Entry entry : v2Catalogue.entries()) {
             List<Objective> objectives = new ArrayList<>(entry.parsedObjectives().size());
             for (QuestObjectiveSpec spec : entry.parsedObjectives()) {
-                String target = spec.targets().get(0);
+                String target = String.join("|", spec.targets());
                 String prefix = switch (spec.type()) {
                     case MINE -> "break:";
                     case HARVEST -> "harvest:";
@@ -807,6 +807,34 @@ public final class QuestManager implements Listener {
         }
     }
 
+    private boolean objectiveTargetMatches(String stored, String eventTarget) {
+        if (stored.equals(eventTarget)) return true;
+        int split = stored.indexOf(':');
+        int eventSplit = eventTarget.indexOf(':');
+        if (split <= 0 || eventSplit <= 0 || !stored.substring(0, split).equals(eventTarget.substring(0, eventSplit))) return false;
+        String[] alternatives = stored.substring(split + 1).split("\\|");
+        String actual = eventTarget.substring(eventSplit + 1);
+        for (String candidate : alternatives) {
+            if (candidate.equals(actual)) return true;
+            if (candidate.startsWith("#") && objectiveTagMatches(candidate, actual)) return true;
+        }
+        return false;
+    }
+
+    private boolean objectiveTagMatches(String tag, String actual) {
+        Material material = Material.matchMaterial(actual);
+        if (material == null) return false;
+        return switch (tag) {
+            case "#LOGS" -> actual.endsWith("_LOG") || actual.endsWith("_STEM");
+            case "#OVERWORLD_ORES" -> (actual.endsWith("_ORE") && !actual.startsWith("NETHER_")
+                    && !actual.equals("NETHER_QUARTZ_ORE") && !actual.equals("NETHER_GOLD_ORE"));
+            case "#STONE_TYPES" -> Set.of("STONE", "DEEPSLATE", "ANDESITE", "DIORITE", "GRANITE", "TUFF").contains(actual);
+            case "#HOSTILES" -> material.isItem() ? false : false;
+            case "#RAIDERS" -> Set.of("PILLAGER", "VINDICATOR", "EVOKER", "RAVAGER", "WITCH", "VEX").contains(actual);
+            default -> false;
+        };
+    }
+
     private void incrementTarget(Player player, String target, int amount) {
         if (amount <= 0) return;
         UUID id = player.getUniqueId();
@@ -815,7 +843,7 @@ public final class QuestManager implements Listener {
         boolean changed = false;
         for (int i = 0; i < count; i++) {
             String base = id + ".objectives." + i;
-            if (!target.equals(data.getString(base + ".target", ""))) continue;
+            if (!objectiveTargetMatches(data.getString(base + ".target", ""), target)) continue;
             int goal = data.getInt(base + ".goal", 1);
             int progress = Math.min(goal, data.getInt(base + ".progress", 0) + amount);
             data.set(base + ".progress", progress);
