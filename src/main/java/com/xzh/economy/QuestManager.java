@@ -781,35 +781,35 @@ public final class QuestManager implements Listener {
         if (event.isCancelled()) return;
         Player p = event.getPlayer();
         if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
-        String placedPath = placedBlockPath(event.getBlock().getLocation());
+        org.bukkit.block.Block block = event.getBlock();
+        Material material = block.getType();
+        String placedPath = placedBlockPath(block.getLocation());
         boolean playerPlaced = plugin.getConfig().getBoolean("quests.v2.placed-block-tracking", true)
                 && data.getBoolean(placedPath, false);
         if (playerPlaced) {
-            org.bukkit.block.Block placedBlock = event.getBlock();
-            Material originalType = placedBlock.getType();
+            Material originalType = material;
             Bukkit.getScheduler().runTask(plugin, () -> {
-                if (placedBlock.getType() != originalType) {
+                if (block.getType() != originalType) {
                     data.set(placedPath, null);
                     save();
                 }
             });
-            return;
         }
-        Material material = event.getBlock().getType();
         String id = material.name();
-        if (material != Material.COBBLESTONE) {
+        // Placed blocks are excluded from MINE; planted crops remain valid HARVEST targets.
+        if (!playerPlaced && material != Material.COBBLESTONE) {
             incrementTarget(p, "break:" + id, 1);
             incrementTarget(p, "break:ANY", 1);
         }
-        if (material.name().endsWith("_ORE") || material == Material.ANCIENT_DEBRIS) {
+        if (!playerPlaced && (material.name().endsWith("_ORE") || material == Material.ANCIENT_DEBRIS)) {
             incrementTarget(p, "break:ANY_ORE", 1);
             recordGlobalProgress(p, "ore", 1);
         }
-        if (material.name().endsWith("_LOG") || material.name().endsWith("_STEM")) {
+        if (!playerPlaced && (material.name().endsWith("_LOG") || material.name().endsWith("_STEM"))) {
             recordGlobalProgress(p, "wood", 1);
         }
         boolean matureCrop = false;
-        if (event.getBlock().getBlockData() instanceof Ageable ageable
+        if (block.getBlockData() instanceof Ageable ageable
                 && ageable.getAge() >= ageable.getMaximumAge()) {
             Material harvested = switch (material) {
                 case WHEAT -> Material.WHEAT;
@@ -825,11 +825,11 @@ public final class QuestManager implements Listener {
                 matureCrop = true;
             }
         }
-        // Melons and pumpkins are harvestable blocks rather than Ageable crops.
-        if (material == Material.MELON) {
+        // Placed melon/pumpkin blocks are excluded; their natural stems remain untouched.
+        if (!playerPlaced && material == Material.MELON) {
             incrementTarget(p, "harvest:MELON_SLICE", 1);
             matureCrop = true;
-        } else if (material == Material.PUMPKIN) {
+        } else if (!playerPlaced && material == Material.PUMPKIN) {
             incrementTarget(p, "harvest:PUMPKIN", 1);
             matureCrop = true;
         }
@@ -838,9 +838,7 @@ public final class QuestManager implements Listener {
             incrementTarget(p, "harvest:ANY", 1);
             recordGlobalProgress(p, "crop", 1);
         }
-
     }
-
     @EventHandler
     public void onVaultLoot(BlockDispenseLootEvent event) {
         if (event.isCancelled() || event.getBlock().getType() != Material.VAULT) return;
