@@ -736,6 +736,7 @@ public final class QuestManager implements Listener {
         Material material = event.getBlock().getType();
         String id = material.name();
         incrementTarget(p, "break:" + id, 1);
+        if (material != Material.COBBLESTONE) incrementTarget(p, "break:ANY", 1);
         // Deepslate ore variants count toward the matching ore contracts too.
         if (id.startsWith("DEEPSLATE_") && id.endsWith("_ORE")) {
             incrementTarget(p, "break:" + id.substring("DEEPSLATE_".length()), 1);
@@ -775,7 +776,11 @@ public final class QuestManager implements Listener {
             incrementTarget(p, "harvest:PUMPKIN", 1);
             matureCrop = true;
         }
-        if (matureCrop) recordGlobalProgress(p, "crop", 1);
+        if (matureCrop) {
+            incrementTarget(p, "harvest:ANY_CROP", 1);
+            incrementTarget(p, "harvest:ANY", 1);
+            recordGlobalProgress(p, "crop", 1);
+        }
         if (cropToReplant != null) {
             org.bukkit.Location cropLocation = event.getBlock().getLocation();
             Material cropMaterial = cropToReplant;
@@ -830,6 +835,7 @@ public final class QuestManager implements Listener {
         if (data.getBoolean(openedPath, false)) return;
         data.set(openedPath, true);
         incrementTarget(player, "loot:" + table, 1);
+        incrementTarget(player, "loot:ANY", 1);
         save();
     }
 
@@ -844,7 +850,9 @@ public final class QuestManager implements Listener {
             incrementTarget(player, "harvest:SWEET_BERRIES", 1);
         } else if (type == Material.CAVE_VINES || type == Material.CAVE_VINES_PLANT) {
             incrementTarget(player, "harvest:GLOW_BERRIES", 1);
-        }
+        } else return;
+        incrementTarget(player, "harvest:ANY_CROP", 1);
+        incrementTarget(player, "harvest:ANY", 1);
         recordGlobalProgress(player, "crop", 1);
     }
 
@@ -917,6 +925,7 @@ public final class QuestManager implements Listener {
         boolean roamingBoss = event.getEntity().getPersistentDataContainer()
                 .getOrDefault(roamingBossKey, PersistentDataType.BYTE, (byte) 0) == (byte) 1;
         if (roamingBoss) incrementTarget(p, "kill:ROAMING_BOSS", 1);
+        incrementTarget(p, "kill:ANY", 1);
         incrementTarget(p, "kill:" + event.getEntityType().name(), 1);
         incrementTarget(p, "kill:KILL_" + event.getEntityType().name(), 1);
         if (spawnReason.equals(CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER.name())) {
@@ -960,13 +969,13 @@ public final class QuestManager implements Listener {
                 int produced = Math.max(0, after - countBefore);
                 if (produced > 0) {
                     incrementTarget(player, "collect:" + output.name(), produced);
-                    if (questCraftWhitelist.contains(output)) incrementTarget(player, "craft:" + output.name(), produced);
+                    if (questCraftWhitelist.contains(output)) { incrementTarget(player, "craft:" + output.name(), produced); incrementTarget(player, "craft:ANY", produced); }
                 }
             });
             return;
         }
         incrementTarget(player, "collect:" + output.name(), result.getAmount());
-        if (questCraftWhitelist.contains(output)) incrementTarget(player, "craft:" + output.name(), result.getAmount());
+        if (questCraftWhitelist.contains(output)) { incrementTarget(player, "craft:" + output.name(), result.getAmount()); incrementTarget(player, "craft:ANY", result.getAmount()); }
     }
 
     @EventHandler
@@ -1051,7 +1060,7 @@ public final class QuestManager implements Listener {
         double accumulated = travelRemainders.getOrDefault(id, 0.0) + accepted;
         int wholeBlocks = (int) Math.floor(accumulated);
         travelRemainders.put(id, accumulated - wholeBlocks);
-        if (wholeBlocks > 0) incrementTarget(p, "travel", wholeBlocks);
+        if (wholeBlocks > 0) { incrementTarget(p, "travel", wholeBlocks); incrementTarget(p, "travel:ANY", wholeBlocks); }
     }
 
     @EventHandler
@@ -1060,6 +1069,7 @@ public final class QuestManager implements Listener {
         Player player = event.getPlayer();
         if (player.getGameMode() == org.bukkit.GameMode.CREATIVE || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         incrementTarget(player, "fish:" + caught.getItemStack().getType().name(), 1);
+        incrementTarget(player, "fish:ANY", 1);
         recordGlobalProgress(player, "fish", 1);
     }
 
