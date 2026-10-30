@@ -943,9 +943,10 @@ public final class QuestManager implements Listener {
         if (roamingBoss) incrementTarget(p, "kill:ROAMING_BOSS", 1);
         incrementTarget(p, "kill:ANY", 1);
         incrementTarget(p, "kill:" + event.getEntityType().name(), 1);
-        incrementTarget(p, "kill:KILL_" + event.getEntityType().name(), 1);
         if (spawnReason.equals(CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER.name())) {
             incrementTarget(p, "kill:TRIAL_KILL_" + event.getEntityType().name(), 1);
+        } else {
+            incrementTarget(p, "kill:KILL_" + event.getEntityType().name(), 1);
         }
         if (event.getEntity() instanceof org.bukkit.entity.Monster) recordGlobalProgress(p, "mob", 1);
     }
