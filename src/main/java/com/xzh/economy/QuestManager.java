@@ -46,7 +46,11 @@ import java.util.UUID;
 public final class QuestManager implements Listener {
     private record Objective(String target, int goal, String description) {}
     private record Pack(String id, String name, Material icon, int cost, int reward, String advancement, List<Objective> objectives) {}
-    private record RandomQuest(String name, Material icon, int cost, int reward, Objective objective) {}
+    private record RandomQuest(String name, Material icon, int cost, int reward, Objective objective, boolean timed) {
+        private RandomQuest(String name, Material icon, int cost, int reward, Objective objective) {
+            this(name, icon, cost, reward, objective, false);
+        }
+    }
     private record GlobalQuest(String name, Material icon, String target, int goal, String description) {}
     private final List<GlobalQuest> globalQuestPool = List.of(
         new GlobalQuest("Community Ore Rush", Material.IRON_PICKAXE, "ore", 160, "Mine ores together"),
@@ -225,18 +229,18 @@ public final class QuestManager implements Listener {
 
     private final List<RandomQuest> randomPool = List.of(
         new RandomQuest("Deep Diamond Expedition", Material.DIAMOND, 180, 252, new Objective("break:DIAMOND_ORE", 12, "Mine 12 Diamond Ore")),
-        new RandomQuest("Ancient Debris Search", Material.ANCIENT_DEBRIS, 260, 390, new Objective("break:ANCIENT_DEBRIS", 8, "Mine 8 Ancient Debris")),
-        new RandomQuest("Raid the Fortress", Material.BLAZE_ROD, 220, 330, new Objective("kill:BLAZE", 18, "Kill 18 Blazes in the Nether")),
+        new RandomQuest("Ancient Debris Search", Material.ANCIENT_DEBRIS, 260, 390, new Objective("break:ANCIENT_DEBRIS", 8, "Mine 8 Ancient Debris"), true),
+        new RandomQuest("Raid the Fortress", Material.BLAZE_ROD, 220, 330, new Objective("kill:BLAZE", 18, "Kill 18 Blazes in the Nether"), true),
         new RandomQuest("Undead Patrol", Material.BOW, 150, 210, new Objective("kill:ZOMBIE", 35, "Kill 35 Zombies")),
         new RandomQuest("Ocean Treasure Hunt", Material.PRISMARINE_SHARD, 200, 300, new Objective("break:PRISMARINE", 96, "Mine 96 Prismarine blocks")),
         new RandomQuest("Ender Pearl Collection", Material.ENDER_PEARL, 240, 360, new Objective("kill:ENDERMAN", 24, "Kill 24 Endermen")),
         new RandomQuest("Iron Supply Contract", Material.RAW_IRON, 130, 182, new Objective("break:IRON_ORE", 64, "Mine 64 Iron Ore")),
-        new RandomQuest("Wither Skeleton Hunt", Material.WITHER_SKELETON_SKULL, 350, 525, new Objective("kill:WITHER_SKELETON", 16, "Kill 16 Wither Skeletons")),
-        new RandomQuest("Fishing for Cod", Material.COD, 90, 126, new Objective("fish:COD", 20, "Catch 20 Cod")),
+        new RandomQuest("Wither Skeleton Hunt", Material.WITHER_SKELETON_SKULL, 350, 525, new Objective("kill:WITHER_SKELETON", 16, "Kill 16 Wither Skeletons"), true),
+        new RandomQuest("Fishing for Cod", Material.COD, 90, 126, new Objective("fish:COD", 20, "Catch 20 Cod"), true),
         new RandomQuest("Fishing for Salmon", Material.SALMON, 110, 154, new Objective("fish:SALMON", 20, "Catch 20 Salmon")),
         new RandomQuest("Feed the Cows", Material.WHEAT, 100, 140, new Objective("feed:COW", 20, "Feed 20 cows")),
         new RandomQuest("Animal Breeding", Material.PORKCHOP, 120, 168, new Objective("breed:ANY", 10, "Breed 10 animals")),
-        new RandomQuest("Travel Contract", Material.COMPASS, 100, 140, new Objective("travel", 2500, "Travel 2,500 blocks")),
+        new RandomQuest("Travel Contract", Material.COMPASS, 100, 140, new Objective("travel", 2500, "Travel 2,500 blocks"), true),
         new RandomQuest("Woodcutting Contract", Material.OAK_LOG, 100, 140, new Objective("break:OAK_LOG", 128, "Chop 128 Oak Logs")),
         new RandomQuest("Crop Delivery", Material.CARROT, 85, 119, new Objective("harvest:CARROT", 96, "Harvest 96 fully grown Carrot crops")),
         new RandomQuest("Blaze Rod Shipment", Material.BLAZE_ROD, 190, 266, new Objective("kill:BLAZE", 32, "Kill 32 Blazes in the Nether")),
@@ -514,6 +518,10 @@ public final class QuestManager implements Listener {
         String questName = template.name() + " #" + (data.getInt("single-shop.quest-sequence", 0) + 1);
         data.set("single-shop.quest-sequence", data.getInt("single-shop.quest-sequence", 0) + 1);
         startQuest(player, "single:" + System.currentTimeMillis(), questName, cost, reward, List.of(objective));
+        long singleTimeLimit = template.timed() ? 30L * 60L : 0L;
+        data.set(id + ".time-limit-seconds", singleTimeLimit);
+        data.set(id + ".remaining-seconds", singleTimeLimit);
+        data.set(id + ".last-online-tick", System.currentTimeMillis());
         data.set(id + ".profit-margin", margin);
         if (!secret) data.set("single-shop.offers." + offerSlot, nextOfferForSlot(offerSlot));
         save();
@@ -522,9 +530,7 @@ public final class QuestManager implements Listener {
     }
 
     private boolean isTimedSingle(RandomQuest quest) {
-        return quest.name().equals("Ancient Debris Search") || quest.name().equals("Raid the Fortress")
-                || quest.name().equals("Fishing for Cod") || quest.name().equals("Travel Contract")
-                || quest.name().equals("Wither Skeleton Hunt");
+        return quest.timed();
     }
 
     private int configuredTierValue(String tier, String setting, int fallback) {
