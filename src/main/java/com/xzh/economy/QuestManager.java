@@ -19,6 +19,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.FurnaceExtractEvent;
+import org.bukkit.event.enchantment.EnchantItemEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerFishEvent;
@@ -796,6 +797,16 @@ public final class QuestManager implements Listener {
         incrementTarget(p, "kill:" + event.getEntityType().name(), 1);
         incrementTarget(p, "kill:KILL_" + event.getEntityType().name(), 1);
         if (event.getEntity() instanceof org.bukkit.entity.Monster) recordGlobalProgress(p, "mob", 1);
+    }
+
+    @EventHandler
+    public void onEnchant(EnchantItemEvent event) {
+        Player player = event.getEnchanter();
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR
+                || event.whichButton() != 2) return;
+        incrementTarget(player, "enchant:ANY", 1);
+        incrementTarget(player, "enchant:" + event.getItem().getType().name(), 1);
     }
 
     @EventHandler
