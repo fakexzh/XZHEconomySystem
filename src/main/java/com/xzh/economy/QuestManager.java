@@ -1480,11 +1480,11 @@ public final class QuestManager implements Listener {
         if (data.getBoolean("event.completed", false)) return;
         long now = System.currentTimeMillis();
         String today = LocalDate.now().toString();
-        if (!today.equals(data.getString("global-event.completion-day", ""))) {
-            data.set("global-event.completion-day", today);
-            data.set("global-event.completions-today", 0);
+        if (!today.equals(data.getString("global-global-event.completion-day", ""))) {
+            data.set("global-global-event.completion-day", today);
+            data.set("global-global-event.completions-today", 0);
         }
-        data.set("global-event.completions-today", data.getInt("global-event.completions-today", 0) + 1);
+        data.set("global-global-event.completions-today", data.getInt("global-global-event.completions-today", 0) + 1);
         data.set("event.completed", true);
         data.set("global-event.cooldown-until", now + configuredGlobalCooldownMinutes() * 60_000L);
         int goal = Math.max(1, data.getInt("event.goal", configuredEventGoal()));
@@ -1715,8 +1715,8 @@ public final class QuestManager implements Listener {
         String today = LocalDate.now().toString();
         String eventName = data.getString("event.name", "");
         if (data.getBoolean("event.completed", false)) {
-            if (data.getString("event.completion-day", "").equals(today)
-                    && data.getInt("event.completions-today", 0) >= configuredGlobalMaxCompletions()) return;
+            if (data.getString("global-event.completion-day", "").equals(today)
+                    && data.getInt("global-event.completions-today", 0) >= configuredGlobalMaxCompletions()) return;
             if (now < data.getLong("global-event.cooldown-until", 0L)) return;
             startNewGlobalQuest(now, true);
             return;
