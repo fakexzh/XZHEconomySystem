@@ -1,7 +1,6 @@
 package com.xzh.economy;
 
 import org.bukkit.Material;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -12,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /** Strict loader for the approved, CSV-derived 300-entry quest catalogue. */
@@ -34,18 +34,16 @@ final class QuestCatalogue {
             YamlConfiguration yaml = YamlConfiguration.loadConfiguration(
                     new InputStreamReader(stream, StandardCharsets.UTF_8));
             if (yaml.getInt("version", -1) != 2) throw new IllegalStateException("Unsupported quests-v2.yml version");
-            ConfigurationSection section = yaml.getConfigurationSection("quests");
-            if (section == null) throw new IllegalStateException("quests-v2.yml has no quests section");
+            List<Map<?, ?>> rows = yaml.getMapList("quests");
+            if (rows.size() != 300) throw new IllegalStateException("Expected 300 quest rows; found " + rows.size());
 
             List<Entry> loaded = new ArrayList<>(300);
             Set<String> ids = new HashSet<>();
             int[] tierCounts = new int[3];
-            for (String key : section.getKeys(false)) {
-                ConfigurationSection q = section.getConfigurationSection(key);
-                if (q == null) throw new IllegalStateException("Quest " + key + " is not a mapping");
-                String id = required(q, "id", key);
+            for (Map<?, ?> q : rows) {
+                String id = required(q, "id");
                 if (!ids.add(id)) throw new IllegalStateException("Duplicate quest id: " + id);
-                String tier = required(q, "tier", id).toLowerCase(Locale.ROOT);
+                String tier = required(q, "tier").toLowerCase(Locale.ROOT);
                 int tierIndex = switch (tier) {
                     case "easy" -> 0;
                     case "hard" -> 1;
@@ -53,11 +51,11 @@ final class QuestCatalogue {
                     default -> throw new IllegalStateException("Invalid tier for " + id + ": " + tier);
                 };
                 tierCounts[tierIndex]++;
-                String group = required(q, "group", id);
-                String groupName = required(q, "group-name", id);
-                String name = required(q, "name", id);
-                List<String> objectives = q.getStringList("objectives");
-                List<String> unlock = q.getStringList("unlock");
+                String group = required(q, "group");
+                String groupName = required(q, "group-name");
+                String name = required(q, "name");
+                List<String> objectives = strings(q.get("objectives"));
+                List<String> unlock = strings(q.get("unlock"));
                 if (objectives.isEmpty()) throw new IllegalStateException("Quest " + id + " has no objectives");
                 for (String objective : objectives) {
                     try { QuestObjectiveSpec.parse(objective); }
@@ -65,18 +63,22 @@ final class QuestCatalogue {
                         throw new IllegalStateException("Invalid objective grammar in " + id + ": " + ex.getMessage(), ex);
                     }
                 }
-                int fee = q.getInt("fee", -1);
-                int profit = q.getInt("profit", -1);
-                int timer = q.getInt("timer-minutes", -1);
-                if (fee < 0 || profit < 0 || timer < 0) throw new IllegalStateException("Negative or missing financial/timer value in " + id);
-                Material icon = Material.matchMaterial(required(q, "icon", id));
+                int fee = integer(q, "fee");
+                int profit = integer(q, "profit");
+                int timer = integer(q, "timer-minutes");
+                int minProfit = tierIndex == 0 ? 160 : tierIndex == 1 ? 350 : 2000;
+                int maxProfit = tierIndex == 0 ? 300 : tierIndex == 1 ? 850 : 5000;
+                if (fee < 0 || profit < minProfit || profit > maxProfit || timer < 0) {
+                    throw new IllegalStateException("Invalid fee/profit/timer values in " + id);
+                }
+                Material icon = Material.matchMaterial(required(q, "icon"));
                 if (icon == null || !icon.isItem()) throw new IllegalStateException("Invalid item icon in " + id);
-                String gate = required(q, "tier-gate", id);
-                loaded.add(new Entry(id, tier, group, groupName, name, List.copyOf(objectives),
-                        List.copyOf(unlock), fee, profit, timer, icon, gate));
+                String gate = required(q, "tier-gate");
+                loaded.add(new Entry(id, tier, group, groupName, name, objectives, unlock,
+                        fee, profit, timer, icon, gate));
             }
-            if (loaded.size() != 300 || tierCounts[0] != 100 || tierCounts[1] != 100 || tierCounts[2] != 100) {
-                throw new IllegalStateException("Expected 100 quests per tier (300 total); found "
+            if (tierCounts[0] != 100 || tierCounts[1] != 100 || tierCounts[2] != 100) {
+                throw new IllegalStateException("Expected 100 quests per tier; found "
                         + tierCounts[0] + "/" + tierCounts[1] + "/" + tierCounts[2]);
             }
             plugin.getLogger().info("Validated v2 quest catalogue: 300 entries (100 per tier).");
@@ -88,9 +90,20 @@ final class QuestCatalogue {
 
     List<Entry> entries() { return entries; }
 
-    private static String required(ConfigurationSection section, String path, String id) {
-        String value = section.getString(path);
-        if (value == null || value.isBlank()) throw new IllegalStateException("Missing " + path + " for " + id);
-        return value;
+    private static String required(Map<?, ?> map, String key) {
+        Object value = map.get(key);
+        if (value == null || value.toString().isBlank()) throw new IllegalStateException("Missing " + key);
+        return value.toString();
+    }
+
+    private static int integer(Map<?, ?> map, String key) {
+        Object value = map.get(key);
+        if (!(value instanceof Number number)) throw new IllegalStateException("Missing or nonnumeric " + key);
+        return number.intValue();
+    }
+
+    private static List<String> strings(Object value) {
+        if (!(value instanceof List<?> list)) return List.of();
+        return list.stream().map(Object::toString).toList();
     }
 }
