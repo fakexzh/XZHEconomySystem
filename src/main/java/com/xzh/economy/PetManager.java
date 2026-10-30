@@ -162,8 +162,18 @@ public final class PetManager implements Listener {
                 panda.setHiddenGene(gene);
             }
             case FOX -> ((Fox) entity).setFoxType(Fox.Type.valueOf(variant));
-            case CHICKEN -> ((Chicken) entity).setVariant(Chicken.Variant.valueOf(variant));
-            case PIG -> ((Pig) entity).setVariant(Pig.Variant.valueOf(variant));
+            case CHICKEN -> ((Chicken) entity).setVariant(switch (variant) {
+                case "TEMPERATE" -> Chicken.Variant.TEMPERATE;
+                case "WARM" -> Chicken.Variant.WARM;
+                case "COLD" -> Chicken.Variant.COLD;
+                default -> throw new IllegalArgumentException("Unknown chicken variant");
+            });
+            case PIG -> ((Pig) entity).setVariant(switch (variant) {
+                case "TEMPERATE" -> Pig.Variant.TEMPERATE;
+                case "WARM" -> Pig.Variant.WARM;
+                case "COLD" -> Pig.Variant.COLD;
+                default -> throw new IllegalArgumentException("Unknown pig variant");
+            });
             case GOAT -> ((Goat) entity).setScreaming(variant.equals("SCREAMING"));
             default -> throw new IllegalArgumentException("Unsupported pet type");
         }
