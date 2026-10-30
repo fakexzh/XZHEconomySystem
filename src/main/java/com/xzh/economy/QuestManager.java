@@ -921,6 +921,9 @@ public final class QuestManager implements Listener {
         if (roamingBoss) incrementTarget(p, "kill:ROAMING_BOSS", 1);
         incrementTarget(p, "kill:" + event.getEntityType().name(), 1);
         incrementTarget(p, "kill:KILL_" + event.getEntityType().name(), 1);
+        if (spawnReason.equals(CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER.name())) {
+            incrementTarget(p, "kill:TRIAL_KILL_" + event.getEntityType().name(), 1);
+        }
         if (event.getEntity() instanceof org.bukkit.entity.Monster) recordGlobalProgress(p, "mob", 1);
     }
 
@@ -1199,20 +1202,15 @@ public final class QuestManager implements Listener {
                 case "#HOSTILES" -> {
                     EntityType type;
                     try { type = EntityType.valueOf(entity); } catch (IllegalArgumentException ex) { yield false; }
-                    yield type != EntityType.ENDER_DRAGON && type != EntityType.WITHER
-                            && type != EntityType.ELDER_GUARDIAN && type != EntityType.WARDEN
-                            && type != EntityType.BREEZE && type != EntityType.BOGGED
-                            && switch (type) {
-                                case ZOMBIE, HUSK, DROWNED, SKELETON, STRAY, CREEPER, SPIDER, CAVE_SPIDER,
-                                     ENDERMAN, WITCH, SLIME, PHANTOM, BLAZE, GHAST, MAGMA_CUBE,
-                                     PILLAGER, VINDICATOR, EVOKER, RAVAGER, VEX, SILVERFISH,
-                                     ZOMBIFIED_PIGLIN, HOGLIN, ZOGLIN, PIGLIN, PIGLIN_BRUTE -> true;
-                                default -> false;
-                            };
+                    Class<? extends org.bukkit.entity.Entity> entityClass = type.getEntityClass();
+                    yield entityClass != null && org.bukkit.entity.Monster.class.isAssignableFrom(entityClass)
+                            && type != EntityType.ENDER_DRAGON && type != EntityType.WITHER
+                            && type != EntityType.ELDER_GUARDIAN && type != EntityType.WARDEN;
                 }
                 case "#RAIDERS" -> Set.of("PILLAGER", "VINDICATOR", "EVOKER", "RAVAGER", "WITCH", "VEX").contains(entity);
-                case "#TRIAL_SPAWN_MOBS" -> Set.of("ZOMBIE", "SKELETON", "STRAY", "SPIDER", "CAVE_SPIDER",
-                        "SLIME", "SILVERFISH", "BREEZE", "BOGGED").contains(entity);
+                case "#TRIAL_SPAWN_MOBS" -> actual.startsWith("TRIAL_KILL_")
+                        && Set.of("BREEZE", "BOGGED", "ZOMBIE", "SKELETON", "SPIDER",
+                                "CAVE_SPIDER", "SILVERFISH", "SLIME").contains(entity);
                 default -> false;
             };
         }
