@@ -22,8 +22,10 @@ jobs:
         run: gradle clean build
       - name: Install GUI icon resource-pack assets
         run: |
-          tar -xzf resource-pack/gui-icons-assets.tar.gz -C resource-pack
-          rm resource-pack/gui-icons-assets.tar.gz
+          cat resource-pack/gui-icons-assets.part1.b64 resource-pack/gui-icons-assets.part2.b64 resource-pack/gui-icons-assets.part3.b64 > build/gui-icons-assets.b64
+          base64 -d build/gui-icons-assets.b64 > build/gui-icons-assets.tar.gz
+          tar -xzf build/gui-icons-assets.tar.gz -C resource-pack
+          rm resource-pack/gui-icons-assets.part*.b64 build/gui-icons-assets.b64 build/gui-icons-assets.tar.gz
       - name: Package source archive
         run: git archive --format=zip --output=build/XZHEconomySystem-source.zip HEAD
       - name: Upload plugin JAR
