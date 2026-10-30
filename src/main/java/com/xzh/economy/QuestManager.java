@@ -590,7 +590,7 @@ public final class QuestManager implements Listener {
     }
 
     private int configuredTierValue(String tier, String setting, int fallback) {
-        return Math.max(0, plugin.getConfig().getInt("quests." + setting + "." + tier, fallback));
+        return Math.max(0, plugin.getConfig().getInt("quests.v2." + setting + "." + tier, fallback));
     }
 
     private String activePackTier(String activeId) {
@@ -714,7 +714,7 @@ public final class QuestManager implements Listener {
     }
 
     private boolean isQuestActivityRecent(Player player) {
-        int seconds = Math.max(1, plugin.getConfig().getInt("quests.activity-seconds", 90));
+        int seconds = Math.max(1, plugin.getConfig().getInt("quests.v2.activity-seconds", 90));
         long last = data.getLong("activity." + player.getUniqueId(), 0L);
         return last > 0L && System.currentTimeMillis() - last <= seconds * 1000L;
     }
@@ -727,12 +727,14 @@ public final class QuestManager implements Listener {
     @EventHandler
     public void onPlace(BlockPlaceEvent event) {
         if (event.isCancelled()) return;
+        if (!plugin.getConfig().getBoolean("quests.v2.placed-block-tracking", true)) return;
         data.set(placedBlockPath(event.getBlock().getLocation()), true);
         save();
     }
 
     @EventHandler
     public void onPistonExtend(BlockPistonExtendEvent event) {
+        if (!plugin.getConfig().getBoolean("quests.v2.placed-block-tracking", true)) return;
         for (org.bukkit.block.Block moved : event.getBlocks()) {
             data.set(placedBlockPath(moved.getLocation()), true);
             data.set(placedBlockPath(moved.getRelative(event.getDirection()).getLocation()), true);
@@ -742,6 +744,7 @@ public final class QuestManager implements Listener {
 
     @EventHandler
     public void onPistonRetract(BlockPistonRetractEvent event) {
+        if (!plugin.getConfig().getBoolean("quests.v2.placed-block-tracking", true)) return;
         for (org.bukkit.block.Block moved : event.getBlocks()) {
             data.set(placedBlockPath(moved.getLocation()), true);
             data.set(placedBlockPath(moved.getRelative(event.getDirection().getOppositeFace()).getLocation()), true);
@@ -755,7 +758,8 @@ public final class QuestManager implements Listener {
         Player p = event.getPlayer();
         if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         String placedPath = placedBlockPath(event.getBlock().getLocation());
-        boolean playerPlaced = data.getBoolean(placedPath, false);
+        boolean playerPlaced = plugin.getConfig().getBoolean("quests.v2.placed-block-tracking", true)
+                && data.getBoolean(placedPath, false);
         if (playerPlaced) {
             data.set(placedPath, null);
             save();
@@ -941,7 +945,9 @@ public final class QuestManager implements Listener {
             UUID id = p.getUniqueId();
             String questId = data.getString(id + ".active", "");
             int limit = (spawnReason.equals(CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER.name())
-                    || spawnReason.equals(CreatureSpawnEvent.SpawnReason.OMINOUS_ITEM_SPAWNER.name())) ? 20 : 10;
+                    || spawnReason.equals(CreatureSpawnEvent.SpawnReason.OMINOUS_ITEM_SPAWNER.name()))
+                    ? plugin.getConfig().getInt("quests.v2.trial-spawner-kill-cap", 20)
+                    : plugin.getConfig().getInt("quests.v2.spawner-kill-cap", 10);
             String countPath = id + ".spawner-counts." + questId + "." + spawner;
             int used = data.getInt(countPath, 0);
             if (used >= limit) return;
@@ -1077,7 +1083,8 @@ public final class QuestManager implements Listener {
         long now = System.currentTimeMillis();
         String ratePath = id + ".travel-rate";
         long last = data.getLong(ratePath + ".time", now);
-        double allowance = Math.max(0.0, 12.0 * Math.max(0L, now - last) / 1000.0);
+        double maxPerSecond = Math.max(0.1, plugin.getConfig().getDouble("quests.v2.travel-max-blocks-per-second", 12.0));
+        double allowance = Math.max(0.0, maxPerSecond * Math.max(0L, now - last) / 1000.0);
         double accepted = Math.min(step, allowance);
         data.set(ratePath + ".time", now);
         if (accepted <= 0.0) return;
