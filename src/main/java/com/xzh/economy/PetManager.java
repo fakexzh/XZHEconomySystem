@@ -66,8 +66,6 @@ public final class PetManager implements Listener {
         add("panda-brown", "Panda - Brown", EntityType.PANDA, "BROWN", 6000, Material.PANDA_SPAWN_EGG);
         add("panda-weak", "Panda - Weak", EntityType.PANDA, "WEAK", 6000, Material.PANDA_SPAWN_EGG);
         add("panda-aggressive", "Panda - Aggressive", EntityType.PANDA, "AGGRESSIVE", 6000, Material.PANDA_SPAWN_EGG);
-        add("fox-red", "Fox - Red", EntityType.FOX, "RED", 2000, Material.FOX_SPAWN_EGG);
-        add("fox-snow", "Fox - Snow", EntityType.FOX, "SNOW", 3500, Material.FOX_SPAWN_EGG);
         add("pig-pink", "Pig - Pink", EntityType.PIG, "TEMPERATE", 1500, Material.PIG_SPAWN_EGG);
         add("chicken-temperate", "Chicken - Temperate", EntityType.CHICKEN, "TEMPERATE", 1200, Material.CHICKEN_SPAWN_EGG);
         add("chicken-warm", "Chicken - Warm", EntityType.CHICKEN, "WARM", 2000, Material.CHICKEN_SPAWN_EGG);
@@ -210,7 +208,6 @@ public final class PetManager implements Listener {
                 panda.setMainGene(gene);
                 panda.setHiddenGene(gene);
             }
-            case FOX -> ((Fox) entity).setFoxType(Fox.Type.valueOf(variant));
             case CHICKEN -> ((Chicken) entity).setVariant(switch (variant) {
                 case "TEMPERATE" -> Chicken.Variant.TEMPERATE;
                 case "WARM" -> Chicken.Variant.WARM;
@@ -591,7 +588,7 @@ public final class PetManager implements Listener {
         String ownerName = ownerId == null ? null : Bukkit.getOfflinePlayer(ownerId).getName();
         if (ownerName != null) return "@" + ownerName + "'s pet";
         String variant = entity.getPersistentDataContainer().get(variantKey, PersistentDataType.STRING);
-        String species = switch (entity.getType()) { case PANDA -> "Panda"; case FOX -> "Fox"; case PIG -> "Pig"; case CHICKEN -> "Chicken"; case GOAT -> "Goat"; default -> "Pet"; };
+        String species = switch (entity.getType()) { case PANDA -> "Panda"; case PIG -> "Pig"; case CHICKEN -> "Chicken"; case GOAT -> "Goat"; default -> "Pet"; };
         if (variant == null || variant.isBlank()) return species;
         String pretty = variant.substring(0, 1).toUpperCase(Locale.ROOT) + variant.substring(1).toLowerCase(Locale.ROOT);
         return species + " (" + pretty + ")";
