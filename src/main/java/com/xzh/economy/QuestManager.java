@@ -505,6 +505,38 @@ public final class QuestManager implements Listener {
                 || quest.name().equals("Wither Skeleton Hunt");
     }
 
+    private int configuredTierValue(String tier, String setting, int fallback) {
+        return Math.max(0, plugin.getConfig().getInt("quests." + setting + "." + tier, fallback));
+    }
+
+    private String activePackTier(String activeId) {
+        if (activeId == null || !activeId.startsWith("pack:")) return "";
+        String packId = activeId.substring("pack:".length());
+        if (packId.startsWith("master_")) return "master";
+        if (packId.startsWith("hard_")) return "hard";
+        if (packId.startsWith("easy_")) return "easy";
+        return "";
+    }
+
+    private boolean tierPurchaseLimitsAllow(Player player, String tier) {
+        if (tier.isBlank()) return true;
+        UUID id = player.getUniqueId();
+        long cooldown = data.getLong(id + ".cooldown-until." + tier, 0L);
+        if (System.currentTimeMillis() < cooldown) {
+            long minutes = Math.max(1L, (cooldown - System.currentTimeMillis() + 59_999L) / 60_000L);
+            plugin.tellPublic(player, "Tier cooldown active. You can buy another " + tier + " pack in " + minutes + " minute(s).");
+            return false;
+        }
+        int cap = configuredTierValue(tier, "daily-profit-cap", tier.equals("easy") ? 2500 : tier.equals("hard") ? 5000 : 12000);
+        String day = LocalDate.now().toString();
+        int earned = data.getInt("daily." + tier + "." + day + ".profit", 0);
+        if (cap > 0 && earned >= cap) {
+            plugin.tellPublic(player, "You have reached today's " + tier + " quest profit cap (" + cap + " coins).");
+            return false;
+        }
+        return true;
+    }
+
     private void buyPack(Player player, Pack pack) {
         UUID id = player.getUniqueId();
         if (data.getBoolean("completed-packs." + id + "." + pack.id(), false)) {
@@ -516,6 +548,7 @@ public final class QuestManager implements Listener {
             plugin.tellPublic(player, "Your loan is overdue. Quest-pack purchases are locked until full repayment.");
             return;
         }
+        if (!tierPurchaseLimitsAllow(player, tierOf(pack))) return;
         if (!tierUnlocked(player, tierOf(pack)) || !hasAdvancement(player, pack.advancement())) {
             plugin.tellPublic(player, "Complete the required advancement to unlock this quest pack.");
             return;
@@ -754,6 +787,18 @@ public final class QuestManager implements Listener {
         if (allComplete(id)) {
             int reward = data.getInt(id + ".reward", 0);
             String activeQuestId = data.getString(id + ".active", "");
+            String completedTier = activePackTier(activeQuestId);
+            if (!completedTier.isBlank()) {
+                int cost = Math.max(0, data.getInt(id + ".cost", 0));
+                int profit = Math.max(0, reward - cost);
+                String day = LocalDate.now().toString();
+                String dailyPath = "daily." + completedTier + "." + day + ".profit";
+                data.set(dailyPath, data.getInt(dailyPath, 0) + profit);
+                int cooldownMinutes = configuredTierValue(completedTier, "cooldown-minutes",
+                        completedTier.equals("easy") ? 5 : completedTier.equals("hard") ? 10 : 15);
+                data.set(id + ".cooldown-until." + completedTier,
+                        System.currentTimeMillis() + cooldownMinutes * 60_000L);
+            }
             if (activeQuestId.startsWith("pack:")) {
                 String packId = activeQuestId.substring("pack:".length());
                 data.set("completed-packs." + id + "." + packId, true);
