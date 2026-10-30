@@ -40,6 +40,7 @@ public final class PetManager implements Listener {
     private final File activePetsFile;
     private final YamlConfiguration activePets;
     private final Map<UUID, UUID> following = new HashMap<>();
+    private long petTick = 0L;
     private final Map<String, PetOption> options = new LinkedHashMap<>();
     private final int followTask;
 
@@ -247,7 +248,7 @@ public final class PetManager implements Listener {
         if (shouldSit) mob.getPathfinder().stopPathfinding();
         entity.setPose(shouldSit ? Pose.SITTING : Pose.STANDING, true);
         mob.setVelocity(new org.bukkit.util.Vector(0, mob.getVelocity().getY(), 0));
-        player.sendMessage("§8[§dPET§8] §f" + (sitting ? "Your pet is standing and following mode will resume." : "Your pet is sitting. It will stay here until you stand it up."));
+        player.sendMessage("§8[§dPET§8] §f" + petName(entity) + (sitting ? " is now standing." : " is now resting."));
         player.playSound(entity.getLocation(), Sound.ENTITY_CAT_PURR, 0.5f, sitting ? 1.3f : 0.8f);
     }
 
@@ -377,6 +378,17 @@ public final class PetManager implements Listener {
             plugin.tellPublic(player, "Your pet stopped following you and will roam nearby.");
             return true;
         }
+        if (args.length == 1 && args[0].equalsIgnoreCase("all")) {
+            List<Entity> ownedPets = new ArrayList<>();
+            for (org.bukkit.World world : Bukkit.getWorlds()) for (Entity pet : world.getEntities()) if (isPet(pet) && isOwnedBy(pet, player)) ownedPets.add(pet);
+            if (ownedPets.isEmpty()) { plugin.tellPublic(player, "You do not own any Baby Pets."); return true; }
+            Location destination = player.getLocation().clone().add(player.getLocation().getDirection().multiply(-1.5));
+            destination.setY(player.getLocation().getY());
+            int brought = 0;
+            for (Entity pet : ownedPets) if (pet.teleport(destination)) brought++;
+            plugin.tellPublic(player, "Brought " + brought + " of your Baby Pets to you. Only your active pet will follow.");
+            return true;
+        }
         if (args.length == 0) {
             List<Entity> activePets = following.entrySet().stream()
                     .filter(e -> e.getValue().equals(player.getUniqueId()))
@@ -389,7 +401,7 @@ public final class PetManager implements Listener {
             Location destination = player.getLocation().clone().add(player.getLocation().getDirection().multiply(-1.5));
             destination.setY(player.getLocation().getY());
             for (Entity active : activePets) active.teleport(destination);
-            plugin.tellPublic(player, "Your active pets have been called to you.");
+            plugin.tellPublic(player, "Your active pet has been called to you.");
             return true;
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("transfer")) {
@@ -418,7 +430,7 @@ public final class PetManager implements Listener {
             return true;
         }
         if (args.length != 0) {
-            plugin.tellPublic(player, "Usage: /pet [transfer <player>]");
+            plugin.tellPublic(player, "Usage: /pet [all|transfer <player>]");
             return true;
         }
         return true;
@@ -431,12 +443,18 @@ public final class PetManager implements Listener {
             String identity = pet.getPersistentDataContainer().get(identityKey, PersistentDataType.STRING);
             if (identity != null) activePets.set("pets." + identity, null);
             saveActivePets();
-            plugin.tellPublic(player, "Your pet stopped following you.");
+            plugin.tellPublic(player, petName(pet) + " is no longer following you.");
         } else {
+            for (UUID oldPetId : new ArrayList<>(following.keySet())) {
+                if (!player.getUniqueId().equals(following.get(oldPetId))) continue;
+                following.remove(oldPetId);
+                Entity oldPet = Bukkit.getEntity(oldPetId);
+                if (oldPet != null) { String oldIdentity = oldPet.getPersistentDataContainer().get(identityKey, PersistentDataType.STRING); if (oldIdentity != null) activePets.set("pets." + oldIdentity, null); }
+            }
             following.put(petId, player.getUniqueId());
             saveActivePet(pet, player.getUniqueId());
             saveActivePets();
-            plugin.tellPublic(player, "Your pet will now follow you.");
+            plugin.tellPublic(player, petName(pet) + " is now your active pet.");
         }
     }
 
@@ -448,6 +466,7 @@ public final class PetManager implements Listener {
     }
 
     private void tickPets() {
+        petTick++;
         for (org.bukkit.World world : Bukkit.getWorlds()) {
             for (Entity pet : world.getEntities()) {
                 if (!isPet(pet) || !pet.isValid()) continue;
@@ -455,6 +474,8 @@ public final class PetManager implements Listener {
                 boolean nameVisible = Bukkit.getOnlinePlayers().stream()
                         .anyMatch(viewer -> viewer.getWorld().equals(pet.getWorld())
                                 && viewer.getLocation().distanceSquared(pet.getLocation()) <= 256.0);
+                ChatColor nameColor = isSitting(pet) ? ChatColor.RED : following.containsKey(pet.getUniqueId()) ? ChatColor.LIGHT_PURPLE : ChatColor.WHITE;
+                pet.setCustomName(nameColor + petName(pet));
                 pet.setCustomNameVisible(nameVisible);
 
                 if (!(pet instanceof Mob mob)) continue;
@@ -497,6 +518,10 @@ public final class PetManager implements Listener {
                     continue;
                 }
 
+                if (pet instanceof Panda panda) {
+                    if (panda.getMainGene() == Panda.Gene.LAZY || panda.getMainGene() == Panda.Gene.WEAK) panda.setMainGene(Panda.Gene.NORMAL);
+                    if (panda.getHiddenGene() == Panda.Gene.LAZY || panda.getHiddenGene() == Panda.Gene.WEAK) panda.setHiddenGene(Panda.Gene.NORMAL);
+                }
                 double distance = pet.getLocation().distance(owner.getLocation());
                 if (distance > 10.0) {
                     Location destination = owner.getLocation().clone()
@@ -504,14 +529,21 @@ public final class PetManager implements Listener {
                     destination.setY(owner.getLocation().getY());
                     pet.teleport(destination);
                 } else if (distance > 3.0) {
-                    // Use vanilla pathfinding and default mob speed, rather than forcing owner-matched velocity.
-                    mob.getPathfinder().moveTo(owner.getLocation(), 1.0);
-                } else {
-                    // Close enough: release the pathfinder so normal idle wandering can happen nearby.
+                    if (petTick % 10L == 0L) mob.getPathfinder().moveTo(owner.getLocation(), 1.0);
+                } else if (distance <= 2.5 && petTick % 10L == 0L) {
                     mob.getPathfinder().stopPathfinding();
                 }
             }
         }
+    }
+
+    private String petName(Entity entity) {
+        if (entity == null) return "Pet";
+        String variant = entity.getPersistentDataContainer().get(variantKey, PersistentDataType.STRING);
+        String species = switch (entity.getType()) { case PANDA -> "Panda"; case FOX -> "Fox"; case PIG -> "Pig"; case CHICKEN -> "Chicken"; case GOAT -> "Goat"; default -> "Pet"; };
+        if (variant == null || variant.isBlank()) return species;
+        String pretty = variant.substring(0, 1).toUpperCase(Locale.ROOT) + variant.substring(1).toLowerCase(Locale.ROOT);
+        return species + " (" + pretty + ")";
     }
 
     private boolean isPet(Entity entity) {
