@@ -717,6 +717,8 @@ public final class ShopManager implements Listener {
         buy.setItemMeta(buyMeta);
         inv.setItem(22, buy);
 
+        if (sellPrice(p) > 0) {
+            ItemStack sell = new ItemStack(Material.SNOWBALL);
             ItemMeta sm = sell.getItemMeta();
             sm.setDisplayName(ChatColor.RED + "Sell all of this item in inventory");
             sm.setLore(List.of(ChatColor.WHITE + "Value: " + ChatColor.RED + money(sellPrice(p)) + " coins each",
@@ -1057,7 +1059,7 @@ public final class ShopManager implements Listener {
     }
 
 
-(Player player) {
+    private void openHandSell(Player player) {
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH Hand Sell");
         ItemStack filler = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
         ItemMeta fillerMeta = filler.getItemMeta();
