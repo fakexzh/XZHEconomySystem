@@ -37,7 +37,7 @@ record QuestObjectiveSpec(Type type, List<String> targets, int quantity, Dimensi
             throw new IllegalArgumentException("Objective target is empty in " + raw);
         }
         for (String target : targets) {
-            if (!target.matches("(?:#[A-Z0-9_]+|[A-Z0-9_*]+)")) {
+            if (!target.matches("(?:#[A-Z0-9_]+|@[A-Z0-9_]+|[A-Z0-9_/*.-]+)")) {
                 throw new IllegalArgumentException("Invalid objective target '" + target + "' in " + raw);
             }
         }
