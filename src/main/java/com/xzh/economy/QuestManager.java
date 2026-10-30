@@ -223,6 +223,7 @@ public final class QuestManager implements Listener {
                     case BIOME -> "biome:";
                 };
                 String displayTarget = target.toLowerCase(Locale.ROOT).replace('_', ' ').replace("|", " or ")
+                        .replace("@roaming boss", "roaming boss")
                         .replace("#hostiles", "hostile mobs").replace("#raiders", "raiders")
                         .replace("#logs", "logs").replace("#overworld ores", "overworld ores")
                         .replace("#stone types", "stone types").replace("#fish junk", "fishing junk")
@@ -232,18 +233,26 @@ public final class QuestManager implements Listener {
                         .replace('_', ' ').replace('/', ' ').trim();
                 if (lootTarget.isBlank()) lootTarget = "structure";
                 String description = switch (spec.type()) {
-                    case MINE -> "Mine " + spec.quantity() + " " + displayTarget;
+                    case MINE -> target.equals("ANY") ? "Mine " + spec.quantity() + " blocks"
+                            : "Mine " + spec.quantity() + " " + displayTarget;
                     case HARVEST -> "Harvest " + spec.quantity() + " " + displayTarget;
                     case KILL -> "Defeat " + spec.quantity() + " " + displayTarget;
-                    case FISH -> "Catch " + spec.quantity() + " " + displayTarget;
-                    case BREED -> "Breed " + spec.quantity() + " " + displayTarget;
-                    case FEED -> "Feed " + spec.quantity() + " " + displayTarget + " until they enter love mode";
-                    case TAME -> "Tame " + spec.quantity() + " " + displayTarget;
-                    case SMELT -> "Smelt " + spec.quantity() + " " + displayTarget + " and collect the output";
-                    case CRAFT -> "Craft " + spec.quantity() + " " + displayTarget;
+                    case FISH -> target.equals("ANY") ? "Catch " + spec.quantity() + " fish"
+                            : "Catch " + spec.quantity() + " " + displayTarget;
+                    case BREED -> target.equals("ANY") ? "Breed " + spec.quantity() + " animals"
+                            : "Breed " + spec.quantity() + " " + displayTarget;
+                    case FEED -> target.equals("ANY") ? "Feed " + spec.quantity() + " animals until they enter love mode"
+                            : "Feed " + spec.quantity() + " " + displayTarget + " until they enter love mode";
+                    case TAME -> target.equals("ANY") ? "Tame " + spec.quantity() + " tameable animals"
+                            : "Tame " + spec.quantity() + " " + displayTarget;
+                    case SMELT -> target.equals("ANY") ? "Smelt " + spec.quantity() + " items and collect the output"
+                            : "Smelt " + spec.quantity() + " " + displayTarget + " and collect the output";
+                    case CRAFT -> target.equals("ANY") ? "Craft " + spec.quantity() + " items"
+                            : "Craft " + spec.quantity() + " " + displayTarget;
                     case ENCHANT -> "Use the third enchantment option " + spec.quantity() + " times";
                     case BARTER -> "Trade " + spec.quantity() + " gold ingots with piglins";
-                    case LOOT -> "Open " + spec.quantity() + " loot chests in " + lootTarget;
+                    case LOOT -> target.equals("ANY") ? "Open " + spec.quantity() + " loot chests"
+                            : "Open " + spec.quantity() + " loot chests in " + lootTarget;
                     case VAULT -> "Unlock " + spec.quantity() + (target.equals("OMINOUS") ? " ominous trial vaults" : " trial vaults");
                     case TRAVEL -> target.equals("ELYTRA") ? "Fly " + spec.quantity() + " blocks using an elytra"
                             : "Walk " + spec.quantity() + " blocks";
