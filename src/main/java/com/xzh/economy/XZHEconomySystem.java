@@ -524,7 +524,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 tell(sender, "§f/sendmoney <player> <amount> §7- request a confirmed transfer to them");
                 tell(sender, "§f/askmoney <player> <amount> §7- ask them for a confirmed payment");
                 tell(sender, "§f/shop §7- open Shop");
-                tell(sender, "§f/pet [transfer <player>] §7- command or transfer your targeted Baby Pet");
+                tell(sender, "§f/pet [all|transfer <player>] §7- call active pet, bring all pets, or transfer active pet");
                 tell(sender, "§f/unpet §7- stop your targeted pet from following");
                 tell(sender, "§f/bank §7- open Bank, deposits, withdrawals and loans");
                 if (sender.hasPermission("xzh.admin")) tell(sender, "§f/shopadmin <restock|stock> §7- manage global shop stock");
@@ -636,7 +636,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         } else if (command.getName().equalsIgnoreCase("quest") && args.length == 1) {
             suggestions.add("cancel");
         } else if (command.getName().equalsIgnoreCase("pet") && args.length == 1) {
-            suggestions.add("transfer");
+            suggestions.add("all"); suggestions.add("transfer");
         } else if ((command.getName().equalsIgnoreCase("pet") && args.length == 2 && args[0].equalsIgnoreCase("transfer"))
                 || (command.getName().equalsIgnoreCase("tpa") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("pay") && args.length == 1)
