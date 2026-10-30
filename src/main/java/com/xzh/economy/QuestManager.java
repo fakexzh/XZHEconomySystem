@@ -1286,7 +1286,7 @@ public final class QuestManager implements Listener {
 
     private int rewardForPack(Pack pack) {
         String id = pack.id();
-        if (id.startsWith("easy_") || id.startsWith("hard_") || id.startsWith("master_")) return pack.reward();
+        if (id.matches("(?i)[EHM][0-9]{3}") || id.startsWith("easy_") || id.startsWith("hard_") || id.startsWith("master_")) return pack.reward();
         double multiplier = 2.0;
         if (List.of("dragon_slayer", "wither_siege", "debris_hunter", "end_expedition",
                 "nether_blaze", "nether_hunter", "raid_supply", "shulker_sweep",
