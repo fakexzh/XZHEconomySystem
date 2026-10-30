@@ -748,7 +748,7 @@ public final class QuestManager implements Listener {
                 + location.getBlockX() + "." + location.getBlockY() + "." + location.getBlockZ();
     }
 
-    @EventHandler
+    @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlace(BlockPlaceEvent event) {
         if (event.isCancelled()) return;
         if (!plugin.getConfig().getBoolean("quests.v2.placed-block-tracking", true)) return;
