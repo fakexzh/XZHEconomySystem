@@ -200,16 +200,16 @@ public final class QuestManager implements Listener {
 
     private boolean tierUnlocked(Player player, String tier) {
         return switch (tier) {
-            case "hard" -> hasAdvancement(player, "minecraft:story/mine_diamond");
-            case "master" -> hasAdvancement(player, "minecraft:end/kill_dragon");
+            case "hard" -> hasAdvancement(player, "minecraft:nether/find_fortress");
+            case "master" -> hasAdvancement(player, "minecraft:end/find_end_city");
             default -> true;
         };
     }
 
     private String tierUnlockDescription(String tier) {
         return switch (tier) {
-            case "hard" -> "Unlock Hard packs by obtaining the Diamonds advancement";
-            case "master" -> "Unlock Master packs by defeating the Ender Dragon";
+            case "hard" -> "Unlock Hard packs by reaching A Terrible Fortress (minecraft:nether/find_fortress)";
+            case "master" -> "Unlock Master packs by reaching The City at the End of the Game (minecraft:end/find_end_city)";
             default -> "Easy packs are available from the start; individual packs have requirements";
         };
     }
