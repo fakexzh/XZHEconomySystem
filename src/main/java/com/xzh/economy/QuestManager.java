@@ -237,7 +237,7 @@ public final class QuestManager implements Listener {
                             ? "Harvest " + spec.quantity() + " crops"
                             : "Harvest " + spec.quantity() + " " + displayTarget;
                     case KILL -> "Defeat " + spec.quantity() + " " + displayTarget;
-                    case FISH -> target.equals("ANY") ? "Catch " + spec.quantity() + " fish"
+                    case FISH -> target.equals("ANY") ? "Catch " + spec.quantity() + " items with a fishing rod (fish, junk or treasure)"
                             : target.equals("#FISH_JUNK") ? "Catch " + spec.quantity() + " junk fishing items"
                             : target.equals("#FISH_TREASURE") ? "Catch " + spec.quantity() + " fishing treasure items"
                             : "Catch " + spec.quantity() + " " + displayTarget;
@@ -315,6 +315,55 @@ public final class QuestManager implements Listener {
         List<Pack> tierPacks = packs.stream().filter(candidate -> tierOf(candidate).equals(tierOf(pack))).toList();
         int index = tierPacks.indexOf(pack);
         return String.format(Locale.ROOT, "(%02d) %s", Math.max(0, index + 1), pack.name());
+    }
+
+    private String coloredPackTitle(Pack pack, ChatColor nameColor) {
+        String numbered = numberedPackName(pack); // "(01) Quest name"
+        int close = numbered.indexOf(')');
+        if (close < 0) return nameColor + numbered;
+        return ChatColor.GOLD + numbered.substring(0, close + 1) + " " + nameColor + numbered.substring(close + 1).trim();
+    }
+    private static final java.util.regex.Pattern TASK_NUMBER = java.util.regex.Pattern.compile("^(\\D*?)(\\d[\\d,]*)(.*)$");
+    private static final java.util.regex.Pattern TASK_CLAUSE = java.util.regex.Pattern.compile("^(.*?)( (?:by|until|and collect|without|using|times|in)\\b.*)$");
+    /** Plain-English task line: green verb, bold yellow amount, aqua target, grey extra condition. */
+    private String taskLine(Objective objective) {
+        String text = objective.description();
+        java.util.regex.Matcher m = TASK_NUMBER.matcher(text);
+        if (!m.matches()) return ChatColor.GREEN + "\u00bb " + ChatColor.WHITE + text;
+        String target = m.group(3), clause = "";
+        java.util.regex.Matcher c = TASK_CLAUSE.matcher(target);
+        if (c.matches()) { target = c.group(1); clause = c.group(2); }
+        return ChatColor.GREEN + "\u00bb " + m.group(1) + ChatColor.YELLOW + ChatColor.BOLD + m.group(2)
+                + ChatColor.RESET + ChatColor.AQUA + target + ChatColor.GRAY + clause;
+    }
+    private void addTaskLore(List<String> lore, Pack pack) {
+        lore.add(ChatColor.AQUA + "What to do:");
+        Set<QuestObjectiveSpec.Type> types = new java.util.LinkedHashSet<>();
+        for (Objective objective : pack.objectives()) lore.add(taskLine(objective));
+        catalogueEntryFor(pack.id()).ifPresent(entry -> entry.parsedObjectives().forEach(spec -> types.add(spec.type())));
+        boolean projectile = plugin.getConfig().getBoolean("quests.v2.projectile-kill-credit", false);
+        int spawnerCap = plugin.getConfig().getInt("quests.v2.spawner-kill-cap", 10);
+        for (QuestObjectiveSpec.Type type : types) switch (type) {
+            case MINE -> lore.add(ChatColor.DARK_GRAY + "Blocks you placed yourself do not count.");
+            case HARVEST -> lore.add(ChatColor.DARK_GRAY + "Only fully grown crops count.");
+            case KILL -> {
+                lore.add(ChatColor.DARK_GRAY + (projectile ? "You must land the final hit (melee, arrow or trident)." : "You must land the final hit in melee."));
+                lore.add(ChatColor.DARK_GRAY + "Spawn-egg, breeding and split mobs do not count; each spawner counts " + spawnerCap + " kills.");
+            }
+            case FISH -> lore.add(ChatColor.DARK_GRAY + "Use a fishing rod; each catch counts once.");
+            case BREED -> lore.add(ChatColor.DARK_GRAY + "Feed two adult animals so a baby is born.");
+            case FEED -> lore.add(ChatColor.DARK_GRAY + "Feed each animal its food; one credit per animal per minute.");
+            case TAME -> lore.add(ChatColor.DARK_GRAY + "Tame wild animals; already tamed pets do not count.");
+            case SMELT -> lore.add(ChatColor.DARK_GRAY + "Take the finished items out of the furnace yourself.");
+            case CRAFT -> lore.add(ChatColor.DARK_GRAY + "Craft the items yourself in a crafting grid.");
+            case ENCHANT -> lore.add(ChatColor.DARK_GRAY + "Use the bottom (third) option of an enchanting table.");
+            case BARTER -> lore.add(ChatColor.DARK_GRAY + "Right-click the piglin and wait for it to finish the trade.");
+            case LOOT -> lore.add(ChatColor.DARK_GRAY + "Open chests nobody has opened before; each chest counts once.");
+            case VAULT -> lore.add(ChatColor.DARK_GRAY + "Unlock vaults with trial keys; each vault counts once.");
+            case TRAVEL -> lore.add(ChatColor.DARK_GRAY + "Boats, minecarts, mounts, teleports and creative flight do not count.");
+            case BIOME -> lore.add(ChatColor.DARK_GRAY + "Walk or fly into new biomes; teleporting does not count.");
+        }
+        lore.add(ChatColor.DARK_GRAY + "Progress counts only while you are actively playing.");
     }
 
     private boolean tierUnlocked(Player player, String tier) {
@@ -569,13 +618,12 @@ public final class QuestManager implements Listener {
                     .orElseGet(() -> tierUnlocked(player, tierOf(pack)) && hasAdvancement(player, pack.advancement()));
             List<String> lore = new ArrayList<>();
             String groupName = catalogueEntryFor(pack.id()).map(QuestCatalogue.Entry::groupName).orElse("General");
-            lore.add(ChatColor.GOLD + numberedPackName(pack));
+            lore.add(coloredPackTitle(pack, ChatColor.WHITE));
             lore.add(ChatColor.GRAY + "Group: " + ChatColor.WHITE + groupName);
             lore.add(ChatColor.GRAY + "Fee: " + ChatColor.YELLOW + pack.cost() + " coins");
             lore.add(ChatColor.GRAY + "Reward: " + ChatColor.GREEN + rewardForPack(pack) + " coins");
             lore.add(ChatColor.GRAY + "Profit: " + ChatColor.GOLD + "+" + (rewardForPack(pack) - pack.cost()) + " coins");
-            lore.add(ChatColor.AQUA + "What to do:");
-            for (Objective objective : pack.objectives()) lore.add(ChatColor.YELLOW + "• " + ChatColor.WHITE + objective.description());
+            addTaskLore(lore, pack);
             if (done) {
                 lore.add(ChatColor.DARK_GRAY + "COMPLETED FOR LIFE — reward already claimed");
             } else {
@@ -596,8 +644,7 @@ public final class QuestManager implements Listener {
             lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes"
                     : ChatColor.GRAY + "No time limit");
             Material icon = done ? Material.BLACK_STAINED_GLASS_PANE : unlocked ? pack.icon() : Material.BARRIER;
-            add(inv, i - pg * 45, icon, (done ? ChatColor.DARK_GRAY : unlocked ? ChatColor.YELLOW : ChatColor.RED)
-                    + numberedPackName(pack), done ? "pack-completed" : unlocked ? "pack-select" : "locked", pack.id(), lore);
+            add(inv, i - pg * 45, icon, coloredPackTitle(pack, done ? ChatColor.DARK_GRAY : unlocked ? ChatColor.YELLOW : ChatColor.RED), done ? "pack-completed" : unlocked ? "pack-select" : "locked", pack.id(), lore);
         }
         if (pg > 0) add(inv, 45, Material.PAPER, ChatColor.WHITE + "Previous page", "pack-page", tier + ":" + (pg - 1));
         add(inv, 49, Material.ARROW, ChatColor.WHITE + "Difficulties", "back-tiers", "");
@@ -608,12 +655,11 @@ public final class QuestManager implements Listener {
     private void confirmPack(Player player, Pack pack) {
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Confirm quest pack");
         List<String> lore = new ArrayList<>();
-        lore.add(ChatColor.GOLD + numberedPackName(pack));
+        lore.add(coloredPackTitle(pack, ChatColor.WHITE));
         lore.add(ChatColor.GRAY + "Fee: " + ChatColor.YELLOW + pack.cost() + " coins");
         lore.add(ChatColor.GRAY + "Reward: " + ChatColor.GREEN + rewardForPack(pack) + " coins");
         lore.add(ChatColor.GRAY + "Profit: " + ChatColor.GOLD + "+" + (rewardForPack(pack) - pack.cost()) + " coins");
-        lore.add(ChatColor.AQUA + "What to do:");
-        for (Objective objective : pack.objectives()) lore.add(ChatColor.YELLOW + "• " + ChatColor.WHITE + objective.description());
+        addTaskLore(lore, pack);
         catalogueEntryFor(pack.id()).ifPresent(entry -> {
             for (String key : missingCatalogueUnlocks(player, entry)) {
                 String normalized = key.contains(":") ? key : "minecraft:" + key;
@@ -622,7 +668,7 @@ public final class QuestManager implements Listener {
         });
         int timerMinutes = packTimerLimitMinutes(pack.id());
         lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
-        add(inv, 13, pack.icon(), ChatColor.YELLOW + numberedPackName(pack), "pack-info", pack.id(), lore);
+        add(inv, 13, pack.icon(), coloredPackTitle(pack, ChatColor.YELLOW), "pack-info", pack.id(), lore);
         add(inv, 11, Material.SLIME_BALL, ChatColor.GREEN + "Confirm purchase", "pack-buy", pack.id());
         add(inv, 15, Material.FIRE_CHARGE, ChatColor.RED + "Cancel", "back-packs", pack.id());
         add(inv, 22, Material.ARROW, ChatColor.WHITE + "Back to packs", "back-packs", pack.id());
@@ -929,7 +975,8 @@ public final class QuestManager implements Listener {
                 }
             });
         }
-        String id = material.name();
+        // Kelp stalks are KELP_PLANT blocks; only the top tip is KELP. Count both as kelp.
+        String id = material == Material.KELP_PLANT ? Material.KELP.name() : material.name();
         // Placed blocks are excluded from MINE; planted crops remain valid HARVEST targets.
         if (!playerPlaced && material != Material.COBBLESTONE) {
             incrementTarget(p, "break:" + id, 1);
@@ -1062,8 +1109,12 @@ public final class QuestManager implements Listener {
             case WARDEN, ENDER_DRAGON -> reason == CreatureSpawnEvent.SpawnReason.DEFAULT;
             default -> false;
         };
-        if (!allowed.contains(reason) && !legitimateBossSpawn) return;
         var pdc = event.getEntity().getPersistentDataContainer();
+        if (!allowed.contains(reason) && !legitimateBossSpawn) {
+            // Distinguish intentionally excluded spawns from mobs created before tagging existed.
+            pdc.set(mobSpawnReasonKey, PersistentDataType.STRING, "EXCLUDED_" + reason.name());
+            return;
+        }
         pdc.set(mobSpawnReasonKey, PersistentDataType.STRING, reason.name());
         if (reason == CreatureSpawnEvent.SpawnReason.SPAWNER
                 || reason == CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER) {
@@ -1084,11 +1135,16 @@ public final class QuestManager implements Listener {
     public void onDirectMeleeDamage(EntityDamageByEntityEvent event) {
         if (event.isCancelled()) return;
         var pdc = event.getEntity().getPersistentDataContainer();
-        if (event.getDamager() instanceof Player attacker) {
-            pdc.set(directMeleeKillerKey, PersistentDataType.STRING, attacker.getUniqueId().toString());
-        } else {
-            pdc.remove(directMeleeKillerKey);
+        Player credited = null;
+        if (event.getDamager() instanceof Player attacker) credited = attacker;
+        else if (plugin.getConfig().getBoolean("quests.v2.projectile-kill-credit", false)
+                && event.getDamager() instanceof org.bukkit.entity.Projectile projectile
+                && projectile.getShooter() instanceof Player shooter) {
+            // Optional: arrows, tridents and deflected fireballs fired by the player also hold the kill credit.
+            credited = shooter;
         }
+        if (credited != null) pdc.set(directMeleeKillerKey, PersistentDataType.STRING, credited.getUniqueId().toString());
+        else pdc.remove(directMeleeKillerKey);
     }
 
     @EventHandler
@@ -1099,10 +1155,19 @@ public final class QuestManager implements Listener {
         data.set("activity." + p.getUniqueId(), System.currentTimeMillis());
         String spawnReason = event.getEntity().getPersistentDataContainer()
                 .get(mobSpawnReasonKey, PersistentDataType.STRING);
-        if (spawnReason == null) return; // Unclassified, command, egg, conversion and custom spawns never count.
+        boolean roamingBossKill = event.getEntity().getPersistentDataContainer()
+                .getOrDefault(roamingBossKey, PersistentDataType.BYTE, (byte) 0) == (byte) 1;
+        // Old untagged mobs are legitimate legacy spawns; newly excluded spawns carry EXCLUDED_*.
+        if (spawnReason == null) spawnReason = "LEGACY";
+        if (spawnReason.startsWith("EXCLUDED_") && !roamingBossKill) return;
         String meleeKiller = event.getEntity().getPersistentDataContainer()
                 .get(directMeleeKillerKey, PersistentDataType.STRING);
         if (meleeKiller == null || !meleeKiller.equals(p.getUniqueId().toString())) return;
+        if (roamingBossKill) {
+            // Roaming bosses count only toward their dedicated objective, never ordinary mob objectives.
+            incrementTarget(p, "kill:ROAMING_BOSS", 1);
+            return;
+        }
         String spawner = event.getEntity().getPersistentDataContainer()
                 .get(mobSpawnerKey, PersistentDataType.STRING);
         if (spawner != null) {
@@ -1116,9 +1181,6 @@ public final class QuestManager implements Listener {
             if (used >= limit) return;
             data.set(countPath, used + 1);
         }
-        boolean roamingBoss = event.getEntity().getPersistentDataContainer()
-                .getOrDefault(roamingBossKey, PersistentDataType.BYTE, (byte) 0) == (byte) 1;
-        if (roamingBoss) incrementTarget(p, "kill:ROAMING_BOSS", 1);
         incrementTarget(p, "kill:ANY", 1);
         incrementTarget(p, "kill:" + event.getEntityType().name(), 1);
         if (spawnReason.equals(CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER.name())) {
@@ -1291,6 +1353,8 @@ public final class QuestManager implements Listener {
                 || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         data.set("activity." + player.getUniqueId(), System.currentTimeMillis());
         String caughtType = caught.getItemStack().getType().name();
+        // Unenchanted fishing rods are junk; treasure rods carry enchantments.
+        if (caught.getItemStack().getType() == Material.FISHING_ROD && caught.getItemStack().getEnchantments().isEmpty()) caughtType = "DAMAGED_FISHING_ROD";
         incrementTarget(player, "fish:" + caughtType, 1);
         incrementTarget(player, "fish:ANY", 1);
         recordGlobalProgress(player, "fish", 1);
@@ -1346,8 +1410,12 @@ public final class QuestManager implements Listener {
         if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
                 || player.getGameMode() == org.bukkit.GameMode.SPECTATOR
                 || player.getInventory().getItemInMainHand().getType() != Material.GOLD_INGOT) return;
+        // Keep the offer valid for vanilla piglin admiration and prune expired entries.
+        long offerNow = System.currentTimeMillis();
+        piglinOfferTimes.values().removeIf(time -> offerNow - time > 60_000L);
+        piglinOfferPlayers.keySet().removeIf(key -> !piglinOfferTimes.containsKey(key));
         piglinOfferPlayers.put(piglin.getUniqueId(), player.getUniqueId());
-        piglinOfferTimes.put(piglin.getUniqueId(), System.currentTimeMillis());
+        piglinOfferTimes.put(piglin.getUniqueId(), offerNow);
     }
 
     @EventHandler
@@ -1356,7 +1424,7 @@ public final class QuestManager implements Listener {
         UUID piglinId = event.getEntity().getUniqueId();
         Long offeredAt = piglinOfferTimes.remove(piglinId);
         UUID playerId = piglinOfferPlayers.remove(piglinId);
-        if (offeredAt == null || playerId == null || System.currentTimeMillis() - offeredAt > 3_000L) return;
+        if (offeredAt == null || playerId == null || System.currentTimeMillis() - offeredAt > 15_000L) return;
         Player player = Bukkit.getPlayer(playerId);
         if (player == null || !player.isOnline()
                 || player.getGameMode() == org.bukkit.GameMode.CREATIVE
@@ -1466,6 +1534,7 @@ public final class QuestManager implements Listener {
                 default -> false;
             };
         }
+        if (actual.equals("DAMAGED_FISHING_ROD")) return tag.equals("#FISH_JUNK");
         Material material = Material.matchMaterial(actual);
         if (material == null) return false;
         return switch (tag) {
@@ -1476,7 +1545,7 @@ public final class QuestManager implements Listener {
                     "DEEPSLATE_GOLD_ORE", "DEEPSLATE_REDSTONE_ORE", "DEEPSLATE_LAPIS_ORE",
                     "DEEPSLATE_DIAMOND_ORE", "DEEPSLATE_EMERALD_ORE").contains(actual);
             case "#STONE_TYPES" -> Set.of("STONE", "DEEPSLATE", "ANDESITE", "DIORITE", "GRANITE", "TUFF").contains(actual);
-            case "#FISH_JUNK" -> Set.of("LILY_PAD", "BOWL", "LEATHER", "LEATHER_BOOTS", "ROTTEN_FLESH",
+            case "#FISH_JUNK" -> Set.of("LILY_PAD", "BOWL", "LEATHER", "LEATHER_BOOTS", "ROTTEN_FLESH", "DAMAGED_FISHING_ROD", "BAMBOO",
                     "STICK", "STRING", "POTION", "BONE", "INK_SAC", "TRIPWIRE_HOOK").contains(actual);
             // Vanilla fishing rods in the treasure table are enchanted, not junk.
             case "#FISH_TREASURE" -> Set.of("BOW", "ENCHANTED_BOOK", "FISHING_ROD", "NAME_TAG",
