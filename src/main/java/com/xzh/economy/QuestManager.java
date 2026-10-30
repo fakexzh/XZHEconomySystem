@@ -1166,6 +1166,7 @@ public final class QuestManager implements Listener {
         if (split <= 0 || eventSplit <= 0) return false;
         String objectiveType = stored.substring(0, split);
         String targetExpression = stored.substring(split + 1);
+        if (targetExpression.equals("@ROAMING_BOSS")) return objectiveType.equals("kill") && eventTarget.equals("kill:ROAMING_BOSS");
         if (targetExpression.startsWith("@")) {
             int dimensionSplit = targetExpression.indexOf(':');
             if (dimensionSplit < 0) return false;
