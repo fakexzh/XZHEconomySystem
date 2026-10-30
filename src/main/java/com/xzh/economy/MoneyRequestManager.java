@@ -95,7 +95,7 @@ public final class MoneyRequestManager implements Listener {
     private void openPrompt(Player recipient, Player requester, Pending pending) {
         String actionText = pending.kind() == Kind.SEND ? "wants to send you" : "asks you to send";
         net.md_5.bungee.api.chat.TextComponent prompt = new net.md_5.bungee.api.chat.TextComponent(
-                "§6[XZH] §e" + requester.getName() + " " + actionText + " " + pending.amount() + " coins. ");
+                "§6[MONEY] §e" + requester.getName() + " " + actionText + " " + pending.amount() + " coins. ");
         net.md_5.bungee.api.chat.TextComponent accept = new net.md_5.bungee.api.chat.TextComponent("§a[ACCEPT]");
         accept.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
                 net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/moneyresponse accept"));
