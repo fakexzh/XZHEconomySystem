@@ -1211,11 +1211,30 @@ public final class QuestManager implements Listener {
     }
 
     private boolean hasAdvancement(Player player, String rawKey) {
-        NamespacedKey key = NamespacedKey.fromString(rawKey);
+        String normalized = rawKey != null && rawKey.contains(":") ? rawKey : "minecraft:" + rawKey;
+        NamespacedKey key = NamespacedKey.fromString(normalized);
         if (key == null) return false;
         Advancement advancement = Bukkit.getAdvancement(key);
         if (advancement == null) return false;
         return player.getAdvancementProgress(advancement).isDone();
+    }
+
+    private boolean catalogueEntryUnlocked(Player player, QuestCatalogue.Entry entry) {
+        if (!tierUnlocked(player, entry.tier()) || !hasAdvancement(player, entry.tierGate())) return false;
+        for (String key : entry.unlock()) if (!hasAdvancement(player, key)) return false;
+        return true;
+    }
+
+    private List<String> missingCatalogueUnlocks(Player player, QuestCatalogue.Entry entry) {
+        List<String> missing = new ArrayList<>();
+        if (!tierUnlocked(player, entry.tier())) missing.add(entry.tierGate());
+        for (String key : entry.unlock()) {
+            if (!hasAdvancement(player, key)) {
+                String normalized = key.contains(":") ? key : "minecraft:" + key;
+                if (!missing.contains(normalized)) missing.add(normalized);
+            }
+        }
+        return List.copyOf(missing);
     }
 
     private void resetEventIfNeeded() {
