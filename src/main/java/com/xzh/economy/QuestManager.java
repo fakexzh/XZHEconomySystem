@@ -217,7 +217,29 @@ public final class QuestManager implements Listener {
                     case TRAVEL -> "travel:";
                     case BIOME -> "biome:";
                 };
-                String description = spec.quantity() + " " + target.toLowerCase(Locale.ROOT).replace('_', ' ');
+                String displayTarget = target.toLowerCase(Locale.ROOT).replace('_', ' ')
+                        .replace("#hostiles", "hostile mobs").replace("#raiders", "raiders")
+                        .replace("#logs", "logs").replace("#overworld ores", "overworld ores")
+                        .replace("#stone types", "stone types").replace("#fish junk", "fishing junk")
+                        .replace("#fish treasure", "fishing treasure").replace("#cooked food", "cooked food")
+                        .replace("#trial spawn mobs", "trial-spawner mobs");
+                String description = switch (spec.type()) {
+                    case MINE -> "Mine " + spec.quantity() + " " + displayTarget;
+                    case HARVEST -> "Harvest " + spec.quantity() + " " + displayTarget;
+                    case KILL -> "Kill " + spec.quantity() + " " + displayTarget;
+                    case FISH -> "Catch " + spec.quantity() + " " + displayTarget;
+                    case BREED -> "Breed " + spec.quantity() + " " + displayTarget;
+                    case FEED -> "Feed " + spec.quantity() + " " + displayTarget;
+                    case TAME -> "Tame " + spec.quantity() + " " + displayTarget;
+                    case SMELT -> "Smelt " + spec.quantity() + " " + displayTarget;
+                    case CRAFT -> "Craft " + spec.quantity() + " " + displayTarget;
+                    case ENCHANT -> "Enchant " + spec.quantity() + " " + displayTarget;
+                    case BARTER -> "Complete " + spec.quantity() + " piglin barters";
+                    case LOOT -> "Open " + spec.quantity() + " loot containers (" + displayTarget + ")";
+                    case VAULT -> "Open " + spec.quantity() + " vaults (" + displayTarget + ")";
+                    case TRAVEL -> "Travel " + spec.quantity() + " blocks " + (target.equals("FOOT") ? "on foot" : target.equals("ELYTRA") ? "with elytra" : "");
+                    case BIOME -> "Visit " + spec.quantity() + " distinct biomes";
+                };
                 String dimension = spec.dimension() == QuestObjectiveSpec.Dimension.ANY ? ""
                         : "@" + spec.dimension().name();
                 objectives.add(new Objective(prefix + dimension + ":" + target, spec.quantity(), description));
