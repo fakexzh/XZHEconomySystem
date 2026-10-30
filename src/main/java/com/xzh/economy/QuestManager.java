@@ -34,6 +34,7 @@ import org.bukkit.event.entity.EntityBreedEvent;
 import org.bukkit.event.entity.EntityTameEvent;
 import org.bukkit.event.entity.EntityEnterLoveModeEvent;
 import org.bukkit.event.entity.PiglinBarterEvent;
+import org.bukkit.event.world.LootGenerateEvent;
 import org.bukkit.entity.Animals;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.inventory.Inventory;
@@ -844,21 +845,16 @@ public final class QuestManager implements Listener {
     }
 
     @EventHandler
-    public void onLootableChestOpen(PlayerInteractEvent event) {
-        if (event.isCancelled() || event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND
-                || event.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK
-                || event.getClickedBlock() == null) return;
-        Player player = event.getPlayer();
-        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
+    public void onLootGenerate(LootGenerateEvent event) {
+        if (event.isCancelled() || !(event.getEntity() instanceof Player player)
+                || player.getGameMode() == org.bukkit.GameMode.CREATIVE
                 || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
-        if (!(event.getClickedBlock().getState() instanceof org.bukkit.loot.Lootable lootable)
-                || lootable.getLootTable() == null) return;
-        String table = lootable.getLootTable().getKey().getKey().toLowerCase(Locale.ROOT);
+        String table = event.getLootTable().getKey().getKey().toLowerCase(Locale.ROOT);
         String active = data.getString(player.getUniqueId() + ".active", "");
         if (active.isBlank()) return;
-        String locationKey = event.getClickedBlock().getWorld().getUID() + ":"
-                + event.getClickedBlock().getX() + ":" + event.getClickedBlock().getY() + ":"
-                + event.getClickedBlock().getZ();
+        org.bukkit.Location location = event.getLootContext().getLocation();
+        String locationKey = location.getWorld().getUID() + ":"
+                + location.getBlockX() + ":" + location.getBlockY() + ":" + location.getBlockZ();
         String openedPath = player.getUniqueId() + ".loot-opened." + active + "." + locationKey.replace(':', '_');
         if (data.getBoolean(openedPath, false)) return;
         data.set(openedPath, true);
