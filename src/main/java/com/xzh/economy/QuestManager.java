@@ -188,7 +188,7 @@ public final class QuestManager implements Listener {
         new Pack("pork_supply", "Pork Supply", Material.PORKCHOP, 562, 843, "minecraft:husbandry/balanced_diet", List.of(new Objective("collect:PORKCHOP", 64, "Collect 64 Porkchops"))),
         new Pack("potato_farmer", "Potato Farmer", Material.POTATO, 609, 853, "minecraft:husbandry/plant_seed", List.of(new Objective("harvest:POTATO", 128, "Harvest 128 fully grown Potato crops"))),
         new Pack("beetroot_farmer", "Beetroot Farmer", Material.BEETROOT, 105, 147, "minecraft:husbandry/plant_seed", List.of(new Objective("harvest:BEETROOT", 128, "Harvest 128 fully grown Beetroot crops"))),
-        new Pack("melon_delivery", "Melon Delivery", Material.MELON_SLICE, 152, 228, "minecraft:husbandry/plant_seed", List.of(new Objective("harvest:MELON_SLICE", 192, "Harvest 192 melons"))),
+        new Pack("melon_delivery", "Melon Delivery", Material.MELON_SLICE, 152, 228, "minecraft:husbandry/plant_seed", List.of(new Objective("harvest:MELON", 192, "Harvest 192 melons"))),
         new Pack("pumpkin_delivery", "Pumpkin Delivery", Material.PUMPKIN, 199, 279, "minecraft:husbandry/plant_seed", List.of(new Objective("harvest:PUMPKIN", 64, "Harvest 64 pumpkins")))
     );
 
@@ -306,7 +306,7 @@ public final class QuestManager implements Listener {
         new RandomQuest("Cod Fishing Run", Material.FISHING_ROD, 120, 180, new Objective("fish:COD", 16, "Catch 16 Cod")),
         new RandomQuest("Potato Harvest", Material.POTATO, 100, 150, new Objective("harvest:POTATO", 128, "Harvest 128 fully grown Potato crops")),
         new RandomQuest("Pumpkin Season", Material.PUMPKIN, 125, 188, new Objective("harvest:PUMPKIN", 64, "Harvest 64 pumpkins")),
-        new RandomQuest("Melon Shipment", Material.MELON_SLICE, 110, 165, new Objective("harvest:MELON_SLICE", 192, "Harvest 192 melons")),
+        new RandomQuest("Melon Shipment", Material.MELON_SLICE, 110, 165, new Objective("harvest:MELON", 192, "Harvest 192 melons")),
         new RandomQuest("Copper Ore Contract", Material.RAW_COPPER, 145, 218, new Objective("break:COPPER_ORE", 64, "Mine 64 Copper Ore")),
         new RandomQuest("Lapis Prospecting", Material.LAPIS_LAZULI, 175, 263, new Objective("break:LAPIS_ORE", 32, "Mine 32 Lapis Lazuli Ore")),
         new RandomQuest("Redstone Extraction", Material.REDSTONE, 165, 248, new Objective("break:REDSTONE_ORE", 48, "Mine 48 Redstone Ore"))
@@ -856,7 +856,7 @@ public final class QuestManager implements Listener {
                 case POTATOES -> Material.POTATO;
                 case BEETROOTS -> Material.BEETROOT;
                 case NETHER_WART -> Material.NETHER_WART;
-                case COCOA -> Material.COCOA_BEANS;
+                case COCOA -> Material.COCOA;
                 default -> null;
             };
             if (harvested != null) {
@@ -866,7 +866,7 @@ public final class QuestManager implements Listener {
         }
         // Placed melon/pumpkin blocks are excluded; their natural stems remain untouched.
         if (!playerPlaced && material == Material.MELON) {
-            incrementTarget(p, "harvest:MELON_SLICE", 1);
+            incrementTarget(p, "harvest:MELON", 1);
             matureCrop = true;
         } else if (!playerPlaced && material == Material.PUMPKIN) {
             incrementTarget(p, "harvest:PUMPKIN", 1);
@@ -925,7 +925,7 @@ public final class QuestManager implements Listener {
                 || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         Material type = event.getHarvestedBlock().getType();
         if (type == Material.SWEET_BERRY_BUSH) {
-            incrementTarget(player, "harvest:SWEET_BERRIES", 1);
+            incrementTarget(player, "harvest:SWEET_BERRY_BUSH", 1);
         } else if (type == Material.CAVE_VINES || type == Material.CAVE_VINES_PLANT) {
             incrementTarget(player, "harvest:GLOW_BERRIES", 1);
         } else return;
