@@ -954,7 +954,16 @@ public final class QuestManager implements Listener {
                 CreatureSpawnEvent.SpawnReason.CURED, CreatureSpawnEvent.SpawnReason.LIGHTNING,
                 CreatureSpawnEvent.SpawnReason.SILVERFISH_BLOCK, CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER,
                 CreatureSpawnEvent.SpawnReason.OMINOUS_ITEM_SPAWNER, CreatureSpawnEvent.SpawnReason.SPAWNER);
-        if (!allowed.contains(reason)) return;
+        // These three bosses use vanilla spawn reasons that are not part of the
+        // general mob allowlist. Admit only their legitimate game-mechanic spawns:
+        // Withers built by players, and Wardens/Ender Dragons reported as DEFAULT.
+        // COMMAND and CUSTOM spawns remain excluded.
+        boolean legitimateBossSpawn = switch (event.getEntityType()) {
+            case WITHER -> reason == CreatureSpawnEvent.SpawnReason.BUILD_WITHER;
+            case WARDEN, ENDER_DRAGON -> reason == CreatureSpawnEvent.SpawnReason.DEFAULT;
+            default -> false;
+        };
+        if (!allowed.contains(reason) && !legitimateBossSpawn) return;
         var pdc = event.getEntity().getPersistentDataContainer();
         pdc.set(mobSpawnReasonKey, PersistentDataType.STRING, reason.name());
         if (reason == CreatureSpawnEvent.SpawnReason.SPAWNER
