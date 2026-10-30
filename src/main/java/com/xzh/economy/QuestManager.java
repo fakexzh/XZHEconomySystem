@@ -1196,8 +1196,9 @@ public final class QuestManager implements Listener {
     }
 
     private boolean objectiveTagMatches(String tag, String actual) {
-        if (actual.startsWith("KILL_")) {
-            String entity = actual.substring("KILL_".length());
+        if (actual.startsWith("KILL_") || actual.startsWith("TRIAL_KILL_")) {
+            String entity = actual.startsWith("TRIAL_KILL_")
+                    ? actual.substring("TRIAL_KILL_".length()) : actual.substring("KILL_".length());
             return switch (tag) {
                 case "#HOSTILES" -> {
                     EntityType type;
