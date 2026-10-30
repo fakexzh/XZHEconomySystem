@@ -289,6 +289,21 @@ public final class QuestManager implements Listener {
         }
     }
 
+    /**
+     * Integration hook for XZHSurvivalPlugin's tree-felling listener.
+     * The caller must invoke this once per non-player-placed felled log and only
+     * after its own cancellation/ownership checks have passed.
+     */
+    public void recordFelledLogs(Player player, Material material, int amount) {
+        if (player == null || material == null || amount <= 0
+                || player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        String name = material.name();
+        if (!(name.endsWith("_LOG") || name.endsWith("_STEM"))) return;
+        incrementTarget(player, "break:" + name, amount);
+        recordGlobalProgress(player, "wood", amount);
+    }
+
     public void adminClearQuest(UUID id) {
         data.set(id.toString(), null);
         Player player = Bukkit.getPlayer(id);
