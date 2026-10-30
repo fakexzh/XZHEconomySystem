@@ -1,6 +1,10 @@
 package com.xzh.economy;
 
 import org.bukkit.Material;
+import org.bukkit.block.Biome;
+import org.bukkit.entity.Animals;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Tameable;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -68,9 +72,12 @@ final class QuestCatalogue {
                 }
                 List<QuestObjectiveSpec> parsedObjectives = new ArrayList<>(objectives.size());
                 for (String objective : objectives) {
-                    try { parsedObjectives.add(QuestObjectiveSpec.parse(objective)); }
-                    catch (IllegalArgumentException ex) {
-                        throw new IllegalStateException("Invalid objective grammar in " + id + ": " + ex.getMessage(), ex);
+                    try {
+                        QuestObjectiveSpec spec = QuestObjectiveSpec.parse(objective);
+                        validateObjectiveTargets(id, spec);
+                        parsedObjectives.add(spec);
+                    } catch (IllegalArgumentException ex) {
+                        throw new IllegalStateException("Invalid or unsupported objective in " + id + ": " + ex.getMessage(), ex);
                     }
                 }
                 int fee = integer(q, "fee");
@@ -96,6 +103,78 @@ final class QuestCatalogue {
         } catch (Exception ex) {
             throw new IllegalStateException("Could not load approved quest catalogue: " + ex.getMessage(), ex);
         }
+    }
+
+    private static void validateObjectiveTargets(String questId, QuestObjectiveSpec spec) {
+        for (String target : spec.targets()) {
+            boolean valid = switch (spec.type()) {
+                case MINE -> Set.of("#LOGS", "#OVERWORLD_ORES", "#STONE_TYPES", "ANY", "ANY_ORE").contains(target)
+                        || isBlock(target);
+                case HARVEST -> Set.of("ANY", "ANY_CROP", "WHEAT", "CARROT", "POTATO", "BEETROOT",
+                        "MELON", "PUMPKIN", "SWEET_BERRY_BUSH", "COCOA", "NETHER_WART", "GLOW_BERRIES").contains(target);
+                case KILL -> Set.of("ANY", "#HOSTILES", "#RAIDERS", "#TRIAL_SPAWN_MOBS", "@ROAMING_BOSS").contains(target)
+                        || isEntityType(target);
+                case FISH -> Set.of("ANY", "#FISH_JUNK", "#FISH_TREASURE").contains(target) || isItem(target);
+                case BREED -> target.equals("ANY") || isAnimal(target);
+                case FEED -> target.equals("ANY") || isAnimal(target);
+                case TAME -> target.equals("ANY") || isTameable(target);
+                case SMELT -> target.equals("ANY") || target.equals("#COOKED_FOOD")
+                        || Set.of("IRON_INGOT", "GOLD_INGOT", "COPPER_INGOT", "NETHERITE_SCRAP", "GLASS",
+                        "BRICK", "STONE", "CHARCOAL", "TERRACOTTA", "COOKED_BEEF", "COOKED_PORKCHOP",
+                        "COOKED_MUTTON", "COOKED_CHICKEN", "COOKED_RABBIT", "COOKED_COD",
+                        "COOKED_SALMON", "BAKED_POTATO", "DRIED_KELP").contains(target);
+                case CRAFT -> Set.of("BREAD", "PUMPKIN_PIE", "CAKE", "COOKIE", "LANTERN", "SHIELD",
+                        "BUCKET", "BOOKSHELF", "IRON_HELMET", "IRON_CHESTPLATE",
+                        "IRON_LEGGINGS", "IRON_BOOTS", "ANY").contains(target);
+                case ENCHANT -> Set.of("ANY", "SLOT3").contains(target) || isItem(target);
+                case BARTER -> target.equals("ANY");
+                case LOOT -> target.equals("ANY") || target.startsWith("chests/") || target.startsWith("underwater_ruin_");
+                case VAULT -> Set.of("ANY", "OMINOUS").contains(target);
+                case TRAVEL -> Set.of("ANY", "FOOT", "ELYTRA").contains(target);
+                case BIOME -> target.equals("ANY") || isBiome(target);
+            };
+            if (!valid) throw new IllegalArgumentException("target '" + target + "' has no supported " + spec.type() + " mechanic");
+        }
+        if (spec.dimension() != QuestObjectiveSpec.Dimension.ANY
+                && !Set.of(QuestObjectiveSpec.Type.MINE, QuestObjectiveSpec.Type.KILL,
+                        QuestObjectiveSpec.Type.FISH, QuestObjectiveSpec.Type.TRAVEL,
+                        QuestObjectiveSpec.Type.BIOME).contains(spec.type())) {
+            throw new IllegalArgumentException("dimension filters are not supported for " + spec.type());
+        }
+    }
+
+    private static boolean isBlock(String target) {
+        Material material = Material.matchMaterial(target);
+        return material != null && material.isBlock();
+    }
+
+    private static boolean isItem(String target) {
+        Material material = Material.matchMaterial(target);
+        return material != null && material.isItem();
+    }
+
+    private static boolean isEntityType(String target) {
+        try { return EntityType.valueOf(target).getEntityClass() != null; }
+        catch (IllegalArgumentException ex) { return false; }
+    }
+
+    private static boolean isAnimal(String target) {
+        try {
+            Class<?> type = EntityType.valueOf(target).getEntityClass();
+            return type != null && Animals.class.isAssignableFrom(type);
+        } catch (IllegalArgumentException ex) { return false; }
+    }
+
+    private static boolean isTameable(String target) {
+        try {
+            Class<?> type = EntityType.valueOf(target).getEntityClass();
+            return type != null && Tameable.class.isAssignableFrom(type);
+        } catch (IllegalArgumentException ex) { return false; }
+    }
+
+    private static boolean isBiome(String target) {
+        try { Biome.valueOf(target); return true; }
+        catch (IllegalArgumentException ex) { return false; }
     }
 
     List<Entry> entries() { return entries; }
