@@ -406,8 +406,8 @@ public final class PetManager implements Listener {
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("transfer")) {
             Entity target = getTargetPet(player);
-            if (target == null || !isOwnedBy(target, player)) {
-                plugin.tellPublic(player, "Look directly at the Baby Pet you want to transfer.");
+            if (target == null || !isOwnedBy(target, player) || !player.getUniqueId().equals(following.get(target.getUniqueId()))) {
+                plugin.tellPublic(player, "Look directly at your active Baby Pet to transfer it.");
                 return true;
             }
             Player recipient = Bukkit.getPlayerExact(args[1].startsWith("@") ? args[1].substring(1) : args[1]);
@@ -419,12 +419,10 @@ public final class PetManager implements Listener {
                 plugin.tellPublic(player, "You already own this pet.");
                 return true;
             }
+            following.remove(target.getUniqueId());
             target.getPersistentDataContainer().set(ownerKey, PersistentDataType.STRING, recipient.getUniqueId().toString());
-            String currentName = ChatColor.stripColor(target.getCustomName() == null ? "" : target.getCustomName());
-            if (currentName.isBlank() || currentName.equals("@" + player.getName() + "'s Pet")) {
-                target.setCustomName(ChatColor.LIGHT_PURPLE + "@" + recipient.getName() + "'s Pet");
-                target.setCustomNameVisible(true);
-            }
+            target.setCustomName(petName(target));
+            target.setCustomNameVisible(true);
             plugin.tellPublic(player, "You transferred this pet to " + recipient.getName() + ".");
             plugin.tellPublic(recipient, player.getName() + " transferred a Baby Pet to you. You are now its owner.");
             return true;
