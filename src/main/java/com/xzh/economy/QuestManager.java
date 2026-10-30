@@ -29,6 +29,7 @@ import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.entity.EntityBreedEvent;
 import org.bukkit.event.entity.EntityTameEvent;
+import org.bukkit.event.entity.EntityEnterLoveModeEvent;
 import org.bukkit.event.entity.PiglinBarterEvent;
 import org.bukkit.entity.Animals;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
@@ -1112,25 +1113,13 @@ public final class QuestManager implements Listener {
     }
 
     @EventHandler
-    public void onFeed(PlayerInteractEntityEvent event) {
-        if (event.isCancelled() || event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND
-                || !(event.getRightClicked() instanceof Animals animal) || animal.getAge() != 0) return;
-        Player player = event.getPlayer();
-        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
+    public void onFeed(EntityEnterLoveModeEvent event) {
+        if (event.isCancelled() || !(event.getHumanEntity() instanceof Player player)
+                || player.getGameMode() == org.bukkit.GameMode.CREATIVE
                 || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
-        Material food = player.getInventory().getItemInMainHand().getType();
-        boolean validFeed = switch (animal.getType()) {
-            case COW, SHEEP, GOAT -> food == Material.WHEAT;
-            case PIG -> food == Material.CARROT || food == Material.POTATO || food == Material.BEETROOT;
-            case CHICKEN -> food == Material.WHEAT_SEEDS || food == Material.BEETROOT_SEEDS
-                    || food == Material.MELON_SEEDS || food == Material.PUMPKIN_SEEDS
-                    || food == Material.TORCHFLOWER_SEEDS;
-            case RABBIT -> food == Material.CARROT || food == Material.GOLDEN_CARROT || food == Material.DANDELION;
-            default -> false;
-        };
-        if (!validFeed) return;
-        long now = System.currentTimeMillis();
+        Animals animal = event.getEntity();
         var pdc = animal.getPersistentDataContainer();
+        long now = System.currentTimeMillis();
         long last = pdc.getOrDefault(feedCooldownKey, PersistentDataType.LONG, 0L);
         if (now - last < 60_000L) return;
         pdc.set(feedCooldownKey, PersistentDataType.LONG, now);
