@@ -43,6 +43,12 @@ commands:
   deathinventory:
     description: Recover your most recent death inventory within 30 minutes.
     usage: /deathinventory
+  pet:
+    description: Control or transfer your owned Baby Pets.
+    usage: /pet [transfer <player>]
+  unpet:
+    description: Stop your targeted Baby Pet from following you.
+    usage: /unpet
   shopadmin:
     description: Manage global shop stock.
     usage: /shopadmin <restock|stock <MATERIAL> <amount>>
