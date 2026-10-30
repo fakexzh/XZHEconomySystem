@@ -256,15 +256,20 @@ public final class QuestManager implements Listener {
         file = new File(plugin.getDataFolder(), "quests.yml");
         data = YamlConfiguration.loadConfiguration(file);
         v2Catalogue = QuestCatalogue.load(plugin);
-        // Remove active quests from the retired system so old easy objectives cannot persist.
+        // One-time v2 migration: refund retired active achievement packs in full.
         boolean migratedOldQuests = false;
         for (String root : new ArrayList<>(data.getKeys(false))) {
             try {
-                UUID.fromString(root);
-                if (data.contains(root + ".active") && !data.contains(root + ".objective-count")) {
-                    data.set(root, null);
-                    migratedOldQuests = true;
-                }
+                UUID playerId = UUID.fromString(root);
+                String active = data.getString(root + ".active", "");
+                if (active.isBlank() || data.contains(root + ".objective-count")) continue;
+                boolean legacyPack = active.startsWith("pack:") || !active.startsWith("single:");
+                if (!legacyPack) continue;
+                int refund = Math.max(0, data.getInt(root + ".cost", 0));
+                if (refund > 0) plugin.setBalance(playerId, plugin.getBalance(playerId) + refund);
+                data.set(root, null);
+                data.set("v2-migration-notice." + playerId, true);
+                migratedOldQuests = true;
             } catch (IllegalArgumentException ignored) { }
         }
         if (migratedOldQuests) {
@@ -701,6 +706,16 @@ public final class QuestManager implements Listener {
             default -> false;
         };
         if (validFeed) incrementTarget(player, "feed:" + animal.getType().name(), 1);
+    }
+
+    @EventHandler
+    public void onQuestMigrationJoin(org.bukkit.event.player.PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        String path = "v2-migration-notice." + player.getUniqueId();
+        if (!data.getBoolean(path, false)) return;
+        data.set(path, null);
+        save();
+        plugin.tellPublic(player, "Quest system updated - your active quest was cancelled and fully refunded.");
     }
 
     private void incrementTarget(Player player, String target, int amount) {
