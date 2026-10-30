@@ -24,6 +24,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.entity.EntityBreedEvent;
+import org.bukkit.event.entity.EntityTameEvent;
 import io.papermc.paper.event.entity.EntityEnterLoveModeEvent;
 import org.bukkit.entity.Animals;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
@@ -890,6 +891,15 @@ public final class QuestManager implements Listener {
         if (player.getGameMode() == org.bukkit.GameMode.CREATIVE || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         incrementTarget(player, "fish:" + caught.getItemStack().getType().name(), 1);
         recordGlobalProgress(player, "fish", 1);
+    }
+
+    @EventHandler
+    public void onTame(EntityTameEvent event) {
+        if (!(event.getOwner() instanceof Player player)
+                || player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        incrementTarget(player, "tame:" + event.getEntityType().name(), 1);
+        incrementTarget(player, "tame:ANY", 1);
     }
 
     @EventHandler
