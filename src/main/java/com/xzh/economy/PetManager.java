@@ -135,7 +135,6 @@ public final class PetManager implements Listener {
             pdc.set(sittingKey, PersistentDataType.BYTE, (byte) 0);
             entity.setCustomName(ChatColor.LIGHT_PURPLE + "@" + player.getName() + "'s Pet");
             entity.setCustomNameVisible(true);
-            mob.setRemoveWhenFarAway(false);
             mob.setCanPickupItems(false);
         } catch (RuntimeException ex) {
             entity.remove();
@@ -238,10 +237,11 @@ public final class PetManager implements Listener {
                 return true;
             }
             target.getPersistentDataContainer().set(ownerKey, PersistentDataType.STRING, recipient.getUniqueId().toString());
-            following.remove(target.getUniqueId());
-            if (target instanceof Mob mob) mob.setAI(true);
-            target.getPersistentDataContainer().set(sittingKey, PersistentDataType.BYTE, (byte) 0);
-            target.setCustomName(ChatColor.LIGHT_PURPLE + "@" + recipient.getName() + "'s Pet");
+            String currentName = ChatColor.stripColor(target.getCustomName() == null ? "" : target.getCustomName());
+            if (currentName.isBlank() || currentName.equals("@" + player.getName() + "'s Pet")) {
+                target.setCustomName(ChatColor.LIGHT_PURPLE + "@" + recipient.getName() + "'s Pet");
+                target.setCustomNameVisible(true);
+            }
             plugin.tellPublic(player, "You transferred this pet to " + recipient.getName() + ".");
             plugin.tellPublic(recipient, player.getName() + " transferred a Baby Pet to you. You are now its owner.");
             return true;
@@ -259,6 +259,7 @@ public final class PetManager implements Listener {
             plugin.tellPublic(player, "Your pet is sitting. Right-click it to make it stand first.");
             return true;
         }
+        following.entrySet().removeIf(entry -> entry.getValue().equals(player.getUniqueId()));
         following.put(target.getUniqueId(), player.getUniqueId());
         plugin.tellPublic(player, "Your pet is now following you. Any other pet will continue roaming independently.");
         return true;
