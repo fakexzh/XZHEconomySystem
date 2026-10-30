@@ -196,6 +196,10 @@ public final class QuestManager implements Listener {
     }
 
     private String tierOf(Pack pack) {
+        String id = pack.id().toUpperCase(Locale.ROOT);
+        if (id.startsWith("M") && id.length() == 4) return "master";
+        if (id.startsWith("H") && id.length() == 4) return "hard";
+        if (id.startsWith("E") && id.length() == 4) return "easy";
         return pack.id().startsWith("master_") ? "master" : pack.id().startsWith("hard_") ? "hard" : "easy";
     }
 
@@ -512,6 +516,9 @@ public final class QuestManager implements Listener {
     private String activePackTier(String activeId) {
         if (activeId == null || !activeId.startsWith("pack:")) return "";
         String packId = activeId.substring("pack:".length());
+        if (packId.matches("(?i)M[0-9]{3}")) return "master";
+        if (packId.matches("(?i)H[0-9]{3}")) return "hard";
+        if (packId.matches("(?i)E[0-9]{3}")) return "easy";
         if (packId.startsWith("master_")) return "master";
         if (packId.startsWith("hard_")) return "hard";
         if (packId.startsWith("easy_")) return "easy";
@@ -845,6 +852,9 @@ public final class QuestManager implements Listener {
     }
 
     private int packTimerLimitMinutes(String packId) {
+        for (QuestCatalogue.Entry entry : v2Catalogue.entries()) {
+            if (entry.id().equalsIgnoreCase(packId)) return entry.timerMinutes();
+        }
         // A subset of generated packs remain timed, with stricter tiers offering more timed challenges.
         if (packId.startsWith("easy_") || packId.startsWith("hard_") || packId.startsWith("master_")) {
             String tier = packId.substring(0, packId.indexOf('_'));
