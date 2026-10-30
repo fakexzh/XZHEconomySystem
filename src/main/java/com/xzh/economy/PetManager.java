@@ -25,7 +25,8 @@ import org.bukkit.util.RayTraceResult;
 import java.util.*;
 
 public final class PetManager implements Listener {
-    private static final String MENU_TITLE = ChatColor.DARK_GREEN + "XZH SHOP: Baby Pets";
+    private static final String MENU_TITLE = ChatColor.DARK_GREEN + "Baby Pets";
+    private static final String CONFIRM_TITLE = ChatColor.DARK_GREEN + "Confirm Pet Purchase";
     private final XZHEconomySystem plugin;
     private final NamespacedKey ownerKey;
     private final NamespacedKey petKey;
@@ -106,6 +107,23 @@ public final class PetManager implements Listener {
         }
         PetOption option = options.get(id);
         if (option == null) return;
+        openConfirmation(player, option);
+    }
+
+    private void openConfirmation(Player player, PetOption option) {
+        Inventory inv = Bukkit.createInventory(null, 27, CONFIRM_TITLE);
+        ItemStack yes = new ItemStack(Material.LIME_CONCRETE);
+        ItemMeta ym = yes.getItemMeta();
+        ym.setDisplayName(ChatColor.GREEN + "Confirm purchase");
+        ym.setLore(List.of(ChatColor.GRAY + option.display(), ChatColor.GOLD + option.price() + " coins"));
+        ym.getPersistentDataContainer().set(new NamespacedKey(plugin, "pet_confirm"), PersistentDataType.STRING, option.id());
+        yes.setItemMeta(ym); inv.setItem(11, yes);
+        ItemStack no = new ItemStack(Material.RED_CONCRETE);
+        ItemMeta nm = no.getItemMeta(); nm.setDisplayName(ChatColor.RED + "Cancel"); no.setItemMeta(nm); inv.setItem(15, no);
+        player.openInventory(inv);
+    }
+
+    private void purchase(Player player, PetOption option) {
         if (plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) {
             plugin.tellPublic(player, "Your loan is overdue. Shop purchases are locked until you repay it.");
             return;
@@ -153,6 +171,18 @@ public final class PetManager implements Listener {
         player.closeInventory();
     }
 
+    @EventHandler
+    public void onPetConfirmationClick(InventoryClickEvent event) {
+        if (!CONFIRM_TITLE.equals(event.getView().getTitle())) return;
+        event.setCancelled(true);
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || !clicked.hasItemMeta()) return;
+        String id = clicked.getItemMeta().getPersistentDataContainer().get(new NamespacedKey(plugin, "pet_confirm"), PersistentDataType.STRING);
+        if (id == null) { if (clicked.getType() == Material.RED_CONCRETE) { player.closeInventory(); openShop(player); } return; }
+        PetOption option = options.get(id); if (option != null) purchase(player, option);
+    }
+
     private void applyVariant(Entity entity, String variant) {
         switch (entity.getType()) {
             case PANDA -> {
@@ -179,7 +209,7 @@ public final class PetManager implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onPetInteract(PlayerInteractEntityEvent event) {
         Entity entity = event.getRightClicked();
         if (!isPet(entity)) return;
@@ -188,6 +218,7 @@ public final class PetManager implements Listener {
             event.setCancelled(true);
             return;
         }
+        if (event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) return;
         ItemStack hand = event.getPlayer().getInventory().getItem(event.getHand());
         if (hand != null && hand.getType() == Material.NAME_TAG) return;
         event.setCancelled(true);
@@ -199,25 +230,24 @@ public final class PetManager implements Listener {
         boolean sitting = isSitting(entity);
         boolean shouldSit = !sitting;
         entity.getPersistentDataContainer().set(sittingKey, PersistentDataType.BYTE, (byte) (shouldSit ? 1 : 0));
-        if (entity instanceof Sittable sittable) {
-            sittable.setSitting(shouldSit);
-            mob.setAI(true);
-        } else {
-            entity.setPose(shouldSit ? Pose.SITTING : Pose.STANDING, true);
-            mob.setAI(!shouldSit);
-        }
+        mob.setAI(!shouldSit);
+        entity.setPose(shouldSit ? Pose.SITTING : Pose.STANDING, true);
         mob.setVelocity(mob.getVelocity().zero());
-        following.remove(entity.getUniqueId());
-        player.sendMessage("§8[§dXZH PETS§8] §f" + (sitting ? "Your pet is standing and roaming again." : "Your pet is sitting and will stay here."));
+        player.sendMessage("§8[§dPET§8] §f" + (sitting ? "Your pet is standing and following mode will resume." : "Your pet is sitting. It will stay here until you stand it up."));
         player.playSound(entity.getLocation(), Sound.ENTITY_CAT_PURR, 0.5f, sitting ? 1.3f : 0.8f);
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void protectPet(EntityDamageEvent event) {
-        if (isPet(event.getEntity())) event.setCancelled(true);
+        if (!isPet(event.getEntity())) return;
+        if (!(event instanceof org.bukkit.event.entity.EntityDamageByEntityEvent byEntity)) { event.setCancelled(true); return; }
+        Player attacker = null; Entity damager = byEntity.getDamager();
+        if (damager instanceof Player direct) attacker = direct;
+        else if (damager instanceof Projectile projectile && projectile.getShooter() instanceof Player shooter) attacker = shooter;
+        if (attacker == null || !isOwnedBy(event.getEntity(), attacker)) event.setCancelled(true);
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void protectPetTarget(EntityTargetEvent event) {
         if (isPet(event.getEntity())) event.setCancelled(true);
     }
@@ -237,6 +267,12 @@ public final class PetManager implements Listener {
             following.remove(target.getUniqueId());
             plugin.tellPublic(player, "Your pet stopped following you and will roam nearby.");
             return true;
+        }
+        if (args.length == 1 && args[0].equalsIgnoreCase("call")) {
+            Entity active = following.entrySet().stream().filter(e -> e.getValue().equals(player.getUniqueId())).map(e -> Bukkit.getEntity(e.getKey())).filter(e -> e != null && e.isValid() && isOwnedBy(e, player)).findFirst().orElse(null);
+            if (active == null) { plugin.tellPublic(player, "You do not have an active pet. Look at a pet and use /pet first."); return true; }
+            Location destination = player.getLocation().clone().add(player.getLocation().getDirection().multiply(-1.5)); destination.setY(player.getLocation().getY());
+            active.teleport(destination); plugin.tellPublic(player, "Your active pet has been called to you."); return true;
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("transfer")) {
             Entity target = getTargetPet(player);
@@ -264,7 +300,7 @@ public final class PetManager implements Listener {
             return true;
         }
         if (args.length != 0) {
-            plugin.tellPublic(player, "Usage: /pet [transfer <player>]");
+            plugin.tellPublic(player, "Usage: /pet [call|transfer <player>]");
             return true;
         }
         Entity target = getTargetPet(player);
@@ -272,11 +308,7 @@ public final class PetManager implements Listener {
             plugin.tellPublic(player, "Look directly at one of your own Baby Pets.");
             return true;
         }
-        if (isSitting(target)) {
-            plugin.tellPublic(player, "Your pet is sitting. Right-click it to make it stand first.");
-            return true;
-        }
-        following.entrySet().removeIf(entry -> entry.getValue().equals(player.getUniqueId()));
+                following.entrySet().removeIf(entry -> entry.getValue().equals(player.getUniqueId()));
         following.put(target.getUniqueId(), player.getUniqueId());
         plugin.tellPublic(player, "Your pet is now following you. Any other pet will continue roaming independently.");
         return true;
@@ -295,10 +327,8 @@ public final class PetManager implements Listener {
             Map.Entry<UUID, UUID> entry = iterator.next();
             Entity pet = Bukkit.getEntity(entry.getKey());
             Player owner = Bukkit.getPlayer(entry.getValue());
-            if (pet == null || !pet.isValid() || owner == null || !owner.isOnline() || isSitting(pet)) {
-                iterator.remove();
-                continue;
-            }
+            if (pet == null || !pet.isValid() || owner == null || !owner.isOnline()) { iterator.remove(); continue; }
+            if (isSitting(pet)) continue;
             if (!isOwnedBy(pet, owner)) {
                 iterator.remove();
                 continue;
@@ -312,7 +342,8 @@ public final class PetManager implements Listener {
                 destination.setY(owner.getLocation().getY());
                 pet.teleport(destination);
             } else if (pet instanceof Mob mob && pet.getLocation().distanceSquared(owner.getLocation()) > 9.0) {
-                mob.getPathfinder().moveTo(owner.getLocation(), 1.05);
+                double ratio = Math.max(0.1, Math.min(3.0, owner.getWalkSpeed() / 0.2));
+                mob.getPathfinder().moveTo(owner.getLocation(), ratio * (owner.isSprinting() ? 1.3 : 1.0));
             }
         }
     }
