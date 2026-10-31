@@ -874,12 +874,13 @@ public final class QuestManager implements Listener {
         if (secret) refreshSecretQuestIfDue();
         int poolIndex = Math.floorMod(data.getInt(secret ? "single-shop.secret.offer" : "single-shop.offers." + offerSlot, offerSlot), randomPool.size());
         RandomQuest template = randomPool.get(poolIndex);
-        int difficultyScale = 85 + random.nextInt(51);
-        int goal = Math.max(1, (int) Math.ceil(template.objective().goal() * difficultyScale / 100.0));
-        Objective objective = new Objective(template.objective().target(), goal, template.objective().description().replaceFirst("\\d+", Integer.toString(goal)));
         int cost = secret ? data.getInt("single-shop.secret.cost", 250) : Math.max(50, (int) Math.round(template.cost() * (0.90 + random.nextDouble() * 0.21)));
         int margin = secret ? data.getInt("single-shop.secret.margin", 40) : 40 + random.nextInt(21);
         int reward = (int) Math.ceil(cost * (1.0 + margin / 100.0));
+        int timerMinutes = isTimedSingle(template) ? 30 : 0;
+        char economicTier = reward - cost >= 180 ? 'M' : reward - cost >= 90 ? 'H' : 'E';
+        Objective objective = rebalanceCollectionObjective(economicTier, template.objective(),
+                cost, reward - cost, timerMinutes, 1);
         if (plugin.getCombinedBalance(id) < cost || !plugin.spendAvailableFunds(id, cost)) { plugin.tellPublic(player, "You need " + cost + " coins to buy this random quest."); return; }
         String questName = template.name() + " #" + (data.getInt("single-shop.quest-sequence", 0) + 1);
         data.set("single-shop.quest-sequence", data.getInt("single-shop.quest-sequence", 0) + 1);
