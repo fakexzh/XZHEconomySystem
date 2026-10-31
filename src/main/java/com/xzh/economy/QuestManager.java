@@ -441,9 +441,10 @@ public final class QuestManager implements Listener {
         String mob = target.substring("KILL:".length());
         double effort = switch (mob) {
             case "ZOMBIE", "SKELETON", "SPIDER", "CAVE_SPIDER", "CREEPER", "DROWNED", "HUSK", "STRAY" -> 1.0;
-            case "ENDERMAN", "WITCH", "SLIME", "PIGLIN", "ZOMBIFIED_PIGLIN", "PHANTOM" -> 2.0;
-            case "PILLAGER", "VINDICATOR", "BLAZE", "GUARDIAN", "HOGLIN", "MAGMA_CUBE" -> 2.5;
-            case "WITHER_SKELETON", "SHULKER", "BREEZE", "EVOKER", "RAVAGER", "VEX" -> 3.5;
+            case "ENDERMAN", "WITCH", "SLIME", "ZOMBIFIED_PIGLIN", "PHANTOM" -> 2.5;
+            case "PIGLIN" -> 4.0;
+            case "PILLAGER", "VINDICATOR", "BLAZE", "GUARDIAN", "HOGLIN", "MAGMA_CUBE" -> 4.0;
+            case "WITHER_SKELETON", "SHULKER", "BREEZE", "EVOKER", "RAVAGER", "VEX" -> 5.0;
             case "PIGLIN_BRUTE", "ELDER_GUARDIAN", "WARDEN", "WITHER", "ENDER_DRAGON" -> 7.0;
             default -> 2.0;
         };
@@ -905,6 +906,7 @@ public final class QuestManager implements Listener {
         if (target.startsWith("collect:")) return "Collect the requested items.";
         if (target.startsWith("travel")) return "Travel the required distance using legitimate movement.";
         if (target.startsWith("breed:")) return "Breed the requested animals.";
+        if (target.startsWith("tame:")) return "Tame the requested animals.";
         if (target.startsWith("feed:")) return "Feed the requested animals.";
         return "Complete the listed task and reach its required amount.";
     }
@@ -1605,7 +1607,7 @@ public final class QuestManager implements Listener {
         String material = target.contains(":") ? target.substring(target.indexOf(':') + 1) : target;
         if (target.startsWith("fish:")) return "fishing";
         if (target.equals("travel") || target.startsWith("travel-") || target.startsWith("visit-biome:")) return "travel";
-        if (target.startsWith("feed:") || target.startsWith("breed:")) return "farming";
+        if (target.startsWith("feed:") || target.startsWith("breed:") || target.startsWith("tame:")) return "farming";
         if (target.startsWith("break:") && (material.endsWith("_LOG") || material.endsWith("_STEM") || material.equals("BAMBOO"))) return "woodcutting";
         if (target.startsWith("break:")) return "mining";
         if (target.startsWith("kill:") || material.equals("BLAZE_ROD") || material.equals("ENDER_PEARL") || material.equals("WITHER_SKELETON_SKULL")) return "combat";
@@ -1701,7 +1703,9 @@ public final class QuestManager implements Listener {
         if (target.startsWith("fish:")) return "Catch the requested fish.";
         if (target.startsWith("smelt:")) return "Process the requested materials in a furnace.";
         if (target.startsWith("collect:")) return "Collect the requested items.";
-        if (target.startsWith("breed:")) return "Breed animals to complete the objective.";
+        if (target.startsWith("breed:")) return "Breed the requested animals to complete the objective.";
+        if (target.startsWith("tame:")) return "Tame the requested animals to complete the objective.";
+        if (target.startsWith("feed:")) return "Feed the requested animals to complete the objective.";
         if (target.startsWith("feed:")) return "Feed the requested animals.";
         return "Complete the objective shown below.";
     }
