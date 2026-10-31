@@ -218,6 +218,11 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
 
     public void tellPublic(CommandSender sender, String message) { tell(sender, message); }
 
+    /** Sends bank and bank-loan notices with the dedicated bank prefix. */
+    public void tellBank(CommandSender sender, String message) {
+        sender.sendMessage("§8[§6bank§8] §r" + message);
+    }
+
     /** Announces only configured high-value, rare, or progression purchases. */
     public void announceSpecialPurchase(Player player, org.bukkit.Material material, int quantity, double total) {
         if (!getConfig().getBoolean("announcements.shop.enabled", true)) return;
@@ -240,7 +245,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
 
     public void announceLoanBorrow(Player player, int principal, double repayment, int days) {
         if (!getConfig().getBoolean("announcements.loan.borrowing", true)) return;
-        Bukkit.broadcastMessage("§8[§bBANK§8] §e" + player.getName() + " §fborrowed §6"
+        Bukkit.broadcastMessage("§8[§6bank§8] §e" + player.getName() + " §fborrowed §6"
                 + money(principal) + " coins§f. Repayment: §c" + money(repayment)
                 + " coins §fover §b" + days + " days§f.");
     }
@@ -367,7 +372,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         if (overflow > 0 && bankManager != null) {
             bankManager.setBalance(uuid, bankManager.getBalance(uuid) + overflow);
             Player recipient = Bukkit.getPlayer(uuid);
-            if (recipient != null) tell(recipient, "Your pocket wallet reached its limit; " + money(overflow) + " excess coins were secured in the bank.");
+            if (recipient != null) tellBank(recipient, "Your pocket wallet reached its limit; " + money(overflow) + " excess coins were secured in the bank.");
         }
         saveBalances();
         saveWalletStatus();
@@ -467,7 +472,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 return true;
             }
             case "bank" -> {
-                if (!(sender instanceof Player player)) { tell(sender, "Only players can open the bank."); return true; }
+                if (!(sender instanceof Player player)) { tellBank(sender, "Only players can open the bank."); return true; }
                 bankManager.open(player);
                 return true;
             }
