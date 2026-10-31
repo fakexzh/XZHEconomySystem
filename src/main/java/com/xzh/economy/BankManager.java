@@ -86,7 +86,7 @@ public final class BankManager implements Listener {
 
     public void open(Player player) {
         if (!isOpenNow()) {
-            player.sendMessage("§8[§6bank§8] §r" + hoursMessage());
+            plugin.tellBank(player, hoursMessage());
             return;
         }
         UUID id = player.getUniqueId();
@@ -97,13 +97,13 @@ public final class BankManager implements Listener {
                         ChatColor.GRAY + "Bank is OPEN",
                         ChatColor.GRAY + hoursMessage()));
 
-        add(inv, 10, plugin.getPocketCoinManager().createCoin(1, 1), ChatColor.GREEN + "Deposit 10", "deposit", 10,
+        add(inv, 9, plugin.getPocketCoinManager().createCoin(1, 1), ChatColor.GREEN + "Deposit 10", "deposit", 10,
                 List.of(ChatColor.GRAY + "Move 10 pocket coins into your bank."));
-        add(inv, 11, plugin.getPocketCoinManager().createCoin(100, 1), ChatColor.GREEN + "Deposit 100", "deposit", 100,
+        add(inv, 10, plugin.getPocketCoinManager().createCoin(100, 1), ChatColor.GREEN + "Deposit 100", "deposit", 100,
                 List.of(ChatColor.GRAY + "Move 100 pocket coins into your bank."));
-        add(inv, 12, plugin.getPocketCoinManager().createCoin(1000, 1), ChatColor.GREEN + "Deposit 1000", "deposit", 1000,
+        add(inv, 11, plugin.getPocketCoinManager().createCoin(1000, 1), ChatColor.GREEN + "Deposit 1000", "deposit", 1000,
                 List.of(ChatColor.GRAY + "Move 1,000 pocket coins into your bank."));
-        add(inv, 13, Material.BUNDLE, ChatColor.YELLOW + "Deposit all", "deposit-all", 0,
+        add(inv, 12, Material.BUNDLE, ChatColor.YELLOW + "Deposit all", "deposit-all", 0,
                 List.of(ChatColor.GRAY + "Deposit your entire pocket balance."));
 
         add(inv, 14, plugin.getPocketCoinManager().createCoin(1, 1), ChatColor.AQUA + "Withdraw 10", "withdraw", 10,
@@ -158,7 +158,7 @@ public final class BankManager implements Listener {
             case "refresh" -> open(player);
             case "deposit", "deposit-all", "withdraw", "withdraw-all" -> {
                 if (!isOpenNow()) {
-                    plugin.tellPublic(player, hoursMessage());
+                    plugin.tellBank(player, hoursMessage());
                     player.closeInventory();
                     return;
                 }
@@ -171,30 +171,30 @@ public final class BankManager implements Listener {
                     default -> value;
                 };
                 if (!deposit && requested > Math.max(0.0, plugin.getPocketBalanceLimit() - pocket)) {
-                    plugin.tellPublic(player, "Your pocket wallet is at its limit. Deposit coins before withdrawing more.");
+                    plugin.tellBank(player, "Your pocket wallet is at its limit. Deposit coins before withdrawing more.");
                     open(player);
                     return;
                 }
                 if (!Double.isFinite(requested) || requested <= 0) {
-                    plugin.tellPublic(player, deposit ? "You have no pocket money to deposit." : "You have no bank funds to withdraw.");
+                    plugin.tellBank(player, deposit ? "You have no pocket money to deposit." : "You have no bank funds to withdraw.");
                     open(player);
                     return;
                 }
                 if (deposit) {
                     if (pocket + 1e-9 < requested) {
-                        plugin.tellPublic(player, "Not enough pocket money. Your pocket balance is " + money(pocket) + " coins.");
+                        plugin.tellBank(player, "Not enough pocket money. Your pocket balance is " + money(pocket) + " coins.");
                     } else {
                         plugin.setBalance(id, pocket - requested);
                         setBalance(id, bank + requested);
-                        plugin.tellPublic(player, "Deposited " + money(requested) + " coins into your bank.");
+                        plugin.tellBank(player, "Deposited " + money(requested) + " coins into your bank.");
                     }
                 } else {
                     if (bank + 1e-9 < requested) {
-                        plugin.tellPublic(player, "Not enough bank funds. Your bank balance is " + money(bank) + " coins.");
+                        plugin.tellBank(player, "Not enough bank funds. Your bank balance is " + money(bank) + " coins.");
                     } else {
                         setBalance(id, bank - requested);
                         plugin.setBalance(id, pocket + requested);
-                        plugin.tellPublic(player, "Withdrew " + money(requested) + " coins from your bank.");
+                        plugin.tellBank(player, "Withdrew " + money(requested) + " coins from your bank.");
                     }
                 }
                 open(player);
