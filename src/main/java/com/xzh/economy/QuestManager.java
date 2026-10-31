@@ -476,8 +476,8 @@ public final class QuestManager implements Listener {
 
     private boolean isOreMaterial(String item) {
         return item.endsWith("_ORE") || List.of("ANCIENT_DEBRIS", "RAW_IRON", "RAW_COPPER",
-                "RAW_GOLD", "IRON_INGOT", "COPPER_INGOT", "GOLD_INGOT", "COAL",
-                "DIAMOND", "EMERALD", "LAPIS_LAZULI", "REDSTONE", "QUARTZ").contains(item);
+                "RAW_GOLD", "IRON_INGOT", "COPPER_INGOT", "GOLD_INGOT", "NETHERITE_SCRAP",
+                "NETHERITE_INGOT", "COAL", "DIAMOND", "EMERALD", "LAPIS_LAZULI", "REDSTONE", "QUARTZ").contains(item);
     }
 
     /**
