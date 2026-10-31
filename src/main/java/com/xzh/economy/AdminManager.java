@@ -128,7 +128,9 @@ public final class AdminManager implements Listener {
         if (!player.hasPermission("xzh.admin")) { prompts.remove(player.getUniqueId()); return; }
         if (input.equalsIgnoreCase("cancel")) {
             prompts.remove(player.getUniqueId());
-            player.sendMessage(ChatColor.YELLOW + "Admin action cancelled.");
+            if (prompt.startsWith("stock-") || prompt.startsWith("price-")) plugin.tellShop(player, "Admin action cancelled.");
+            else if (prompt.startsWith("quest-stock-")) plugin.tellQuest(player, "Admin action cancelled.");
+            else player.sendMessage(ChatColor.YELLOW + "Admin action cancelled.");
             return;
         }
         if (prompt.equals("balance-player")) {
@@ -192,7 +194,7 @@ public final class AdminManager implements Listener {
             String pack = prompt.substring("quest-stock-amount:".length());
             int amount;
             try { amount = Integer.parseInt(input); }
-            catch (NumberFormatException ex) { player.sendMessage(ChatColor.RED + "Enter a whole number or cancel."); return; }
+            catch (NumberFormatException ex) { plugin.tellQuest(player, "Enter a whole number or cancel."); return; }
             if (amount < 0 || amount > 1_000_000) { plugin.tellQuest(player, "Stock must be between 0 and 1000000."); return; }
             if (!plugin.getQuestManager().setPackStock(pack, amount)) { plugin.tellQuest(player, "Could not update that quest pack."); return; }
             prompts.remove(player.getUniqueId());
@@ -210,7 +212,7 @@ public final class AdminManager implements Listener {
         if (prompt.equals("price-material")) {
             Material material;
             try { material = Material.valueOf(input.toUpperCase(Locale.ROOT)); }
-            catch (IllegalArgumentException ex) { player.sendMessage(ChatColor.RED + "Unknown material. Try again or type cancel."); return; }
+            catch (IllegalArgumentException ex) { plugin.tellShop(player, "Unknown material. Try again or type cancel."); return; }
             prompts.put(player.getUniqueId(), "price-kind:" + material.name());
             plugin.tellShop(player, "Type buy or sell for " + material.name() + ", or cancel.");
             return;
@@ -228,8 +230,8 @@ public final class AdminManager implements Listener {
             String[] parts = prompt.split(":");
             double amount;
             try { amount = Double.parseDouble(input); }
-            catch (NumberFormatException ex) { player.sendMessage(ChatColor.RED + "Enter a valid price or cancel."); return; }
-            if (!Double.isFinite(amount) || amount < 0 || amount > 1_000_000) { player.sendMessage(ChatColor.RED + "Price must be between 0 and 1000000."); return; }
+            catch (NumberFormatException ex) { plugin.tellShop(player, "Enter a valid price or cancel."); return; }
+            if (!Double.isFinite(amount) || amount < 0 || amount > 1_000_000) { plugin.tellShop(player, "Price must be between 0 and 1000000."); return; }
             Material material = Material.valueOf(parts[1]);
             plugin.getShopManager().setPrice(material, parts[2], amount);
             prompts.remove(player.getUniqueId());
@@ -239,7 +241,7 @@ public final class AdminManager implements Listener {
         if (prompt.equals("stock-material")) {
             Material material;
             try { material = Material.valueOf(input.toUpperCase(Locale.ROOT)); }
-            catch (IllegalArgumentException ex) { player.sendMessage(ChatColor.RED + "Unknown material. Try again or type 'cancel'."); return; }
+            catch (IllegalArgumentException ex) { plugin.tellShop(player, "Unknown material. Try again or type 'cancel'."); return; }
             prompts.put(player.getUniqueId(), "stock-amount:" + material.name());
             plugin.tellShop(player, "Type the current stock amount for " + material.name() + " (0–1000000), or 'cancel'.");
             return;
@@ -248,7 +250,7 @@ public final class AdminManager implements Listener {
             String name = prompt.substring("stock-amount:".length());
             int amount;
             try { amount = Integer.parseInt(input); }
-            catch (NumberFormatException ex) { player.sendMessage(ChatColor.RED + "Enter a whole number or 'cancel'."); return; }
+            catch (NumberFormatException ex) { plugin.tellShop(player, "Enter a whole number or 'cancel'."); return; }
             if (amount < 0 || amount > 1_000_000) {
                 plugin.tellShop(player, "Stock must be between 0 and 1000000."); return;
             }
@@ -261,7 +263,9 @@ public final class AdminManager implements Listener {
     private void prompt(Player player, String state, String text) {
         prompts.put(player.getUniqueId(), state);
         player.closeInventory();
-        player.sendMessage(ChatColor.YELLOW + text + " Type 'cancel' to stop.");
+        if (state.startsWith("stock-") || state.startsWith("price-")) plugin.tellShop(player, text + " Type 'cancel' to stop.");
+        else if (state.startsWith("quest-stock-")) plugin.tellQuest(player, text + " Type 'cancel' to stop.");
+        else player.sendMessage(ChatColor.YELLOW + text + " Type 'cancel' to stop.");
     }
 
     private void showTransactions(Player player) {
