@@ -696,10 +696,10 @@ public final class QuestManager implements Listener {
 
     public void open(Player player) {
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Quests");
-        add(inv, 10, Material.WRITABLE_BOOK, ChatColor.YELLOW + "Single Quests", "section-single", "single",
+        add(inv, 10, Material.MAP, ChatColor.YELLOW + "Single Quests", "section-single", "single",
             List.of(ChatColor.GRAY + "Random challenge generated on every purchase",
                     ChatColor.GRAY + "Shop offer refreshes every 2 hours"));
-        add(inv, 13, Material.ENCHANTED_BOOK, ChatColor.LIGHT_PURPLE + "Achievement Quest Packs", "section-packs", "packs",
+        add(inv, 13, Material.WRITABLE_BOOK, ChatColor.LIGHT_PURPLE + "Achievement Quest Packs", "section-packs", "packs",
             List.of(ChatColor.GRAY + "Hard multi-objective challenges",
                     ChatColor.GRAY + "Each locked pack explains its unlock requirement"));
         add(inv, 16, Material.NETHER_STAR, ChatColor.GOLD + "Global Quest", "section-global", "global",
@@ -746,8 +746,8 @@ public final class QuestManager implements Listener {
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Pack Tiers");
         for (String tier : List.of("easy", "hard", "master")) {
             boolean unlocked = tierUnlocked(player, tier);
-            Material icon = tier.equals("easy") ? Material.OAK_SAPLING
-                    : tier.equals("hard") ? Material.ROTTEN_FLESH : Material.GOLDEN_HELMET;
+            Material icon = tier.equals("easy") ? Material.AXOLOTL_SPAWN_EGG
+                    : tier.equals("hard") ? Material.BREEZE_SPAWN_EGG : Material.BAT_SPAWN_EGG;
             String label = tier.equals("easy") ? "Easy Packs" : tier.equals("hard") ? "Hard Packs" : "Master Packs";
             long done = packs.stream().filter(pack -> tierOf(pack).equals(tier)
                     && completedPack(player.getUniqueId(), pack.id())).count();
