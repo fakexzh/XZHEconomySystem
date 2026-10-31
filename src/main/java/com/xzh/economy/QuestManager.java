@@ -1036,6 +1036,9 @@ public final class QuestManager implements Listener {
             data.set(uuid + ".objectives." + i + ".progress", 0);
         }
         data.set(uuid + ".started-at", System.currentTimeMillis());
+        data.set(uuid + ".paused-at", null);
+        data.set(uuid + ".warned-5m", false);
+        data.set(uuid + ".warned-1m", false);
         data.set(uuid + ".warned-5m", false);
         data.set(uuid + ".warned-1m", false);
         save();
