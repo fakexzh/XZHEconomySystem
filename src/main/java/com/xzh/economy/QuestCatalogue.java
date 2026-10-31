@@ -83,8 +83,8 @@ final class QuestCatalogue {
                 int fee = integer(q, "fee");
                 int profit = integer(q, "profit");
                 int timer = integer(q, "timer-minutes");
-                int minProfit = tierIndex == 0 ? 160 : tierIndex == 1 ? 350 : 2000;
-                int maxProfit = tierIndex == 0 ? 350 : tierIndex == 1 ? 950 : 5000;
+                int minProfit = tierIndex == 0 ? 200 : tierIndex == 1 ? 400 : 2200;
+                int maxProfit = tierIndex == 0 ? 350 : tierIndex == 1 ? 1500 : 8000;
                 if (fee < 0 || profit < minProfit || profit > maxProfit || timer < 0) {
                     throw new IllegalStateException("Invalid fee/profit/timer values in " + id);
                 }
