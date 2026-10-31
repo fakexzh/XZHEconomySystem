@@ -703,6 +703,7 @@ public final class QuestManager implements Listener {
         this.plugin = plugin;
         file = new File(plugin.getDataFolder(), "quests.yml");
         data = YamlConfiguration.loadConfiguration(file);
+        playerPlacedBlocks.addAll(data.getStringList("anti-exploit.placed-blocks"));
         // Remove active quests from the retired system so old easy objectives cannot persist.
         boolean migratedOldQuests = false;
         for (String root : new ArrayList<>(data.getKeys(false))) {
@@ -1055,6 +1056,7 @@ public final class QuestManager implements Listener {
         Material material = event.getBlock().getType();
         String id = material.name();
         boolean playerPlaced = playerPlacedBlocks.remove(blockKey(event.getBlock().getLocation()));
+        if (playerPlaced) savePlacedBlockTracking();
         if (!playerPlaced) incrementTarget(p, "break:" + id, 1);
         // Deepslate ore variants count toward the matching ore contracts too.
         if (!playerPlaced && id.startsWith("DEEPSLATE_") && id.endsWith("_ORE")) {
@@ -1113,7 +1115,13 @@ public final class QuestManager implements Listener {
                 || type == Material.SPONGE || type == Material.SEA_LANTERN
                 || type == Material.AMETHYST_CLUSTER || type == Material.GILDED_BLACKSTONE) {
             playerPlacedBlocks.add(blockKey(event.getBlockPlaced().getLocation()));
+            savePlacedBlockTracking();
         }
+    }
+
+    private void savePlacedBlockTracking() {
+        data.set("anti-exploit.placed-blocks", new ArrayList<>(playerPlacedBlocks));
+        save();
     }
 
     private String blockKey(Location location) {
