@@ -441,7 +441,7 @@ quests:
     group-name: "Animal Husbandry"
     name: "Shepherd's Pride"
     objectives:
-      - "FEED:SHEEP:12"
+      - "FEED:SHEEP:9"
     unlock:
       - "husbandry/breed_an_animal"
     fee: 90
@@ -455,7 +455,7 @@ quests:
     group-name: "Animal Husbandry"
     name: "Piggy Bank"
     objectives:
-      - "FEED:PIG:12"
+      - "FEED:PIG:9"
     unlock:
       - "husbandry/breed_an_animal"
     fee: 90
@@ -469,7 +469,7 @@ quests:
     group-name: "Animal Husbandry"
     name: "Coop Commander"
     objectives:
-      - "FEED:CHICKEN:16"
+      - "FEED:CHICKEN:12"
     unlock:
       - "husbandry/breed_an_animal"
     fee: 90
@@ -483,7 +483,7 @@ quests:
     group-name: "Animal Husbandry"
     name: "Herd Builder"
     objectives:
-      - "FEED:ANY:16"
+      - "FEED:ANY:20"
     unlock:
       - "husbandry/breed_an_animal"
     fee: 90
@@ -497,7 +497,7 @@ quests:
     group-name: "Animal Husbandry"
     name: "Rabbit Ranch"
     objectives:
-      - "FEED:RABBIT:10"
+      - "FEED:RABBIT:8"
     unlock:
       - "husbandry/breed_an_animal"
     fee: 130
@@ -553,7 +553,7 @@ quests:
     group-name: "Animal Husbandry"
     name: "Turtle Beach"
     objectives:
-      - "FEED:TURTLE:3"
+      - "FEED:TURTLE:2"
     unlock:
       - "husbandry/breed_an_animal"
     fee: 210
