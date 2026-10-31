@@ -472,12 +472,12 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 return true;
             }
             case "quest", "quests" -> {
-                if (!(sender instanceof Player player)) { tell(sender, "Only players can use quests."); return true; }
+                if (!(sender instanceof Player player)) { tellQuest(sender, "Only players can use quests."); return true; }
                 if (args.length == 1 && args[0].equalsIgnoreCase("cancel")) {
                     questManager.cancelActiveQuest(player);
                     return true;
                 }
-                if (args.length != 0) { tell(sender, "Usage: /quest cancel or /quests"); return true; }
+                if (args.length != 0) { tellQuest(sender, "Usage: /quest cancel or /quests"); return true; }
                 questManager.open(player);
                 return true;
             }
@@ -494,7 +494,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 return true;
             }
             case "books" -> {
-                if (!(sender instanceof Player player)) { tell(sender, "Only players can open the book shop."); return true; }
+                if (!(sender instanceof Player player)) { tellShop(sender, "Only players can open the book shop."); return true; }
                 bookShopManager.open(player);
                 return true;
             }
@@ -507,20 +507,20 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 if (!sender.hasPermission("xzh.admin")) { tell(sender, "No permission."); return true; }
                 if (args.length == 1 && args[0].equalsIgnoreCase("restock")) {
                     shopManager.restockAll();
-                    tell(sender, "Global shop stock has been restocked to configured limits.");
+                    tellShop(sender, "Global shop stock has been restocked to configured limits.");
                     return true;
                 }
                 if (args.length == 3 && args[0].equalsIgnoreCase("stock")) {
                     org.bukkit.Material material;
                     int amount;
                     try { material = org.bukkit.Material.valueOf(args[1].toUpperCase(Locale.ROOT)); amount = Integer.parseInt(args[2]); }
-                    catch (IllegalArgumentException ex) { tell(sender, "Usage: /shopadmin stock <MATERIAL> <amount>"); return true; }
-                    if (amount < 0 || amount > 1000000) { tell(sender, "Stock must be between 0 and 1000000."); return true; }
+                    catch (IllegalArgumentException ex) { tellShop(sender, "Usage: /shopadmin stock <MATERIAL> <amount>"); return true; }
+                    if (amount < 0 || amount > 1000000) { tellShop(sender, "Stock must be between 0 and 1000000."); return true; }
                     shopManager.setStock(material, amount);
-                    tell(sender, "Global stock for " + material.name() + " set to " + amount + ".");
+                    tellShop(sender, "Global stock for " + material.name() + " set to " + amount + ".");
                     return true;
                 }
-                tell(sender, "Usage: /shopadmin <restock|stock <MATERIAL> <amount>>");
+                tellShop(sender, "Usage: /shopadmin <restock|stock <MATERIAL> <amount>>");
                 return true;
             }
             case "pet", "unpet" -> {
