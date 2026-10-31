@@ -50,7 +50,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
-/** Random single quests, achievement-unlocked multi-objective packs, and shared global quests. */
+/** Random single quests, achievement-unlocked multi-objective packs, and shared community chests. */
 public final class QuestManager implements Listener {
     private record Objective(String target, int goal, String description) {}
     private record Pack(String id, String name, Material icon, int cost, int reward, String advancement, String unlockTitle, int timerMinutes, List<Objective> objectives) {}
@@ -448,6 +448,10 @@ public final class QuestManager implements Listener {
         int effortBasedGoal = (int) Math.round(economicBudget * tierFactor * timeFactor
                 * sharedObjectiveFactor / unitEffort);
         int balancedGoal = Math.max(1, effortBasedGoal);
+        if (tier == 'M') {
+            int masterCeiling = masterCollectionCeiling(category, item);
+            if (masterCeiling > 0) balancedGoal = Math.min(balancedGoal, masterCeiling);
+        }
 
         if (balancedGoal == objective.goal()) return objective;
         String formattedGoal = String.format(Locale.ROOT, "%,d", balancedGoal);
@@ -455,6 +459,20 @@ public final class QuestManager implements Listener {
         return new Objective(objective.target(), balancedGoal, description);
     }
 
+
+    private int masterCollectionCeiling(String category, String item) {
+        if (category.equals("FISH")) return 200;
+        if (category.equals("HARVEST")) return 1000;
+        if (category.equals("BREAK")) {
+            if (item.endsWith("_LOG") || item.endsWith("_STEM")) return 1000;
+            if (isOreMaterial(item)) return 300;
+            return 1000;
+        }
+        if (category.equals("SMELT") || category.equals("COLLECT")) {
+            return isOreMaterial(item) ? 300 : 700;
+        }
+        return 700;
+    }
 
     private boolean isOreMaterial(String item) {
         return item.endsWith("_ORE") || List.of("ANCIENT_DEBRIS", "RAW_IRON", "RAW_COPPER",
@@ -702,7 +720,7 @@ public final class QuestManager implements Listener {
         add(inv, 13, Material.WRITABLE_BOOK, ChatColor.LIGHT_PURPLE + "Achievement Quest Packs", "section-packs", "packs",
             List.of(ChatColor.GRAY + "Hard multi-objective challenges",
                     ChatColor.GRAY + "Each locked pack explains its unlock requirement"));
-        add(inv, 16, Material.NETHER_STAR, ChatColor.GOLD + "Global Quest", "section-global", "global",
+        add(inv, 16, Material.NETHER_STAR, ChatColor.GOLD + "Community Chest", "section-global", "global",
             List.of(ChatColor.GRAY + "Everyone contributes to shared progress",
                     ChatColor.GRAY + "Server reminders every 15 minutes"));
         add(inv, 22, Material.ARROW, ChatColor.WHITE + "Back to Shop", "back-shop", "");
@@ -807,9 +825,9 @@ public final class QuestManager implements Listener {
         lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + reward + " coins");
         lore.add(ChatColor.WHITE + "Profit: " + ChatColor.GOLD + "+" + (reward - cost) + " coins");
         for (Objective objective : objectives) {
-            lore.add(ChatColor.YELLOW + "Job - " + ChatColor.LIGHT_PURPLE + objective.description());
+            appendTwoLineLore(lore, "Job - ", objective.description(), ChatColor.YELLOW, ChatColor.LIGHT_PURPLE);
         }
-        lore.add(ChatColor.WHITE + "Objective: " + ChatColor.GRAY + explanation);
+        appendTwoLineLore(lore, "Objective: ", explanation, ChatColor.WHITE, ChatColor.GRAY);
         if (timerMinutes > 0) {
             lore.add(ChatColor.WHITE + "Time limit: " + ChatColor.RED + timerMinutes + " minutes");
         }
@@ -819,6 +837,22 @@ public final class QuestManager implements Listener {
         if (unlockInstruction != null && !unlockInstruction.isBlank()) {
             lore.add(ChatColor.GRAY + "To unlock: " + unlockInstruction);
         }
+    }
+
+    private void appendTwoLineLore(List<String> lore, String prefix, String text,
+                                   ChatColor prefixColor, ChatColor textColor) {
+        String value = text == null ? "" : text.trim();
+        int maxLineLength = 38;
+        int firstLineTextLimit = Math.max(8, maxLineLength - prefix.length());
+        if (value.length() <= firstLineTextLimit) {
+            lore.add(prefixColor + prefix + textColor + value);
+            return;
+        }
+        int splitAt = value.lastIndexOf(' ', Math.min(firstLineTextLimit, value.length() - 1));
+        if (splitAt <= 0) splitAt = Math.min(firstLineTextLimit, value.length());
+        lore.add(prefixColor + prefix + textColor + value.substring(0, splitAt).trim());
+        String remainder = value.substring(splitAt).trim();
+        if (!remainder.isEmpty()) lore.add(textColor + "  " + remainder);
     }
 
     private String objectiveExplanation(Objective objective) {
@@ -1326,8 +1360,8 @@ public final class QuestManager implements Listener {
         int contribution = data.getInt("event.contribution." + id, 0);
         long remaining = Math.max(0L, data.getLong("event.ends-at", System.currentTimeMillis()) - System.currentTimeMillis());
         boolean completed = data.getBoolean("event.completed", false);
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Global Quest");
-        add(inv, 13, Material.NETHER_STAR, ChatColor.GOLD + data.getString("event.name", "Global Quest"), "global-info", "global",
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Community Chest");
+        add(inv, 13, Material.NETHER_STAR, ChatColor.GOLD + data.getString("event.name", "Community Chest"), "global-info", "global",
             List.of(ChatColor.WHITE + data.getString("event.description", "Work together to complete the objective."),
                     ChatColor.WHITE + "Shared progress: " + progress + "/" + goal,
                     ChatColor.WHITE + "Your contribution: " + contribution,
@@ -1373,13 +1407,13 @@ public final class QuestManager implements Listener {
                     if (contribution <= 0) continue;
                     plugin.setBalance(id, plugin.getBalance(id) + reward);
                     Player online = Bukkit.getPlayer(id);
-                    if (online != null) plugin.tellPublic(online, "§aGlobal quest reward received: " + reward + " coins for contributing to " + data.getString("event.name", "the global quest") + ".");
+                    if (online != null) plugin.tellPublic(online, "§aGlobal quest reward received: " + reward + " coins for contributing to " + data.getString("event.name", "the community chest") + ".");
                     paid++;
                 } catch (IllegalArgumentException ignored) { }
             }
         }
-        Bukkit.broadcastMessage(ChatColor.GOLD + "[Global Quest] " + ChatColor.GREEN
-                + data.getString("event.name", "Global Quest") + " completed! " + paid
+        Bukkit.broadcastMessage(ChatColor.GOLD + "[Community Chest] " + ChatColor.GREEN
+                + data.getString("event.name", "Community Chest") + " completed! " + paid
                 + " contributor(s) received " + reward + " coins each.");
         save();
         // A successful early completion immediately opens the next four-hour community challenge.
@@ -1418,14 +1452,14 @@ public final class QuestManager implements Listener {
             case "crop" -> "Harvest " + progress + "/" + goal + " Crops";
             default -> data.getString("event.description", "Complete the community objective") + " (" + progress + "/" + goal + ")";
         };
-        return "§6Global Quest: §f" + objective + " §8(" + percent + "%, " + formatGlobalTime(remaining) + ")";
+        return "§6Community Chest: §f" + objective + " §8(" + percent + "%, " + formatGlobalTime(remaining) + ")";
     }
 
     private void broadcastGlobalProgress() {
         resetEventIfNeeded();
         if (data.getBoolean("event.completed", false)) return;
-        String message = ChatColor.GOLD + "[Global Quest] " + ChatColor.YELLOW
-            + data.getString("event.name", "Global Quest") + ": " + data.getInt("event.progress", 0) + "/"
+        String message = ChatColor.GOLD + "[Community Chest] " + ChatColor.YELLOW
+            + data.getString("event.name", "Community Chest") + ": " + data.getInt("event.progress", 0) + "/"
             + data.getInt("event.goal", configuredEventGoal()) + " — "
             + data.getString("event.description", "Help complete the community objective.")
             + " Time left: " + formatGlobalTime(Math.max(0L, data.getLong("event.ends-at", 0L) - System.currentTimeMillis())) + ".";
@@ -1635,7 +1669,7 @@ public final class QuestManager implements Listener {
         data.set("event.started-at", now);
         save();
         if (announce) {
-            Bukkit.broadcastMessage(ChatColor.GOLD + "[Global Quest] " + ChatColor.YELLOW
+            Bukkit.broadcastMessage(ChatColor.GOLD + "[Community Chest] " + ChatColor.YELLOW
                     + "New 4-hour community quest: " + selected.name() + " — " + selected.description()
                     + ". Reward: " + reward + " coins for each contributor. Work together before the deadline!");
         }
@@ -1647,7 +1681,7 @@ public final class QuestManager implements Listener {
         String title = ChatColor.stripColor(event.getView().getTitle());
         if (title == null || !(title.equals("XZH Quests") || title.equals("XZH Single Quests")
                 || title.startsWith("XZH Achievement Packs") || title.equals("XZH Pack Tiers") || title.startsWith("XZH Easy Packs") || title.startsWith("XZH Hard Packs") || title.startsWith("XZH Master Packs") || title.equals("Confirm quest pack")
-                || title.equals("XZH Global Quest"))) return;
+                || title.equals("XZH Community Chest"))) return;
         event.setCancelled(true);
         ItemStack item = event.getCurrentItem();
         if (item == null || !item.hasItemMeta()) return;
