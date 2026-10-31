@@ -5,10 +5,16 @@ import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.Location;
+import org.bukkit.Sound;
+import org.bukkit.block.Biome;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.advancement.Advancement;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Vehicle;
+import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -18,6 +24,8 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.FurnaceExtractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.vehicle.VehicleMoveEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.entity.EntityBreedEvent;
@@ -77,7 +85,8 @@ public final class QuestManager implements Listener {
     private final NamespacedKey actionKey;
     private final NamespacedKey valueKey;
     private final Random random = new Random();
-    private final Map<UUID, Double> travelRemainders = new HashMap<>();
+    private final Map<String, Double> travelRemainders = new HashMap<>();
+    private static final NamespacedKey SURVIVAL_MONSTER_LEVEL_KEY = NamespacedKey.fromString("xzhsurvivalplugin:monster_level");
 
     private final List<Pack> packs = buildPacks();
 
@@ -137,7 +146,7 @@ public final class QuestManager implements Listener {
         result.add(new Pack("E052", "Skeleton Shooting Gallery", Material.IRON_SWORD, 90, 290, "minecraft:adventure/kill_a_mob", "Monster Hunter", 55, List.of(new Objective("kill:SKELETON", 25, "Defeat 25 Skeleton"))));
         result.add(new Pack("E053", "Creeper Cleanup", Material.IRON_SWORD, 90, 290, "minecraft:adventure/kill_a_mob", "Monster Hunter", 50, List.of(new Objective("kill:CREEPER", 15, "Defeat 15 Creeper"))));
         result.add(new Pack("E054", "Spider Season", Material.IRON_SWORD, 50, 240, "minecraft:adventure/kill_a_mob", "Monster Hunter", 50, List.of(new Objective("kill:SPIDER", 25, "Defeat 25 Spider"))));
-        result.add(new Pack("E055", "Night Shift", Material.IRON_SWORD, 90, 310, "minecraft:adventure/kill_a_mob", "Monster Hunter", 70, List.of(new Objective("kill:ZOMBIE", 60, "Defeat 60 Zombie"))));
+        result.add(new Pack("E055", "Night Shift", Material.IRON_SWORD, 90, 310, "minecraft:adventure/kill_a_mob", "Monster Hunter", 70, List.of(new Objective("kill-level:ZOMBIE:5", 12, "Defeat 12 Zombies at level 5 or higher"))));
         result.add(new Pack("E056", "Enderman Encounter", Material.IRON_SWORD, 170, 390, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("kill:ENDERMAN", 6, "Defeat 6 Enderman"))));
         result.add(new Pack("E057", "Witch Hunt", Material.IRON_SWORD, 170, 410, "minecraft:adventure/kill_a_mob", "Monster Hunter", 0, List.of(new Objective("kill:WITCH", 5, "Defeat 5 Witch"))));
         result.add(new Pack("E058", "Slime Squisher", Material.IRON_SWORD, 130, 340, "minecraft:adventure/kill_a_mob", "Monster Hunter", 0, List.of(new Objective("kill:SLIME", 12, "Defeat 12 Slime"))));
@@ -153,16 +162,16 @@ public final class QuestManager implements Listener {
         result.add(new Pack("E068", "Seafood Platter", Material.FURNACE, 90, 270, "minecraft:husbandry/fishy_business", "Fishy Business", 0, List.of(new Objective("smelt:COOKED_COD", 80, "Smelt 80 Cooked Cod"))));
         result.add(new Pack("E069", "Terracotta Kiln", Material.FURNACE, 130, 330, "minecraft:story/smelt_iron", "Acquire Hardware", 0, List.of(new Objective("smelt:TERRACOTTA", 128, "Smelt 128 Terracotta"))));
         result.add(new Pack("E070", "Baker's Dozen", Material.CRAFTING_TABLE, 90, 270, "minecraft:husbandry/plant_seed", "A Seedy Place", 0, List.of(new Objective("collect:BREAD", 96, "Collect 96 Bread"))));
-        result.add(new Pack("E071", "First Mile", Material.COMPASS, 50, 210, "minecraft:story/mine_stone", "Stone Age", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("E072", "Long Walk", Material.COMPASS, 50, 230, "minecraft:story/upgrade_tools", "Getting an Upgrade", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("E073", "Marathon Stroll", Material.COMPASS, 90, 320, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("E074", "Biome Hopper", Material.COMPASS, 90, 290, "minecraft:story/upgrade_tools", "Getting an Upgrade", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("E075", "Plains to Peaks", Material.COMPASS, 130, 370, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("E076", "Sprint Training", Material.COMPASS, 90, 300, "minecraft:story/iron_tools", "Isn't It Iron Pick", 50, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("E077", "Cave Cartographer", Material.COMPASS, 170, 390, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("E078", "Frozen Frontier", Material.COMPASS, 130, 340, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("E079", "Sandy Safari", Material.COMPASS, 130, 340, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("E080", "Jungle Expedition", Material.COMPASS, 130, 340, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
+        result.add(new Pack("E071", "First Mile", Material.COMPASS, 50, 210, "minecraft:story/mine_stone", "Stone Age", 0, List.of(new Objective("travel", 1000, "Travel 1,000 blocks")));
+        result.add(new Pack("E072", "Long Walk", Material.COMPASS, 50, 230, "minecraft:story/upgrade_tools", "Getting an Upgrade", 0, List.of(new Objective("visit-biome:FOREST", 1, "Enter the Forest biome")));
+        result.add(new Pack("E073", "Marathon Stroll", Material.COMPASS, 90, 320, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel-biome:PLAINS", 800, "Travel 800 blocks inside Plains biomes")));
+        result.add(new Pack("E074", "Biome Hopper", Material.COMPASS, 90, 290, "minecraft:story/upgrade_tools", "Getting an Upgrade", 0, List.of(new Objective("visit-biome:DESERT", 1, "Enter the Desert biome"), new Objective("visit-biome:SAVANNA", 1, "Enter the Savanna biome")));
+        result.add(new Pack("E075", "Plains to Peaks", Material.COMPASS, 130, 370, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel", 1500, "Travel 1,500 blocks")));
+        result.add(new Pack("E076", "Sprint Training", Material.COMPASS, 90, 300, "minecraft:story/iron_tools", "Isn't It Iron Pick", 50, List.of(new Objective("travel", 1200, "Travel 1,200 blocks")));
+        result.add(new Pack("E077", "Cave Cartographer", Material.COMPASS, 170, 390, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("visit-biome:LUSH_CAVES", 1, "Enter a Lush Caves biome")));
+        result.add(new Pack("E078", "Frozen Frontier", Material.COMPASS, 130, 340, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel-biome:SNOWY_PLAINS", 700, "Travel 700 blocks inside Snowy Plains")));
+        result.add(new Pack("E079", "Sandy Safari", Material.COMPASS, 130, 340, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel-biome:DESERT", 800, "Travel 800 blocks inside Desert biomes")));
+        result.add(new Pack("E080", "Jungle Expedition", Material.COMPASS, 130, 340, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("visit-biome:JUNGLE", 1, "Enter a Jungle biome")));
         result.add(new Pack("E081", "Village Pantry Raid", Material.WHEAT, 90, 290, "minecraft:adventure/trade", "What a Deal!", 45, List.of(new Objective("harvest:WHEAT", 64, "Harvest 64 Wheat"))));
         result.add(new Pack("E082", "Dungeon Delver", Material.IRON_SWORD, 130, 350, "minecraft:story/iron_tools", "Isn't It Iron Pick", 50, List.of(new Objective("kill:ZOMBIE", 15, "Defeat 15 Zombie"))));
         result.add(new Pack("E083", "Mineshaft Scavenger", Material.IRON_SWORD, 130, 360, "minecraft:story/iron_tools", "Isn't It Iron Pick", 60, List.of(new Objective("kill:CAVE_SPIDER", 20, "Defeat 20 Cave Spider"))));
@@ -213,9 +222,9 @@ public final class QuestManager implements Listener {
         result.add(new Pack("H028", "Bastion Looter", Material.DIAMOND_SWORD, 590, 1140, "minecraft:nether/find_bastion", "Those Were the Days", 0, List.of(new Objective("kill:PIGLIN", 30, "Defeat 30 Piglin"))));
         result.add(new Pack("H029", "Fortress Chest Crawl", Material.DIAMOND_SWORD, 530, 1030, "minecraft:nether/obtain_blaze_rod", "Into Fire", 0, List.of(new Objective("kill:BLAZE", 25, "Defeat 25 Blaze"))));
         result.add(new Pack("H030", "Zombified Piglin Purge", Material.DIAMOND_SWORD, 360, 750, "minecraft:nether/root", "Nether", 75, List.of(new Objective("kill:ZOMBIFIED_PIGLIN", 60, "Defeat 60 Zombified Piglin"))));
-        result.add(new Pack("H031", "Undead Annihilator", Material.DIAMOND_SWORD, 360, 800, "minecraft:adventure/kill_a_mob", "Monster Hunter", 100, List.of(new Objective("kill:ZOMBIE", 80, "Defeat 80 Zombie"))));
-        result.add(new Pack("H032", "Bone Collector", Material.DIAMOND_SWORD, 360, 800, "minecraft:adventure/shoot_arrow", "Take Aim", 100, List.of(new Objective("kill:SKELETON", 60, "Defeat 60 Skeleton"))));
-        result.add(new Pack("H033", "Arachnophobia", Material.DIAMOND_SWORD, 360, 770, "minecraft:adventure/kill_a_mob", "Monster Hunter", 90, List.of(new Objective("kill:SPIDER", 70, "Defeat 70 Spider"))));
+        result.add(new Pack("H031", "Undead Annihilator", Material.DIAMOND_SWORD, 360, 800, "minecraft:adventure/kill_a_mob", "Monster Hunter", 100, List.of(new Objective("kill-level:ZOMBIE:10", 20, "Defeat 20 Zombies at level 10 or higher"))));
+        result.add(new Pack("H032", "Bone Collector", Material.DIAMOND_SWORD, 360, 800, "minecraft:adventure/shoot_arrow", "Take Aim", 100, List.of(new Objective("kill-level:SKELETON:10", 15, "Defeat 15 Skeletons at level 10 or higher"))));
+        result.add(new Pack("H033", "Arachnophobia", Material.DIAMOND_SWORD, 360, 770, "minecraft:adventure/kill_a_mob", "Monster Hunter", 90, List.of(new Objective("kill-level:SPIDER:10", 18, "Defeat 18 Spiders at level 10 or higher"))));
         result.add(new Pack("H034", "Creeper Clearance", Material.DIAMOND_SWORD, 410, 880, "minecraft:adventure/shoot_arrow", "Take Aim", 100, List.of(new Objective("kill:CREEPER", 40, "Defeat 40 Creeper"))));
         result.add(new Pack("H035", "Phantom Menace", Material.DIAMOND_SWORD, 530, 1050, "minecraft:adventure/kill_a_mob", "Monster Hunter", 0, List.of(new Objective("kill:PHANTOM", 12, "Defeat 12 Phantom"))));
         result.add(new Pack("H036", "Witch's Cauldron", Material.DIAMOND_SWORD, 530, 1050, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("kill:WITCH", 12, "Defeat 12 Witch"))));
@@ -223,7 +232,7 @@ public final class QuestManager implements Listener {
         result.add(new Pack("H038", "Silverfish Sweeper", Material.DIAMOND_SWORD, 470, 910, "minecraft:story/follow_ender_eye", "Eye Spy", 0, List.of(new Objective("kill:SILVERFISH", 40, "Defeat 40 Silverfish"))));
         result.add(new Pack("H039", "Raid Cleanup", Material.DIAMOND_SWORD, 590, 1170, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 115, List.of(new Objective("kill:PILLAGER", 30, "Defeat 30 Pillager"))));
         result.add(new Pack("H040", "Ravager Wrangler", Material.DIAMOND_SWORD, 700, 1370, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 0, List.of(new Objective("kill:RAVAGER", 3, "Defeat 3 Ravager"))));
-        result.add(new Pack("H041", "Guardian Patrol", Material.DIAMOND_SWORD, 530, 1110, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 125, List.of(new Objective("kill:GUARDIAN", 30, "Defeat 30 Guardian"))));
+        result.add(new Pack("H041", "Guardian Patrol", Material.DIAMOND_SWORD, 530, 1110, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 125, List.of(new Objective("kill-level:GUARDIAN:10", 12, "Defeat 12 Guardians at level 10 or higher"))));
         result.add(new Pack("H042", "Prismarine Pillager", Material.IRON_PICKAXE, 470, 940, "minecraft:story/mine_diamond", "Diamonds!", 70, List.of(new Objective("break:PRISMARINE", 256, "Mine 256 Prismarine"))));
         result.add(new Pack("H043", "Sea Lantern Looter", Material.IRON_PICKAXE, 590, 1140, "minecraft:story/mine_diamond", "Diamonds!", 0, List.of(new Objective("break:SEA_LANTERN", 24, "Mine 24 Sea Lantern"))));
         result.add(new Pack("H044", "Drowned Hunter", Material.DIAMOND_SWORD, 410, 850, "minecraft:husbandry/fishy_business", "Fishy Business", 0, List.of(new Objective("kill:DROWNED", 50, "Defeat 50 Drowned"))));
@@ -231,7 +240,7 @@ public final class QuestManager implements Listener {
         result.add(new Pack("H046", "Pufferfish Plague", Material.FISHING_ROD, 470, 960, "minecraft:husbandry/fishy_business", "Fishy Business", 0, List.of(new Objective("fish:PUFFERFISH", 20, "Catch 20 Pufferfish"))));
         result.add(new Pack("H047", "Tropical Trove", Material.FISHING_ROD, 640, 1330, "minecraft:husbandry/tactical_fishing", "Tactical Fishing", 0, List.of(new Objective("fish:TROPICAL_FISH", 5, "Catch 5 Tropical Fish"))));
         result.add(new Pack("H048", "Treasure Tycoon", Material.FISHING_ROD, 590, 1140, "minecraft:husbandry/fishy_business", "Fishy Business", 0, List.of(new Objective("fish:COD", 6, "Catch 6 Cod"))));
-        result.add(new Pack("H049", "Ocean Explorer", Material.COMPASS, 410, 820, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
+        result.add(new Pack("H049", "Ocean Explorer", Material.COMPASS, 410, 820, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel-biome:OCEAN", 2500, "Travel 2,500 blocks inside Ocean biomes")));
         result.add(new Pack("H050", "Wreck & Ruin Tour", Material.FISHING_ROD, 530, 1080, "minecraft:husbandry/fishy_business", "Fishy Business", 0, List.of(new Objective("fish:COD", 80, "Catch 80 Cod"))));
         result.add(new Pack("H051", "Wheat Baron", Material.WHEAT, 360, 770, "minecraft:husbandry/plant_seed", "A Seedy Place", 70, List.of(new Objective("harvest:WHEAT", 640, "Harvest 640 Wheat"))));
         result.add(new Pack("H052", "Carrot Tycoon", Material.WHEAT, 360, 770, "minecraft:husbandry/plant_seed", "A Seedy Place", 70, List.of(new Objective("harvest:CARROT", 512, "Harvest 512 Carrot"))));
@@ -253,36 +262,36 @@ public final class QuestManager implements Listener {
         result.add(new Pack("H068", "Charcoal Baron", Material.FURNACE, 300, 650, "minecraft:story/upgrade_tools", "Getting an Upgrade", 60, List.of(new Objective("smelt:CHARCOAL", 512, "Smelt 512 Charcoal"))));
         result.add(new Pack("H069", "Kiln Master", Material.FURNACE, 410, 880, "minecraft:story/iron_tools", "Isn't It Iron Pick", 80, List.of(new Objective("smelt:TERRACOTTA", 384, "Smelt 384 Terracotta"))));
         result.add(new Pack("H070", "Smelter's Gauntlet", Material.FURNACE, 530, 1050, "minecraft:story/mine_diamond", "Diamonds!", 0, List.of(new Objective("smelt:IRON_INGOT", 128, "Smelt 128 Iron Ingot"), new Objective("smelt:GOLD_INGOT", 64, "Smelt 64 Gold Ingot"), new Objective("smelt:COPPER_INGOT", 128, "Smelt 128 Copper Ingot"))));
-        result.add(new Pack("H071", "Cross-Country Hike", Material.COMPASS, 410, 980, "minecraft:story/iron_tools", "Isn't It Iron Pick", 120, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("H072", "Biome Collector", Material.COMPASS, 530, 1180, "minecraft:adventure/sleep_in_bed", "Sweet Dreams", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("H073", "Mountain Pass", Material.COMPASS, 470, 990, "minecraft:story/iron_tools", "Isn't It Iron Pick", 90, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("H074", "Swamp & Mangrove Trek", Material.COMPASS, 410, 850, "minecraft:story/iron_tools", "Isn't It Iron Pick", 70, List.of(new Objective("travel", 500, "Travel 500 blocks"), new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("H075", "Mushroom Pilgrim", Material.COMPASS, 640, 1220, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("H076", "Blossom & Pale Wanderer", Material.COMPASS, 530, 1080, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("H077", "Savanna Safari", Material.COMPASS, 410, 850, "minecraft:story/iron_tools", "Isn't It Iron Pick", 70, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("H078", "Nether Grand Tour", Material.COMPASS, 530, 1080, "minecraft:nether/ride_strider", "This Boat Has Legs", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("H079", "Sprint Challenge", Material.COMPASS, 410, 930, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 100, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("H080", "Cave Biome Delver", Material.COMPASS, 590, 1200, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
+        result.add(new Pack("H071", "Cross-Country Hike", Material.COMPASS, 410, 980, "minecraft:story/iron_tools", "Isn't It Iron Pick", 120, List.of(new Objective("travel", 3500, "Travel 3,500 blocks")));
+        result.add(new Pack("H072", "Biome Collector", Material.COMPASS, 530, 1180, "minecraft:adventure/sleep_in_bed", "Sweet Dreams", 0, List.of(new Objective("visit-biome:DESERT", 1, "Enter the Desert biome"), new Objective("visit-biome:BADLANDS", 1, "Enter the Badlands biome"), new Objective("visit-biome:SAVANNA", 1, "Enter the Savanna biome"), new Objective("visit-biome:PLAINS", 1, "Enter the Plains biome")));
+        result.add(new Pack("H073", "Mountain Pass", Material.COMPASS, 470, 990, "minecraft:story/iron_tools", "Isn't It Iron Pick", 90, List.of(new Objective("travel-biome:WINDSWEPT_HILLS", 2000, "Travel 2,000 blocks inside Windswept Hills")));
+        result.add(new Pack("H074", "Swamp & Mangrove Trek", Material.COMPASS, 410, 850, "minecraft:story/iron_tools", "Isn't It Iron Pick", 70, List.of(new Objective("visit-biome:SWAMP", 1, "Enter the Swamp biome"), new Objective("visit-biome:MANGROVE_SWAMP", 1, "Enter the Mangrove Swamp biome")));
+        result.add(new Pack("H075", "Mushroom Pilgrim", Material.COMPASS, 640, 1220, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("visit-biome:MUSHROOM_FIELDS", 1, "Enter the Mushroom Fields biome")));
+        result.add(new Pack("H076", "Blossom & Pale Wanderer", Material.COMPASS, 530, 1080, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("visit-biome:CHERRY_GROVE", 1, "Enter the Cherry Grove biome"), new Objective("visit-biome:PALE_GARDEN", 1, "Enter the Pale Garden biome")));
+        result.add(new Pack("H077", "Savanna Safari", Material.COMPASS, 410, 850, "minecraft:story/iron_tools", "Isn't It Iron Pick", 70, List.of(new Objective("travel-biome:SAVANNA", 2500, "Travel 2,500 blocks inside Savanna biomes")));
+        result.add(new Pack("H078", "Nether Grand Tour", Material.COMPASS, 530, 1080, "minecraft:nether/ride_strider", "This Boat Has Legs", 0, List.of(new Objective("travel-world:NETHER", 3000, "Travel 3,000 blocks in the Nether")));
+        result.add(new Pack("H079", "Sprint Challenge", Material.COMPASS, 410, 930, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 100, List.of(new Objective("travel", 4500, "Travel 4,500 blocks")));
+        result.add(new Pack("H080", "Cave Biome Delver", Material.COMPASS, 590, 1200, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("visit-biome:DRIPSTONE_CAVES", 1, "Enter a Dripstone Caves biome"), new Objective("visit-biome:DEEP_DARK", 1, "Enter a Deep Dark biome")));
         result.add(new Pack("H081", "Desert Pyramid Plunder", Material.DIAMOND_SWORD, 530, 1060, "minecraft:story/iron_tools", "Isn't It Iron Pick", 80, List.of(new Objective("kill:HUSK", 20, "Defeat 20 Husk"))));
         result.add(new Pack("H082", "Jungle Temple Raider", Material.DIAMOND_SWORD, 530, 1060, "minecraft:story/iron_tools", "Isn't It Iron Pick", 80, List.of(new Objective("kill:SPIDER", 20, "Defeat 20 Spider"))));
         result.add(new Pack("H083", "Stronghold Stacks", Material.DIAMOND_SWORD, 590, 1170, "minecraft:story/follow_ender_eye", "Eye Spy", 0, List.of(new Objective("kill:ZOMBIE", 30, "Defeat 30 Zombie"))));
         result.add(new Pack("H084", "Outpost Overrun", Material.DIAMOND_SWORD, 530, 1030, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 0, List.of(new Objective("kill:PILLAGER", 15, "Defeat 15 Pillager"))));
-        result.add(new Pack("H085", "Dungeon Crawl XL", Material.DIAMOND_SWORD, 470, 1020, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("kill:ZOMBIE", 50, "Defeat 50 Zombie"))));
-        result.add(new Pack("H086", "Mineshaft Marathon", Material.DIAMOND_SWORD, 470, 1050, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 110, List.of(new Objective("kill:CAVE_SPIDER", 60, "Defeat 60 Cave Spider"))));
+        result.add(new Pack("H085", "Dungeon Crawl XL", Material.DIAMOND_SWORD, 470, 1020, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("kill-level:ZOMBIE:12", 20, "Defeat 20 Zombies at level 12 or higher"))));
+        result.add(new Pack("H086", "Mineshaft Marathon", Material.DIAMOND_SWORD, 470, 1050, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 110, List.of(new Objective("kill-level:CAVE_SPIDER:12", 15, "Defeat 15 Cave Spiders at level 12 or higher"))));
         result.add(new Pack("H087", "Mansion Heist", Material.DIAMOND_SWORD, 700, 1420, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 0, List.of(new Objective("kill:VINDICATOR", 20, "Defeat 20 Vindicator"))));
         result.add(new Pack("H088", "Ruined Portal Raider", Material.IRON_PICKAXE, 530, 1110, "minecraft:story/form_obsidian", "Ice Bucket Challenge", 0, List.of(new Objective("break:OBSIDIAN", 32, "Mine 32 Obsidian"))));
         result.add(new Pack("H089", "Village Hero's Haul", Material.WHEAT, 470, 990, "minecraft:adventure/trade", "What a Deal!", 0, List.of(new Objective("harvest:WHEAT", 192, "Harvest 192 Wheat"))));
         result.add(new Pack("H090", "Treasure Map Master", Material.FISHING_ROD, 640, 1300, "minecraft:husbandry/fishy_business", "Fishy Business", 0, List.of(new Objective("fish:COD", 20, "Catch 20 Cod"))));
         result.add(new Pack("H091", "Elder Guardian Slayer", Material.DIAMOND_SWORD, 700, 1390, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("kill:ELDER_GUARDIAN", 1, "Defeat 1 Elder Guardian"))));
         result.add(new Pack("H092", "Roaming Boss Hunter", Material.DIAMOND_SWORD, 640, 1300, "minecraft:adventure/kill_a_mob", "Monster Hunter", 0, List.of(new Objective("kill:@ROAMING_BOSS", 1, "Defeat 1 @roaming Boss"))));
-        result.add(new Pack("H093", "Skull Hunter", Material.DIAMOND_SWORD, 590, 1300, "minecraft:nether/obtain_blaze_rod", "Into Fire", 175, List.of(new Objective("kill:WITHER_SKELETON", 60, "Defeat 60 Wither Skeleton"))));
-        result.add(new Pack("H094", "Blaze Rod Baron", Material.DIAMOND_SWORD, 530, 1160, "minecraft:nether/obtain_blaze_rod", "Into Fire", 150, List.of(new Objective("kill:BLAZE", 60, "Defeat 60 Blaze"))));
+        result.add(new Pack("H093", "Skull Hunter", Material.DIAMOND_SWORD, 590, 1300, "minecraft:nether/obtain_blaze_rod", "Into Fire", 175, List.of(new Objective("kill-level:WITHER_SKELETON:15", 10, "Defeat 10 Wither Skeletons at level 15 or higher"))));
+        result.add(new Pack("H094", "Blaze Rod Baron", Material.DIAMOND_SWORD, 530, 1160, "minecraft:nether/obtain_blaze_rod", "Into Fire", 150, List.of(new Objective("kill-level:BLAZE:15", 12, "Defeat 12 Blazes at level 15 or higher"))));
         result.add(new Pack("H095", "Ghast Gauntlet", Material.DIAMOND_SWORD, 590, 1220, "minecraft:nether/return_to_sender", "Return to Sender", 0, List.of(new Objective("kill:GHAST", 16, "Defeat 16 Ghast"))));
         result.add(new Pack("H096", "Evoker Execution", Material.DIAMOND_SWORD, 700, 1390, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 0, List.of(new Objective("kill:EVOKER", 2, "Defeat 2 Evoker"))));
         result.add(new Pack("H097", "Vex Vanquisher", Material.DIAMOND_SWORD, 530, 1080, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 115, List.of(new Objective("kill:VEX", 20, "Defeat 20 Vex"))));
         result.add(new Pack("H098", "Captain's Bounty", Material.DIAMOND_SWORD, 470, 990, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 115, List.of(new Objective("kill:PILLAGER", 40, "Defeat 40 Pillager"))));
         result.add(new Pack("H099", "Nether Conqueror", Material.IRON_PICKAXE, 700, 1470, "minecraft:nether/obtain_ancient_debris", "Hidden in the Depths", 0, List.of(new Objective("break:ANCIENT_DEBRIS", 4, "Mine 4 Ancient Debris"), new Objective("kill:BLAZE", 25, "Defeat 25 Blaze"), new Objective("kill:WITHER_SKELETON", 15, "Defeat 15 Wither Skeleton"))));
-        result.add(new Pack("H100", "Overworld Overlord", Material.IRON_PICKAXE, 700, 1550, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("break:DIAMOND_ORE", 20, "Mine 20 Diamond Ore"), new Objective("kill:CREEPER", 20, "Defeat 20 Creeper"), new Objective("fish:COD", 3, "Catch 3 Cod"), new Objective("travel", 500, "Travel 500 blocks"))));
+        result.add(new Pack("H100", "Overworld Overlord", Material.IRON_PICKAXE, 700, 1550, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("travel", 3000, "Travel 3,000 blocks")));
         result.add(new Pack("M001", "Enderman Exterminator", Material.NETHERITE_SWORD, 2100, 4900, "minecraft:end/enter_end_gateway", "Remote Getaway", 140, List.of(new Objective("kill:ENDERMAN", 60, "Defeat 60 Enderman"))));
         result.add(new Pack("M002", "End Stone Excavator", Material.IRON_PICKAXE, 1200, 3200, "minecraft:end/enter_end_gateway", "Remote Getaway", 0, List.of(new Objective("break:END_STONE", 500, "Mine 500 End Stone"))));
         result.add(new Pack("M003", "Purpur Pillager", Material.IRON_PICKAXE, 1650, 4150, "minecraft:end/find_end_city", "The City at the End of the Game", 100, List.of(new Objective("break:PURPUR_BLOCK", 384, "Mine 384 Purpur Block"))));
@@ -290,8 +299,8 @@ public final class QuestManager implements Listener {
         result.add(new Pack("M005", "Shulker Shell Hunt", Material.NETHERITE_SWORD, 2350, 5300, "minecraft:end/find_end_city", "The City at the End of the Game", 150, List.of(new Objective("kill:SHULKER", 16, "Defeat 16 Shulker"))));
         result.add(new Pack("M006", "End City Loot Run", Material.NETHERITE_SWORD, 2350, 5300, "minecraft:end/find_end_city", "The City at the End of the Game", 0, List.of(new Objective("kill:SHULKER", 40, "Defeat 40 Shulker"))));
         result.add(new Pack("M007", "Dragon Head Heist", Material.IRON_PICKAXE, 2800, 6050, "minecraft:end/find_end_city", "The City at the End of the Game", 0, List.of(new Objective("break:DRAGON_HEAD", 1, "Mine 1 Dragon Head"))));
-        result.add(new Pack("M008", "Sky Pirate", Material.COMPASS, 2100, 4800, "minecraft:end/elytra", "Sky's the Limit", 100, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("M009", "Void Walker", Material.COMPASS, 1900, 4500, "minecraft:end/enter_end_gateway", "Remote Getaway", 100, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
+        result.add(new Pack("M008", "Sky Pirate", Material.COMPASS, 2100, 4800, "minecraft:end/elytra", "Sky's the Limit", 100, List.of(new Objective("travel", 8000, "Travel 8,000 blocks")));
+        result.add(new Pack("M009", "Void Walker", Material.COMPASS, 1900, 4500, "minecraft:end/enter_end_gateway", "Remote Getaway", 100, List.of(new Objective("travel-world:THE_END", 5000, "Travel 5,000 blocks in the End")));
         result.add(new Pack("M010", "Endgame Supply Run", Material.NETHERITE_SWORD, 2100, 5200, "minecraft:end/find_end_city", "The City at the End of the Game", 200, List.of(new Objective("kill:ENDERMAN", 30, "Defeat 30 Enderman"), new Objective("break:END_STONE", 500, "Mine 500 End Stone"), new Objective("break:CHORUS_PLANT", 256, "Mine 256 Chorus Plant"))));
         result.add(new Pack("M011", "Debris Magnate", Material.IRON_PICKAXE, 2800, 6250, "minecraft:nether/obtain_ancient_debris", "Hidden in the Depths", 0, List.of(new Objective("break:ANCIENT_DEBRIS", 24, "Mine 24 Ancient Debris"))));
         result.add(new Pack("M012", "Scrap Smelter Supreme", Material.FURNACE, 2800, 6400, "minecraft:nether/obtain_ancient_debris", "Hidden in the Depths", 0, List.of(new Objective("smelt:NETHERITE_SCRAP", 12, "Smelt 12 Netherite Scrap"))));
@@ -330,9 +339,9 @@ public final class QuestManager implements Listener {
         result.add(new Pack("M045", "Illager Annihilator", Material.NETHERITE_SWORD, 2100, 5200, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 200, List.of(new Objective("kill:VINDICATOR", 50, "Defeat 50 Vindicator"))));
         result.add(new Pack("M046", "Totem Trader", Material.NETHERITE_SWORD, 2800, 6750, "minecraft:adventure/totem_of_undying", "Postmortal", 0, List.of(new Objective("kill:EVOKER", 10, "Defeat 10 Evoker"))));
         result.add(new Pack("M047", "Witch Doctor", Material.NETHERITE_SWORD, 2100, 5150, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 190, List.of(new Objective("kill:WITCH", 40, "Defeat 40 Witch"))));
-        result.add(new Pack("M048", "Patrol Marathon", Material.NETHERITE_SWORD, 1900, 5150, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 250, List.of(new Objective("kill:PILLAGER", 150, "Defeat 150 Pillager"))));
+        result.add(new Pack("M048", "Patrol Marathon", Material.NETHERITE_SWORD, 1900, 5150, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 250, List.of(new Objective("kill-level:PILLAGER:15", 35, "Defeat 35 Pillagers at level 15 or higher"))));
         result.add(new Pack("M049", "Vex Vendetta", Material.NETHERITE_SWORD, 2100, 5100, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 175, List.of(new Objective("kill:VEX", 60, "Defeat 60 Vex"))));
-        result.add(new Pack("M050", "Raid Master", Material.NETHERITE_SWORD, 2550, 6650, "minecraft:adventure/hero_of_the_village", "Hero of the Village", 0, List.of(new Objective("kill:PILLAGER", 200, "Defeat 200 Pillager"))));
+        result.add(new Pack("M050", "Raid Master", Material.NETHERITE_SWORD, 2550, 6650, "minecraft:adventure/hero_of_the_village", "Hero of the Village", 0, List.of(new Objective("kill-level:PILLAGER:15", 50, "Defeat 50 Pillagers at level 15 or higher"))));
         result.add(new Pack("M051", "Trial Initiate", Material.NETHERITE_SWORD, 2100, 4950, "minecraft:adventure/minecraft_trials_edition", "Minecraft: Trial(s) Edition", 120, List.of(new Objective("kill:BREEZE", 40, "Defeat 40 Breeze"))));
         result.add(new Pack("M052", "Vault Cracker", Material.NETHERITE_SWORD, 2350, 5450, "minecraft:adventure/under_lock_and_key", "Under Lock and Key", 140, List.of(new Objective("kill:BREEZE", 15, "Defeat 15 Breeze"))));
         result.add(new Pack("M053", "Breeze Breaker", Material.NETHERITE_SWORD, 2350, 5450, "minecraft:adventure/minecraft_trials_edition", "Minecraft: Trial(s) Edition", 175, List.of(new Objective("kill:BREEZE", 30, "Defeat 30 Breeze"))));
@@ -341,25 +350,25 @@ public final class QuestManager implements Listener {
         result.add(new Pack("M056", "Chamber Looter", Material.NETHERITE_SWORD, 2350, 5700, "minecraft:adventure/minecraft_trials_edition", "Minecraft: Trial(s) Edition", 0, List.of(new Objective("kill:BREEZE", 100, "Defeat 100 Breeze"))));
         result.add(new Pack("M057", "Vault Veteran", Material.NETHERITE_SWORD, 2550, 6150, "minecraft:adventure/revaulting", "Revaulting", 0, List.of(new Objective("kill:BREEZE", 40, "Defeat 40 Breeze"))));
         result.add(new Pack("M058", "Ominous Trials", Material.NETHERITE_SWORD, 3000, 7200, "minecraft:adventure/revaulting", "Revaulting", 0, List.of(new Objective("kill:BREEZE", 15, "Defeat 15 Breeze"))));
-        result.add(new Pack("M059", "Trial Marathon", Material.NETHERITE_SWORD, 2350, 5800, "minecraft:adventure/under_lock_and_key", "Under Lock and Key", 0, List.of(new Objective("kill:ZOMBIE", 200, "Defeat 200 Zombie"))));
-        result.add(new Pack("M060", "Heavy Hitter", Material.NETHERITE_SWORD, 2550, 6150, "minecraft:adventure/overoverkill", "Over-Overkill", 250, List.of(new Objective("kill:ZOMBIE", 150, "Defeat 150 Zombie"))));
-        result.add(new Pack("M061", "Monument Marauder", Material.NETHERITE_SWORD, 2100, 5350, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 225, List.of(new Objective("kill:GUARDIAN", 80, "Defeat 80 Guardian"))));
+        result.add(new Pack("M059", "Trial Marathon", Material.NETHERITE_SWORD, 2350, 5800, "minecraft:adventure/under_lock_and_key", "Under Lock and Key", 0, List.of(new Objective("kill-level:ZOMBIE:15", 35, "Defeat 35 Zombies at level 15 or higher"))));
+        result.add(new Pack("M060", "Heavy Hitter", Material.NETHERITE_SWORD, 2550, 6150, "minecraft:adventure/overoverkill", "Over-Overkill", 250, List.of(new Objective("kill-level:ZOMBIE:18", 25, "Defeat 25 Zombies at level 18 or higher"))));
+        result.add(new Pack("M061", "Monument Marauder", Material.NETHERITE_SWORD, 2100, 5350, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 225, List.of(new Objective("kill-level:GUARDIAN:15", 20, "Defeat 20 Guardians at level 15 or higher"))));
         result.add(new Pack("M062", "Elder Duo", Material.NETHERITE_SWORD, 2800, 6400, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("kill:ELDER_GUARDIAN", 2, "Defeat 2 Elder Guardian"))));
         result.add(new Pack("M063", "Sponge Collector", Material.IRON_PICKAXE, 2550, 5600, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("break:WET_SPONGE", 24, "Mine 24 Wet Sponge"))));
         result.add(new Pack("M064", "Prismarine Palace", Material.IRON_PICKAXE, 1650, 4400, "minecraft:story/mine_diamond", "Diamonds!", 140, List.of(new Objective("break:PRISMARINE", 800, "Mine 800 Prismarine"))));
         result.add(new Pack("M065", "Sea Lantern Empire", Material.IRON_PICKAXE, 2100, 5100, "minecraft:story/mine_diamond", "Diamonds!", 140, List.of(new Objective("break:SEA_LANTERN", 80, "Mine 80 Sea Lantern"))));
-        result.add(new Pack("M066", "Trench Diver", Material.NETHERITE_SWORD, 1650, 4650, "minecraft:husbandry/fishy_business", "Fishy Business", 225, List.of(new Objective("kill:DROWNED", 150, "Defeat 150 Drowned"))));
+        result.add(new Pack("M066", "Trench Diver", Material.NETHERITE_SWORD, 1650, 4650, "minecraft:husbandry/fishy_business", "Fishy Business", 225, List.of(new Objective("kill-level:DROWNED:15", 40, "Defeat 40 Drowned at level 15 or higher"))));
         result.add(new Pack("M067", "Treasure Tycoon II", Material.FISHING_ROD, 2350, 5700, "minecraft:husbandry/fishy_business", "Fishy Business", 0, List.of(new Objective("fish:COD", 12, "Catch 12 Cod"))));
         result.add(new Pack("M068", "Tropical Tycoon", Material.FISHING_ROD, 2550, 6250, "minecraft:husbandry/tactical_fishing", "Tactical Fishing", 0, List.of(new Objective("fish:TROPICAL_FISH", 10, "Catch 10 Tropical Fish"))));
         result.add(new Pack("M069", "Pufferfish Plague II", Material.FISHING_ROD, 2100, 5300, "minecraft:husbandry/fishy_business", "Fishy Business", 0, List.of(new Objective("fish:PUFFERFISH", 40, "Catch 40 Pufferfish"))));
-        result.add(new Pack("M070", "Deep Ocean Voyager", Material.COMPASS, 1900, 4850, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"), new Objective("travel", 500, "Travel 500 blocks"))));
+        result.add(new Pack("M070", "Deep Ocean Voyager", Material.COMPASS, 1900, 4850, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel-biome:DEEP_OCEAN", 4000, "Travel 4,000 blocks inside Deep Ocean biomes"), new Objective("visit-biome:WARM_OCEAN", 1, "Enter a Warm Ocean biome")));
         result.add(new Pack("M071", "Miner's Grand Slam", Material.IRON_PICKAXE, 2800, 7050, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("break:DIAMOND_ORE", 32, "Mine 32 Diamond Ore"), new Objective("break:EMERALD_ORE", 12, "Mine 12 Emerald Ore"), new Objective("break:GOLD_ORE", 64, "Mine 64 Gold Ore"), new Objective("break:ANCIENT_DEBRIS", 6, "Mine 6 Ancient Debris"))));
-        result.add(new Pack("M072", "Hunter's Grand Slam", Material.NETHERITE_SWORD, 2350, 5950, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 275, List.of(new Objective("kill:ENDERMAN", 30, "Defeat 30 Enderman"), new Objective("kill:BLAZE", 30, "Defeat 30 Blaze"), new Objective("kill:WITCH", 15, "Defeat 15 Witch"), new Objective("kill:CREEPER", 40, "Defeat 40 Creeper"))));
+        result.add(new Pack("M072", "Hunter's Grand Slam", Material.NETHERITE_SWORD, 2350, 5950, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 275, List.of(new Objective("kill-level:ENDERMAN:15", 12, "Defeat 12 Endermen at level 15 or higher"), new Objective("kill-level:BLAZE:15", 12, "Defeat 12 Blazes at level 15 or higher"), new Objective("kill:WITCH", 15, "Defeat 15 Witch"), new Objective("kill:CREEPER", 40, "Defeat 40 Creeper"))));
         result.add(new Pack("M073", "Farmer's Grand Slam", Material.WHEAT, 1650, 4800, "minecraft:husbandry/plant_seed", "A Seedy Place", 200, List.of(new Objective("harvest:WHEAT", 512, "Harvest 512 Wheat"), new Objective("harvest:CARROT", 512, "Harvest 512 Carrot"), new Objective("harvest:POTATO", 512, "Harvest 512 Potato"), new Objective("harvest:MELON_SLICE", 128, "Harvest 128 Melon Slice"), new Objective("harvest:PUMPKIN", 128, "Harvest 128 Pumpkin"))));
         result.add(new Pack("M074", "Angler's Grand Slam", Material.FISHING_ROD, 2350, 5950, "minecraft:husbandry/tactical_fishing", "Tactical Fishing", 0, List.of(new Objective("fish:COD", 60, "Catch 60 Cod"), new Objective("fish:SALMON", 40, "Catch 40 Salmon"), new Objective("fish:PUFFERFISH", 20, "Catch 20 Pufferfish"), new Objective("fish:TROPICAL_FISH", 4, "Catch 4 Tropical Fish"))));
         result.add(new Pack("M075", "Smith's Grand Slam", Material.FURNACE, 1900, 5150, "minecraft:story/mine_diamond", "Diamonds!", 200, List.of(new Objective("smelt:IRON_INGOT", 256, "Smelt 256 Iron Ingot"), new Objective("smelt:GOLD_INGOT", 96, "Smelt 96 Gold Ingot"), new Objective("smelt:COPPER_INGOT", 256, "Smelt 256 Copper Ingot"), new Objective("smelt:GLASS", 512, "Smelt 512 Glass"))));
-        result.add(new Pack("M076", "Explorer's Grand Slam", Material.COMPASS, 2100, 5950, "minecraft:adventure/sleep_in_bed", "Sweet Dreams", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"), new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("M077", "Looter's Grand Slam", Material.NETHERITE_SWORD, 2350, 6100, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("kill:ZOMBIE", 200, "Defeat 200 Zombie"))));
+        result.add(new Pack("M076", "Explorer's Grand Slam", Material.COMPASS, 2100, 5950, "minecraft:adventure/sleep_in_bed", "Sweet Dreams", 0, List.of(new Objective("visit-biome:DESERT", 1, "Enter the Desert biome"), new Objective("visit-biome:JUNGLE", 1, "Enter the Jungle biome"), new Objective("visit-biome:BADLANDS", 1, "Enter the Badlands biome"), new Objective("visit-biome:SNOWY_PLAINS", 1, "Enter the Snowy Plains biome"), new Objective("visit-biome:MUSHROOM_FIELDS", 1, "Enter the Mushroom Fields biome")));
+        result.add(new Pack("M077", "Looter's Grand Slam", Material.NETHERITE_SWORD, 2350, 6100, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("kill-level:ZOMBIE:18", 30, "Defeat 30 Zombies at level 18 or higher"))));
         result.add(new Pack("M078", "Breeder's Grand Slam", Material.WHEAT, 1900, 5250, "minecraft:husbandry/bred_all_animals", "Two by Two", 0, List.of(new Objective("harvest:WHEAT", 400, "Harvest 400 Wheat"))));
         result.add(new Pack("M079", "Dimension Hopper", Material.IRON_PICKAXE, 2800, 6900, "minecraft:end/find_end_city", "The City at the End of the Game", 0, List.of(new Objective("break:ANCIENT_DEBRIS", 8, "Mine 8 Ancient Debris"), new Objective("kill:SHULKER", 8, "Defeat 8 Shulker"), new Objective("fish:COD", 100, "Catch 100 Cod"))));
         result.add(new Pack("M080", "Master Chef", Material.FURNACE, 1650, 4650, "minecraft:husbandry/balanced_diet", "A Balanced Diet", 180, List.of(new Objective("smelt:COOKED_BEEF", 1100, "Smelt 1100 Cooked Beef"))));
@@ -367,12 +376,12 @@ public final class QuestManager implements Listener {
         result.add(new Pack("M082", "Ore Baron", Material.IRON_PICKAXE, 1900, 5500, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("break:ANY_ORE", 500, "Mine 500 Any Ore"))));
         result.add(new Pack("M083", "Forest Eater", Material.IRON_PICKAXE, 1200, 3950, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("break:OAK_LOG", 500, "Mine 500 Oak Log"))));
         result.add(new Pack("M084", "Field Marshal", Material.WHEAT, 1200, 4200, "minecraft:husbandry/plant_seed", "A Seedy Place", 0, List.of(new Objective("harvest:WHEAT", 4000, "Harvest 4000 Wheat"))));
-        result.add(new Pack("M085", "Great Wall Walk", Material.COMPASS, 1450, 5600, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
-        result.add(new Pack("M086", "Slayer Ascendant", Material.NETHERITE_SWORD, 1650, 5800, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("kill:ZOMBIE", 1000, "Defeat 1000 Zombie"))));
+        result.add(new Pack("M085", "Great Wall Walk", Material.COMPASS, 1450, 5600, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("travel", 10000, "Travel 10,000 blocks")));
+        result.add(new Pack("M086", "Slayer Ascendant", Material.NETHERITE_SWORD, 1650, 5800, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("kill-level:ZOMBIE:20", 12, "Defeat 12 Zombies at level 20 or higher"))));
         result.add(new Pack("M087", "Angler Ascendant", Material.FISHING_ROD, 1450, 5200, "minecraft:husbandry/tactical_fishing", "Tactical Fishing", 0, List.of(new Objective("fish:COD", 900, "Catch 900 Cod"))));
         result.add(new Pack("M088", "Furnace Emperor", Material.FURNACE, 1450, 4850, "minecraft:story/mine_diamond", "Diamonds!", 0, List.of(new Objective("smelt:ANY", 3000, "Smelt 3000 Any"))));
         result.add(new Pack("M089", "Herd Master", Material.WHEAT, 1200, 3950, "minecraft:husbandry/breed_an_animal", "The Parrots and the Bats", 0, List.of(new Objective("harvest:WHEAT", 500, "Harvest 500 Wheat"))));
-        result.add(new Pack("M090", "Nether Wanderer", Material.COMPASS, 1650, 4750, "minecraft:nether/fast_travel", "Subspace Bubble", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"))));
+        result.add(new Pack("M090", "Nether Wanderer", Material.COMPASS, 1650, 4750, "minecraft:nether/fast_travel", "Subspace Bubble", 0, List.of(new Objective("travel-world:NETHER", 12000, "Travel 12,000 blocks in the Nether")));
         result.add(new Pack("M091", "Three Realms Trial", Material.IRON_PICKAXE, 2550, 6550, "minecraft:end/find_end_city", "The City at the End of the Game", 325, List.of(new Objective("break:IRON_ORE", 128, "Mine 128 Iron Ore"), new Objective("kill:BLAZE", 30, "Defeat 30 Blaze"), new Objective("kill:ENDERMAN", 30, "Defeat 30 Enderman"))));
         result.add(new Pack("M092", "Netherite Initiation", Material.IRON_PICKAXE, 2800, 6900, "minecraft:nether/obtain_ancient_debris", "Hidden in the Depths", 0, List.of(new Objective("break:ANCIENT_DEBRIS", 8, "Mine 8 Ancient Debris"), new Objective("smelt:NETHERITE_SCRAP", 8, "Smelt 8 Netherite Scrap"), new Objective("kill:WITHER_SKELETON", 30, "Defeat 30 Wither Skeleton"))));
         result.add(new Pack("M093", "End Game Gauntlet", Material.NETHERITE_SWORD, 2800, 6800, "minecraft:end/find_end_city", "The City at the End of the Game", 300, List.of(new Objective("kill:SHULKER", 12, "Defeat 12 Shulker"), new Objective("kill:SHULKER", 30, "Defeat 30 Shulker"), new Objective("kill:ENDERMAN", 40, "Defeat 40 Enderman"))));
@@ -381,15 +390,14 @@ public final class QuestManager implements Listener {
         result.add(new Pack("M096", "Pillager's Doom", Material.NETHERITE_SWORD, 3000, 7200, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 0, List.of(new Objective("kill:VINDICATOR", 30, "Defeat 30 Vindicator"), new Objective("kill:EVOKER", 4, "Defeat 4 Evoker"), new Objective("kill:RAVAGER", 4, "Defeat 4 Ravager"))));
         result.add(new Pack("M097", "Ocean Overlord", Material.NETHERITE_SWORD, 2800, 7200, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 360, List.of(new Objective("kill:ELDER_GUARDIAN", 2, "Defeat 2 Elder Guardian"), new Objective("kill:GUARDIAN", 60, "Defeat 60 Guardian"), new Objective("break:SPONGE", 16, "Mine 16 Sponge"))));
         result.add(new Pack("M098", "Trial by Fire", Material.NETHERITE_SWORD, 2800, 6900, "minecraft:adventure/under_lock_and_key", "Under Lock and Key", 325, List.of(new Objective("kill:BREEZE", 40, "Defeat 40 Breeze"), new Objective("kill:BREEZE", 25, "Defeat 25 Breeze"), new Objective("kill:BLAZE", 40, "Defeat 40 Blaze"))));
-        result.add(new Pack("M099", "Legend of the Wanderer", Material.COMPASS, 2800, 7700, "minecraft:adventure/sleep_in_bed", "Sweet Dreams", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"), new Objective("travel", 500, "Travel 500 blocks"), new Objective("kill:ZOMBIE", 150, "Defeat 150 Zombie"))));
+        result.add(new Pack("M099", "Legend of the Wanderer", Material.COMPASS, 2800, 7700, "minecraft:adventure/sleep_in_bed", "Sweet Dreams", 0, List.of(new Objective("travel", 8000, "Travel 8,000 blocks"), new Objective("visit-biome:CHERRY_GROVE", 1, "Enter the Cherry Grove biome"), new Objective("visit-biome:PALE_GARDEN", 1, "Enter the Pale Garden biome"), new Objective("kill:ZOMBIE", 20, "Defeat 20 Zombies at level 15 or higher")));
         result.add(new Pack("M100", "The Grand Master", Material.NETHERITE_SWORD, 3000, 8000, "minecraft:end/respawn_dragon", "The End... Again...", 0, List.of(new Objective("kill:ENDER_DRAGON", 1, "Defeat 1 Ender Dragon"), new Objective("kill:WITHER", 1, "Defeat 1 Wither"), new Objective("kill:ELDER_GUARDIAN", 1, "Defeat 1 Elder Guardian"), new Objective("kill:WARDEN", 1, "Defeat 1 Warden"))));
         return sortAndPricePacks(result);
     }
 
     private List<Pack> sortAndPricePacks(List<Pack> source) {
         List<Pack> ordered = new ArrayList<>(300);
-        Set<Material> usedIcons = new HashSet<>();
-        for (char tier : new char[] {'E', 'H', 'M'}) {
+                for (char tier : new char[] {'E', 'H', 'M'}) {
             List<Pack> tierPacks = new ArrayList<>();
             for (Pack pack : source) if (pack.id().charAt(0) == tier) tierPacks.add(pack);
             tierPacks.sort(Comparator.comparingInt(Pack::cost).thenComparing(Pack::id));
@@ -399,7 +407,7 @@ public final class QuestManager implements Listener {
                 Pack pack = tierPacks.get(i);
                 int profit = minimumProfit + (int) Math.round((maximumProfit - minimumProfit) * (i / (double) Math.max(1, tierPacks.size() - 1)));
                 String numberedName = String.format(Locale.ROOT, "(%02d) %s", i + 1, pack.name());
-                Material icon = selectUniqueQuestIcon(pack, usedIcons);
+                Material icon = questIconForPack(pack);
                 ordered.add(new Pack(pack.id(), numberedName, icon, pack.cost(), pack.cost() + profit,
                         pack.advancement(), pack.unlockTitle(), pack.timerMinutes(), pack.objectives()));
             }
@@ -407,69 +415,52 @@ public final class QuestManager implements Listener {
         return ordered;
     }
 
-    private Material selectUniqueQuestIcon(Pack pack, Set<Material> used) {
-        String target = pack.objectives().isEmpty() ? "" : pack.objectives().get(0).target().toUpperCase(Locale.ROOT);
+    private Material questIconForPack(Pack pack) {
+        if (pack.objectives().isEmpty()) return Material.BOOK;
+        String target = pack.objectives().get(0).target().toUpperCase(Locale.ROOT);
+        if (target.equals("TRAVEL") || target.startsWith("TRAVEL-") || target.startsWith("VISIT-BIOME:")) {
+            return target.startsWith("VISIT-BIOME:") ? Material.FILLED_MAP : Material.COMPASS;
+        }
         String category = target.contains(":") ? target.substring(0, target.indexOf(':')) : target;
-        String targetItem = target.contains(":") ? target.substring(target.indexOf(':') + 1) : target;
+        String targetItem = target.contains(":") ? target.substring(target.indexOf(':') + 1).split(":")[0] : target;
+        if (category.equals("KILL") || category.equals("KILL-LEVEL")) {
+            return switch (targetItem) {
+                case "ZOMBIE" -> Material.ZOMBIE_HEAD;
+                case "SKELETON" -> Material.SKELETON_SKULL;
+                case "WITHER_SKELETON" -> Material.WITHER_SKELETON_SKULL;
+                case "CREEPER" -> Material.CREEPER_HEAD;
+                case "ENDERMAN" -> Material.ENDER_PEARL;
+                case "SPIDER", "CAVE_SPIDER" -> Material.SPIDER_EYE;
+                case "BLAZE" -> Material.BLAZE_ROD;
+                case "GHAST" -> Material.GHAST_TEAR;
+                case "SLIME", "MAGMA_CUBE" -> Material.SLIME_BALL;
+                case "DROWNED" -> Material.ROTTEN_FLESH;
+                case "WITCH" -> Material.GLASS_BOTTLE;
+                case "PIGLIN", "PIGLIN_BRUTE", "ZOMBIFIED_PIGLIN" -> Material.GOLD_INGOT;
+                case "HOGLIN" -> Material.PORKCHOP;
+                case "PHANTOM" -> Material.PHANTOM_MEMBRANE;
+                case "SHULKER" -> Material.SHULKER_SHELL;
+                case "PILLAGER", "VINDICATOR", "EVOKER", "RAVAGER", "VEX" -> Material.CROSSBOW;
+                case "GUARDIAN", "ELDER_GUARDIAN" -> Material.PRISMARINE_SHARD;
+                case "BREEZE" -> Material.BREEZE_ROD;
+                case "BOGGED" -> Material.ARROW;
+                case "WARDEN" -> Material.SCULK_CATALYST;
+                case "WITHER", "ENDER_DRAGON", "@ROAMING_BOSS" -> Material.NETHER_STAR;
+                default -> Material.IRON_SWORD;
+            };
+        }
         Material exact = Material.matchMaterial(targetItem);
-        if (exact != null && exact.isItem() && !exact.isAir() && !used.contains(exact)) {
-            used.add(exact);
-            return exact;
-        }
-        String questWords = pack.name().toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]+", " ");
-        Material best = null;
-        int bestScore = Integer.MIN_VALUE;
-        for (Material candidate : Material.values()) {
-            if (!candidate.isItem() || candidate.isAir() || used.contains(candidate)) continue;
-            String item = candidate.name();
-            int score = 0;
-            if (!targetItem.isBlank() && item.contains(targetItem)) score += 900;
-            for (String word : questWords.split(" ")) if (word.length() >= 4 && item.contains(word)) score += 45;
-            switch (category) {
-                case "BREAK" -> {
-                    if (item.contains("PICKAXE")) score += 100;
-                    if (item.contains("ORE") || item.contains("RAW_") || item.contains("INGOT") || item.contains("GEM")) score += 65;
-                    if (item.contains("STONE") || item.contains("DEEPSLATE") || item.contains("OBSIDIAN") || item.contains("CRYSTAL")) score += 35;
-                    if (item.endsWith("_LOG") || item.endsWith("_WOOD") || item.contains("PLANKS") || item.contains("SAPLING")) score += 30;
-                }
-                case "HARVEST" -> {
-                    if (item.contains("SEEDS") || item.contains("WHEAT") || item.contains("CARROT") || item.contains("POTATO") || item.contains("BEETROOT")) score += 90;
-                    if (item.contains("BERRY") || item.contains("MELON") || item.contains("PUMPKIN") || item.contains("CROP") || item.contains("HOE")) score += 65;
-                    if (item.contains("FARM") || item.contains("HAY") || item.contains("HONEY")) score += 35;
-                }
-                case "FISH" -> {
-                    if (item.contains("FISH") || item.contains("FISHING_ROD")) score += 110;
-                    if (item.contains("NAUTILUS") || item.contains("PRISMARINE") || item.contains("HEART_OF_THE_SEA")) score += 45;
-                    if (item.contains("BOAT") || item.contains("BUCKET")) score += 25;
-                }
-                case "KILL" -> {
-                    if (item.contains("SKULL") || item.contains("BONE") || item.contains("ROTTEN_FLESH") || item.contains("GUNPOWDER") || item.contains("STRING")) score += 75;
-                    if (item.contains("SPIDER_EYE") || item.contains("SLIME_BALL") || item.contains("ENDER_PEARL") || item.contains("BLAZE_ROD") || item.contains("GHAST_TEAR")) score += 70;
-                    if (item.contains("PHANTOM_MEMBRANE") || item.contains("SHULKER_SHELL") || item.contains("NAUTILUS_SHELL") || item.contains("PRISMARINE_SHARD")) score += 65;
-                    if (item.contains("TOTEM") || item.contains("OMINOUS") || item.contains("TRIAL_KEY") || item.contains("BREEZE_ROD")) score += 50;
-                    if (item.contains("SPAWN_EGG")) score += 20;
-                }
-                case "SMELT" -> {
-                    if (item.contains("FURNACE") || item.contains("BLAST_FURNACE") || item.contains("SMOKER")) score += 100;
-                    if (item.contains("COAL") || item.contains("INGOT") || item.contains("NUGGET")) score += 65;
-                    if (item.contains("GLASS") || item.contains("BRICK") || item.contains("COOKED")) score += 45;
-                }
-                case "TRAVEL" -> {
-                    if (item.contains("MAP") || item.contains("COMPASS") || item.contains("ELYTRA") || item.contains("SPYGLASS")) score += 100;
-                    if (item.contains("BOAT") || item.contains("MINECART") || item.contains("SADDLE") || item.contains("HORSE_ARMOR")) score += 75;
-                    if (item.contains("BOOTS") || item.contains("FIREWORK_ROCKET")) score += 45;
-                }
-                case "COLLECT" -> {
-                    if (!targetItem.isBlank() && item.contains(targetItem)) score += 900;
-                    if (item.contains("BOOK") || item.contains("LANTERN") || item.contains("BUCKET") || item.contains("CAKE")) score += 35;
-                }
-                default -> { }
-            }
-            if (score > bestScore) { bestScore = score; best = candidate; }
-        }
-        if (best == null) throw new IllegalStateException("No unused item icon remains for quest " + pack.id());
-        used.add(best);
-        return best;
+        if (exact != null && exact.isItem() && !exact.isAir()) return exact;
+        return switch (category) {
+            case "HARVEST" -> Material.WHEAT;
+            case "FISH" -> Material.FISHING_ROD;
+            case "TRAVEL", "TRAVEL-WORLD", "TRAVEL-BIOME", "VISIT-BIOME" -> Material.COMPASS;
+            case "SMELT" -> Material.FURNACE;
+            case "BREAK" -> Material.IRON_PICKAXE;
+            case "FEED", "BREED" -> Material.WHEAT;
+            case "COLLECT" -> Material.CHEST;
+            default -> Material.BOOK;
+        };
     }
 
     private String tierOf(Pack pack) {
@@ -486,8 +477,8 @@ public final class QuestManager implements Listener {
 
     private String tierUnlockDescription(String tier) {
         return switch (tier) {
-            case "hard" -> "Unlock Hard packs by obtaining the Diamonds advancement";
-            case "master" -> "Unlock Master packs by defeating the Ender Dragon";
+            case "hard" -> "Unlock Hard packs by earning the Minecraft advancement Diamonds! (obtain a diamond)";
+            case "master" -> "Unlock Master packs by earning Free the End (defeat the Ender Dragon)";
             default -> "Easy packs are available from the start; individual packs have requirements";
         };
     }
@@ -509,7 +500,7 @@ public final class QuestManager implements Listener {
         new RandomQuest("Fishing for Salmon", Material.SALMON, 110, 154, new Objective("fish:SALMON", 20, "Catch 20 Salmon")),
         new RandomQuest("Feed the Cows", Material.WHEAT, 100, 140, new Objective("feed:COW", 20, "Feed 20 cows")),
         new RandomQuest("Animal Breeding", Material.PORKCHOP, 120, 168, new Objective("breed:ANY", 10, "Breed 10 animals")),
-        new RandomQuest("Travel Contract", Material.COMPASS, 100, 140, new Objective("travel", 2500, "Travel 2,500 blocks")),
+        new RandomQuest("Travel Contract", Material.COMPASS, 100, 140, new Objective("travel", 3000, "Travel 3,000 blocks")),
         new RandomQuest("Woodcutting Contract", Material.OAK_LOG, 100, 140, new Objective("break:OAK_LOG", 128, "Chop 128 Oak Logs")),
         new RandomQuest("Crop Delivery", Material.CARROT, 85, 119, new Objective("harvest:CARROT", 96, "Harvest 96 fully grown Carrot crops")),
         new RandomQuest("Blaze Rod Shipment", Material.BLAZE_ROD, 190, 266, new Objective("collect:BLAZE_ROD", 32, "Collect 32 Blaze Rods")),
@@ -672,12 +663,15 @@ public final class QuestManager implements Listener {
             lore.add(ChatColor.WHITE + "Cost: " + ChatColor.YELLOW + pack.cost() + " coins");
             lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + rewardForPack(pack) + " coins");
             lore.add(ChatColor.WHITE + "Profit: " + ChatColor.GOLD + "+" + (rewardForPack(pack) - pack.cost()) + " coins");
+            lore.add(ChatColor.GRAY + "Description: " + packDescription(pack));
             lore.add(ChatColor.WHITE + "Objectives:");
+            lore.add(ChatColor.GRAY + "Unlock advancement: " + ChatColor.AQUA + pack.unlockTitle());
+            lore.add(ChatColor.GRAY + unlockHowTo(pack));
             for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + "• " + objective.description());
             lore.add(done ? ChatColor.DARK_GRAY + "COMPLETED FOR LIFE — reward already claimed"
                     : !tierUnlocked(player, tierOf(pack)) ? ChatColor.RED + tierUnlockDescription(tierOf(pack))
                     : unlocked ? ChatColor.GREEN + "UNLOCKED"
-                    : ChatColor.RED + "Locked: earn " + pack.unlockTitle() + " (" + pack.advancement() + ")");
+                    : ChatColor.RED + "Locked: earn " + pack.unlockTitle());
             int timerMinutes = packTimerLimitMinutes(pack.id());
             lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes"
                     : ChatColor.GRAY + "No time limit");
@@ -697,6 +691,9 @@ public final class QuestManager implements Listener {
         lore.add(ChatColor.WHITE + "Fee: " + pack.cost() + " coins");
         lore.add(ChatColor.WHITE + "Reward: " + rewardForPack(pack) + " coins");
         lore.add(ChatColor.GOLD + "Profit: +" + (rewardForPack(pack) - pack.cost()) + " coins");
+        lore.add(ChatColor.GRAY + "Description: " + packDescription(pack));
+        lore.add(ChatColor.GRAY + "Unlock advancement: " + ChatColor.AQUA + pack.unlockTitle());
+        lore.add(ChatColor.GRAY + unlockHowTo(pack));
         for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + objective.description());
         int timerMinutes = packTimerLimitMinutes(pack.id());
         lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
@@ -718,6 +715,7 @@ public final class QuestManager implements Listener {
         int refund = originalCost / 2;
         // Clear the active record before refunding so this purchase can never be refunded twice.
         data.set(id.toString(), null);
+        clearTravelRemainders(id);
         save();
         plugin.getHudManager().hideActiveQuest(player);
         if (refund > 0) plugin.setBalance(id, plugin.getBalance(id) + refund);
@@ -774,7 +772,7 @@ public final class QuestManager implements Listener {
             return;
         }
         if (!tierUnlocked(player, tierOf(pack)) || !hasAdvancement(player, pack.advancement())) {
-            plugin.tellPublic(player, "Complete the required advancement to unlock this quest pack.");
+            plugin.tellPublic(player, "Unlock " + pack.unlockTitle() + ": " + unlockHowTo(pack));
             return;
         }
         if (!data.getString(id + ".active", "").isBlank()) {
@@ -792,6 +790,7 @@ public final class QuestManager implements Listener {
 
     private void startQuest(Player player, String id, String name, int cost, int reward, List<Objective> objectives) {
         UUID uuid = player.getUniqueId();
+        clearTravelRemainders(uuid);
         data.set(uuid + ".active", id);
         data.set(uuid + ".name", name);
         data.set(uuid + ".cost", cost);
@@ -809,6 +808,8 @@ public final class QuestManager implements Listener {
         data.set(uuid + ".warned-1m", false);
         save();
         updateHud(player);
+        player.sendTitle(ChatColor.GREEN + "QUEST STARTED", ChatColor.WHITE + name, 10, 60, 10);
+        player.playSound(player.getLocation(), Sound.UI_TOAST_IN, 0.85f, 1.0f);
     }
 
     @EventHandler
@@ -863,7 +864,17 @@ public final class QuestManager implements Listener {
         Player p = event.getEntity().getKiller();
         if (p == null || p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         incrementTarget(p, "kill:" + event.getEntityType().name(), 1);
-        if (event.getEntity() instanceof org.bukkit.entity.Monster) recordGlobalProgress(p, "mob", 1);
+        if (event.getEntity() instanceof Monster monster) {
+            if (SURVIVAL_MONSTER_LEVEL_KEY != null) {
+                Integer level = monster.getPersistentDataContainer().get(SURVIVAL_MONSTER_LEVEL_KEY, PersistentDataType.INTEGER);
+                if (level != null && level > 0) {
+                    for (int minimumLevel = 1; minimumLevel <= Math.min(25, level); minimumLevel++) {
+                        incrementTarget(p, "kill-level:" + event.getEntityType().name() + ":" + minimumLevel, 1);
+                    }
+                }
+            }
+            recordGlobalProgress(p, "mob", 1);
+        }
     }
 
     @EventHandler
@@ -906,26 +917,88 @@ public final class QuestManager implements Listener {
 
     @EventHandler
     public void onMove(PlayerMoveEvent event) {
-        Player p = event.getPlayer();
-        UUID id = p.getUniqueId();
-        if (event.isCancelled() || event.getTo() == null || event.getFrom().getWorld() != event.getTo().getWorld()) {
-            travelRemainders.remove(id);
+        Player player = event.getPlayer();
+        if (event instanceof PlayerTeleportEvent) {
+            clearTravelRemainders(player.getUniqueId());
             return;
         }
-        if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR
-                || data.getString(id + ".active", "").isBlank() || !matchesTarget(id, "travel")) {
-            travelRemainders.remove(id);
+        if (event.isCancelled() || event.getTo() == null) return;
+        // Boats and other Bukkit vehicles are tracked by VehicleMoveEvent to avoid double-counting.
+        if (player.isInsideVehicle() && player.getVehicle() instanceof Vehicle) return;
+        recordTravelMovement(player, event.getFrom(), event.getTo());
+    }
+
+    @EventHandler
+    public void onVehicleMove(VehicleMoveEvent event) {
+        if (event.getFrom().getWorld() != event.getTo().getWorld()) return;
+        recordVehiclePassengers(event.getVehicle(), event.getFrom(), event.getTo());
+    }
+
+    private void recordVehiclePassengers(Entity vehicle, Location from, Location to) {
+        for (Entity passenger : vehicle.getPassengers()) {
+            if (passenger instanceof Player player) {
+                recordTravelMovement(player, from, to);
+            } else {
+                recordVehiclePassengers(passenger, from, to);
+            }
+        }
+    }
+
+    private void recordTravelMovement(Player player, Location from, Location to) {
+        UUID id = player.getUniqueId();
+        if (from == null || to == null || from.getWorld() == null || to.getWorld() == null
+                || from.getWorld() != to.getWorld()) {
+            clearTravelRemainders(id);
             return;
         }
-        double step = event.getFrom().distance(event.getTo());
-        if (step > 10) {
-            travelRemainders.remove(id);
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR
+                || data.getString(id + ".active", "").isBlank()) return;
+
+        double step = from.distance(to);
+        // Reject abnormal same-world jumps while allowing fast Elytra and vehicle movement.
+        if (step <= 0.0 || step > 32.0) {
+            if (step > 32.0) clearTravelRemainders(id);
             return;
         }
-        double accumulated = travelRemainders.getOrDefault(id, 0.0) + step;
-        int wholeBlocks = (int) Math.floor(accumulated);
-        travelRemainders.put(id, accumulated - wholeBlocks);
-        if (wholeBlocks > 0) incrementTarget(p, "travel", wholeBlocks);
+
+        Biome fromBiome = from.getBlock().getBiome();
+        Biome toBiome = to.getBlock().getBiome();
+        if (fromBiome != toBiome) {
+            incrementTarget(player, "visit-biome:" + toBiome.name(), 1);
+            if (data.getString(id + ".active", "").isBlank()) return;
+        }
+
+        int count = data.getInt(id + ".objective-count", 0);
+        Set<String> matchingDistanceTargets = new HashSet<>();
+        for (int i = 0; i < count; i++) {
+            String target = data.getString(id + ".objectives." + i + ".target", "");
+            if (target.equals("travel")) {
+                matchingDistanceTargets.add(target);
+            } else if (target.startsWith("travel-world:")) {
+                String environment = target.substring("travel-world:".length());
+                if (environment.equalsIgnoreCase(to.getWorld().getEnvironment().name())) {
+                    matchingDistanceTargets.add(target);
+                }
+            } else if (target.startsWith("travel-biome:")) {
+                String biome = target.substring("travel-biome:".length());
+                if (biome.equalsIgnoreCase(toBiome.name()) && fromBiome == toBiome) {
+                    matchingDistanceTargets.add(target);
+                }
+            }
+        }
+        for (String target : matchingDistanceTargets) {
+            String remainderKey = id + ":" + target;
+            double accumulated = travelRemainders.getOrDefault(remainderKey, 0.0) + step;
+            int wholeBlocks = (int) Math.floor(accumulated);
+            travelRemainders.put(remainderKey, accumulated - wholeBlocks);
+            if (wholeBlocks > 0) incrementTarget(player, target, wholeBlocks);
+        }
+    }
+
+    private void clearTravelRemainders(UUID playerId) {
+        String prefix = playerId + ":";
+        travelRemainders.keySet().removeIf(key -> key.startsWith(prefix));
     }
 
     @EventHandler
@@ -978,6 +1051,9 @@ public final class QuestManager implements Listener {
         if (!changed) return;
         if (allComplete(id)) {
             int reward = data.getInt(id + ".reward", 0);
+            String completedQuestName = data.getString(id + ".name", "Quest");
+            player.sendTitle(ChatColor.GOLD + "QUEST COMPLETED", ChatColor.YELLOW + completedQuestName, 10, 70, 20);
+            player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
             String activeQuestId = data.getString(id + ".active", "");
             if (activeQuestId.startsWith("pack:")) {
                 String packId = activeQuestId.substring("pack:".length());
@@ -987,6 +1063,7 @@ public final class QuestManager implements Listener {
             plugin.setBalance(id, plugin.getBalance(id) + reward);
             plugin.tellPublic(player, "Quest completed! Reward: " + reward + " coins.");
             data.set(id.toString(), null);
+            clearTravelRemainders(id);
             plugin.getHudManager().hideActiveQuest(player);
         } else updateHud(player);
         save();
@@ -1275,7 +1352,7 @@ public final class QuestManager implements Listener {
         String target = quest.objective().target();
         String material = target.contains(":") ? target.substring(target.indexOf(':') + 1) : target;
         if (target.startsWith("fish:")) return "fishing";
-        if (target.equals("travel")) return "travel";
+        if (target.equals("travel") || target.startsWith("travel-") || target.startsWith("visit-biome:")) return "travel";
         if (target.startsWith("feed:") || target.startsWith("breed:")) return "farming";
         if (target.startsWith("break:") && (material.endsWith("_LOG") || material.endsWith("_STEM") || material.equals("BAMBOO"))) return "woodcutting";
         if (target.startsWith("break:")) return "mining";
@@ -1326,6 +1403,82 @@ public final class QuestManager implements Listener {
             case "wither_siege" -> "Summon the Wither";
             default -> "Complete the related Minecraft challenge";
         };
+    }
+
+    private String unlockHowTo(Pack pack) {
+        return unlockHowTo(pack.advancement(), pack.unlockTitle());
+    }
+
+    private String unlockHowTo(String advancement, String title) {
+        return switch (advancement) {
+            case "minecraft:story/mine_stone" -> "Mine stone with a pickaxe to earn Stone Age.";
+            case "minecraft:story/upgrade_tools" -> "Craft a stone pickaxe to earn Getting an Upgrade.";
+            case "minecraft:story/smelt_iron" -> "Smelt an iron ingot.";
+            case "minecraft:story/iron_tools" -> "Craft an iron pickaxe.";
+            case "minecraft:husbandry/plant_seed" -> "Plant a seed and grow a crop.";
+            case "minecraft:husbandry/breed_an_animal" -> "Breed two animals.";
+            case "minecraft:husbandry/tame_an_animal" -> "Tame an animal.";
+            case "minecraft:husbandry/fishy_business" -> "Catch a fish with a fishing rod.";
+            case "minecraft:husbandry/tactical_fishing" -> "Catch a fish using a water bucket.";
+            case "minecraft:adventure/kill_a_mob" -> "Defeat a hostile mob.";
+            case "minecraft:adventure/trade" -> "Trade with a villager.";
+            case "minecraft:story/form_obsidian" -> "Obtain obsidian.";
+            case "minecraft:story/enchant_item" -> "Enchant an item at an enchanting table.";
+            case "minecraft:story/obtain_armor" -> "Equip a piece of armor.";
+            case "minecraft:story/mine_diamond" -> "Obtain a diamond.";
+            case "minecraft:nether/root" -> "Enter the Nether.";
+            case "minecraft:nether/obtain_ancient_debris" -> "Obtain Ancient Debris.";
+            case "minecraft:nether/obtain_crying_obsidian" -> "Obtain Crying Obsidian.";
+            case "minecraft:nether/obtain_blaze_rod" -> "Obtain a Blaze Rod.";
+            case "minecraft:nether/return_to_sender" -> "Complete Return to Sender by sending a Ghast fireball back.";
+            case "minecraft:nether/find_bastion" -> "Find and enter a Bastion Remnant.";
+            case "minecraft:adventure/shoot_arrow" -> "Complete the Take Aim advancement; its target requirement is shown in your Advancements menu.";
+            case "minecraft:story/shiny_gear" -> "Equip a full set of diamond armor.";
+            case "minecraft:story/follow_ender_eye" -> "Use an Eye of Ender to locate a stronghold.";
+            case "minecraft:adventure/voluntary_exile" -> "Defeat a raid captain.";
+            case "minecraft:adventure/sleep_in_bed" -> "Sleep in a bed to set your respawn point.";
+            case "minecraft:nether/ride_strider" -> "Ride a Strider using a Warped Fungus on a Stick.";
+            case "minecraft:end/enter_end_gateway" -> "Enter an End Gateway.";
+            case "minecraft:end/find_end_city" -> "Find and enter an End City.";
+            case "minecraft:end/elytra" -> "Obtain an Elytra.";
+            case "minecraft:nether/find_fortress" -> "Find and enter a Nether Fortress.";
+            case "minecraft:nether/distract_piglin" -> "Distract Piglins with gold.";
+            case "minecraft:nether/get_wither_skull" -> "Obtain a Wither Skeleton Skull.";
+            case "minecraft:nether/loot_bastion" -> "Open a chest in a Bastion Remnant.";
+            case "minecraft:nether/summon_wither" -> "Summon the Wither.";
+            case "minecraft:end/respawn_dragon" -> "Respawn the Ender Dragon using End Crystals.";
+            case "minecraft:adventure/avoid_vibration" -> "Complete Sneak 100; its in-game requirement is shown in your Advancements menu.";
+            case "minecraft:adventure/totem_of_undying" -> "Use a Totem of Undying to survive a fatal hit.";
+            case "minecraft:adventure/hero_of_the_village" -> "Complete a raid and earn Hero of the Village.";
+            case "minecraft:adventure/minecraft_trials_edition" -> "Find and enter a Trial Chamber.";
+            case "minecraft:adventure/under_lock_and_key" -> "Unlock a Vault with a Trial Key.";
+            case "minecraft:adventure/revaulting" -> "Open a Vault again.";
+            case "minecraft:adventure/overoverkill" -> "Complete Over-Overkill; its in-game requirement is shown in your Advancements menu.";
+            case "minecraft:husbandry/bred_all_animals" -> "Breed every required animal type.";
+            case "minecraft:husbandry/balanced_diet" -> "Eat every food required by A Balanced Diet.";
+            case "minecraft:nether/fast_travel" -> "Travel 7 km in the Nether.";
+            default -> "Earn the Minecraft advancement \"" + title + "\". Check the in-game Advancements menu for its requirement.";
+        };
+    }
+
+    private String packDescription(Pack pack) {
+        if (pack.objectives().size() > 1) return "Complete every objective listed below to finish this challenge.";
+        if (pack.objectives().isEmpty()) return "Complete this challenge's listed requirements.";
+        String target = pack.objectives().get(0).target().toLowerCase(Locale.ROOT);
+        if (target.startsWith("kill-level:")) return "Hunt the specified monster type at the required level or higher.";
+        if (target.startsWith("kill:")) return "Defeat the specified creatures and meet the required count.";
+        if (target.startsWith("travel-biome:")) return "Cover the required distance while travelling inside the named biome.";
+        if (target.startsWith("visit-biome:")) return "Reach the named biome. Entering it counts; first-time discovery is not required.";
+        if (target.startsWith("travel-world:")) return "Explore the required dimension and cover the listed distance there.";
+        if (target.equals("travel")) return "Explore the world and cover the required distance using any legitimate travel method.";
+        if (target.startsWith("break:")) return "Gather the requested blocks and materials.";
+        if (target.startsWith("harvest:")) return "Harvest the requested fully grown crops.";
+        if (target.startsWith("fish:")) return "Catch the requested fish.";
+        if (target.startsWith("smelt:")) return "Process the requested materials in a furnace.";
+        if (target.startsWith("collect:")) return "Collect the requested items.";
+        if (target.startsWith("breed:")) return "Breed animals to complete the objective.";
+        if (target.startsWith("feed:")) return "Feed the requested animals.";
+        return "Complete the objective shown below.";
     }
 
     private boolean hasAdvancement(Player player, String rawKey) {
@@ -1406,6 +1559,7 @@ public final class QuestManager implements Listener {
             }
             case "back-tiers" -> openPacks(player);
             case "pack-completed" -> plugin.tellPublic(player, "This achievement pack is permanently completed and cannot reward you again.");
+            case "locked" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> plugin.tellPublic(player, "Unlock " + p.unlockTitle() + ": " + unlockHowTo(p)));
             case "pack-select" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> confirmPack(player, p));
             case "pack-buy" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> buyPack(player, p));
             case "global-claim" -> plugin.tellPublic(player, "Global quest rewards are paid automatically to contributors when the community completes the objective.");
