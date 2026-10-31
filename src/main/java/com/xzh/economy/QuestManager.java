@@ -57,25 +57,25 @@ public final class QuestManager implements Listener {
     private record RandomQuest(String name, Material icon, int cost, int reward, Objective objective) {}
     private record GlobalQuest(String name, Material icon, String target, int goal, String description) {}
     private final List<GlobalQuest> globalQuestPool = List.of(
-        new GlobalQuest("Community Ore Rush", Material.IRON_PICKAXE, "ore", 160, "Mine ores together"),
-        new GlobalQuest("Deep Mining Expedition", Material.DEEPSLATE_DIAMOND_ORE, "ore", 320, "Mine deep ores together"),
-        new GlobalQuest("Stoneworker Union", Material.STONE_PICKAXE, "ore", 500, "Keep the mining crews busy"),
+        new GlobalQuest("Community Ore Rush", Material.IRON_PICKAXE, "ore", 40, "Mine ores together"),
+        new GlobalQuest("Deep Mining Expedition", Material.DEEPSLATE_DIAMOND_ORE, "ore", 80, "Mine deep ores together"),
+        new GlobalQuest("Stoneworker Union", Material.STONE_PICKAXE, "ore", 120, "Keep the mining crews busy"),
         new GlobalQuest("Monster Patrol", Material.ROTTEN_FLESH, "mob", 80, "Defeat monsters together"),
         new GlobalQuest("Night Watch", Material.SHIELD, "mob", 180, "Protect the settlement from monsters"),
         new GlobalQuest("Dangerous Hunt", Material.NETHER_STAR, "mob", 300, "Complete a demanding monster hunt"),
-        new GlobalQuest("Fishing Fleet", Material.FISHING_ROD, "fish", 30, "Catch fish together"),
-        new GlobalQuest("Deepwater Haul", Material.COD, "fish", 75, "Bring in a major fishing haul"),
-        new GlobalQuest("Anglers Marathon", Material.SALMON, "fish", 120, "Keep fishing until the goal is met"),
-        new GlobalQuest("Forest Cleanup", Material.OAK_LOG, "wood", 128, "Chop logs together"),
-        new GlobalQuest("Lumber Guild", Material.SPRUCE_LOG, "wood", 300, "Supply the community with timber"),
-        new GlobalQuest("Great Reforestation", Material.BIRCH_LOG, "wood", 450, "Gather a huge amount of wood"),
-        new GlobalQuest("Harvest Festival", Material.CARROT, "crop", 96, "Harvest crops together"),
-        new GlobalQuest("Farmers Market", Material.WHEAT, "crop", 220, "Collect a crop surplus"),
-        new GlobalQuest("Grand Harvest", Material.PUMPKIN, "crop", 400, "Complete a demanding farming drive"),
-        new GlobalQuest("Community Food Drive", Material.POTATO, "crop", 180, "Stock the community food supply"),
-        new GlobalQuest("Carrot Cartel", Material.CARROT, "crop", 260, "Gather carrots for the community"),
-        new GlobalQuest("Wheat Supply Run", Material.WHEAT, "crop", 320, "Harvest wheat for a large order"),
-        new GlobalQuest("Woodland Supply Run", Material.JUNGLE_LOG, "wood", 220, "Gather timber for building")
+        new GlobalQuest("Fishing Fleet", Material.FISHING_ROD, "fish", 10, "Catch fish together"),
+        new GlobalQuest("Deepwater Haul", Material.COD, "fish", 20, "Bring in a major fishing haul"),
+        new GlobalQuest("Anglers Marathon", Material.SALMON, "fish", 30, "Keep fishing until the goal is met"),
+        new GlobalQuest("Forest Cleanup", Material.OAK_LOG, "wood", 30, "Chop logs together"),
+        new GlobalQuest("Lumber Guild", Material.SPRUCE_LOG, "wood", 60, "Supply the community with timber"),
+        new GlobalQuest("Great Reforestation", Material.BIRCH_LOG, "wood", 100, "Gather a huge amount of wood"),
+        new GlobalQuest("Harvest Festival", Material.CARROT, "crop", 25, "Harvest crops together"),
+        new GlobalQuest("Farmers Market", Material.WHEAT, "crop", 45, "Collect a crop surplus"),
+        new GlobalQuest("Grand Harvest", Material.PUMPKIN, "crop", 70, "Complete a demanding farming drive"),
+        new GlobalQuest("Community Food Drive", Material.POTATO, "crop", 35, "Stock the community food supply"),
+        new GlobalQuest("Carrot Cartel", Material.CARROT, "crop", 45, "Gather carrots for the community"),
+        new GlobalQuest("Wheat Supply Run", Material.WHEAT, "crop", 60, "Harvest wheat for a large order"),
+        new GlobalQuest("Woodland Supply Run", Material.JUNGLE_LOG, "wood", 45, "Gather timber for building")
     );
 
     private final XZHEconomySystem plugin;
@@ -406,11 +406,55 @@ public final class QuestManager implements Listener {
                 int profit = minimumProfit + (int) Math.round((maximumProfit - minimumProfit) * (i / (double) Math.max(1, tierPacks.size() - 1)));
                 String numberedName = String.format(Locale.ROOT, "(%02d) %s", i + 1, pack.name());
                 Material icon = questIconForPack(pack);
+                List<Objective> balancedObjectives = pack.objectives().stream()
+                        .map(objective -> rebalanceCollectionObjective(tier, objective))
+                        .toList();
                 ordered.add(new Pack(pack.id(), numberedName, icon, pack.cost(), pack.cost() + profit,
-                        pack.advancement(), pack.unlockTitle(), pack.timerMinutes(), pack.objectives()));
+                        pack.advancement(), pack.unlockTitle(), pack.timerMinutes(), balancedObjectives));
             }
         }
         return ordered;
+    }
+
+    /**
+     * Keeps collection objectives achievable during ordinary play. The limits are
+     * deliberately tiered by activity: ores are rarer than stone, fishing and
+     * smelting take longer per item, and logs/crops are faster to gather.
+     */
+    private Objective rebalanceCollectionObjective(char tier, Objective objective) {
+        String target = objective.target().toUpperCase(Locale.ROOT);
+        String category = target.contains(":") ? target.substring(0, target.indexOf(':')) : target;
+        String item = target.contains(":") ? target.substring(target.indexOf(':') + 1).split(":")[0] : target;
+
+        int easy;
+        int hard;
+        int master;
+        switch (category) {
+            case "FISH" -> { easy = 4; hard = 7; master = 12; }
+            case "SMELT" -> { easy = 6; hard = 10; master = 16; }
+            case "HARVEST" -> { easy = 12; hard = 18; master = 24; }
+            case "COLLECT" -> { easy = 8; hard = 14; master = 20; }
+            case "BREAK" -> {
+                if (item.endsWith("_ORE") || item.equals("ANCIENT_DEBRIS")) {
+                    easy = 6; hard = 10; master = item.equals("ANCIENT_DEBRIS") ? 4 : 16;
+                } else if (item.endsWith("_LOG")) {
+                    easy = 12; hard = 20; master = 32;
+                } else if (item.equals("BAMBOO") || item.equals("SUGAR_CANE") || item.equals("KELP")) {
+                    easy = 12; hard = 20; master = 32;
+                } else {
+                    easy = 24; hard = 32; master = 48;
+                }
+            }
+            default -> { return objective; }
+        }
+
+        int cap = tier == 'E' ? easy : tier == 'H' ? hard : master;
+        int balancedGoal = Math.min(objective.goal(), cap);
+        if (balancedGoal == objective.goal()) return objective;
+
+        String formattedGoal = String.format(Locale.ROOT, "%,d", balancedGoal);
+        String description = objective.description().replaceFirst("\\b[\\d,]+\\b", formattedGoal);
+        return new Objective(objective.target(), balancedGoal, description);
     }
 
     private Material questIconForPack(Pack pack) {
