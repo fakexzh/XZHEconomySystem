@@ -86,7 +86,7 @@ public final class BankManager implements Listener {
 
     public void open(Player player) {
         if (!isOpenNow()) {
-            plugin.tellPublic(player, hoursMessage());
+            player.sendMessage("§8[§6BANK§8] §r" + hoursMessage());
             return;
         }
         UUID id = player.getUniqueId();
