@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -382,7 +383,93 @@ public final class QuestManager implements Listener {
         result.add(new Pack("M098", "Trial by Fire", Material.NETHERITE_SWORD, 2800, 6900, "minecraft:adventure/under_lock_and_key", "Under Lock and Key", 325, List.of(new Objective("kill:BREEZE", 40, "Defeat 40 Breeze"), new Objective("kill:BREEZE", 25, "Defeat 25 Breeze"), new Objective("kill:BLAZE", 40, "Defeat 40 Blaze"))));
         result.add(new Pack("M099", "Legend of the Wanderer", Material.COMPASS, 2800, 7700, "minecraft:adventure/sleep_in_bed", "Sweet Dreams", 0, List.of(new Objective("travel", 500, "Travel 500 blocks"), new Objective("travel", 500, "Travel 500 blocks"), new Objective("kill:ZOMBIE", 150, "Defeat 150 Zombie"))));
         result.add(new Pack("M100", "The Grand Master", Material.NETHERITE_SWORD, 3000, 8000, "minecraft:end/respawn_dragon", "The End... Again...", 0, List.of(new Objective("kill:ENDER_DRAGON", 1, "Defeat 1 Ender Dragon"), new Objective("kill:WITHER", 1, "Defeat 1 Wither"), new Objective("kill:ELDER_GUARDIAN", 1, "Defeat 1 Elder Guardian"), new Objective("kill:WARDEN", 1, "Defeat 1 Warden"))));
-        return List.copyOf(result);
+        return sortAndPricePacks(result);
+    }
+
+    private List<Pack> sortAndPricePacks(List<Pack> source) {
+        List<Pack> ordered = new ArrayList<>(300);
+        Set<Material> usedIcons = new HashSet<>();
+        for (char tier : new char[] {'E', 'H', 'M'}) {
+            List<Pack> tierPacks = new ArrayList<>();
+            for (Pack pack : source) if (pack.id().charAt(0) == tier) tierPacks.add(pack);
+            tierPacks.sort(Comparator.comparingInt(Pack::cost).thenComparing(Pack::id));
+            int minimumProfit = tier == 'E' ? 160 : tier == 'H' ? 350 : 2000;
+            int maximumProfit = tier == 'E' ? 350 : tier == 'H' ? 1500 : 8000;
+            for (int i = 0; i < tierPacks.size(); i++) {
+                Pack pack = tierPacks.get(i);
+                int profit = minimumProfit + (int) Math.round((maximumProfit - minimumProfit) * (i / (double) Math.max(1, tierPacks.size() - 1)));
+                String numberedName = String.format(Locale.ROOT, "(%02d) %s", i + 1, pack.name());
+                Material icon = selectUniqueQuestIcon(pack, usedIcons);
+                ordered.add(new Pack(pack.id(), numberedName, icon, pack.cost(), pack.cost() + profit,
+                        pack.advancement(), pack.unlockTitle(), pack.timerMinutes(), pack.objectives()));
+            }
+        }
+        return ordered;
+    }
+
+    private Material selectUniqueQuestIcon(Pack pack, Set<Material> used) {
+        String target = pack.objectives().isEmpty() ? "" : pack.objectives().get(0).target().toUpperCase(Locale.ROOT);
+        String category = target.contains(":") ? target.substring(0, target.indexOf(':')) : target;
+        String targetItem = target.contains(":") ? target.substring(target.indexOf(':') + 1) : target;
+        Material exact = Material.matchMaterial(targetItem);
+        if (exact != null && exact.isItem() && !exact.isAir() && !used.contains(exact)) {
+            used.add(exact);
+            return exact;
+        }
+        String questWords = pack.name().toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]+", " ");
+        Material best = null;
+        int bestScore = Integer.MIN_VALUE;
+        for (Material candidate : Material.values()) {
+            if (!candidate.isItem() || candidate.isAir() || used.contains(candidate)) continue;
+            String item = candidate.name();
+            int score = 0;
+            if (!targetItem.isBlank() && item.contains(targetItem)) score += 900;
+            for (String word : questWords.split(" ")) if (word.length() >= 4 && item.contains(word)) score += 45;
+            switch (category) {
+                case "BREAK" -> {
+                    if (item.contains("PICKAXE")) score += 100;
+                    if (item.contains("ORE") || item.contains("RAW_") || item.contains("INGOT") || item.contains("GEM")) score += 65;
+                    if (item.contains("STONE") || item.contains("DEEPSLATE") || item.contains("OBSIDIAN") || item.contains("CRYSTAL")) score += 35;
+                    if (item.endsWith("_LOG") || item.endsWith("_WOOD") || item.contains("PLANKS") || item.contains("SAPLING")) score += 30;
+                }
+                case "HARVEST" -> {
+                    if (item.contains("SEEDS") || item.contains("WHEAT") || item.contains("CARROT") || item.contains("POTATO") || item.contains("BEETROOT")) score += 90;
+                    if (item.contains("BERRY") || item.contains("MELON") || item.contains("PUMPKIN") || item.contains("CROP") || item.contains("HOE")) score += 65;
+                    if (item.contains("FARM") || item.contains("HAY") || item.contains("HONEY")) score += 35;
+                }
+                case "FISH" -> {
+                    if (item.contains("FISH") || item.contains("FISHING_ROD")) score += 110;
+                    if (item.contains("NAUTILUS") || item.contains("PRISMARINE") || item.contains("HEART_OF_THE_SEA")) score += 45;
+                    if (item.contains("BOAT") || item.contains("BUCKET")) score += 25;
+                }
+                case "KILL" -> {
+                    if (item.contains("SKULL") || item.contains("BONE") || item.contains("ROTTEN_FLESH") || item.contains("GUNPOWDER") || item.contains("STRING")) score += 75;
+                    if (item.contains("SPIDER_EYE") || item.contains("SLIME_BALL") || item.contains("ENDER_PEARL") || item.contains("BLAZE_ROD") || item.contains("GHAST_TEAR")) score += 70;
+                    if (item.contains("PHANTOM_MEMBRANE") || item.contains("SHULKER_SHELL") || item.contains("NAUTILUS_SHELL") || item.contains("PRISMARINE_SHARD")) score += 65;
+                    if (item.contains("TOTEM") || item.contains("OMINOUS") || item.contains("TRIAL_KEY") || item.contains("BREEZE_ROD")) score += 50;
+                    if (item.contains("SPAWN_EGG")) score += 20;
+                }
+                case "SMELT" -> {
+                    if (item.contains("FURNACE") || item.contains("BLAST_FURNACE") || item.contains("SMOKER")) score += 100;
+                    if (item.contains("COAL") || item.contains("INGOT") || item.contains("NUGGET")) score += 65;
+                    if (item.contains("GLASS") || item.contains("BRICK") || item.contains("COOKED")) score += 45;
+                }
+                case "TRAVEL" -> {
+                    if (item.contains("MAP") || item.contains("COMPASS") || item.contains("ELYTRA") || item.contains("SPYGLASS")) score += 100;
+                    if (item.contains("BOAT") || item.contains("MINECART") || item.contains("SADDLE") || item.contains("HORSE_ARMOR")) score += 75;
+                    if (item.contains("BOOTS") || item.contains("FIREWORK_ROCKET")) score += 45;
+                }
+                case "COLLECT" -> {
+                    if (!targetItem.isBlank() && item.contains(targetItem)) score += 900;
+                    if (item.contains("BOOK") || item.contains("LANTERN") || item.contains("BUCKET") || item.contains("CAKE")) score += 35;
+                }
+                default -> { }
+            }
+            if (score > bestScore) { bestScore = score; best = candidate; }
+        }
+        if (best == null) throw new IllegalStateException("No unused item icon remains for quest " + pack.id());
+        used.add(best);
+        return best;
     }
 
     private String tierOf(Pack pack) {
