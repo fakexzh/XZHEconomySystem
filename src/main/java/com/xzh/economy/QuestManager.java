@@ -87,6 +87,8 @@ public final class QuestManager implements Listener {
     private final NamespacedKey valueKey;
     private final Random random = new Random();
     private final Map<String, Double> travelRemainders = new HashMap<>();
+    // Prevent block-break quests from being farmed by placing and repeatedly breaking the same blocks.
+    private final Set<String> playerPlacedBlocks = new HashSet<>();
 
     private final List<Pack> packs = buildPacks();
 
@@ -305,13 +307,13 @@ public final class QuestManager implements Listener {
         result.add(new Pack("M011", "Debris Magnate", Material.IRON_PICKAXE, 2800, 6250, "minecraft:nether/obtain_ancient_debris", "Hidden in the Depths", 0, List.of(new Objective("break:ANCIENT_DEBRIS", 24, "Mine 24 Ancient Debris"))));
         result.add(new Pack("M012", "Scrap Smelter Supreme", Material.FURNACE, 2800, 6400, "minecraft:nether/obtain_ancient_debris", "Hidden in the Depths", 0, List.of(new Objective("smelt:NETHERITE_SCRAP", 12, "Smelt 12 Netherite Scrap"))));
         result.add(new Pack("M013", "Quartz Empire", Material.IRON_PICKAXE, 1450, 3900, "minecraft:nether/find_fortress", "A Terrible Fortress", 110, List.of(new Objective("break:NETHER_QUARTZ_ORE", 768, "Mine 768 Nether Quartz Ore"))));
-        result.add(new Pack("M014", "Piglin Diplomat", Material.NETHER_STAR, 1900, 4500, "minecraft:nether/distract_piglin", "Oh Shiny", 100, List.of(new Objective("kill:PIGLIN", 480, "Defeat 480 Piglin"))));
+        result.add(new Pack("M014", "Piglin Diplomat", Material.NETHER_STAR, 1900, 4500, "minecraft:nether/distract_piglin", "Oh Shiny", 100, List.of(new Objective("kill:PIGLIN", 30, "Defeat 30 Piglin"))));
         result.add(new Pack("M015", "Gilded Gambit", Material.IRON_PICKAXE, 2100, 4800, "minecraft:nether/find_bastion", "Those Were the Days", 100, List.of(new Objective("break:GILDED_BLACKSTONE", 40, "Mine 40 Gilded Blackstone"))));
         result.add(new Pack("M016", "Hoglin Husbandry", Material.WHEAT, 2100, 4650, "minecraft:nether/find_bastion", "Those Were the Days", 0, List.of(new Objective("breed:HOGLIN", 8, "Breed 8 Hoglins"))));
         result.add(new Pack("M017", "Skull Magnate", Material.NETHER_STAR, 2350, 5700, "minecraft:nether/get_wither_skull", "Spooky Scary Skeleton", 0, List.of(new Objective("kill:WITHER_SKELETON", 120, "Defeat 120 Wither Skeleton"))));
         result.add(new Pack("M018", "Blaze Baron", Material.NETHER_STAR, 2100, 5300, "minecraft:nether/obtain_blaze_rod", "Into Fire", 215, List.of(new Objective("kill:BLAZE", 120, "Defeat 120 Blaze"))));
         result.add(new Pack("M019", "Bastion Vault", Material.NETHER_STAR, 2550, 5600, "minecraft:nether/loot_bastion", "War Pigs", 0, List.of(new Objective("kill:PIGLIN", 20, "Defeat 20 Piglin"))));
-        result.add(new Pack("M020", "Fortress Overlord", Material.NETHER_STAR, 2550, 6250, "minecraft:nether/find_fortress", "A Terrible Fortress", 265, List.of(new Objective("kill:WITHER_SKELETON", 50, "Defeat 50 Wither Skeleton"), new Objective("kill:BLAZE", 50, "Defeat 50 Blaze"), new Objective("kill:BLAZE", 30, "Defeat 30 Blaze"))));
+        result.add(new Pack("M020", "Fortress Overlord", Material.NETHER_STAR, 2550, 6250, "minecraft:nether/find_fortress", "A Terrible Fortress", 265, List.of(new Objective("kill:WITHER_SKELETON", 50, "Defeat 50 Wither Skeleton"), new Objective("kill:BLAZE", 80, "Defeat 80 Blaze"))));
         result.add(new Pack("M021", "Wither Wrecker", Material.NETHER_STAR, 2800, 6400, "minecraft:nether/summon_wither", "Withering Heights", 225, List.of(new Objective("kill:WITHER", 1, "Defeat 1 Wither"))));
         result.add(new Pack("M022", "Triple Wither", Material.NETHER_STAR, 3000, 7750, "minecraft:nether/summon_wither", "Withering Heights", 0, List.of(new Objective("kill:WITHER", 3, "Defeat 3 Wither"))));
         result.add(new Pack("M023", "Dragon Slayer Redux", Material.NETHER_STAR, 3000, 6950, "minecraft:end/respawn_dragon", "The End... Again...", 0, List.of(new Objective("kill:ENDER_DRAGON", 1, "Defeat 1 Ender Dragon"))));
@@ -334,7 +336,7 @@ public final class QuestManager implements Listener {
         result.add(new Pack("M040", "Dark Descent", Material.IRON_PICKAXE, 1900, 5000, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("break:ANY_ORE", 500, "Mine 500 Any Ore"))));
         result.add(new Pack("M041", "Mansion Plunder", Material.NETHER_STAR, 2800, 6400, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 0, List.of(new Objective("kill:VINDICATOR", 40, "Defeat 40 Vindicator"))));
         result.add(new Pack("M042", "Mansion Cleansing", Material.NETHER_STAR, 2550, 6050, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 225, List.of(new Objective("kill:VINDICATOR", 30, "Defeat 30 Vindicator"), new Objective("kill:EVOKER", 3, "Defeat 3 Evoker"), new Objective("kill:VEX", 20, "Defeat 20 Vex"))));
-        result.add(new Pack("M043", "Outpost Overlord", Material.NETHER_STAR, 2100, 5100, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 175, List.of(new Objective("kill:PILLAGER", 30, "Defeat 30 Pillager"), new Objective("kill:PILLAGER", 40, "Defeat 40 Pillager"))));
+        result.add(new Pack("M043", "Outpost Overlord", Material.NETHER_STAR, 2100, 5100, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 175, List.of(new Objective("kill:PILLAGER", 70, "Defeat 70 Pillager"))));
         result.add(new Pack("M044", "Captain Hunter", Material.NETHER_STAR, 1900, 4900, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 200, List.of(new Objective("kill:PILLAGER", 80, "Defeat 80 Pillager"))));
         result.add(new Pack("M045", "Illager Annihilator", Material.NETHER_STAR, 2100, 5200, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 200, List.of(new Objective("kill:VINDICATOR", 50, "Defeat 50 Vindicator"))));
         result.add(new Pack("M046", "Totem Trader", Material.NETHER_STAR, 2800, 6750, "minecraft:adventure/totem_of_undying", "Postmortal", 0, List.of(new Objective("kill:EVOKER", 10, "Defeat 10 Evoker"))));
@@ -384,12 +386,12 @@ public final class QuestManager implements Listener {
         result.add(new Pack("M090", "Nether Wanderer", Material.COMPASS, 1650, 4750, "minecraft:nether/fast_travel", "Subspace Bubble", 0, List.of(new Objective("travel-world:NETHER", 12000, "Travel 12,000 blocks in the Nether"))));
         result.add(new Pack("M091", "Three Realms Trial", Material.IRON_PICKAXE, 2550, 6550, "minecraft:end/find_end_city", "The City at the End of the Game", 325, List.of(new Objective("break:IRON_ORE", 128, "Mine 128 Iron Ore"), new Objective("kill:BLAZE", 30, "Defeat 30 Blaze"), new Objective("kill:ENDERMAN", 30, "Defeat 30 Enderman"))));
         result.add(new Pack("M092", "Netherite Initiation", Material.IRON_PICKAXE, 2800, 6900, "minecraft:nether/obtain_ancient_debris", "Hidden in the Depths", 0, List.of(new Objective("break:ANCIENT_DEBRIS", 8, "Mine 8 Ancient Debris"), new Objective("smelt:NETHERITE_SCRAP", 8, "Smelt 8 Netherite Scrap"), new Objective("kill:WITHER_SKELETON", 30, "Defeat 30 Wither Skeleton"))));
-        result.add(new Pack("M093", "End Game Gauntlet", Material.NETHER_STAR, 2800, 6800, "minecraft:end/find_end_city", "The City at the End of the Game", 300, List.of(new Objective("kill:SHULKER", 12, "Defeat 12 Shulker"), new Objective("kill:SHULKER", 30, "Defeat 30 Shulker"), new Objective("kill:ENDERMAN", 40, "Defeat 40 Enderman"))));
+        result.add(new Pack("M093", "End Game Gauntlet", Material.NETHER_STAR, 2800, 6800, "minecraft:end/find_end_city", "The City at the End of the Game", 300, List.of(new Objective("kill:SHULKER", 42, "Defeat 42 Shulker"), new Objective("kill:ENDERMAN", 40, "Defeat 40 Enderman"))));
         result.add(new Pack("M094", "Abyss Walker", Material.NETHER_STAR, 3000, 7350, "minecraft:adventure/avoid_vibration", "Sneak 100", 0, List.of(new Objective("kill:WARDEN", 1, "Defeat 1 Warden"), new Objective("break:SCULK", 96, "Mine 96 Sculk"))));
         result.add(new Pack("M095", "Siege of the Wither", Material.NETHER_STAR, 3000, 7250, "minecraft:nether/summon_wither", "Withering Heights", 325, List.of(new Objective("kill:WITHER", 1, "Defeat 1 Wither"), new Objective("kill:WITHER_SKELETON", 40, "Defeat 40 Wither Skeleton"))));
         result.add(new Pack("M096", "Pillager's Doom", Material.NETHER_STAR, 3000, 7200, "minecraft:adventure/voluntary_exile", "Voluntary Exile", 0, List.of(new Objective("kill:VINDICATOR", 30, "Defeat 30 Vindicator"), new Objective("kill:EVOKER", 4, "Defeat 4 Evoker"), new Objective("kill:RAVAGER", 4, "Defeat 4 Ravager"))));
         result.add(new Pack("M097", "Ocean Overlord", Material.NETHER_STAR, 2800, 7200, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 360, List.of(new Objective("kill:ELDER_GUARDIAN", 2, "Defeat 2 Elder Guardian"), new Objective("kill:GUARDIAN", 60, "Defeat 60 Guardian"), new Objective("break:WET_SPONGE", 16, "Collect 16 Wet Sponge"))));
-        result.add(new Pack("M098", "Trial by Fire", Material.NETHER_STAR, 2800, 6900, "minecraft:adventure/under_lock_and_key", "Under Lock and Key", 325, List.of(new Objective("kill:BREEZE", 40, "Defeat 40 Breeze"), new Objective("kill:BREEZE", 25, "Defeat 25 Breeze"), new Objective("kill:BLAZE", 40, "Defeat 40 Blaze"))));
+        result.add(new Pack("M098", "Trial by Fire", Material.NETHER_STAR, 2800, 6900, "minecraft:adventure/under_lock_and_key", "Under Lock and Key", 325, List.of(new Objective("kill:BREEZE", 65, "Defeat 65 Breeze"), new Objective("kill:BLAZE", 40, "Defeat 40 Blaze"))));
         result.add(new Pack("M099", "Legend of the Wanderer", Material.COMPASS, 2800, 7700, "minecraft:adventure/sleep_in_bed", "Sweet Dreams", 0, List.of(new Objective("travel", 8000, "Travel 8,000 blocks"), new Objective("visit-biome:CHERRY_GROVE", 1, "Enter the Cherry Grove biome"), new Objective("visit-biome:PALE_GARDEN", 1, "Enter the Pale Garden biome"), new Objective("kill:ZOMBIE", 150, "Defeat 150 Zombie"))));
         result.add(new Pack("M100", "The Grand Master", Material.NETHER_STAR, 3000, 8000, "minecraft:end/respawn_dragon", "The End... Again...", 0, List.of(new Objective("kill:ENDER_DRAGON", 1, "Defeat 1 Ender Dragon"), new Objective("kill:WITHER", 1, "Defeat 1 Wither"), new Objective("kill:ELDER_GUARDIAN", 1, "Defeat 1 Elder Guardian"), new Objective("kill:WARDEN", 1, "Defeat 1 Warden"))));
         return sortAndPricePacks(result);
@@ -410,8 +412,10 @@ public final class QuestManager implements Listener {
                 Material icon = questIconForPack(pack);
                 int timerMinutes = pack.timerMinutes();
                 List<Objective> balancedObjectives = pack.objectives().stream()
-                        .map(objective -> rebalanceCollectionObjective(tier, objective, pack.cost(),
-                                profit, timerMinutes, pack.objectives().size()))
+                        .map(objective -> rebalanceCombatObjective(tier,
+                        rebalanceCollectionObjective(tier, objective, pack.cost(),
+                                profit, timerMinutes, pack.objectives().size()),
+                        pack.cost(), profit, timerMinutes, pack.objectives().size()))
                         .toList();
                 ordered.add(new Pack(pack.id(), numberedName, icon, pack.cost(), pack.cost() + profit,
                         pack.advancement(), pack.unlockTitle(), pack.timerMinutes(), balancedObjectives));
@@ -430,6 +434,35 @@ public final class QuestManager implements Listener {
      * objective. Tier, material rarity, activity speed, pack cost/profit, objective
      * count, and any timer determine the result; no universal quantity caps are used.
      */
+    private Objective rebalanceCombatObjective(char tier, Objective objective, int cost,
+            int profit, int timerMinutes, int objectiveCount) {
+        String target = objective.target().toUpperCase(Locale.ROOT);
+        if (!target.startsWith("KILL:") || target.equals("KILL:@ROAMING_BOSS")) return objective;
+        String mob = target.substring("KILL:".length());
+        double effort = switch (mob) {
+            case "ZOMBIE", "SKELETON", "SPIDER", "CAVE_SPIDER", "CREEPER", "DROWNED", "HUSK", "STRAY" -> 1.0;
+            case "ENDERMAN", "WITCH", "SLIME", "PIGLIN", "ZOMBIFIED_PIGLIN", "PHANTOM" -> 2.0;
+            case "PILLAGER", "VINDICATOR", "BLAZE", "GUARDIAN", "HOGLIN", "MAGMA_CUBE" -> 2.5;
+            case "WITHER_SKELETON", "SHULKER", "BREEZE", "EVOKER", "RAVAGER", "VEX" -> 3.5;
+            case "PIGLIN_BRUTE", "ELDER_GUARDIAN", "WARDEN", "WITHER", "ENDER_DRAGON" -> 7.0;
+            default -> 2.0;
+        };
+        // Monster Level raises mob health and equipment on this server, so combat
+        // contracts use a deliberately conservative target instead of raw kill counts.
+        double economicBudget = 4.0 + Math.sqrt(Math.max(0, profit)) * 0.90
+                + Math.sqrt(Math.max(0, cost)) * 0.20;
+        double tierFactor = tier == 'M' ? 0.85 : tier == 'H' ? 0.75 : 0.65;
+        double timeFactor = timerMinutes > 0
+                ? Math.max(0.45, Math.min(1.0, timerMinutes / 120.0)) : 1.0;
+        double sharedObjectiveFactor = 1.0 / Math.sqrt(Math.max(1, objectiveCount));
+        int balancedGoal = Math.max(1, (int) Math.round(economicBudget * tierFactor
+                * timeFactor * sharedObjectiveFactor / effort));
+        if (balancedGoal == objective.goal()) return objective;
+        String formattedGoal = String.format(Locale.ROOT, "%,d", balancedGoal);
+        return new Objective(objective.target(), balancedGoal,
+                objective.description().replaceFirst("\\b[\\d,]+\\b", formattedGoal));
+    }
+
     private Objective rebalanceCollectionObjective(char tier, Objective objective, int cost,
             int profit, int timerMinutes, int objectiveCount) {
         String target = objective.target().toUpperCase(Locale.ROOT);
@@ -507,6 +540,11 @@ public final class QuestManager implements Listener {
             };
         }
         if (category.equals("BREAK")) {
+            if (item.equals("DRAGON_HEAD")) return 100.0;
+            if (item.equals("SEA_LANTERN")) return 4.0;
+            if (item.equals("AMETHYST_CLUSTER")) return 2.5;
+            if (item.equals("GILDED_BLACKSTONE")) return 3.0;
+            if (item.equals("WET_SPONGE") || item.equals("SPONGE")) return 4.0;
             if (item.endsWith("_LOG")) return 0.28;
             if (item.endsWith("_STEM")) return 0.55;
             if (item.equals("BAMBOO") || item.equals("SUGAR_CANE") || item.equals("KELP")) return 0.12;
@@ -1009,16 +1047,17 @@ public final class QuestManager implements Listener {
         if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         Material material = event.getBlock().getType();
         String id = material.name();
-        incrementTarget(p, "break:" + id, 1);
+        boolean playerPlaced = playerPlacedBlocks.remove(blockKey(event.getBlock().getLocation()));
+        if (!playerPlaced) incrementTarget(p, "break:" + id, 1);
         // Deepslate ore variants count toward the matching ore contracts too.
-        if (id.startsWith("DEEPSLATE_") && id.endsWith("_ORE")) {
+        if (!playerPlaced && id.startsWith("DEEPSLATE_") && id.endsWith("_ORE")) {
             incrementTarget(p, "break:" + id.substring("DEEPSLATE_".length()), 1);
         }
-        if (material.name().endsWith("_ORE") || material == Material.ANCIENT_DEBRIS) {
+        if (!playerPlaced && (material.name().endsWith("_ORE") || material == Material.ANCIENT_DEBRIS)) {
             incrementTarget(p, "break:ANY_ORE", 1);
             recordGlobalProgress(p, "ore", 1);
         }
-        if (material.name().endsWith("_LOG") || material.name().endsWith("_STEM")) {
+        if (!playerPlaced && (material.name().endsWith("_LOG") || material.name().endsWith("_STEM"))) {
             recordGlobalProgress(p, "wood", 1);
         }
         boolean matureCrop = false;
@@ -1031,12 +1070,19 @@ public final class QuestManager implements Listener {
                 case BEETROOTS -> Material.BEETROOT;
                 case NETHER_WART -> Material.NETHER_WART;
                 case COCOA -> Material.COCOA_BEANS;
+                case SWEET_BERRY_BUSH -> Material.SWEET_BERRIES;
                 default -> null;
             };
             if (harvested != null) {
                 incrementTarget(p, "harvest:" + harvested.name(), 1);
                 matureCrop = true;
             }
+        }
+        // Glow berries grow on cave vines rather than Ageable crop blocks.
+        if ((material == Material.CAVE_VINES || material == Material.CAVE_VINES_PLANT)
+                && event.getBlock().getBlockData().getAsString().contains("berries=true")) {
+            incrementTarget(p, "harvest:GLOW_BERRIES", 1);
+            matureCrop = true;
         }
         // Melons and pumpkins are harvestable blocks rather than Ageable crops.
         if (material == Material.MELON) {
@@ -1050,10 +1096,27 @@ public final class QuestManager implements Listener {
     }
 
     @EventHandler
+    public void onPlace(BlockPlaceEvent event) {
+        if (event.isCancelled()) return;
+        playerPlacedBlocks.add(blockKey(event.getBlockPlaced().getLocation()));
+    }
+
+    private String blockKey(Location location) {
+        return location.getWorld().getUID() + ":" + location.getBlockX() + ":"
+                + location.getBlockY() + ":" + location.getBlockZ();
+    }
+
+    @EventHandler
     public void onKill(EntityDeathEvent event) {
         Player p = event.getEntity().getKiller();
         if (p == null || p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         incrementTarget(p, "kill:" + event.getEntityType().name(), 1);
+        // XZHSurvivalPlugin tags roaming bosses in persistent data; recognize that marker
+        // without depending on the other plugin's Java classes.
+        if (event.getEntity().getPersistentDataContainer().getKeys().stream()
+                .anyMatch(key -> key.getKey().equalsIgnoreCase("roaming_boss"))) {
+            incrementTarget(p, "kill:@ROAMING_BOSS", 1);
+        }
         if (event.getEntity() instanceof org.bukkit.entity.Monster) recordGlobalProgress(p, "mob", 1);
     }
 
@@ -1193,7 +1256,16 @@ public final class QuestManager implements Listener {
     @EventHandler
     public void onBreed(EntityBreedEvent event) {
         if (!(event.getBreeder() instanceof Player player)) return;
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         incrementTarget(player, "breed:ANY", 1);
+        incrementTarget(player, "breed:" + event.getEntity().getType().name(), 1);
+    }
+
+    @EventHandler
+    public void onTame(EntityTameEvent event) {
+        if (!(event.getOwner() instanceof Player player)) return;
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
+        incrementTarget(player, "tame:" + event.getEntity().getType().name(), 1);
     }
 
     @EventHandler
