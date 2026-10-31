@@ -443,9 +443,10 @@ public final class QuestManager implements Listener {
                     if (item.contains("BOAT") || item.contains("BUCKET")) score += 25;
                 }
                 case "KILL" -> {
-                    if (item.contains("SWORD") || item.contains("BOW") || item.contains("CROSSBOW") || item.contains("TRIDENT")) score += 85;
-                    if (item.contains("SKULL") || item.contains("BONE") || item.contains("ROTTEN_FLESH") || item.contains("GUNPOWDER") || item.contains("STRING")) score += 65;
-                    if (item.contains("ARMOR") || item.contains("SHIELD") || item.contains("TOTEM") || item.contains("ARROW")) score += 40;
+                    if (item.contains("SKULL") || item.contains("BONE") || item.contains("ROTTEN_FLESH") || item.contains("GUNPOWDER") || item.contains("STRING")) score += 75;
+                    if (item.contains("SPIDER_EYE") || item.contains("SLIME_BALL") || item.contains("ENDER_PEARL") || item.contains("BLAZE_ROD") || item.contains("GHAST_TEAR")) score += 70;
+                    if (item.contains("PHANTOM_MEMBRANE") || item.contains("SHULKER_SHELL") || item.contains("NAUTILUS_SHELL") || item.contains("PRISMARINE_SHARD")) score += 65;
+                    if (item.contains("TOTEM") || item.contains("OMINOUS") || item.contains("TRIAL_KEY") || item.contains("BREEZE_ROD")) score += 50;
                     if (item.contains("SPAWN_EGG")) score += 20;
                 }
                 case "SMELT" -> {
