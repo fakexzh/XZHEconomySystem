@@ -101,16 +101,21 @@ public final class BankManager implements Listener {
                 List.of(ChatColor.GRAY + "Move 10 pocket coins into your bank."));
         add(inv, 11, plugin.getPocketCoinManager().createCoin(100, 1), ChatColor.GREEN + "Deposit 100", "deposit", 100,
                 List.of(ChatColor.GRAY + "Move 100 pocket coins into your bank."));
-        add(inv, 12, Material.BUNDLE, ChatColor.YELLOW + "Deposit all", "deposit-all", 0,
+        add(inv, 12, plugin.getPocketCoinManager().createCoin(1000, 1), ChatColor.GREEN + "Deposit 1000", "deposit", 1000,
+                List.of(ChatColor.GRAY + "Move 1,000 pocket coins into your bank."));
+        add(inv, 13, Material.BUNDLE, ChatColor.YELLOW + "Deposit all", "deposit-all", 0,
                 List.of(ChatColor.GRAY + "Deposit your entire pocket balance."));
 
         add(inv, 14, plugin.getPocketCoinManager().createCoin(1, 1), ChatColor.AQUA + "Withdraw 10", "withdraw", 10,
                 List.of(ChatColor.GRAY + "Move 10 bank coins into your pocket."));
         add(inv, 15, plugin.getPocketCoinManager().createCoin(100, 1), ChatColor.AQUA + "Withdraw 100", "withdraw", 100,
                 List.of(ChatColor.GRAY + "Move 100 bank coins into your pocket."));
-        add(inv, 16, Material.BUNDLE, ChatColor.WHITE + "Withdraw all", "withdraw-all", 0,
+        add(inv, 16, plugin.getPocketCoinManager().createCoin(1000, 1), ChatColor.AQUA + "Withdraw 1000", "withdraw", 1000,
+                List.of(ChatColor.GRAY + "Move 1,000 bank coins into your pocket."));
+        add(inv, 17, Material.BUNDLE, ChatColor.WHITE + "Withdraw all", "withdraw-all", 0,
                 List.of(ChatColor.GRAY + "Withdraw your entire bank balance."));
 
+        add(inv, 18, Material.ARROW, ChatColor.WHITE + "Back to Shop", "back", 0, List.of());
         add(inv, 22, Material.WRITABLE_BOOK, ChatColor.LIGHT_PURPLE + "Loans", "loans", 0,
                 List.of(ChatColor.GRAY + "Borrow, review your debt, or repay.",
                         ChatColor.GRAY + "Loan repayments can use pocket and bank funds."));
@@ -195,6 +200,7 @@ public final class BankManager implements Listener {
                 open(player);
             }
             case "loans" -> plugin.getLoanManager().open(player);
+            case "back" -> plugin.getShopManager().openMain(player);
             case "close" -> player.closeInventory();
             default -> { }
         }
