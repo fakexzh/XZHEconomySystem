@@ -25,6 +25,8 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.FurnaceExtractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.vehicle.VehicleMoveEvent;
 import org.bukkit.event.player.PlayerFishEvent;
@@ -1371,6 +1373,34 @@ public final class QuestManager implements Listener {
         }
         if (!activeId.startsWith("pack:")) return 0L;
         return packTimerLimitMinutes(activeId.substring("pack:".length())) * 60L;
+    }
+
+    @EventHandler
+    public void onQuestQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        expireTimedQuestIfNeeded(player);
+        UUID id = player.getUniqueId();
+        String active = data.getString(id + ".active", "");
+        if (timerLimitSeconds(id, active) > 0 && !active.isBlank()) {
+            data.set(id + ".paused-at", System.currentTimeMillis());
+            save();
+        }
+    }
+
+    @EventHandler
+    public void onQuestJoin(PlayerJoinEvent event) {
+        UUID id = event.getPlayer().getUniqueId();
+        long pausedAt = data.getLong(id + ".paused-at", 0L);
+        if (pausedAt <= 0L) return;
+        String active = data.getString(id + ".active", "");
+        if (timerLimitSeconds(id, active) > 0 && !active.isBlank()) {
+            long offlineDuration = Math.max(0L, System.currentTimeMillis() - pausedAt);
+            long startedAt = data.getLong(id + ".started-at", System.currentTimeMillis());
+            data.set(id + ".started-at", startedAt + offlineDuration);
+        }
+        data.set(id + ".paused-at", null);
+        save();
+        updateHud(event.getPlayer());
     }
 
     private void expireTimedQuestIfNeeded(Player player) {
