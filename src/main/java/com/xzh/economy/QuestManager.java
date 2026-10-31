@@ -425,8 +425,8 @@ public final class QuestManager implements Listener {
      */
     /**
      * Derives collection quantities from the economic value and real effort of each
-     * objective. Tier values are ceilings, not targets; material rarity, activity
-     * speed, pack cost/profit, objective count, and any timer determine the result.
+     * objective. Tier, material rarity, activity speed, pack cost/profit, objective
+     * count, and any timer determine the result; no universal quantity caps are used.
      */
     private Objective rebalanceCollectionObjective(char tier, Objective objective, int cost,
             int profit, int timerMinutes, int objectiveCount) {
@@ -439,15 +439,15 @@ public final class QuestManager implements Listener {
         double unitEffort = collectionEffortPerUnit(category, item);
         if (unitEffort <= 0.0) return objective;
 
-        double economicBudget = 6.0 + Math.sqrt(Math.max(0, profit)) * 1.35
-                + Math.sqrt(Math.max(0, cost)) * 0.35;
+        double economicBudget = 4.0 + Math.sqrt(Math.max(0, profit)) * 0.90
+                + Math.sqrt(Math.max(0, cost)) * 0.20;
+        double tierFactor = tier == 'M' ? 1.10 : tier == 'H' ? 1.0 : 0.90;
         double timeFactor = timerMinutes > 0
                 ? Math.max(0.35, Math.min(1.0, timerMinutes / 60.0)) : 1.0;
         double sharedObjectiveFactor = 1.0 / Math.sqrt(Math.max(1, objectiveCount));
-        int effortBasedGoal = (int) Math.round(economicBudget * timeFactor
+        int effortBasedGoal = (int) Math.round(economicBudget * tierFactor * timeFactor
                 * sharedObjectiveFactor / unitEffort);
-        int ceiling = collectionCeiling(tier, category, item);
-        int balancedGoal = Math.max(1, Math.min(ceiling, effortBasedGoal));
+        int balancedGoal = Math.max(1, effortBasedGoal);
 
         if (balancedGoal == objective.goal()) return objective;
         String formattedGoal = String.format(Locale.ROOT, "%,d", balancedGoal);
@@ -455,24 +455,6 @@ public final class QuestManager implements Listener {
         return new Objective(objective.target(), balancedGoal, description);
     }
 
-    private int collectionCeiling(char tier, String category, String item) {
-        boolean ore = isOreMaterial(item);
-        boolean logs = item.endsWith("_LOG") || item.endsWith("_STEM") || item.equals("BAMBOO");
-        boolean crop = category.equals("HARVEST") || List.of("WHEAT", "CARROT", "POTATO",
-                "BEETROOT", "MELON_SLICE", "PUMPKIN", "NETHER_WART", "COCOA_BEANS")
-                .contains(item);
-        boolean fish = category.equals("FISH") || List.of("COD", "SALMON", "TROPICAL_FISH",
-                "PUFFERFISH").contains(item);
-        boolean block = category.equals("BREAK") && !ore && !logs;
-        boolean smeltedOre = category.equals("SMELT") && ore;
-
-        if (ore || smeltedOre) return tier == 'M' ? 150 : 40;
-        if (logs) return tier == 'M' ? 300 : tier == 'H' ? 200 : 100;
-        if (crop) return tier == 'M' ? 500 : tier == 'H' ? 200 : 100;
-        if (fish) return tier == 'M' ? 150 : tier == 'H' ? 100 : 40;
-        if (block) return tier == 'M' ? 500 : tier == 'H' ? 200 : 100;
-        return tier == 'M' ? 400 : tier == 'H' ? 200 : 100;
-    }
 
     private boolean isOreMaterial(String item) {
         return item.endsWith("_ORE") || List.of("ANCIENT_DEBRIS", "RAW_IRON", "RAW_COPPER",
