@@ -99,7 +99,8 @@ public final class HudManager {
         java.util.List<String> lines = new java.util.ArrayList<>(java.util.List.of(
                 ChatColor.GRAY + "Pocket",
                 ChatColor.YELLOW + formatMoney(balance),
-                ChatColor.GRAY + "Bank",
+                ChatColor.GRAY + "Bank " + (plugin.getBankManager() != null && plugin.getBankManager().isOpenNow()
+                        ? ChatColor.YELLOW + "●" : ChatColor.RED + "●"),
                 ChatColor.GREEN + formatMoney(bankBalance),
                 ChatColor.DARK_GRAY + " ",
                 ChatColor.GRAY + "Loan owed",

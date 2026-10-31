@@ -28,9 +28,6 @@ public final class BankManager implements Listener {
     private final YamlConfiguration data;
     private final NamespacedKey actionKey;
     private final NamespacedKey amountKey;
-    private Boolean previousOpenState;
-    private boolean openingWarned;
-    private boolean closingWarned;
 
     public BankManager(XZHEconomySystem plugin) {
         this.plugin = plugin;
@@ -39,8 +36,6 @@ public final class BankManager implements Listener {
         actionKey = new NamespacedKey(plugin, "bank_action");
         amountKey = new NamespacedKey(plugin, "bank_amount");
         Bukkit.getPluginManager().registerEvents(this, plugin);
-        previousOpenState = isOpenNow();
-        Bukkit.getScheduler().runTaskTimer(plugin, this::announceSchedule, 20L, 20L);
     }
 
     public double getBalance(UUID id) {
@@ -70,58 +65,16 @@ public final class BankManager implements Listener {
         return openTick < closeTick ? time >= openTick && time < closeTick : time >= openTick || time < closeTick;
     }
 
-    private void announceSchedule() {
-        if (!plugin.getConfig().getBoolean("announcements.bank.enabled", true)) return;
-        World world = getClockWorld();
-        if (world == null) return;
-        boolean open = isOpenNow();
-        if (previousOpenState != null && previousOpenState != open) {
-            Bukkit.broadcastMessage(open
-                    ? ChatColor.GOLD + "[BANK] " + ChatColor.GREEN + "The bank is now OPEN."
-                    : ChatColor.GOLD + "[BANK] " + ChatColor.RED + "The bank is now CLOSED.");
-            if (open) { openingWarned = false; closingWarned = false; }
-        }
-        previousOpenState = open;
-        long now = Math.floorMod(world.getTime(), 24000L);
-        long openTick = Math.floorMod((plugin.getConfig().getInt("bank.open-hour", 9) - 6L) * 1000L, 24000L);
-        long closeTick = Math.floorMod((plugin.getConfig().getInt("bank.close-hour", 20) - 6L) * 1000L, 24000L);
-        if (open) {
-            double seconds = secondsUntil(now, closeTick);
-            if (!closingWarned && seconds > 0 && seconds <= 300) {
-                closingWarned = true;
-                Bukkit.broadcastMessage(ChatColor.GOLD + "[BANK] " + ChatColor.YELLOW + "The bank will close in about 5 minutes.");
-            }
-        } else {
-            double seconds = secondsUntil(now, openTick);
-            if (!openingWarned && seconds > 0 && seconds <= 300) {
-                openingWarned = true;
-                Bukkit.broadcastMessage(ChatColor.GOLD + "[BANK] " + ChatColor.YELLOW + "The bank will open in about 5 minutes.");
-            }
-        }
-    }
-
-    private double secondsUntil(long from, long target) {
-        long distance = Math.floorMod(target - from, 24000L);
-        double seconds = 0.0;
-        long cursor = from;
-        while (distance > 0) {
-            boolean day = cursor < 12000L;
-            long boundary = day ? 12000L : 24000L;
-            long span = Math.min(distance, boundary - cursor);
-            // Vanilla daylight cycling: each 12,000-tick half-day lasts 10 real minutes.
-            seconds += span * (600.0 / 12000.0);
-            distance -= span;
-            cursor += span;
-            if (cursor >= 24000L) cursor = 0L;
-        }
-        return seconds;
+    private String formatHour(int hour) {
+        int normalized = Math.floorMod(hour, 24);
+        int display = normalized % 12;
+        if (display == 0) display = 12;
+        return display + ":00 " + (normalized < 12 ? "AM" : "PM");
     }
 
     public String hoursMessage() {
-        World world = getClockWorld();
-        String worldName = world == null ? "server world" : world.getName();
-        return "Bank hours are " + plugin.getConfig().getInt("bank.open-hour", 9) + ":00–"
-                + plugin.getConfig().getInt("bank.close-hour", 20) + ":00 Minecraft time (" + worldName + ").";
+        return "Bank hours: " + formatHour(plugin.getConfig().getInt("bank.open-hour", 9))
+                + " – " + formatHour(plugin.getConfig().getInt("bank.close-hour", 20));
     }
 
     private World getClockWorld() {
@@ -132,27 +85,30 @@ public final class BankManager implements Listener {
     }
 
     public void open(Player player) {
+        if (!isOpenNow()) {
+            plugin.tellPublic(player, hoursMessage());
+            return;
+        }
         UUID id = player.getUniqueId();
-        boolean open = isOpenNow();
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.GOLD + "XZH BANK");
         add(inv, 4, Material.GOLD_INGOT, ChatColor.YELLOW + "Your balances", "refresh", 0,
                 List.of(ChatColor.WHITE + "Pocket: " + ChatColor.YELLOW + money(plugin.getBalance(id)) + " coins",
                         ChatColor.WHITE + "Bank: " + ChatColor.GREEN + money(getBalance(id)) + " coins",
-                        ChatColor.GRAY + (open ? "Bank is OPEN" : "Bank is CLOSED"),
+                        ChatColor.GRAY + "Bank is OPEN",
                         ChatColor.GRAY + hoursMessage()));
 
-        add(inv, 10, Material.CHEST, ChatColor.GREEN + "Deposit 10", "deposit", 10,
+        add(inv, 10, plugin.getPocketCoinManager().createCoin(1, 1), ChatColor.GREEN + "Deposit 10", "deposit", 10,
                 List.of(ChatColor.GRAY + "Move 10 pocket coins into your bank."));
-        add(inv, 11, Material.ENDER_CHEST, ChatColor.GREEN + "Deposit 100", "deposit", 100,
+        add(inv, 11, plugin.getPocketCoinManager().createCoin(100, 1), ChatColor.GREEN + "Deposit 100", "deposit", 100,
                 List.of(ChatColor.GRAY + "Move 100 pocket coins into your bank."));
-        add(inv, 12, Material.BARREL, ChatColor.GREEN + "Deposit all", "deposit-all", 0,
+        add(inv, 12, Material.BUNDLE, ChatColor.YELLOW + "Deposit all", "deposit-all", 0,
                 List.of(ChatColor.GRAY + "Deposit your entire pocket balance."));
 
-        add(inv, 14, Material.GOLD_NUGGET, ChatColor.AQUA + "Withdraw 10", "withdraw", 10,
+        add(inv, 14, plugin.getPocketCoinManager().createCoin(1, 1), ChatColor.AQUA + "Withdraw 10", "withdraw", 10,
                 List.of(ChatColor.GRAY + "Move 10 bank coins into your pocket."));
-        add(inv, 15, Material.GOLD_INGOT, ChatColor.AQUA + "Withdraw 100", "withdraw", 100,
+        add(inv, 15, plugin.getPocketCoinManager().createCoin(100, 1), ChatColor.AQUA + "Withdraw 100", "withdraw", 100,
                 List.of(ChatColor.GRAY + "Move 100 bank coins into your pocket."));
-        add(inv, 16, Material.CHEST_MINECART, ChatColor.AQUA + "Withdraw all", "withdraw-all", 0,
+        add(inv, 16, Material.BUNDLE, ChatColor.WHITE + "Withdraw all", "withdraw-all", 0,
                 List.of(ChatColor.GRAY + "Withdraw your entire bank balance."));
 
         add(inv, 22, Material.WRITABLE_BOOK, ChatColor.LIGHT_PURPLE + "Loans", "loans", 0,
@@ -164,7 +120,11 @@ public final class BankManager implements Listener {
 
     private void add(Inventory inv, int slot, Material material, String name, String action,
                      int amount, List<String> lore) {
-        ItemStack stack = new ItemStack(material);
+        add(inv, slot, new ItemStack(material), name, action, amount, lore);
+    }
+
+    private void add(Inventory inv, int slot, ItemStack stack, String name, String action,
+                     int amount, List<String> lore) {
         ItemMeta meta = stack.getItemMeta();
         meta.setDisplayName(name);
         meta.setLore(lore);
@@ -193,8 +153,8 @@ public final class BankManager implements Listener {
             case "refresh" -> open(player);
             case "deposit", "deposit-all", "withdraw", "withdraw-all" -> {
                 if (!isOpenNow()) {
-                    plugin.tellPublic(player, "The bank is closed. " + hoursMessage());
-                    open(player);
+                    plugin.tellPublic(player, hoursMessage());
+                    player.closeInventory();
                     return;
                 }
                 boolean deposit = action.startsWith("deposit");
