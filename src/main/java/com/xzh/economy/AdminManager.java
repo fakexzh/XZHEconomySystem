@@ -297,10 +297,10 @@ public final class AdminManager implements Listener {
 
     private void questOverview(Player player) {
         YamlConfiguration quests = YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "quests.yml"));
-        player.sendMessage(ChatColor.GOLD + "Global event: " + quests.getInt("event.progress", 0) + "/"
+        plugin.tellQuest(player, "Community Chest: " + quests.getInt("event.progress", 0) + "/"
                 + quests.getInt("event.goal", 500) + " ores; reward claims remaining: "
                 + quests.getInt("event.claims-remaining", 25) + ".");
-        player.sendMessage(ChatColor.GRAY + "Pack stock — Beginner: " + quests.getInt("stock.beginner", 0)
+        plugin.tellQuest(player, "Pack stock — Beginner: " + quests.getInt("stock.beginner", 0)
                 + ", Miner: " + quests.getInt("stock.miner", 0) + ", Hunter: " + quests.getInt("stock.hunter", 0)
                 + ", Explorer: " + quests.getInt("stock.explorer", 0) + ", Nether: " + quests.getInt("stock.nether", 0)
                 + ", End: " + quests.getInt("stock.end", 0) + ".");
