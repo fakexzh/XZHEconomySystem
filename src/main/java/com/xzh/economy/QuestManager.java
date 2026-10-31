@@ -406,8 +406,10 @@ public final class QuestManager implements Listener {
                 int profit = minimumProfit + (int) Math.round((maximumProfit - minimumProfit) * (i / (double) Math.max(1, tierPacks.size() - 1)));
                 String numberedName = String.format(Locale.ROOT, "(%02d) %s", i + 1, pack.name());
                 Material icon = questIconForPack(pack);
+                int timerMinutes = pack.timerMinutes();
                 List<Objective> balancedObjectives = pack.objectives().stream()
-                        .map(objective -> rebalanceCollectionObjective(tier, objective))
+                        .map(objective -> rebalanceCollectionObjective(tier, objective, pack.cost(),
+                                profit, timerMinutes, pack.objectives().size()))
                         .toList();
                 ordered.add(new Pack(pack.id(), numberedName, icon, pack.cost(), pack.cost() + profit,
                         pack.advancement(), pack.unlockTitle(), pack.timerMinutes(), balancedObjectives));
@@ -421,40 +423,133 @@ public final class QuestManager implements Listener {
      * deliberately tiered by activity: ores are rarer than stone, fishing and
      * smelting take longer per item, and logs/crops are faster to gather.
      */
-    private Objective rebalanceCollectionObjective(char tier, Objective objective) {
+    /**
+     * Derives collection quantities from the economic value and real effort of each
+     * objective. Tier values are ceilings, not targets; material rarity, activity
+     * speed, pack cost/profit, objective count, and any timer determine the result.
+     */
+    private Objective rebalanceCollectionObjective(char tier, Objective objective, int cost,
+            int profit, int timerMinutes, int objectiveCount) {
         String target = objective.target().toUpperCase(Locale.ROOT);
         String category = target.contains(":") ? target.substring(0, target.indexOf(':')) : target;
         String item = target.contains(":") ? target.substring(target.indexOf(':') + 1).split(":")[0] : target;
 
-        int easy;
-        int hard;
-        int master;
-        switch (category) {
-            case "FISH" -> { easy = 4; hard = 7; master = 12; }
-            case "SMELT" -> { easy = 6; hard = 10; master = 16; }
-            case "HARVEST" -> { easy = 12; hard = 18; master = 24; }
-            case "COLLECT" -> { easy = 8; hard = 14; master = 20; }
-            case "BREAK" -> {
-                if (item.endsWith("_ORE") || item.equals("ANCIENT_DEBRIS")) {
-                    easy = 6; hard = 10; master = item.equals("ANCIENT_DEBRIS") ? 4 : 16;
-                } else if (item.endsWith("_LOG")) {
-                    easy = 12; hard = 20; master = 32;
-                } else if (item.equals("BAMBOO") || item.equals("SUGAR_CANE") || item.equals("KELP")) {
-                    easy = 12; hard = 20; master = 32;
-                } else {
-                    easy = 24; hard = 32; master = 48;
-                }
-            }
-            default -> { return objective; }
-        }
+        if (!List.of("FISH", "SMELT", "HARVEST", "COLLECT", "BREAK").contains(category)) return objective;
 
-        int cap = tier == 'E' ? easy : tier == 'H' ? hard : master;
-        int balancedGoal = Math.min(objective.goal(), cap);
+        double unitEffort = collectionEffortPerUnit(category, item);
+        if (unitEffort <= 0.0) return objective;
+
+        double economicBudget = 6.0 + Math.sqrt(Math.max(0, profit)) * 1.35
+                + Math.sqrt(Math.max(0, cost)) * 0.35;
+        double timeFactor = timerMinutes > 0
+                ? Math.max(0.35, Math.min(1.0, timerMinutes / 60.0)) : 1.0;
+        double sharedObjectiveFactor = 1.0 / Math.sqrt(Math.max(1, objectiveCount));
+        int effortBasedGoal = (int) Math.round(economicBudget * timeFactor
+                * sharedObjectiveFactor / unitEffort);
+        int ceiling = collectionCeiling(tier, category, item);
+        int balancedGoal = Math.max(1, Math.min(ceiling, effortBasedGoal));
+
         if (balancedGoal == objective.goal()) return objective;
-
         String formattedGoal = String.format(Locale.ROOT, "%,d", balancedGoal);
         String description = objective.description().replaceFirst("\\b[\\d,]+\\b", formattedGoal);
         return new Objective(objective.target(), balancedGoal, description);
+    }
+
+    private int collectionCeiling(char tier, String category, String item) {
+        boolean ore = isOreMaterial(item);
+        boolean logs = item.endsWith("_LOG") || item.endsWith("_STEM") || item.equals("BAMBOO");
+        boolean crop = category.equals("HARVEST") || List.of("WHEAT", "CARROT", "POTATO",
+                "BEETROOT", "MELON_SLICE", "PUMPKIN", "NETHER_WART", "COCOA_BEANS")
+                .contains(item);
+        boolean fish = category.equals("FISH") || List.of("COD", "SALMON", "TROPICAL_FISH",
+                "PUFFERFISH").contains(item);
+        boolean block = category.equals("BREAK") && !ore && !logs;
+        boolean smeltedOre = category.equals("SMELT") && ore;
+
+        if (ore || smeltedOre) return tier == 'M' ? 150 : 40;
+        if (logs) return tier == 'M' ? 300 : tier == 'H' ? 200 : 100;
+        if (crop) return tier == 'M' ? 500 : tier == 'H' ? 200 : 100;
+        if (fish) return tier == 'M' ? 150 : tier == 'H' ? 100 : 40;
+        if (block) return tier == 'M' ? 500 : tier == 'H' ? 200 : 100;
+        return tier == 'M' ? 400 : tier == 'H' ? 200 : 100;
+    }
+
+    private boolean isOreMaterial(String item) {
+        return item.endsWith("_ORE") || List.of("ANCIENT_DEBRIS", "RAW_IRON", "RAW_COPPER",
+                "RAW_GOLD", "IRON_INGOT", "COPPER_INGOT", "GOLD_INGOT", "COAL",
+                "DIAMOND", "EMERALD", "LAPIS_LAZULI", "REDSTONE", "QUARTZ").contains(item);
+    }
+
+    /**
+     * Relative work required per unit. Higher values mean fewer items are fair
+     * for the same purchase price and profit.
+     */
+    private double collectionEffortPerUnit(String category, String item) {
+        if (category.equals("FISH")) {
+            return switch (item) {
+                case "COD" -> 0.65;
+                case "SALMON" -> 0.85;
+                case "PUFFERFISH" -> 2.4;
+                case "TROPICAL_FISH" -> 3.2;
+                default -> 1.0;
+            };
+        }
+        if (category.equals("HARVEST")) {
+            return switch (item) {
+                case "MELON_SLICE" -> 0.10;
+                case "WHEAT", "CARROT", "POTATO" -> 0.24;
+                case "BEETROOT", "PUMPKIN" -> 0.45;
+                case "SWEET_BERRIES" -> 0.30;
+                case "COCOA_BEANS", "NETHER_WART" -> 0.65;
+                default -> 0.35;
+            };
+        }
+        if (category.equals("BREAK")) {
+            if (item.endsWith("_LOG")) return 0.28;
+            if (item.endsWith("_STEM")) return 0.55;
+            if (item.equals("BAMBOO") || item.equals("SUGAR_CANE") || item.equals("KELP")) return 0.12;
+            if (item.equals("ANCIENT_DEBRIS")) return 9.0;
+            if (item.endsWith("_ORE")) {
+                return switch (item) {
+                    case "COAL_ORE", "DEEPSLATE_COAL_ORE" -> 0.65;
+                    case "COPPER_ORE", "DEEPSLATE_COPPER_ORE" -> 0.75;
+                    case "IRON_ORE", "DEEPSLATE_IRON_ORE" -> 0.95;
+                    case "GOLD_ORE", "DEEPSLATE_GOLD_ORE", "NETHER_GOLD_ORE" -> 1.35;
+                    case "LAPIS_ORE", "DEEPSLATE_LAPIS_ORE", "REDSTONE_ORE",
+                            "DEEPSLATE_REDSTONE_ORE" -> 1.45;
+                    case "EMERALD_ORE", "DEEPSLATE_EMERALD_ORE" -> 2.2;
+                    case "DIAMOND_ORE", "DEEPSLATE_DIAMOND_ORE" -> 3.2;
+                    default -> 1.0;
+                };
+            }
+            return switch (item) {
+                case "STONE", "COBBLESTONE", "DEEPSLATE", "COBBLED_DEEPSLATE",
+                        "NETHERRACK" -> 0.22;
+                case "DIRT", "GRAVEL", "SAND", "RED_SAND" -> 0.18;
+                case "CLAY" -> 0.38;
+                case "PRISMARINE", "DARK_PRISMARINE", "PRISMARINE_BRICKS" -> 1.1;
+                case "OBSIDIAN", "CRYING_OBSIDIAN" -> 2.8;
+                case "END_STONE" -> 0.65;
+                default -> 0.35;
+            };
+        }
+        if (category.equals("SMELT")) {
+            double materialEffort = isOreMaterial(item) ? collectionEffortPerUnit("COLLECT", item) : 0.5;
+            return Math.max(0.8, materialEffort + 0.55);
+        }
+        if (category.equals("COLLECT")) {
+            return switch (item) {
+                case "ANCIENT_DEBRIS", "NETHERITE_SCRAP" -> 8.0;
+                case "DIAMOND", "DIAMOND_BLOCK" -> 3.2;
+                case "EMERALD", "EMERALD_BLOCK" -> 2.4;
+                case "ENDER_PEARL", "BLAZE_ROD", "GHAST_TEAR", "SHULKER_SHELL" -> 1.8;
+                case "RAW_IRON", "IRON_INGOT", "RAW_COPPER", "COPPER_INGOT",
+                        "RAW_GOLD", "GOLD_INGOT", "QUARTZ", "REDSTONE", "LAPIS_LAZULI" -> 0.9;
+                case "BREAD", "COOKED_BEEF", "COOKED_PORKCHOP", "COOKED_CHICKEN" -> 0.35;
+                default -> 0.45;
+            };
+        }
+        return 0.5;
     }
 
     private Material questIconForPack(Pack pack) {
