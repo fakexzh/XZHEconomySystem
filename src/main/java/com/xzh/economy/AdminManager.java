@@ -130,6 +130,7 @@ public final class AdminManager implements Listener {
             prompts.remove(player.getUniqueId());
             if (prompt.startsWith("stock-") || prompt.startsWith("price-")) plugin.tellShop(player, "Admin action cancelled.");
             else if (prompt.startsWith("quest-stock-")) plugin.tellQuest(player, "Admin action cancelled.");
+            else if (prompt.startsWith("clear-loan-")) plugin.tellBank(player, "Admin action cancelled.");
             else player.sendMessage(ChatColor.YELLOW + "Admin action cancelled.");
             return;
         }
@@ -157,11 +158,11 @@ public final class AdminManager implements Listener {
             return;
         }
         if (prompt.equals("clear-loan-player")) {
-            if (!input.matches("[A-Za-z0-9_]{1,16}")) { player.sendMessage(ChatColor.RED + "Invalid player name. Try again or type cancel."); return; }
+            if (!input.matches("[A-Za-z0-9_]{1,16}")) { plugin.tellBank(player, "Invalid player name. Try again or type cancel."); return; }
             OfflinePlayer target = Bukkit.getOfflinePlayer(input);
             plugin.getLoanManager().adminClearLoan(target.getUniqueId());
             prompts.remove(player.getUniqueId());
-            player.sendMessage(ChatColor.GREEN + "Cleared active loan for " + input + ".");
+            plugin.tellBank(player, "Cleared active loan for " + input + ".");
             return;
         }
         if (prompt.equals("clear-recovery-player")) {
@@ -265,6 +266,7 @@ public final class AdminManager implements Listener {
         player.closeInventory();
         if (state.startsWith("stock-") || state.startsWith("price-")) plugin.tellShop(player, text + " Type 'cancel' to stop.");
         else if (state.startsWith("quest-stock-")) plugin.tellQuest(player, text + " Type 'cancel' to stop.");
+        else if (state.startsWith("clear-loan-")) plugin.tellBank(player, text + " Type 'cancel' to stop.");
         else player.sendMessage(ChatColor.YELLOW + text + " Type 'cancel' to stop.");
     }
 
@@ -292,7 +294,7 @@ public final class AdminManager implements Listener {
             double owed = loans.getDouble(key + ".amount", 0);
             if (owed > 0) { count++; total += owed; }
         }
-        player.sendMessage(ChatColor.GOLD + "Loan overview: " + count + " active loans; total owed " + String.format(Locale.US, "%.2f", total) + " coins.");
+        plugin.tellBank(player, "Loan overview: " + count + " active loans; total owed " + String.format(Locale.US, "%.2f", total) + " coins.");
     }
 
     private void questOverview(Player player) {
