@@ -2243,7 +2243,7 @@ quests:
     group-name: "Master Farmers"
     name: "Stable Master"
     objectives:
-      - "BREED:ANY:30"
+      - "BREED:ANY:24"
     unlock:
       - "husbandry/breed_an_animal"
     fee: 410
@@ -2825,7 +2825,7 @@ quests:
     group-name: "End Expeditions"
     name: "Enderman Exterminator"
     objectives:
-      - "KILL:ENDERMAN:60@END"
+      - "KILL:ENDERMAN:40@END"
     unlock:
       - "end/enter_end_gateway"
     fee: 2100
@@ -2923,7 +2923,7 @@ quests:
     group-name: "End Expeditions"
     name: "Sky Pirate"
     objectives:
-      - "TRAVEL:ELYTRA:5000"
+      - "TRAVEL:ELYTRA:3000"
     unlock:
       - "end/elytra"
     fee: 2100
@@ -3009,7 +3009,7 @@ quests:
     group-name: "Netherite & Nether Mastery"
     name: "Piglin Diplomat"
     objectives:
-      - "BARTER:ANY:96"
+      - "BARTER:ANY:32"
     unlock:
       - "nether/distract_piglin"
     fee: 1900
@@ -3037,7 +3037,7 @@ quests:
     group-name: "Netherite & Nether Mastery"
     name: "Hoglin Husbandry"
     objectives:
-      - "BREED:HOGLIN:12"
+      - "BREED:HOGLIN:8"
     unlock:
       - "nether/find_bastion"
     fee: 2100
@@ -3051,7 +3051,7 @@ quests:
     group-name: "Netherite & Nether Mastery"
     name: "Skull Magnate"
     objectives:
-      - "KILL:WITHER_SKELETON:80@NETHER"
+      - "KILL:WITHER_SKELETON:50@NETHER"
     unlock:
       - "nether/get_wither_skull"
     fee: 2350
@@ -3065,7 +3065,7 @@ quests:
     group-name: "Netherite & Nether Mastery"
     name: "Blaze Baron"
     objectives:
-      - "KILL:BLAZE:80@NETHER"
+      - "KILL:BLAZE:50@NETHER"
     unlock:
       - "nether/obtain_blaze_rod"
     fee: 2100
@@ -3438,7 +3438,7 @@ quests:
     group-name: "Raids & Mansions"
     name: "Captain Hunter"
     objectives:
-      - "KILL:PILLAGER:80"
+      - "KILL:PILLAGER:50"
     unlock:
       - "adventure/voluntary_exile"
     fee: 1900
@@ -3452,7 +3452,7 @@ quests:
     group-name: "Raids & Mansions"
     name: "Illager Annihilator"
     objectives:
-      - "KILL:VINDICATOR:50"
+      - "KILL:VINDICATOR:30"
     unlock:
       - "adventure/voluntary_exile"
     fee: 2100
@@ -3494,7 +3494,7 @@ quests:
     group-name: "Raids & Mansions"
     name: "Patrol Marathon"
     objectives:
-      - "KILL:PILLAGER:80"
+      - "KILL:PILLAGER:50"
     unlock:
       - "adventure/voluntary_exile"
     fee: 1900
@@ -3508,7 +3508,7 @@ quests:
     group-name: "Raids & Mansions"
     name: "Vex Vendetta"
     objectives:
-      - "KILL:VEX:60"
+      - "KILL:VEX:30"
     unlock:
       - "adventure/voluntary_exile"
     fee: 2100
@@ -3676,7 +3676,7 @@ quests:
     group-name: "Monuments & Sea Legends"
     name: "Monument Marauder"
     objectives:
-      - "KILL:GUARDIAN:80"
+      - "KILL:GUARDIAN:40"
     unlock:
       - "story/shiny_gear"
     fee: 2100
@@ -3746,7 +3746,7 @@ quests:
     group-name: "Monuments & Sea Legends"
     name: "Trench Diver"
     objectives:
-      - "KILL:DROWNED:80"
+      - "KILL:DROWNED:50"
     unlock:
       - "husbandry/fishy_business"
     fee: 1650
@@ -3851,9 +3851,9 @@ quests:
     group-name: "Grand Collections"
     name: "Farmer's Grand Slam"
     objectives:
-      - "HARVEST:WHEAT:128"
-      - "HARVEST:CARROT:128"
-      - "HARVEST:POTATO:128"
+      - "HARVEST:WHEAT:96"
+      - "HARVEST:CARROT:96"
+      - "HARVEST:POTATO:96"
       - "HARVEST:MELON:64"
       - "HARVEST:PUMPKIN:64"
     unlock:
@@ -3904,7 +3904,7 @@ quests:
     name: "Explorer's Grand Slam"
     objectives:
       - "BIOME:ANY:12"
-      - "TRAVEL:FOOT:5000"
+      - "TRAVEL:FOOT:4000"
     unlock:
       - "adventure/sleep_in_bed"
     fee: 2100
@@ -3932,7 +3932,7 @@ quests:
     group-name: "Grand Collections"
     name: "Breeder's Grand Slam"
     objectives:
-      - "BREED:ANY:20"
+      - "BREED:ANY:16"
     unlock:
       - "husbandry/bred_all_animals"
     fee: 1900
@@ -4018,7 +4018,7 @@ quests:
     group-name: "Marathons"
     name: "Field Marshal"
     objectives:
-      - "HARVEST:ANY_CROP:128"
+      - "HARVEST:ANY_CROP:96"
     unlock:
       - "husbandry/plant_seed"
     fee: 1200
@@ -4032,7 +4032,7 @@ quests:
     group-name: "Marathons"
     name: "Great Wall Walk"
     objectives:
-      - "TRAVEL:FOOT:5000"
+      - "TRAVEL:FOOT:4000"
     unlock:
       - "story/iron_tools"
     fee: 1450
@@ -4102,7 +4102,7 @@ quests:
     group-name: "Marathons"
     name: "Nether Wanderer"
     objectives:
-      - "TRAVEL:FOOT:5000@NETHER"
+      - "TRAVEL:FOOT:3500@NETHER"
     unlock:
       - "nether/fast_travel"
     fee: 1650
@@ -4211,7 +4211,7 @@ quests:
     name: "Ocean Overlord"
     objectives:
       - "KILL:ELDER_GUARDIAN:2"
-      - "KILL:GUARDIAN:60"
+      - "KILL:GUARDIAN:40"
       - "MINE:SPONGE|WET_SPONGE:16"
     unlock:
       - "story/shiny_gear"
@@ -4243,7 +4243,7 @@ quests:
     name: "Legend of the Wanderer"
     objectives:
       - "BIOME:ANY:12"
-      - "TRAVEL:FOOT:5000"
+      - "TRAVEL:FOOT:4000"
       - "LOOT:chests/*:10"
     unlock:
       - "adventure/sleep_in_bed"
