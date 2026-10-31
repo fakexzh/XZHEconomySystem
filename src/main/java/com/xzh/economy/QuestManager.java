@@ -395,7 +395,7 @@ public final class QuestManager implements Listener {
 
     private List<Pack> sortAndPricePacks(List<Pack> source) {
         List<Pack> ordered = new ArrayList<>(300);
-                for (char tier : new char[] {'E', 'H', 'M'}) {
+        for (char tier : new char[] {'E', 'H', 'M'}) {
             List<Pack> tierPacks = new ArrayList<>();
             for (Pack pack : source) if (pack.id().charAt(0) == tier) tierPacks.add(pack);
             tierPacks.sort(Comparator.comparingInt(Pack::cost).thenComparing(Pack::id));
@@ -421,7 +421,7 @@ public final class QuestManager implements Listener {
         }
         String category = target.contains(":") ? target.substring(0, target.indexOf(':')) : target;
         String targetItem = target.contains(":") ? target.substring(target.indexOf(':') + 1).split(":")[0] : target;
-        if (category.equals("KILL") || category.equals("KILL-LEVEL")) {
+        if (category.equals("KILL")) {
             return switch (targetItem) {
                 case "ZOMBIE" -> Material.ZOMBIE_HEAD;
                 case "SKELETON" -> Material.SKELETON_SKULL;
@@ -1371,32 +1371,6 @@ public final class QuestManager implements Listener {
         save();
     }
 
-    private String unlockDescription(String id) {
-        return switch (id) {
-            case "stone_survey" -> "Craft iron tools";
-            case "coal_contract" -> "Smelt an iron ingot";
-            case "iron_miner", "copper_miner", "deepslate_delver" -> "Craft iron tools";
-            case "gold_digger" -> "Upgrade your tools with gold";
-            case "diamond_miner" -> "Mine a diamond";
-            case "quartz_quarry", "nether_hunter", "magma_march", "hoglin_hunt" -> "Enter the Nether";
-            case "debris_hunter" -> "Obtain Ancient Debris";
-            case "nether_blaze" -> "Obtain a Blaze Rod";
-            case "end_expedition", "pearl_trader" -> "Enter the End";
-            case "dragon_slayer" -> "Defeat the Ender Dragon";
-            case "ocean_fisher" -> "Catch a fish";
-            case "salmon_run", "deep_sea" -> "Catch a fish";
-            case "farm_starter", "root_vegetables" -> "Plant and grow a crop";
-            case "baked_goods", "meat_supply" -> "Complete the Balanced Diet food challenge";
-            case "animal_breeder", "cattle_feed", "sheep_flock" -> "Breed an animal";
-            case "woodcutter", "builder_supply" -> "Upgrade your tools";
-            case "explorer_trail" -> "Discover many Overworld biomes";
-            case "monster_patrol" -> "Defeat a hostile mob";
-            case "raid_supply" -> "Fire a crossbow";
-            case "wither_siege" -> "Summon the Wither";
-            default -> "Complete the related Minecraft challenge";
-        };
-    }
-
     private String unlockHowTo(Pack pack) {
         return unlockHowTo(pack.advancement(), pack.unlockTitle());
     }
@@ -1444,11 +1418,11 @@ public final class QuestManager implements Listener {
             case "minecraft:adventure/hero_of_the_village" -> "Complete a raid and earn Hero of the Village.";
             case "minecraft:adventure/minecraft_trials_edition" -> "Find and enter a Trial Chamber.";
             case "minecraft:adventure/under_lock_and_key" -> "Unlock a Vault with a Trial Key.";
-            case "minecraft:adventure/revaulting" -> "Open a Vault again.";
+            case "minecraft:adventure/revaulting" -> "Unlock a Vault that another player has already opened.";
             case "minecraft:adventure/overoverkill" -> "Complete Over-Overkill; its in-game requirement is shown in your Advancements menu.";
             case "minecraft:husbandry/bred_all_animals" -> "Breed every required animal type.";
             case "minecraft:husbandry/balanced_diet" -> "Eat every food required by A Balanced Diet.";
-            case "minecraft:nether/fast_travel" -> "Travel 7 km in the Nether.";
+            case "minecraft:nether/fast_travel" -> "Use the Nether to travel between two Overworld locations at least 7 km apart.";
             default -> "Earn the Minecraft advancement \"" + title + "\". Check the in-game Advancements menu for its requirement.";
         };
     }
