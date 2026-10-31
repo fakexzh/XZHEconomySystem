@@ -292,7 +292,7 @@ public final class UtilityManager implements Listener {
                 return true;
             }
             case "helpxzh" -> {
-                net.md_5.bungee.api.chat.TextComponent link = new net.md_5.bungee.api.chat.TextComponent("§6[XZH] §eClick here to open the XZH server guide");
+                net.md_5.bungee.api.chat.TextComponent link = new net.md_5.bungee.api.chat.TextComponent("§6[SERVER] §eClick here to open the Server guide");
                 link.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
                     net.md_5.bungee.api.chat.ClickEvent.Action.OPEN_URL,
                     "https://github.com/fakexzh/XZHEconomySystem/blob/main/README.md"));
@@ -303,7 +303,7 @@ public final class UtilityManager implements Listener {
                 return true;
             }
             case "help" -> {
-                sender.sendMessage(ChatColor.GOLD + "XZHEconomySystem commands:");
+                sender.sendMessage(ChatColor.GOLD + "Economy commands:");
                 sender.sendMessage(ChatColor.WHITE + "/balance, /pay, /shop, /books, /loan, /quests, /deathinventory");
                 sender.sendMessage(ChatColor.WHITE + "/spawn, /home, /warp, /tpa, /tpaccept, /tpdeny, /back, /rtp");
                 sender.sendMessage(ChatColor.WHITE + "/msg, /reply, /ignore, /afk, /near, /list, /top, /kit");

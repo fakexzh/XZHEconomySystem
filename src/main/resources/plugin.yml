@@ -26,10 +26,10 @@ commands:
     description: Accept or decline a pending money request.
     usage: /moneyresponse <accept|decline>
   shop:
-    description: Open the XZH shop GUI.
+    description: Open the shop GUI.
     usage: /shop
   bank:
-    description: Open the XZH bank for deposits, withdrawals, and loans.
+    description: Open the bank for deposits, withdrawals, and loans.
     usage: /bank
   loan:
     description: Open the bank or repay an active loan.
@@ -43,6 +43,12 @@ commands:
   deathinventory:
     description: Recover your most recent death inventory within 30 minutes.
     usage: /deathinventory
+  pet:
+    description: Control or transfer your owned Baby Pets.
+    usage: /pet [all|transfer <player>]
+  unpet:
+    description: Stop your targeted Baby Pet from following you.
+    usage: /unpet
   shopadmin:
     description: Manage global shop stock.
     usage: /shopadmin <restock|stock <MATERIAL> <amount>>
