@@ -218,6 +218,16 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
 
     public void tellPublic(CommandSender sender, String message) { tell(sender, message); }
 
+    /** Sends all shop-related player notices with the dedicated shop prefix. */
+    public void tellShop(CommandSender sender, String message) {
+        sender.sendMessage("§8[§6shop§8] §r" + message);
+    }
+
+    /** Sends quest, achievement-pack, and Community Chest notices consistently. */
+    public void tellQuest(CommandSender sender, String message) {
+        sender.sendMessage("§8[§dquest§8] §r" + message);
+    }
+
     /** Sends bank and bank-loan notices with the dedicated bank prefix. */
     public void tellBank(CommandSender sender, String message) {
         sender.sendMessage("§8[§6bank§8] §r" + message);
@@ -233,7 +243,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         boolean progression = getConfig().getStringList("announcements.shop.progression-items").stream()
                 .anyMatch(name -> name.equalsIgnoreCase(material.name()));
         if (!expensive && !rare && !progression) return;
-        String prefix = "§8[§6SHOP§8] §r";
+        String prefix = "§8[§6shop§8] §r";
         if (progression) {
             Bukkit.broadcastMessage(prefix + "§e" + player.getName() + " §funlocked a progression item: §b"
                     + item + " §7(" + money(total) + " coins).");
@@ -252,7 +262,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
 
     public void announceLoanRepaid(String playerName, double amount, boolean automatic) {
         if (!getConfig().getBoolean("announcements.loan.full-repayment", true)) return;
-        Bukkit.broadcastMessage("§8[§bBANK§8] §e" + playerName + " §ffully repaid their loan of §6"
+        Bukkit.broadcastMessage("§8[§6bank§8] §e" + playerName + " §ffully repaid their loan of §6"
                 + money(amount) + " coins§f" + (automatic ? " §7(automatic repayment)." : "."));
     }
 
