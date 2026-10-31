@@ -275,12 +275,12 @@ public final class BoatManager implements Listener {
         double unitPrice = chest ? offer.chestPrice() : offer.price();
         double total = unitPrice * quantity;
         if (plugin.getLoanManager() != null && plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) {
-            plugin.tellPublic(player, "Your loan is overdue. Shop purchases are locked until you repay it.");
+            plugin.tellShop(player, "Your loan is overdue. Shop purchases are locked until you repay it.");
             player.closeInventory();
             return;
         }
         if (plugin.getCombinedBalance(player.getUniqueId()) + 1e-9 < total) {
-            plugin.tellPublic(player, "Not enough coins for this purchase.");
+            plugin.tellShop(player, "Not enough coins for this purchase.");
             return;
         }
         ItemStack boat = createBoatItem(offer, chest);
@@ -294,17 +294,17 @@ public final class BoatManager implements Listener {
                 rollback.setAmount(delivered);
                 player.getInventory().removeItem(rollback);
             }
-            plugin.tellPublic(player, "Inventory full; purchase cancelled. Make room and try again.");
+            plugin.tellShop(player, "Inventory full; purchase cancelled. Make room and try again.");
             return;
         }
         if (!plugin.spendAvailableFunds(player.getUniqueId(), total)) {
             ItemStack rollback = createBoatItem(offer, chest);
             rollback.setAmount(quantity);
             player.getInventory().removeItem(rollback);
-            plugin.tellPublic(player, "Purchase cancelled because your available funds changed.");
+            plugin.tellShop(player, "Purchase cancelled because your available funds changed.");
             return;
         }
-        plugin.tellPublic(player, "Purchased " + quantity + " × " + offer.name() + (chest ? " with chest" : "")
+        plugin.tellShop(player, "Purchased " + quantity + " × " + offer.name() + (chest ? " with chest" : "")
                 + " for " + money(total) + " coins.");
         player.closeInventory();
     }
@@ -356,12 +356,12 @@ public final class BoatManager implements Listener {
         int quantity = Math.max(1, Math.min(64, requestedQuantity));
         double total = travelPrice(tier) * quantity;
         if (plugin.getLoanManager() != null && plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) {
-            plugin.tellPublic(player, "Your loan is overdue. Shop purchases are locked until you repay it.");
+            plugin.tellShop(player, "Your loan is overdue. Shop purchases are locked until you repay it.");
             player.closeInventory();
             return;
         }
         if (plugin.getCombinedBalance(player.getUniqueId()) + 1e-9 < total) {
-            plugin.tellPublic(player, "Not enough coins for these spawn eggs.");
+            plugin.tellShop(player, "Not enough coins for these spawn eggs.");
             return;
         }
         Material material = travelMaterial(tier);
@@ -377,17 +377,17 @@ public final class BoatManager implements Listener {
                 rollback.setAmount(delivered);
                 player.getInventory().removeItem(rollback);
             }
-            plugin.tellPublic(player, "Inventory full; purchase cancelled. Make room and try again.");
+            plugin.tellShop(player, "Inventory full; purchase cancelled. Make room and try again.");
             return;
         }
         if (!plugin.spendAvailableFunds(player.getUniqueId(), total)) {
             ItemStack rollback = travelEgg(material, tier, name);
             rollback.setAmount(quantity);
             player.getInventory().removeItem(rollback);
-            plugin.tellPublic(player, "Purchase cancelled because your available funds changed.");
+            plugin.tellShop(player, "Purchase cancelled because your available funds changed.");
             return;
         }
-        plugin.tellPublic(player, "Purchased " + quantity + " × " + name + " for " + money(total) + " coins.");
+        plugin.tellShop(player, "Purchased " + quantity + " × " + name + " for " + money(total) + " coins.");
         player.closeInventory();
     }
 
