@@ -1105,7 +1105,15 @@ public final class QuestManager implements Listener {
     @EventHandler
     public void onPlace(BlockPlaceEvent event) {
         if (event.isCancelled()) return;
-        playerPlacedBlocks.add(blockKey(event.getBlockPlaced().getLocation()));
+        Material type = event.getBlockPlaced().getType();
+        String name = type.name();
+        // Only retain locations for rare or structure-dependent block objectives.
+        if (name.endsWith("_ORE") || type == Material.ANCIENT_DEBRIS
+                || type == Material.DRAGON_HEAD || type == Material.WET_SPONGE
+                || type == Material.SPONGE || type == Material.SEA_LANTERN
+                || type == Material.AMETHYST_CLUSTER || type == Material.GILDED_BLACKSTONE) {
+            playerPlacedBlocks.add(blockKey(event.getBlockPlaced().getLocation()));
+        }
     }
 
     private String blockKey(Location location) {
