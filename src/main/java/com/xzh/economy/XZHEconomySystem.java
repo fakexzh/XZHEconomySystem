@@ -487,9 +487,9 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 return true;
             }
             case "loan" -> {
-                if (!(sender instanceof Player player)) { tell(sender, "Only players can use loans."); return true; }
+                if (!(sender instanceof Player player)) { tellBank(sender, "Only players can use loans."); return true; }
                 if (args.length == 1 && args[0].equalsIgnoreCase("repay")) return loanManager.repay(player);
-                if (args.length > 0) { tell(sender, "Usage: /loan [repay]"); return true; }
+                if (args.length > 0) { tellBank(sender, "Usage: /loan [repay]"); return true; }
                 bankManager.open(player);
                 return true;
             }
