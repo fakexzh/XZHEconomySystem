@@ -93,7 +93,7 @@ public final class QuestManager implements Listener {
         result.add(new Pack("E001", "Stonecutter's Warm-Up", Material.IRON_PICKAXE, 50, 210, "minecraft:story/mine_stone", "Stone Age", 30, List.of(new Objective("break:STONE", 500, "Mine 500 Stone"))));
         result.add(new Pack("E002", "Coal Seam Crew", Material.IRON_PICKAXE, 50, 210, "minecraft:story/upgrade_tools", "Getting an Upgrade", 0, List.of(new Objective("break:COAL_ORE", 96, "Mine 96 Coal Ore"))));
         result.add(new Pack("E003", "Copper Crawl", Material.IRON_PICKAXE, 90, 260, "minecraft:story/upgrade_tools", "Getting an Upgrade", 0, List.of(new Objective("break:COPPER_ORE", 96, "Mine 96 Copper Ore"))));
-        result.add(new Pack("E004", "Iron Vein Run", Material.IRON_PICKAXE, 130, 340, "minecraft:story/smelt_iron", "Acquire Hardware", 40, List.of(new Objective("break:IRON_ORE", 64, "Mine 64 Iron Ore"))));
+        result.add(new Pack("E004", "Iron Vein Run", Material.IRON_PICKAXE, 130, 340, "minecraft:story/smelt_iron", "Acquire Hardware", 40, List.of(new Objective("break:IRON_ORE", 12, "Mine 12 Iron Ore"))));
         result.add(new Pack("E005", "Gravel Pit Shift", Material.IRON_PICKAXE, 50, 210, "minecraft:story/mine_stone", "Stone Age", 30, List.of(new Objective("break:GRAVEL", 640, "Mine 640 Gravel"))));
         result.add(new Pack("E006", "Dune Digger", Material.IRON_PICKAXE, 50, 210, "minecraft:story/mine_stone", "Stone Age", 30, List.of(new Objective("break:SAND", 896, "Mine 896 Sand"))));
         result.add(new Pack("E007", "Clay Banks", Material.IRON_PICKAXE, 130, 330, "minecraft:story/upgrade_tools", "Getting an Upgrade", 0, List.of(new Objective("break:CLAY", 160, "Mine 160 Clay"))));
@@ -173,7 +173,7 @@ public final class QuestManager implements Listener {
         result.add(new Pack("E081", "Village Pantry Raid", Material.WHEAT, 90, 290, "minecraft:adventure/trade", "What a Deal!", 45, List.of(new Objective("harvest:WHEAT", 64, "Harvest 64 Wheat"))));
         result.add(new Pack("E082", "Dungeon Delver", Material.ROTTEN_FLESH, 130, 350, "minecraft:story/iron_tools", "Isn't It Iron Pick", 50, List.of(new Objective("kill:ZOMBIE", 15, "Defeat 15 Zombie"))));
         result.add(new Pack("E083", "Mineshaft Scavenger", Material.ROTTEN_FLESH, 130, 360, "minecraft:story/iron_tools", "Isn't It Iron Pick", 60, List.of(new Objective("kill:CAVE_SPIDER", 20, "Defeat 20 Cave Spider"))));
-        result.add(new Pack("E084", "Shipwreck Salvage", Material.FISHING_ROD, 170, 410, "minecraft:husbandry/fishy_business", "Fishy Business", 0, List.of(new Objective("fish:COD", 20, "Catch 20 Cod"))));
+        result.add(new Pack("E084", "Shipwreck Salvage", Material.FISHING_ROD, 170, 410, "minecraft:husbandry/fishy_business", "Fishy Business", 0, List.of(new Objective("fish:COD", 5, "Catch 5 Cod"))));
         result.add(new Pack("E085", "X Marks the Spot", Material.FISHING_ROD, 210, 470, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("fish:COD", 10, "Catch 10 Cod"))));
         result.add(new Pack("E086", "Ruined Portal Looter", Material.IRON_PICKAXE, 170, 400, "minecraft:story/form_obsidian", "Ice Bucket Challenge", 0, List.of(new Objective("break:OBSIDIAN", 12, "Mine 12 Obsidian"))));
         result.add(new Pack("E087", "Desert Pyramid Heist", Material.ROTTEN_FLESH, 170, 410, "minecraft:story/iron_tools", "Isn't It Iron Pick", 0, List.of(new Objective("kill:HUSK", 10, "Defeat 10 Husk"))));
@@ -208,7 +208,7 @@ public final class QuestManager implements Listener {
         result.add(new Pack("H016", "Crimson Logger", Material.IRON_PICKAXE, 410, 830, "minecraft:nether/root", "Nether", 60, List.of(new Objective("break:CRIMSON_STEM", 160, "Mine 160 Crimson Stem"))));
         result.add(new Pack("H017", "Warped Logger", Material.IRON_PICKAXE, 410, 830, "minecraft:nether/root", "Nether", 60, List.of(new Objective("break:WARPED_STEM", 160, "Mine 160 Warped Stem"))));
         result.add(new Pack("H018", "Wart Farmer", Material.WHEAT, 470, 910, "minecraft:nether/root", "Nether", 0, List.of(new Objective("harvest:NETHER_WART", 192, "Harvest 192 Nether Wart"))));
-        result.add(new Pack("H019", "Ancient Debris Dig", Material.IRON_PICKAXE, 700, 1370, "minecraft:nether/obtain_ancient_debris", "Hidden in the Depths", 0, List.of(new Objective("break:ANCIENT_DEBRIS", 8, "Mine 8 Ancient Debris"))));
+        result.add(new Pack("H019", "Ancient Debris Dig", Material.IRON_PICKAXE, 700, 1370, "minecraft:nether/obtain_ancient_debris", "Hidden in the Depths", 0, List.of(new Objective("break:ANCIENT_DEBRIS", 2, "Mine 2 Ancient Debris"))));
         result.add(new Pack("H020", "Crying Obsidian Harvest", Material.IRON_PICKAXE, 590, 1120, "minecraft:nether/obtain_crying_obsidian", "Who is Cutting Onions?", 0, List.of(new Objective("break:CRYING_OBSIDIAN", 12, "Mine 12 Crying Obsidian"))));
         result.add(new Pack("H021", "Blaze Brigade", Material.NETHER_STAR, 530, 1030, "minecraft:nether/obtain_blaze_rod", "Into Fire", 90, List.of(new Objective("kill:BLAZE", 30, "Defeat 30 Blaze"))));
         result.add(new Pack("H022", "Wither Skeleton Cull", Material.NETHER_STAR, 530, 1060, "minecraft:nether/obtain_blaze_rod", "Into Fire", 100, List.of(new Objective("kill:WITHER_SKELETON", 20, "Defeat 20 Wither Skeleton"))));
@@ -530,35 +530,35 @@ public final class QuestManager implements Listener {
     }
 
     private final List<RandomQuest> randomPool = List.of(
-        new RandomQuest("Deep Diamond Expedition", Material.DIAMOND, 180, 252, new Objective("break:DIAMOND_ORE", 12, "Mine 12 Diamond Ore")),
+        new RandomQuest("Deep Diamond Expedition", Material.DIAMOND, 180, 252, new Objective("break:DIAMOND_ORE", 4, "Mine 4 Diamond Ore")),
         new RandomQuest("Ancient Debris Search", Material.ANCIENT_DEBRIS, 260, 390, new Objective("break:ANCIENT_DEBRIS", 8, "Mine 8 Ancient Debris")),
         new RandomQuest("Raid the Fortress", Material.BLAZE_ROD, 220, 330, new Objective("kill:BLAZE", 18, "Kill 18 Blazes in the Nether")),
         new RandomQuest("Undead Patrol", Material.ZOMBIE_HEAD, 150, 210, new Objective("kill:ZOMBIE", 35, "Kill 35 Zombies")),
-        new RandomQuest("Ocean Treasure Hunt", Material.PRISMARINE_SHARD, 200, 300, new Objective("break:PRISMARINE", 96, "Mine 96 Prismarine blocks")),
-        new RandomQuest("Ender Pearl Collection", Material.ENDER_PEARL, 240, 360, new Objective("collect:ENDER_PEARL", 24, "Collect 24 Ender Pearls")),
+        new RandomQuest("Ocean Treasure Hunt", Material.PRISMARINE_SHARD, 200, 300, new Objective("break:PRISMARINE", 24, "Mine 24 Prismarine blocks")),
+        new RandomQuest("Ender Pearl Collection", Material.ENDER_PEARL, 240, 360, new Objective("collect:ENDER_PEARL", 12, "Collect 12 Ender Pearls")),
         new RandomQuest("Iron Supply Contract", Material.RAW_IRON, 130, 182, new Objective("break:IRON_ORE", 64, "Mine 64 Iron Ore")),
         new RandomQuest("Wither Skeleton Hunt", Material.WITHER_SKELETON_SKULL, 350, 525, new Objective("kill:WITHER_SKELETON", 16, "Kill 16 Wither Skeletons")),
         new RandomQuest("Fishing for Cod", Material.COD, 90, 126, new Objective("fish:COD", 20, "Catch 20 Cod")),
-        new RandomQuest("Fishing for Salmon", Material.SALMON, 110, 154, new Objective("fish:SALMON", 20, "Catch 20 Salmon")),
+        new RandomQuest("Fishing for Salmon", Material.SALMON, 110, 154, new Objective("fish:SALMON", 5, "Catch 5 Salmon")),
         new RandomQuest("Feed the Cows", Material.WHEAT, 100, 140, new Objective("feed:COW", 20, "Feed 20 cows")),
         new RandomQuest("Animal Breeding", Material.PORKCHOP, 120, 168, new Objective("breed:ANY", 10, "Breed 10 animals")),
         new RandomQuest("Travel Contract", Material.COMPASS, 100, 140, new Objective("travel", 3000, "Travel 3,000 blocks")),
-        new RandomQuest("Woodcutting Contract", Material.OAK_LOG, 100, 140, new Objective("break:OAK_LOG", 128, "Chop 128 Oak Logs")),
-        new RandomQuest("Crop Delivery", Material.CARROT, 85, 119, new Objective("harvest:CARROT", 96, "Harvest 96 fully grown Carrot crops")),
-        new RandomQuest("Blaze Rod Shipment", Material.BLAZE_ROD, 190, 266, new Objective("collect:BLAZE_ROD", 32, "Collect 32 Blaze Rods")),
-        new RandomQuest("Sand Quarry", Material.SAND, 75, 105, new Objective("break:SAND", 256, "Mine 256 Sand")),
+        new RandomQuest("Woodcutting Contract", Material.OAK_LOG, 100, 140, new Objective("break:OAK_LOG", 16, "Chop 16 Oak Logs")),
+        new RandomQuest("Crop Delivery", Material.CARROT, 85, 119, new Objective("harvest:CARROT", 12, "Harvest 12 fully grown Carrot crops")),
+        new RandomQuest("Blaze Rod Shipment", Material.BLAZE_ROD, 190, 266, new Objective("collect:BLAZE_ROD", 12, "Collect 12 Blaze Rods")),
+        new RandomQuest("Sand Quarry", Material.SAND, 75, 105, new Objective("break:SAND", 32, "Mine 32 Sand")),
         new RandomQuest("Monster Cleanup", Material.SKELETON_SKULL, 140, 196, new Objective("kill:SKELETON", 30, "Kill 30 Skeletons")),
-        new RandomQuest("Food Pantry", Material.BREAD, 90, 126, new Objective("collect:BREAD", 64, "Collect 64 Bread")),
-        new RandomQuest("Quartz Shipment", Material.QUARTZ, 160, 224, new Objective("collect:QUARTZ", 96, "Collect 96 Nether Quartz")),
+        new RandomQuest("Food Pantry", Material.BREAD, 90, 126, new Objective("collect:BREAD", 16, "Collect 16 Bread")),
+        new RandomQuest("Quartz Shipment", Material.QUARTZ, 160, 224, new Objective("collect:QUARTZ", 24, "Collect 24 Nether Quartz")),
         new RandomQuest("Tropical Catch", Material.TROPICAL_FISH, 150, 225, new Objective("fish:TROPICAL_FISH", 8, "Catch 8 Tropical Fish")),
         new RandomQuest("Pufferfish Watch", Material.PUFFERFISH, 135, 203, new Objective("fish:PUFFERFISH", 10, "Catch 10 Pufferfish")),
         new RandomQuest("Cod Fishing Run", Material.FISHING_ROD, 120, 180, new Objective("fish:COD", 16, "Catch 16 Cod")),
-        new RandomQuest("Potato Harvest", Material.POTATO, 100, 150, new Objective("harvest:POTATO", 128, "Harvest 128 fully grown Potato crops")),
-        new RandomQuest("Pumpkin Season", Material.PUMPKIN, 125, 188, new Objective("harvest:PUMPKIN", 64, "Harvest 64 pumpkins")),
-        new RandomQuest("Melon Shipment", Material.MELON_SLICE, 110, 165, new Objective("harvest:MELON_SLICE", 192, "Harvest 192 melons")),
-        new RandomQuest("Copper Ore Contract", Material.RAW_COPPER, 145, 218, new Objective("break:COPPER_ORE", 64, "Mine 64 Copper Ore")),
-        new RandomQuest("Lapis Prospecting", Material.LAPIS_LAZULI, 175, 263, new Objective("break:LAPIS_ORE", 32, "Mine 32 Lapis Lazuli Ore")),
-        new RandomQuest("Redstone Extraction", Material.REDSTONE, 165, 248, new Objective("break:REDSTONE_ORE", 48, "Mine 48 Redstone Ore"))
+        new RandomQuest("Potato Harvest", Material.POTATO, 100, 150, new Objective("harvest:POTATO", 12, "Harvest 12 fully grown Potato crops")),
+        new RandomQuest("Pumpkin Season", Material.PUMPKIN, 125, 188, new Objective("harvest:PUMPKIN", 8, "Harvest 8 pumpkins")),
+        new RandomQuest("Melon Shipment", Material.MELON_SLICE, 110, 165, new Objective("harvest:MELON_SLICE", 24, "Harvest 24 melon slices")),
+        new RandomQuest("Copper Ore Contract", Material.RAW_COPPER, 145, 218, new Objective("break:COPPER_ORE", 12, "Mine 12 Copper Ore")),
+        new RandomQuest("Lapis Prospecting", Material.LAPIS_LAZULI, 175, 263, new Objective("break:LAPIS_ORE", 8, "Mine 8 Lapis Lazuli Ore")),
+        new RandomQuest("Redstone Extraction", Material.REDSTONE, 165, 248, new Objective("break:REDSTONE_ORE", 10, "Mine 10 Redstone Ore"))
     );
 
     public QuestManager(XZHEconomySystem plugin) {
