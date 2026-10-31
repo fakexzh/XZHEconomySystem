@@ -728,12 +728,9 @@ public final class QuestManager implements Listener {
             int cost = offer.cost();
             int reward = (int) Math.ceil(cost * 1.4);
             List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.WHITE + "Job: " + offer.name());
-            lore.add(ChatColor.AQUA + offer.objective().description());
-            lore.add(ChatColor.WHITE + "Required amount: " + offer.objective().goal());
-            lore.add(ChatColor.WHITE + "Purchase price: " + ChatColor.YELLOW + cost + " coins");
-            lore.add(ChatColor.WHITE + "Completion reward: " + ChatColor.GREEN + reward + " coins");
-            lore.add(isTimedSingle(offer) ? ChatColor.RED + "Time limit: 30 minutes" : ChatColor.GRAY + "No time limit");
+            appendQuestInfoLore(lore, cost, reward, List.of(offer.objective()),
+                    objectiveExplanation(offer.objective()), isTimedSingle(offer) ? 30 : 0,
+                    "UNLOCKED", null);
             lore.add(ChatColor.GRAY + "Refresh in " + (mins / 60) + "h " + (mins % 60) + "m");
             add(inv, 11 + i, offer.icon(), ChatColor.YELLOW + offer.name(), "single-buy", Integer.toString(i), lore);
         }
@@ -779,24 +776,23 @@ public final class QuestManager implements Listener {
             boolean done = completedPack(player.getUniqueId(), pack.id());
             boolean unlocked = tierUnlocked(player, tierOf(pack)) && hasAdvancement(player, pack.advancement());
             List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.WHITE + "Cost: " + ChatColor.YELLOW + pack.cost() + " coins");
-            lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + rewardForPack(pack) + " coins");
-            lore.add(ChatColor.WHITE + "Profit: " + ChatColor.GOLD + "+" + (rewardForPack(pack) - pack.cost()) + " coins");
-            lore.add(ChatColor.GRAY + "Description: " + packDescription(pack));
-            lore.add(ChatColor.WHITE + "Objectives:");
-            lore.add(ChatColor.GRAY + "Unlock advancement: " + ChatColor.AQUA + pack.unlockTitle());
-            lore.add(ChatColor.GRAY + unlockHowTo(pack));
-            for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + "• " + objective.description());
-            lore.add(done ? ChatColor.DARK_GRAY + "COMPLETED FOR LIFE — reward already claimed"
-                    : !tierUnlocked(player, tierOf(pack)) ? ChatColor.RED + tierUnlockDescription(tierOf(pack))
-                    : unlocked ? ChatColor.GREEN + "UNLOCKED"
-                    : ChatColor.RED + "Locked: earn " + pack.unlockTitle());
+            int reward = rewardForPack(pack);
             int timerMinutes = packTimerLimitMinutes(pack.id());
-            lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes"
-                    : ChatColor.GRAY + "No time limit");
+            String status = done ? "COMPLETED" : unlocked ? "UNLOCKED" : "LOCKED";
+            String unlockInstruction = unlocked || done ? null
+                    : !tierUnlocked(player, tierOf(pack)) ? tierUnlockDescription(tierOf(pack))
+                    : unlockHowTo(pack);
+            appendQuestInfoLore(lore, pack.cost(), reward, pack.objectives(), packDescription(pack),
+                    timerMinutes, status, unlockInstruction);
             Material icon = done ? Material.BLACK_STAINED_GLASS_PANE : unlocked ? pack.icon() : Material.BARRIER;
-            add(inv, i - pg * 45, icon, (done ? ChatColor.DARK_GRAY : unlocked ? ChatColor.YELLOW : ChatColor.RED)
-                    + pack.name(), done ? "pack-completed" : unlocked ? "pack-select" : "locked", pack.id(), lore);
+            String displayName = (done ? ChatColor.DARK_GRAY : ChatColor.YELLOW) + pack.name();
+            int separator = pack.name().indexOf(' ');
+            if (separator > 0 && pack.name().startsWith("(")) {
+                displayName = (done ? ChatColor.DARK_GRAY : ChatColor.LIGHT_PURPLE) + pack.name().substring(0, separator)
+                        + " " + (done ? ChatColor.DARK_GRAY : ChatColor.YELLOW) + pack.name().substring(separator + 1);
+            }
+            add(inv, i - pg * 45, icon, displayName,
+                    done ? "pack-completed" : unlocked ? "pack-select" : "locked", pack.id(), lore);
         }
         if (pg > 0) add(inv, 45, Material.PAPER, ChatColor.WHITE + "Previous page", "pack-page", tier + ":" + (pg - 1));
         add(inv, 49, Material.ARROW, ChatColor.WHITE + "Difficulties", "back-tiers", "");
@@ -804,19 +800,53 @@ public final class QuestManager implements Listener {
         player.openInventory(inv);
     }
 
+    private void appendQuestInfoLore(List<String> lore, int cost, int reward,
+                                     List<Objective> objectives, String explanation,
+                                     int timerMinutes, String status, String unlockInstruction) {
+        lore.add(ChatColor.WHITE + "Cost: " + ChatColor.YELLOW + cost + " coins");
+        lore.add(ChatColor.WHITE + "Reward: " + ChatColor.GREEN + reward + " coins");
+        lore.add(ChatColor.WHITE + "Profit: " + ChatColor.GOLD + "+" + (reward - cost) + " coins");
+        for (Objective objective : objectives) {
+            lore.add(ChatColor.YELLOW + "Job - " + ChatColor.LIGHT_PURPLE + objective.description());
+        }
+        lore.add(ChatColor.WHITE + "Objective: " + ChatColor.GRAY + explanation);
+        if (timerMinutes > 0) {
+            lore.add(ChatColor.WHITE + "Time limit: " + ChatColor.RED + timerMinutes + " minutes");
+        }
+        if ("LOCKED".equals(status)) lore.add(ChatColor.RED + "LOCKED");
+        else if ("UNLOCKED".equals(status)) lore.add(ChatColor.GREEN + "UNLOCKED");
+        else if ("COMPLETED".equals(status)) lore.add(ChatColor.DARK_GRAY + "COMPLETED");
+        if (unlockInstruction != null && !unlockInstruction.isBlank()) {
+            lore.add(ChatColor.GRAY + "To unlock: " + unlockInstruction);
+        }
+    }
+
+    private String objectiveExplanation(Objective objective) {
+        String target = objective.target().toLowerCase(Locale.ROOT);
+        if (target.startsWith("kill:")) return "Defeat the specified creatures and meet the required count.";
+        if (target.startsWith("break:")) return "Mine or gather the requested blocks and materials.";
+        if (target.startsWith("harvest:")) return "Harvest the requested fully grown crops.";
+        if (target.startsWith("fish:")) return "Catch the requested fish.";
+        if (target.startsWith("smelt:")) return "Smelt the requested materials in a furnace.";
+        if (target.startsWith("collect:")) return "Collect the requested items.";
+        if (target.startsWith("travel")) return "Travel the required distance using legitimate movement.";
+        if (target.startsWith("breed:")) return "Breed the requested animals.";
+        if (target.startsWith("feed:")) return "Feed the requested animals.";
+        return "Complete the listed task and reach its required amount.";
+    }
+
     private void confirmPack(Player player, Pack pack) {
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Confirm quest pack");
         List<String> lore = new ArrayList<>();
-        lore.add(ChatColor.WHITE + "Fee: " + pack.cost() + " coins");
-        lore.add(ChatColor.WHITE + "Reward: " + rewardForPack(pack) + " coins");
-        lore.add(ChatColor.GOLD + "Profit: +" + (rewardForPack(pack) - pack.cost()) + " coins");
-        lore.add(ChatColor.GRAY + "Description: " + packDescription(pack));
-        lore.add(ChatColor.GRAY + "Unlock advancement: " + ChatColor.AQUA + pack.unlockTitle());
-        lore.add(ChatColor.GRAY + unlockHowTo(pack));
-        for (Objective objective : pack.objectives()) lore.add(ChatColor.AQUA + objective.description());
-        int timerMinutes = packTimerLimitMinutes(pack.id());
-        lore.add(timerMinutes > 0 ? ChatColor.RED + "Time limit: " + timerMinutes + " minutes" : ChatColor.GRAY + "No time limit");
-        add(inv, 13, pack.icon(), ChatColor.YELLOW + pack.name(), "pack-info", pack.id(), lore);
+        appendQuestInfoLore(lore, pack.cost(), rewardForPack(pack), pack.objectives(),
+                packDescription(pack), packTimerLimitMinutes(pack.id()), "UNLOCKED", null);
+        String displayName = ChatColor.YELLOW + pack.name();
+        int separator = pack.name().indexOf(' ');
+        if (separator > 0 && pack.name().startsWith("(")) {
+            displayName = ChatColor.LIGHT_PURPLE + pack.name().substring(0, separator)
+                    + " " + ChatColor.YELLOW + pack.name().substring(separator + 1);
+        }
+        add(inv, 13, pack.icon(), displayName, "pack-info", pack.id(), lore);
         add(inv, 11, Material.SLIME_BALL, ChatColor.GREEN + "Confirm purchase", "pack-buy", pack.id());
         add(inv, 15, Material.FIRE_CHARGE, ChatColor.RED + "Cancel", "back-packs", pack.id());
         add(inv, 22, Material.ARROW, ChatColor.WHITE + "Back to packs", "back-packs", pack.id());
