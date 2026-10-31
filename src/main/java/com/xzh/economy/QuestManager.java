@@ -891,7 +891,7 @@ public final class QuestManager implements Listener {
         UUID id = player.getUniqueId();
         String activeId = data.getString(id + ".active", "");
         if (activeId.isBlank()) {
-            plugin.tellPublic(player, "You do not have an active quest or mission to cancel.");
+            plugin.tellQuest(player, "You do not have an active quest or mission to cancel.");
             return false;
         }
         int originalCost = Math.max(0, data.getInt(id + ".cost", 0));
@@ -903,18 +903,18 @@ public final class QuestManager implements Listener {
         plugin.getHudManager().hideActiveQuest(player);
         if (refund > 0) plugin.setBalance(id, plugin.getBalance(id) + refund);
         if (originalCost > 0) {
-            plugin.tellPublic(player, "Quest cancelled. Refunded 50% of its purchase price: " + refund
+            plugin.tellQuest(player, "Quest cancelled. Refunded 50% of its purchase price: " + refund
                     + " coins (original price " + originalCost + "). No completion reward was paid.");
         } else {
-            plugin.tellPublic(player, "Quest cancelled. It had no purchase price, so no refund or completion reward was paid.");
+            plugin.tellQuest(player, "Quest cancelled. It had no purchase price, so no refund or completion reward was paid.");
         }
         return true;
     }
 
     private void buyRandom(Player player, int offerSlot) {
         UUID id = player.getUniqueId();
-        if (plugin.getLoanManager().isShopPurchaseRestricted(id)) { plugin.tellPublic(player, "Your loan is overdue. Quest purchases are locked; sell eligible items and repay your debt."); return; }
-        if (!data.getString(id + ".active", "").isBlank()) { plugin.tellPublic(player, "Finish your active quest before buying another."); return; }
+        if (plugin.getLoanManager().isShopPurchaseRestricted(id)) { plugin.tellQuest(player, "Your loan is overdue. Quest purchases are locked; sell eligible items and repay your debt."); return; }
+        if (!data.getString(id + ".active", "").isBlank()) { plugin.tellQuest(player, "Finish your active quest before buying another."); return; }
         if (offerSlot < 0 || offerSlot > 5) return;
         boolean secret = offerSlot == 5;
         if (secret) refreshSecretQuestIfDue();
@@ -927,14 +927,14 @@ public final class QuestManager implements Listener {
         char economicTier = reward - cost >= 180 ? 'M' : reward - cost >= 90 ? 'H' : 'E';
         Objective objective = rebalanceCollectionObjective(economicTier, template.objective(),
                 cost, reward - cost, timerMinutes, 1);
-        if (plugin.getCombinedBalance(id) < cost || !plugin.spendAvailableFunds(id, cost)) { plugin.tellPublic(player, "You need " + cost + " coins to buy this random quest."); return; }
+        if (plugin.getCombinedBalance(id) < cost || !plugin.spendAvailableFunds(id, cost)) { plugin.tellQuest(player, "You need " + cost + " coins to buy this random quest."); return; }
         String questName = template.name() + " #" + (data.getInt("single-shop.quest-sequence", 0) + 1);
         data.set("single-shop.quest-sequence", data.getInt("single-shop.quest-sequence", 0) + 1);
         startQuest(player, "single:" + System.currentTimeMillis(), questName, cost, reward, List.of(objective));
         data.set(id + ".profit-margin", margin);
         if (!secret) data.set("single-shop.offers." + offerSlot, nextOfferForSlot(offerSlot));
         save();
-        plugin.tellPublic(player, "Started " + questName + ": " + objective.description() + ". Cost " + cost + "; reward " + reward + " coins. " + (isTimedSingle(template) ? "Time limit: 30 minutes." : "No timer."));
+        plugin.tellQuest(player, "Started " + questName + ": " + objective.description() + ". Cost " + cost + "; reward " + reward + " coins. " + (isTimedSingle(template) ? "Time limit: 30 minutes." : "No timer."));
         player.closeInventory();
     }
 
@@ -947,33 +947,33 @@ public final class QuestManager implements Listener {
     private void buyPack(Player player, Pack pack) {
         UUID id = player.getUniqueId();
         if (data.getBoolean("completed-packs." + id + "." + pack.id(), false)) {
-            plugin.tellPublic(player, "You have already completed this achievement pack. It can only be completed once.");
+            plugin.tellQuest(player, "You have already completed this achievement pack. It can only be completed once.");
             openPacks(player);
             return;
         }
         if (plugin.getLoanManager().isShopPurchaseRestricted(id)) {
-            plugin.tellPublic(player, "Your loan is overdue. Quest-pack purchases are locked until full repayment.");
+            plugin.tellQuest(player, "Your loan is overdue. Quest-pack purchases are locked until full repayment.");
             return;
         }
         if (!tierUnlocked(player, tierOf(pack))) {
-            plugin.tellPublic(player, tierUnlockDescription(tierOf(pack)));
+            plugin.tellQuest(player, tierUnlockDescription(tierOf(pack)));
             return;
         }
         if (!hasAdvancement(player, pack.advancement())) {
-            plugin.tellPublic(player, "Unlock " + pack.unlockTitle() + ": " + unlockHowTo(pack));
+            plugin.tellQuest(player, "Unlock " + pack.unlockTitle() + ": " + unlockHowTo(pack));
             return;
         }
         if (!data.getString(id + ".active", "").isBlank()) {
-            plugin.tellPublic(player, "Finish your active quest before buying another.");
+            plugin.tellQuest(player, "Finish your active quest before buying another.");
             return;
         }
         if (plugin.getCombinedBalance(id) < pack.cost() || !plugin.spendAvailableFunds(id, pack.cost())) {
-            plugin.tellPublic(player, "Not enough coins for this quest pack.");
+            plugin.tellQuest(player, "Not enough coins for this quest pack.");
             return;
         }
         startQuest(player, "pack:" + pack.id(), pack.name(), pack.cost(), rewardForPack(pack), pack.objectives());
         player.closeInventory();
-        plugin.tellPublic(player, "Quest pack started: " + pack.name() + ". Complete every objective to earn " + pack.reward() + " coins.");
+        plugin.tellQuest(player, "Quest pack started: " + pack.name() + ". Complete every objective to earn " + pack.reward() + " coins.");
     }
 
     private void startQuest(Player player, String id, String name, int cost, int reward, List<Objective> objectives) {
@@ -1236,10 +1236,10 @@ public final class QuestManager implements Listener {
             if (activeQuestId.startsWith("pack:")) {
                 String packId = activeQuestId.substring("pack:".length());
                 data.set("completed-packs." + id + "." + packId, true);
-                plugin.tellPublic(player, "§6Achievement pack permanently completed: §e" + packId + "§6. It is now marked with black stained glass and cannot be repeated.");
+                plugin.tellQuest(player, "§6Achievement pack permanently completed: §e" + packId + "§6. It is now marked with black stained glass and cannot be repeated.");
             }
             plugin.setBalance(id, plugin.getBalance(id) + reward);
-            plugin.tellPublic(player, "Quest completed! Reward: " + reward + " coins.");
+            plugin.tellQuest(player, "Quest completed! Reward: " + reward + " coins.");
             data.set(id.toString(), null);
             clearTravelRemainders(id);
             plugin.getHudManager().hideActiveQuest(player);
@@ -1308,18 +1308,18 @@ public final class QuestManager implements Listener {
             data.set(id.toString(), null);
             save();
             plugin.getHudManager().hideActiveQuest(player);
-            plugin.tellPublic(player, "Quest timer expired. The quest was forfeited; choose another challenge.");
+            plugin.tellQuest(player, "Quest timer expired. The quest was forfeited; choose another challenge.");
             return;
         }
         if (remaining <= 5L * 60L && !data.getBoolean(id + ".warned-5m", false)) {
             data.set(id + ".warned-5m", true);
             save();
-            plugin.tellPublic(player, "Quest warning: 5 minutes or less remain on your timed quest!");
+            plugin.tellQuest(player, "Quest warning: 5 minutes or less remain on your timed quest!");
         }
         if (remaining <= 60L && !data.getBoolean(id + ".warned-1m", false)) {
             data.set(id + ".warned-1m", true);
             save();
-            plugin.tellPublic(player, "Quest warning: 1 minute or less remains on your timed quest!");
+            plugin.tellQuest(player, "Quest warning: 1 minute or less remains on your timed quest!");
         }
     }
 
@@ -1407,12 +1407,12 @@ public final class QuestManager implements Listener {
                     if (contribution <= 0) continue;
                     plugin.setBalance(id, plugin.getBalance(id) + reward);
                     Player online = Bukkit.getPlayer(id);
-                    if (online != null) plugin.tellPublic(online, "§aGlobal quest reward received: " + reward + " coins for contributing to " + data.getString("event.name", "the community chest") + ".");
+                    if (online != null) plugin.tellQuest(online, "§aGlobal quest reward received: " + reward + " coins for contributing to " + data.getString("event.name", "the community chest") + ".");
                     paid++;
                 } catch (IllegalArgumentException ignored) { }
             }
         }
-        Bukkit.broadcastMessage(ChatColor.GOLD + "[Community Chest] " + ChatColor.GREEN
+        Bukkit.broadcastMessage(ChatColor.GOLD + "[quest] " + ChatColor.GREEN
                 + data.getString("event.name", "Community Chest") + " completed! " + paid
                 + " contributor(s) received " + reward + " coins each.");
         save();
@@ -1458,7 +1458,7 @@ public final class QuestManager implements Listener {
     private void broadcastGlobalProgress() {
         resetEventIfNeeded();
         if (data.getBoolean("event.completed", false)) return;
-        String message = ChatColor.GOLD + "[Community Chest] " + ChatColor.YELLOW
+        String message = ChatColor.GOLD + "[quest] " + ChatColor.YELLOW
             + data.getString("event.name", "Community Chest") + ": " + data.getInt("event.progress", 0) + "/"
             + data.getInt("event.goal", configuredEventGoal()) + " — "
             + data.getString("event.description", "Help complete the community objective.")
@@ -1487,7 +1487,7 @@ public final class QuestManager implements Listener {
             }
             for (int i = 0; i < choices.size(); i++) data.set("single-shop.offers." + i, choices.get(i));
             save();
-            Bukkit.broadcastMessage(ChatColor.GOLD + "[Quests] Five new random single-quest offers are available!");
+            Bukkit.broadcastMessage(ChatColor.GOLD + "[quest] Five new random single-quest offers are available!");
         }
     }
 
@@ -1669,7 +1669,7 @@ public final class QuestManager implements Listener {
         data.set("event.started-at", now);
         save();
         if (announce) {
-            Bukkit.broadcastMessage(ChatColor.GOLD + "[Community Chest] " + ChatColor.YELLOW
+            Bukkit.broadcastMessage(ChatColor.GOLD + "[quest] " + ChatColor.YELLOW
                     + "New 4-hour community quest: " + selected.name() + " — " + selected.description()
                     + ". Reward: " + reward + " coins for each contributor. Work together before the deadline!");
         }
@@ -1697,10 +1697,10 @@ public final class QuestManager implements Listener {
             case "section-global" -> openGlobal(player);
             case "single-buy" -> { try { buyRandom(player, Integer.parseInt(value)); } catch (NumberFormatException ignored) { } }
             case "single-secret-buy" -> buyRandom(player, 5);
-            case "single-info" -> plugin.tellPublic(player, "Five random quests are available; each purchase replaces its offer slot.");
+            case "single-info" -> plugin.tellQuest(player, "Five random quests are available; each purchase replaces its offer slot.");
             case "pack-tier" -> openPacks(player, value, 0);
             case "tier-locked" -> {
-                plugin.tellPublic(player, tierUnlockDescription(value));
+                plugin.tellQuest(player, tierUnlockDescription(value));
                 openPacks(player, value, 0);
             }
             case "pack-page" -> {
@@ -1709,11 +1709,11 @@ public final class QuestManager implements Listener {
                 catch (RuntimeException ignored) { openPacks(player); }
             }
             case "back-tiers" -> openPacks(player);
-            case "pack-completed" -> plugin.tellPublic(player, "This achievement pack is permanently completed and cannot reward you again.");
-            case "locked" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> plugin.tellPublic(player, "Unlock " + p.unlockTitle() + ": " + unlockHowTo(p)));
+            case "pack-completed" -> plugin.tellQuest(player, "This achievement pack is permanently completed and cannot reward you again.");
+            case "locked" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> plugin.tellQuest(player, "Unlock " + p.unlockTitle() + ": " + unlockHowTo(p)));
             case "pack-select" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> confirmPack(player, p));
             case "pack-buy" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> buyPack(player, p));
-            case "global-claim" -> plugin.tellPublic(player, "Global quest rewards are paid automatically to contributors when the community completes the objective.");
+            case "global-claim" -> plugin.tellQuest(player, "Global quest rewards are paid automatically to contributors when the community completes the objective.");
             case "back" -> open(player);
             case "back-packs" -> { Pack pack = packs.stream().filter(p -> p.id().equals(value)).findFirst().orElse(null); if (pack == null) openPacks(player); else openPacks(player, tierOf(pack), 0); }
             default -> { }
