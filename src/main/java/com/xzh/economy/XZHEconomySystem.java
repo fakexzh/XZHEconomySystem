@@ -504,7 +504,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 return true;
             }
             case "shopadmin" -> {
-                if (!sender.hasPermission("xzh.admin")) { tell(sender, "No permission."); return true; }
+                if (!sender.hasPermission("xzh.admin")) { tellShop(sender, "No permission."); return true; }
                 if (args.length == 1 && args[0].equalsIgnoreCase("restock")) {
                     shopManager.restockAll();
                     tellShop(sender, "Global shop stock has been restocked to configured limits.");
@@ -528,7 +528,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 return petManager != null && petManager.handleCommand(player, command.getName(), args);
             }
             case "shop" -> {
-                if (!(sender instanceof Player player)) { tell(sender, "Only players can open the shop."); return true; }
+                if (!(sender instanceof Player player)) { tellShop(sender, "Only players can open the shop."); return true; }
                 if (shopManager != null) shopManager.openMain(player);
                 return true;
             }
