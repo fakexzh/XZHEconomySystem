@@ -131,6 +131,7 @@ public final class AdminManager implements Listener {
             if (prompt.startsWith("stock-") || prompt.startsWith("price-")) plugin.tellShop(player, "Admin action cancelled.");
             else if (prompt.startsWith("quest-stock-")) plugin.tellQuest(player, "Admin action cancelled.");
             else if (prompt.startsWith("clear-loan-")) plugin.tellBank(player, "Admin action cancelled.");
+            else if (prompt.startsWith("clear-quest-")) plugin.tellQuest(player, "Admin action cancelled.");
             else player.sendMessage(ChatColor.YELLOW + "Admin action cancelled.");
             return;
         }
@@ -174,7 +175,7 @@ public final class AdminManager implements Listener {
             return;
         }
         if (prompt.equals("clear-quest-player")) {
-            if (!input.matches("[A-Za-z0-9_]{1,16}")) { player.sendMessage(ChatColor.RED + "Invalid player name. Try again or type cancel."); return; }
+            if (!input.matches("[A-Za-z0-9_]{1,16}")) { plugin.tellQuest(player, "Invalid player name. Try again or type cancel."); return; }
             OfflinePlayer target = Bukkit.getOfflinePlayer(input);
             plugin.getQuestManager().adminClearQuest(target.getUniqueId());
             prompts.remove(player.getUniqueId());
@@ -267,6 +268,7 @@ public final class AdminManager implements Listener {
         if (state.startsWith("stock-") || state.startsWith("price-")) plugin.tellShop(player, text + " Type 'cancel' to stop.");
         else if (state.startsWith("quest-stock-")) plugin.tellQuest(player, text + " Type 'cancel' to stop.");
         else if (state.startsWith("clear-loan-")) plugin.tellBank(player, text + " Type 'cancel' to stop.");
+        else if (state.startsWith("clear-quest-")) plugin.tellQuest(player, text + " Type 'cancel' to stop.");
         else player.sendMessage(ChatColor.YELLOW + text + " Type 'cancel' to stop.");
     }
 
