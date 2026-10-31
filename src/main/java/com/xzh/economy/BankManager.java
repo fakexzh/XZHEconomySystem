@@ -72,6 +72,11 @@ public final class BankManager implements Listener {
         return display + ":00 " + (normalized < 12 ? "AM" : "PM");
     }
 
+    public String hoursMessage() {
+        return "Bank hours: " + formatHour(plugin.getConfig().getInt("bank.open-hour", 9))
+                + " – " + formatHour(plugin.getConfig().getInt("bank.close-hour", 20));
+    }
+
     private World getClockWorld() {
         String name = plugin.getConfig().getString("bank.clock-world", "world");
         World world = name == null ? null : Bukkit.getWorld(name);
@@ -89,7 +94,7 @@ public final class BankManager implements Listener {
         add(inv, 4, Material.GOLD_INGOT, ChatColor.YELLOW + "Your balances", "refresh", 0,
                 List.of(ChatColor.WHITE + "Pocket: " + ChatColor.YELLOW + money(plugin.getBalance(id)) + " coins",
                         ChatColor.WHITE + "Bank: " + ChatColor.GREEN + money(getBalance(id)) + " coins",
-                        ChatColor.GRAY + (open ? "Bank is OPEN" : "Bank is CLOSED"),
+                        ChatColor.GRAY + "Bank is OPEN",
                         ChatColor.GRAY + hoursMessage()));
 
         add(inv, 10, plugin.getPocketCoinManager().createCoin(1, 1), ChatColor.GREEN + "Deposit 10", "deposit", 10,
@@ -115,7 +120,11 @@ public final class BankManager implements Listener {
 
     private void add(Inventory inv, int slot, Material material, String name, String action,
                      int amount, List<String> lore) {
-        ItemStack stack = new ItemStack(material);
+        add(inv, slot, new ItemStack(material), name, action, amount, lore);
+    }
+
+    private void add(Inventory inv, int slot, ItemStack stack, String name, String action,
+                     int amount, List<String> lore) {
         ItemMeta meta = stack.getItemMeta();
         meta.setDisplayName(name);
         meta.setLore(lore);
