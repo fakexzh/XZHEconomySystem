@@ -7,11 +7,11 @@ quests:
     group-name: "Quarry & Stone"
     name: "Stonecutter's Warm-Up"
     objectives:
-      - "MINE:STONE:128"
+      - "MINE:STONE:64"
     unlock:
       - "story/mine_stone"
     fee: 50
-    profit: 180
+    profit: 200
     timer-minutes: 30
     icon: STONE
     tier-gate: "story/mine_stone"
@@ -21,11 +21,11 @@ quests:
     group-name: "Quarry & Stone"
     name: "Coal Seam Crew"
     objectives:
-      - "MINE:COAL_ORE|DEEPSLATE_COAL_ORE:96"
+      - "MINE:COAL_ORE|DEEPSLATE_COAL_ORE:32"
     unlock:
       - "story/upgrade_tools"
     fee: 50
-    profit: 180
+    profit: 200
     timer-minutes: 0
     icon: COAL
     tier-gate: "story/mine_stone"
@@ -35,11 +35,11 @@ quests:
     group-name: "Quarry & Stone"
     name: "Copper Crawl"
     objectives:
-      - "MINE:COPPER_ORE|DEEPSLATE_COPPER_ORE:96"
+      - "MINE:COPPER_ORE|DEEPSLATE_COPPER_ORE:32"
     unlock:
       - "story/upgrade_tools"
     fee: 90
-    profit: 200
+    profit: 219
     timer-minutes: 0
     icon: RAW_COPPER
     tier-gate: "story/mine_stone"
@@ -49,11 +49,11 @@ quests:
     group-name: "Quarry & Stone"
     name: "Iron Vein Run"
     objectives:
-      - "MINE:IRON_ORE|DEEPSLATE_IRON_ORE:64"
+      - "MINE:IRON_ORE|DEEPSLATE_IRON_ORE:32"
     unlock:
       - "story/smelt_iron"
     fee: 130
-    profit: 240
+    profit: 256
     timer-minutes: 40
     icon: RAW_IRON
     tier-gate: "story/mine_stone"
@@ -63,11 +63,11 @@ quests:
     group-name: "Quarry & Stone"
     name: "Gravel Pit Shift"
     objectives:
-      - "MINE:GRAVEL:96"
+      - "MINE:GRAVEL:64"
     unlock:
       - "story/mine_stone"
     fee: 50
-    profit: 180
+    profit: 200
     timer-minutes: 30
     icon: GRAVEL
     tier-gate: "story/mine_stone"
@@ -77,11 +77,11 @@ quests:
     group-name: "Quarry & Stone"
     name: "Dune Digger"
     objectives:
-      - "MINE:SAND|RED_SAND:128"
+      - "MINE:SAND|RED_SAND:64"
     unlock:
       - "story/mine_stone"
     fee: 50
-    profit: 180
+    profit: 200
     timer-minutes: 30
     icon: SAND
     tier-gate: "story/mine_stone"
@@ -91,11 +91,11 @@ quests:
     group-name: "Quarry & Stone"
     name: "Clay Banks"
     objectives:
-      - "MINE:CLAY:160"
+      - "MINE:CLAY:64"
     unlock:
       - "story/upgrade_tools"
     fee: 130
-    profit: 230
+    profit: 247
     timer-minutes: 0
     icon: CLAY
     tier-gate: "story/mine_stone"
@@ -105,11 +105,11 @@ quests:
     group-name: "Quarry & Stone"
     name: "Granite Gang"
     objectives:
-      - "MINE:GRANITE|DIORITE|ANDESITE:128"
+      - "MINE:GRANITE|DIORITE|ANDESITE:64"
     unlock:
       - "story/upgrade_tools"
     fee: 50
-    profit: 180
+    profit: 200
     timer-minutes: 0
     icon: GRANITE
     tier-gate: "story/mine_stone"
@@ -119,11 +119,11 @@ quests:
     group-name: "Quarry & Stone"
     name: "Redstone Rush"
     objectives:
-      - "MINE:REDSTONE_ORE|DEEPSLATE_REDSTONE_ORE:80"
+      - "MINE:REDSTONE_ORE|DEEPSLATE_REDSTONE_ORE:32"
     unlock:
       - "story/smelt_iron"
     fee: 130
-    profit: 240
+    profit: 256
     timer-minutes: 45
     icon: REDSTONE
     tier-gate: "story/mine_stone"
@@ -133,11 +133,11 @@ quests:
     group-name: "Quarry & Stone"
     name: "Lapis Lodestar"
     objectives:
-      - "MINE:LAPIS_ORE|DEEPSLATE_LAPIS_ORE:48"
+      - "MINE:LAPIS_ORE|DEEPSLATE_LAPIS_ORE:32"
     unlock:
       - "story/iron_tools"
     fee: 170
-    profit: 240
+    profit: 256
     timer-minutes: 0
     icon: LAPIS_LAZULI
     tier-gate: "story/mine_stone"
@@ -147,11 +147,11 @@ quests:
     group-name: "Timber & Lumber"
     name: "Lumberjack Basics"
     objectives:
-      - "MINE:#LOGS:128"
+      - "MINE:#LOGS:64"
     unlock:
       - "story/mine_stone"
     fee: 50
-    profit: 180
+    profit: 200
     timer-minutes: 30
     icon: OAK_LOG
     tier-gate: "story/mine_stone"
@@ -161,11 +161,11 @@ quests:
     group-name: "Timber & Lumber"
     name: "Birch Brigade"
     objectives:
-      - "MINE:BIRCH_LOG:128"
+      - "MINE:BIRCH_LOG:64"
     unlock:
       - "story/upgrade_tools"
     fee: 90
-    profit: 200
+    profit: 219
     timer-minutes: 0
     icon: BIRCH_LOG
     tier-gate: "story/mine_stone"
@@ -175,11 +175,11 @@ quests:
     group-name: "Timber & Lumber"
     name: "Spruce Supply"
     objectives:
-      - "MINE:SPRUCE_LOG:128"
+      - "MINE:SPRUCE_LOG:64"
     unlock:
       - "story/upgrade_tools"
     fee: 90
-    profit: 200
+    profit: 219
     timer-minutes: 0
     icon: SPRUCE_LOG
     tier-gate: "story/mine_stone"
@@ -189,11 +189,11 @@ quests:
     group-name: "Timber & Lumber"
     name: "Dark Forest Cutter"
     objectives:
-      - "MINE:DARK_OAK_LOG:96"
+      - "MINE:DARK_OAK_LOG:64"
     unlock:
       - "story/iron_tools"
     fee: 130
-    profit: 220
+    profit: 238
     timer-minutes: 0
     icon: DARK_OAK_LOG
     tier-gate: "story/mine_stone"
@@ -203,11 +203,11 @@ quests:
     group-name: "Timber & Lumber"
     name: "Jungle Chopper"
     objectives:
-      - "MINE:JUNGLE_LOG:96"
+      - "MINE:JUNGLE_LOG:64"
     unlock:
       - "story/iron_tools"
     fee: 130
-    profit: 230
+    profit: 247
     timer-minutes: 0
     icon: JUNGLE_LOG
     tier-gate: "story/mine_stone"
@@ -217,11 +217,11 @@ quests:
     group-name: "Timber & Lumber"
     name: "Savanna Sawyer"
     objectives:
-      - "MINE:ACACIA_LOG:96"
+      - "MINE:ACACIA_LOG:64"
     unlock:
       - "story/iron_tools"
     fee: 130
-    profit: 220
+    profit: 238
     timer-minutes: 0
     icon: ACACIA_LOG
     tier-gate: "story/mine_stone"
@@ -235,7 +235,7 @@ quests:
     unlock:
       - "husbandry/plant_seed"
     fee: 170
-    profit: 230
+    profit: 247
     timer-minutes: 0
     icon: CHERRY_LOG
     tier-gate: "story/mine_stone"
@@ -249,7 +249,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 170
-    profit: 230
+    profit: 247
     timer-minutes: 0
     icon: MANGROVE_LOG
     tier-gate: "story/mine_stone"
@@ -259,11 +259,11 @@ quests:
     group-name: "Timber & Lumber"
     name: "Bamboo Thicket"
     objectives:
-      - "MINE:BAMBOO:96"
+      - "MINE:BAMBOO:64"
     unlock:
       - "husbandry/plant_seed"
     fee: 90
-    profit: 200
+    profit: 219
     timer-minutes: 0
     icon: BAMBOO
     tier-gate: "story/mine_stone"
@@ -273,11 +273,11 @@ quests:
     group-name: "Timber & Lumber"
     name: "Pale Garden Harvest"
     objectives:
-      - "MINE:PALE_OAK_LOG:80"
+      - "MINE:PALE_OAK_LOG:64"
     unlock:
       - "story/iron_tools"
     fee: 210
-    profit: 260
+    profit: 275
     timer-minutes: 0
     icon: PALE_OAK_LOG
     tier-gate: "story/mine_stone"
@@ -287,11 +287,11 @@ quests:
     group-name: "Farmhand"
     name: "Wheat Weekend"
     objectives:
-      - "HARVEST:WHEAT:192"
+      - "HARVEST:WHEAT:64"
     unlock:
       - "husbandry/plant_seed"
     fee: 50
-    profit: 200
+    profit: 219
     timer-minutes: 0
     icon: WHEAT
     tier-gate: "story/mine_stone"
@@ -301,11 +301,11 @@ quests:
     group-name: "Farmhand"
     name: "Carrot Cartel"
     objectives:
-      - "HARVEST:CARROT:160"
+      - "HARVEST:CARROT:64"
     unlock:
       - "husbandry/plant_seed"
     fee: 50
-    profit: 200
+    profit: 219
     timer-minutes: 0
     icon: CARROT
     tier-gate: "story/mine_stone"
@@ -315,11 +315,11 @@ quests:
     group-name: "Farmhand"
     name: "Potato Patch"
     objectives:
-      - "HARVEST:POTATO:160"
+      - "HARVEST:POTATO:64"
     unlock:
       - "husbandry/plant_seed"
     fee: 50
-    profit: 200
+    profit: 219
     timer-minutes: 0
     icon: POTATO
     tier-gate: "story/mine_stone"
@@ -329,11 +329,11 @@ quests:
     group-name: "Farmhand"
     name: "Beetroot Brigade"
     objectives:
-      - "HARVEST:BEETROOT:128"
+      - "HARVEST:BEETROOT:64"
     unlock:
       - "husbandry/plant_seed"
     fee: 90
-    profit: 210
+    profit: 228
     timer-minutes: 0
     icon: BEETROOT
     tier-gate: "story/mine_stone"
@@ -343,11 +343,11 @@ quests:
     group-name: "Farmhand"
     name: "Melon Madness"
     objectives:
-      - "HARVEST:MELON:128"
+      - "HARVEST:MELON:64"
     unlock:
       - "husbandry/plant_seed"
     fee: 90
-    profit: 210
+    profit: 228
     timer-minutes: 0
     icon: MELON_SLICE
     tier-gate: "story/mine_stone"
@@ -361,7 +361,7 @@ quests:
     unlock:
       - "husbandry/plant_seed"
     fee: 90
-    profit: 200
+    profit: 219
     timer-minutes: 0
     icon: PUMPKIN
     tier-gate: "story/mine_stone"
@@ -371,11 +371,11 @@ quests:
     group-name: "Farmhand"
     name: "Sweet Berry Picker"
     objectives:
-      - "HARVEST:SWEET_BERRY_BUSH:128"
+      - "HARVEST:SWEET_BERRY_BUSH:64"
     unlock:
       - "husbandry/plant_seed"
     fee: 130
-    profit: 220
+    profit: 238
     timer-minutes: 0
     icon: SWEET_BERRIES
     tier-gate: "story/mine_stone"
@@ -385,11 +385,11 @@ quests:
     group-name: "Farmhand"
     name: "Cocoa Grove"
     objectives:
-      - "HARVEST:COCOA:96"
+      - "HARVEST:COCOA:64"
     unlock:
       - "husbandry/plant_seed"
     fee: 130
-    profit: 220
+    profit: 238
     timer-minutes: 0
     icon: COCOA_BEANS
     tier-gate: "story/mine_stone"
@@ -399,11 +399,11 @@ quests:
     group-name: "Farmhand"
     name: "Sugar Cane Run"
     objectives:
-      - "MINE:SUGAR_CANE:96"
+      - "MINE:SUGAR_CANE:64"
     unlock:
       - "husbandry/plant_seed"
     fee: 90
-    profit: 200
+    profit: 219
     timer-minutes: 0
     icon: SUGAR_CANE
     tier-gate: "story/mine_stone"
@@ -413,11 +413,11 @@ quests:
     group-name: "Farmhand"
     name: "Kelp Farm Shift"
     objectives:
-      - "MINE:KELP:96"
+      - "MINE:KELP:64"
     unlock:
       - "husbandry/plant_seed"
     fee: 90
-    profit: 200
+    profit: 219
     timer-minutes: 0
     icon: KELP
     tier-gate: "story/mine_stone"
@@ -427,11 +427,11 @@ quests:
     group-name: "Animal Husbandry"
     name: "Cow Whisperer"
     objectives:
-      - "FEED:COW:24"
+      - "FEED:COW:16"
     unlock:
       - "husbandry/breed_an_animal"
     fee: 50
-    profit: 180
+    profit: 200
     timer-minutes: 0
     icon: WHEAT
     tier-gate: "story/mine_stone"
@@ -441,11 +441,11 @@ quests:
     group-name: "Animal Husbandry"
     name: "Shepherd's Pride"
     objectives:
-      - "BREED:SHEEP:12"
+      - "FEED:SHEEP:12"
     unlock:
       - "husbandry/breed_an_animal"
     fee: 90
-    profit: 210
+    profit: 228
     timer-minutes: 0
     icon: SHEEP_SPAWN_EGG
     tier-gate: "story/mine_stone"
@@ -455,11 +455,11 @@ quests:
     group-name: "Animal Husbandry"
     name: "Piggy Bank"
     objectives:
-      - "BREED:PIG:12"
+      - "FEED:PIG:12"
     unlock:
       - "husbandry/breed_an_animal"
     fee: 90
-    profit: 210
+    profit: 228
     timer-minutes: 0
     icon: PIG_SPAWN_EGG
     tier-gate: "story/mine_stone"
@@ -469,11 +469,11 @@ quests:
     group-name: "Animal Husbandry"
     name: "Coop Commander"
     objectives:
-      - "BREED:CHICKEN:16"
+      - "FEED:CHICKEN:16"
     unlock:
       - "husbandry/breed_an_animal"
     fee: 90
-    profit: 210
+    profit: 228
     timer-minutes: 0
     icon: CHICKEN_SPAWN_EGG
     tier-gate: "story/mine_stone"
@@ -483,11 +483,11 @@ quests:
     group-name: "Animal Husbandry"
     name: "Herd Builder"
     objectives:
-      - "BREED:ANY:30"
+      - "FEED:ANY:16"
     unlock:
       - "husbandry/breed_an_animal"
     fee: 90
-    profit: 270
+    profit: 284
     timer-minutes: 0
     icon: HAY_BLOCK
     tier-gate: "story/mine_stone"
@@ -497,11 +497,11 @@ quests:
     group-name: "Animal Husbandry"
     name: "Rabbit Ranch"
     objectives:
-      - "BREED:RABBIT:10"
+      - "FEED:RABBIT:10"
     unlock:
       - "husbandry/breed_an_animal"
     fee: 130
-    profit: 230
+    profit: 247
     timer-minutes: 0
     icon: RABBIT_SPAWN_EGG
     tier-gate: "story/mine_stone"
@@ -515,7 +515,7 @@ quests:
     unlock:
       - "husbandry/tame_an_animal"
     fee: 130
-    profit: 210
+    profit: 228
     timer-minutes: 0
     icon: COD
     tier-gate: "story/mine_stone"
@@ -525,11 +525,11 @@ quests:
     group-name: "Animal Husbandry"
     name: "Wolf Pack"
     objectives:
-      - "TAME:WOLF:3"
+      - "TAME:WOLF:2"
     unlock:
       - "husbandry/tame_an_animal"
     fee: 130
-    profit: 230
+    profit: 247
     timer-minutes: 0
     icon: BONE
     tier-gate: "story/mine_stone"
@@ -543,7 +543,7 @@ quests:
     unlock:
       - "husbandry/tame_an_animal"
     fee: 170
-    profit: 250
+    profit: 266
     timer-minutes: 0
     icon: WHEAT_SEEDS
     tier-gate: "story/mine_stone"
@@ -553,11 +553,11 @@ quests:
     group-name: "Animal Husbandry"
     name: "Turtle Beach"
     objectives:
-      - "BREED:TURTLE:3"
+      - "FEED:TURTLE:3"
     unlock:
       - "husbandry/breed_an_animal"
     fee: 210
-    profit: 260
+    profit: 275
     timer-minutes: 0
     icon: TURTLE_SPAWN_EGG
     tier-gate: "story/mine_stone"
@@ -571,7 +571,7 @@ quests:
     unlock:
       - "husbandry/fishy_business"
     fee: 50
-    profit: 210
+    profit: 228
     timer-minutes: 0
     icon: FISHING_ROD
     tier-gate: "story/mine_stone"
@@ -585,7 +585,7 @@ quests:
     unlock:
       - "husbandry/fishy_business"
     fee: 50
-    profit: 210
+    profit: 228
     timer-minutes: 0
     icon: COD
     tier-gate: "story/mine_stone"
@@ -599,7 +599,7 @@ quests:
     unlock:
       - "husbandry/fishy_business"
     fee: 90
-    profit: 220
+    profit: 238
     timer-minutes: 0
     icon: SALMON
     tier-gate: "story/mine_stone"
@@ -613,7 +613,7 @@ quests:
     unlock:
       - "husbandry/fishy_business"
     fee: 130
-    profit: 250
+    profit: 266
     timer-minutes: 0
     icon: PUFFERFISH
     tier-gate: "story/mine_stone"
@@ -627,7 +627,7 @@ quests:
     unlock:
       - "husbandry/tactical_fishing"
     fee: 210
-    profit: 300
+    profit: 313
     timer-minutes: 0
     icon: TROPICAL_FISH
     tier-gate: "story/mine_stone"
@@ -641,7 +641,7 @@ quests:
     unlock:
       - "husbandry/fishy_business"
     fee: 90
-    profit: 240
+    profit: 256
     timer-minutes: 0
     icon: TRIPWIRE_HOOK
     tier-gate: "story/mine_stone"
@@ -655,7 +655,7 @@ quests:
     unlock:
       - "husbandry/fishy_business"
     fee: 170
-    profit: 250
+    profit: 266
     timer-minutes: 0
     icon: ENCHANTED_BOOK
     tier-gate: "story/mine_stone"
@@ -665,11 +665,11 @@ quests:
     group-name: "Anglers"
     name: "Big Haul"
     objectives:
-      - "FISH:ANY:80"
+      - "FISH:ANY:40"
     unlock:
       - "husbandry/fishy_business"
     fee: 90
-    profit: 270
+    profit: 284
     timer-minutes: 70
     icon: FISHING_ROD
     tier-gate: "story/mine_stone"
@@ -684,7 +684,7 @@ quests:
     unlock:
       - "husbandry/fishy_business"
     fee: 130
-    profit: 250
+    profit: 266
     timer-minutes: 0
     icon: COD
     tier-gate: "story/mine_stone"
@@ -694,11 +694,11 @@ quests:
     group-name: "Anglers"
     name: "Deep Pond Marathon"
     objectives:
-      - "FISH:ANY:120"
+      - "FISH:ANY:40"
     unlock:
       - "husbandry/fishy_business"
     fee: 90
-    profit: 300
+    profit: 313
     timer-minutes: 0
     icon: FISHING_ROD
     tier-gate: "story/mine_stone"
@@ -708,11 +708,11 @@ quests:
     group-name: "Monster Patrol"
     name: "Zombie Sweep"
     objectives:
-      - "KILL:ZOMBIE:30"
+      - "KILL:ZOMBIE:20"
     unlock:
       - "adventure/kill_a_mob"
     fee: 50
-    profit: 220
+    profit: 238
     timer-minutes: 50
     icon: ROTTEN_FLESH
     tier-gate: "story/mine_stone"
@@ -722,11 +722,11 @@ quests:
     group-name: "Monster Patrol"
     name: "Skeleton Shooting Gallery"
     objectives:
-      - "KILL:SKELETON:25"
+      - "KILL:SKELETON:20"
     unlock:
       - "adventure/kill_a_mob"
     fee: 90
-    profit: 230
+    profit: 247
     timer-minutes: 55
     icon: BONE
     tier-gate: "story/mine_stone"
@@ -740,7 +740,7 @@ quests:
     unlock:
       - "adventure/kill_a_mob"
     fee: 90
-    profit: 230
+    profit: 247
     timer-minutes: 50
     icon: GUNPOWDER
     tier-gate: "story/mine_stone"
@@ -750,11 +750,11 @@ quests:
     group-name: "Monster Patrol"
     name: "Spider Season"
     objectives:
-      - "KILL:SPIDER:25"
+      - "KILL:SPIDER:20"
     unlock:
       - "adventure/kill_a_mob"
     fee: 50
-    profit: 220
+    profit: 238
     timer-minutes: 50
     icon: STRING
     tier-gate: "story/mine_stone"
@@ -764,11 +764,11 @@ quests:
     group-name: "Monster Patrol"
     name: "Night Shift"
     objectives:
-      - "KILL:#HOSTILES:60"
+      - "KILL:#HOSTILES:20"
     unlock:
       - "adventure/kill_a_mob"
     fee: 90
-    profit: 250
+    profit: 266
     timer-minutes: 70
     icon: ROTTEN_FLESH
     tier-gate: "story/mine_stone"
@@ -782,7 +782,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 170
-    profit: 250
+    profit: 266
     timer-minutes: 0
     icon: ENDER_PEARL
     tier-gate: "story/mine_stone"
@@ -796,7 +796,7 @@ quests:
     unlock:
       - "adventure/kill_a_mob"
     fee: 170
-    profit: 270
+    profit: 284
     timer-minutes: 0
     icon: GLASS_BOTTLE
     tier-gate: "story/mine_stone"
@@ -810,7 +810,7 @@ quests:
     unlock:
       - "adventure/kill_a_mob"
     fee: 130
-    profit: 240
+    profit: 256
     timer-minutes: 0
     icon: SLIME_BALL
     tier-gate: "story/mine_stone"
@@ -824,7 +824,7 @@ quests:
     unlock:
       - "adventure/kill_a_mob"
     fee: 90
-    profit: 230
+    profit: 247
     timer-minutes: 55
     icon: TRIDENT
     tier-gate: "story/mine_stone"
@@ -839,7 +839,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 170
-    profit: 260
+    profit: 275
     timer-minutes: 0
     icon: ROTTEN_FLESH
     tier-gate: "story/mine_stone"
@@ -849,11 +849,11 @@ quests:
     group-name: "Kitchen & Forge"
     name: "Furnace Apprentice"
     objectives:
-      - "SMELT:IRON_INGOT:96"
+      - "SMELT:IRON_INGOT:64"
     unlock:
       - "story/smelt_iron"
     fee: 90
-    profit: 210
+    profit: 228
     timer-minutes: 0
     icon: IRON_INGOT
     tier-gate: "story/mine_stone"
@@ -863,11 +863,11 @@ quests:
     group-name: "Kitchen & Forge"
     name: "Copper Smelter"
     objectives:
-      - "SMELT:COPPER_INGOT:128"
+      - "SMELT:COPPER_INGOT:64"
     unlock:
       - "story/smelt_iron"
     fee: 90
-    profit: 210
+    profit: 228
     timer-minutes: 0
     icon: COPPER_INGOT
     tier-gate: "story/mine_stone"
@@ -877,11 +877,11 @@ quests:
     group-name: "Kitchen & Forge"
     name: "Glassblower"
     objectives:
-      - "SMELT:GLASS:256"
+      - "SMELT:GLASS:64"
     unlock:
       - "story/smelt_iron"
     fee: 50
-    profit: 200
+    profit: 219
     timer-minutes: 30
     icon: GLASS
     tier-gate: "story/mine_stone"
@@ -891,11 +891,11 @@ quests:
     group-name: "Kitchen & Forge"
     name: "Brickyard"
     objectives:
-      - "SMELT:BRICK:192"
+      - "SMELT:BRICK:64"
     unlock:
       - "story/smelt_iron"
     fee: 130
-    profit: 220
+    profit: 238
     timer-minutes: 0
     icon: BRICK
     tier-gate: "story/mine_stone"
@@ -905,11 +905,11 @@ quests:
     group-name: "Kitchen & Forge"
     name: "Stone Mason"
     objectives:
-      - "SMELT:STONE:256"
+      - "SMELT:STONE:64"
     unlock:
       - "story/mine_stone"
     fee: 50
-    profit: 180
+    profit: 200
     timer-minutes: 30
     icon: STONE
     tier-gate: "story/mine_stone"
@@ -919,11 +919,11 @@ quests:
     group-name: "Kitchen & Forge"
     name: "Charcoal Burner"
     objectives:
-      - "SMELT:CHARCOAL:128"
+      - "SMELT:CHARCOAL:64"
     unlock:
       - "story/mine_stone"
     fee: 50
-    profit: 180
+    profit: 200
     timer-minutes: 0
     icon: CHARCOAL
     tier-gate: "story/mine_stone"
@@ -933,11 +933,11 @@ quests:
     group-name: "Kitchen & Forge"
     name: "Cookout"
     objectives:
-      - "SMELT:COOKED_BEEF|COOKED_PORKCHOP|COOKED_MUTTON|COOKED_CHICKEN:96"
+      - "SMELT:COOKED_BEEF|COOKED_PORKCHOP|COOKED_MUTTON|COOKED_CHICKEN:64"
     unlock:
       - "story/smelt_iron"
     fee: 90
-    profit: 210
+    profit: 228
     timer-minutes: 0
     icon: COOKED_BEEF
     tier-gate: "story/mine_stone"
@@ -947,11 +947,11 @@ quests:
     group-name: "Kitchen & Forge"
     name: "Seafood Platter"
     objectives:
-      - "SMELT:COOKED_COD|COOKED_SALMON:80"
+      - "SMELT:COOKED_COD|COOKED_SALMON:64"
     unlock:
       - "husbandry/fishy_business"
     fee: 90
-    profit: 210
+    profit: 228
     timer-minutes: 0
     icon: COOKED_COD
     tier-gate: "story/mine_stone"
@@ -961,11 +961,11 @@ quests:
     group-name: "Kitchen & Forge"
     name: "Terracotta Kiln"
     objectives:
-      - "SMELT:TERRACOTTA:128"
+      - "SMELT:TERRACOTTA:64"
     unlock:
       - "story/smelt_iron"
     fee: 130
-    profit: 230
+    profit: 247
     timer-minutes: 0
     icon: TERRACOTTA
     tier-gate: "story/mine_stone"
@@ -975,11 +975,11 @@ quests:
     group-name: "Kitchen & Forge"
     name: "Baker's Dozen"
     objectives:
-      - "CRAFT:BREAD:96"
+      - "CRAFT:BREAD:64"
     unlock:
       - "husbandry/plant_seed"
     fee: 90
-    profit: 210
+    profit: 228
     timer-minutes: 0
     icon: BREAD
     tier-gate: "story/mine_stone"
@@ -993,7 +993,7 @@ quests:
     unlock:
       - "story/mine_stone"
     fee: 50
-    profit: 180
+    profit: 200
     timer-minutes: 0
     icon: COMPASS
     tier-gate: "story/mine_stone"
@@ -1007,7 +1007,7 @@ quests:
     unlock:
       - "story/upgrade_tools"
     fee: 50
-    profit: 210
+    profit: 228
     timer-minutes: 0
     icon: COMPASS
     tier-gate: "story/mine_stone"
@@ -1021,7 +1021,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 90
-    profit: 260
+    profit: 275
     timer-minutes: 0
     icon: COMPASS
     tier-gate: "story/mine_stone"
@@ -1035,7 +1035,7 @@ quests:
     unlock:
       - "story/upgrade_tools"
     fee: 90
-    profit: 230
+    profit: 247
     timer-minutes: 0
     icon: MAP
     tier-gate: "story/mine_stone"
@@ -1045,11 +1045,11 @@ quests:
     group-name: "Wanderer"
     name: "Plains to Peaks"
     objectives:
-      - "BIOME:ANY:10"
+      - "BIOME:ANY:6"
     unlock:
       - "story/iron_tools"
     fee: 130
-    profit: 270
+    profit: 284
     timer-minutes: 0
     icon: MAP
     tier-gate: "story/mine_stone"
@@ -1063,7 +1063,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 90
-    profit: 240
+    profit: 256
     timer-minutes: 50
     icon: COMPASS
     tier-gate: "story/mine_stone"
@@ -1077,7 +1077,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 170
-    profit: 250
+    profit: 266
     timer-minutes: 0
     icon: MOSS_BLOCK
     tier-gate: "story/mine_stone"
@@ -1091,7 +1091,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 130
-    profit: 240
+    profit: 256
     timer-minutes: 0
     icon: SNOW_BLOCK
     tier-gate: "story/mine_stone"
@@ -1105,7 +1105,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 130
-    profit: 240
+    profit: 256
     timer-minutes: 0
     icon: SAND
     tier-gate: "story/mine_stone"
@@ -1119,7 +1119,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 130
-    profit: 240
+    profit: 256
     timer-minutes: 0
     icon: JUNGLE_SAPLING
     tier-gate: "story/mine_stone"
@@ -1133,7 +1133,7 @@ quests:
     unlock:
       - "adventure/trade"
     fee: 90
-    profit: 230
+    profit: 247
     timer-minutes: 45
     icon: BREAD
     tier-gate: "story/mine_stone"
@@ -1147,7 +1147,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 130
-    profit: 250
+    profit: 266
     timer-minutes: 50
     icon: BONE
     tier-gate: "story/mine_stone"
@@ -1161,7 +1161,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 130
-    profit: 260
+    profit: 275
     timer-minutes: 60
     icon: RAIL
     tier-gate: "story/mine_stone"
@@ -1175,7 +1175,7 @@ quests:
     unlock:
       - "husbandry/fishy_business"
     fee: 170
-    profit: 270
+    profit: 284
     timer-minutes: 0
     icon: OAK_BOAT
     tier-gate: "story/mine_stone"
@@ -1189,7 +1189,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 210
-    profit: 300
+    profit: 313
     timer-minutes: 0
     icon: HEART_OF_THE_SEA
     tier-gate: "story/mine_stone"
@@ -1203,7 +1203,7 @@ quests:
     unlock:
       - "story/form_obsidian"
     fee: 170
-    profit: 260
+    profit: 275
     timer-minutes: 0
     icon: OBSIDIAN
     tier-gate: "story/mine_stone"
@@ -1217,7 +1217,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 170
-    profit: 270
+    profit: 284
     timer-minutes: 0
     icon: SANDSTONE
     tier-gate: "story/mine_stone"
@@ -1231,7 +1231,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 170
-    profit: 270
+    profit: 284
     timer-minutes: 0
     icon: TRIPWIRE_HOOK
     tier-gate: "story/mine_stone"
@@ -1241,11 +1241,11 @@ quests:
     group-name: "Treasure Hunters"
     name: "Mixed Loot Run"
     objectives:
-      - "LOOT:chests/*:10"
+      - "LOOT:chests/*:5"
     unlock:
       - "story/iron_tools"
     fee: 130
-    profit: 270
+    profit: 284
     timer-minutes: 0
     icon: CHEST
     tier-gate: "story/mine_stone"
@@ -1259,7 +1259,7 @@ quests:
     unlock:
       - "husbandry/fishy_business"
     fee: 170
-    profit: 270
+    profit: 284
     timer-minutes: 0
     icon: PRISMARINE_SHARD
     tier-gate: "story/mine_stone"
@@ -1273,7 +1273,7 @@ quests:
     unlock:
       - "husbandry/plant_seed"
     fee: 90
-    profit: 220
+    profit: 238
     timer-minutes: 40
     icon: PUMPKIN_PIE
     tier-gate: "story/mine_stone"
@@ -1287,7 +1287,7 @@ quests:
     unlock:
       - "husbandry/plant_seed"
     fee: 170
-    profit: 250
+    profit: 266
     timer-minutes: 0
     icon: CAKE
     tier-gate: "story/mine_stone"
@@ -1297,11 +1297,11 @@ quests:
     group-name: "Workshop"
     name: "Cookie Jar"
     objectives:
-      - "CRAFT:COOKIE:192"
+      - "CRAFT:COOKIE:64"
     unlock:
       - "husbandry/plant_seed"
     fee: 130
-    profit: 240
+    profit: 256
     timer-minutes: 40
     icon: COOKIE
     tier-gate: "story/mine_stone"
@@ -1315,7 +1315,7 @@ quests:
     unlock:
       - "story/smelt_iron"
     fee: 130
-    profit: 230
+    profit: 247
     timer-minutes: 0
     icon: LANTERN
     tier-gate: "story/mine_stone"
@@ -1329,7 +1329,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 130
-    profit: 230
+    profit: 247
     timer-minutes: 0
     icon: SHIELD
     tier-gate: "story/mine_stone"
@@ -1343,7 +1343,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 170
-    profit: 240
+    profit: 256
     timer-minutes: 0
     icon: BUCKET
     tier-gate: "story/mine_stone"
@@ -1357,7 +1357,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 130
-    profit: 230
+    profit: 247
     timer-minutes: 0
     icon: BOOKSHELF
     tier-gate: "story/mine_stone"
@@ -1371,7 +1371,7 @@ quests:
     unlock:
       - "story/enchant_item"
     fee: 170
-    profit: 240
+    profit: 256
     timer-minutes: 0
     icon: ENCHANTED_BOOK
     tier-gate: "story/mine_stone"
@@ -1388,7 +1388,7 @@ quests:
     unlock:
       - "story/obtain_armor"
     fee: 170
-    profit: 250
+    profit: 266
     timer-minutes: 0
     icon: IRON_HELMET
     tier-gate: "story/mine_stone"
@@ -1405,7 +1405,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 250
-    profit: 340
+    profit: 350
     timer-minutes: 0
     icon: RAW_IRON
     tier-gate: "story/mine_stone"
@@ -1419,7 +1419,7 @@ quests:
     unlock:
       - "story/mine_diamond"
     fee: 590
-    profit: 600
+    profit: 800
     timer-minutes: 0
     icon: DIAMOND
     tier-gate: "nether/find_fortress"
@@ -1433,7 +1433,7 @@ quests:
     unlock:
       - "story/mine_diamond"
     fee: 640
-    profit: 650
+    profit: 900
     timer-minutes: 0
     icon: EMERALD
     tier-gate: "nether/find_fortress"
@@ -1447,7 +1447,7 @@ quests:
     unlock:
       - "story/smelt_iron"
     fee: 530
-    profit: 560
+    profit: 720
     timer-minutes: 0
     icon: RAW_GOLD
     tier-gate: "nether/find_fortress"
@@ -1457,11 +1457,11 @@ quests:
     group-name: "Deep Mining"
     name: "Deepslate Delver"
     objectives:
-      - "MINE:DEEPSLATE:256"
+      - "MINE:DEEPSLATE:128"
     unlock:
       - "story/mine_diamond"
     fee: 360
-    profit: 410
+    profit: 420
     timer-minutes: 50
     icon: DEEPSLATE
     tier-gate: "nether/find_fortress"
@@ -1475,7 +1475,7 @@ quests:
     unlock:
       - "story/enchant_item"
     fee: 470
-    profit: 560
+    profit: 720
     timer-minutes: 80
     icon: LAPIS_LAZULI
     tier-gate: "nether/find_fortress"
@@ -1485,11 +1485,11 @@ quests:
     group-name: "Deep Mining"
     name: "Redstone Royalty"
     objectives:
-      - "MINE:REDSTONE_ORE|DEEPSLATE_REDSTONE_ORE:96"
+      - "MINE:REDSTONE_ORE|DEEPSLATE_REDSTONE_ORE:64"
     unlock:
       - "story/mine_diamond"
     fee: 470
-    profit: 530
+    profit: 660
     timer-minutes: 0
     icon: REDSTONE
     tier-gate: "nether/find_fortress"
@@ -1499,11 +1499,11 @@ quests:
     group-name: "Deep Mining"
     name: "Copper Cavern Crew"
     objectives:
-      - "MINE:COPPER_ORE|DEEPSLATE_COPPER_ORE:128"
+      - "MINE:COPPER_ORE|DEEPSLATE_COPPER_ORE:64"
     unlock:
       - "story/iron_tools"
     fee: 410
-    profit: 500
+    profit: 600
     timer-minutes: 70
     icon: RAW_COPPER
     tier-gate: "nether/find_fortress"
@@ -1517,7 +1517,7 @@ quests:
     unlock:
       - "story/mine_diamond"
     fee: 590
-    profit: 600
+    profit: 800
     timer-minutes: 0
     icon: AMETHYST_SHARD
     tier-gate: "nether/find_fortress"
@@ -1527,11 +1527,11 @@ quests:
     group-name: "Deep Mining"
     name: "Mixed Ore Blitz"
     objectives:
-      - "MINE:#OVERWORLD_ORES:128"
+      - "MINE:#OVERWORLD_ORES:64"
     unlock:
       - "story/mine_diamond"
     fee: 470
-    profit: 550
+    profit: 700
     timer-minutes: 0
     icon: DIAMOND_PICKAXE
     tier-gate: "nether/find_fortress"
@@ -1546,7 +1546,7 @@ quests:
     unlock:
       - "story/mine_diamond"
     fee: 590
-    profit: 620
+    profit: 840
     timer-minutes: 0
     icon: DIAMOND
     tier-gate: "nether/find_fortress"
@@ -1560,7 +1560,7 @@ quests:
     unlock:
       - "nether/root"
     fee: 410
-    profit: 440
+    profit: 480
     timer-minutes: 50
     icon: QUARTZ
     tier-gate: "nether/find_fortress"
@@ -1574,7 +1574,7 @@ quests:
     unlock:
       - "nether/root"
     fee: 410
-    profit: 440
+    profit: 480
     timer-minutes: 50
     icon: GLOWSTONE
     tier-gate: "nether/find_fortress"
@@ -1588,7 +1588,7 @@ quests:
     unlock:
       - "nether/root"
     fee: 360
-    profit: 410
+    profit: 420
     timer-minutes: 50
     icon: SOUL_SAND
     tier-gate: "nether/find_fortress"
@@ -1602,7 +1602,7 @@ quests:
     unlock:
       - "nether/root"
     fee: 410
-    profit: 430
+    profit: 460
     timer-minutes: 0
     icon: GOLD_NUGGET
     tier-gate: "nether/find_fortress"
@@ -1616,7 +1616,7 @@ quests:
     unlock:
       - "nether/root"
     fee: 360
-    profit: 410
+    profit: 420
     timer-minutes: 50
     icon: BASALT
     tier-gate: "nether/find_fortress"
@@ -1630,7 +1630,7 @@ quests:
     unlock:
       - "nether/root"
     fee: 410
-    profit: 480
+    profit: 560
     timer-minutes: 60
     icon: CRIMSON_STEM
     tier-gate: "nether/find_fortress"
@@ -1644,7 +1644,7 @@ quests:
     unlock:
       - "nether/root"
     fee: 410
-    profit: 480
+    profit: 560
     timer-minutes: 60
     icon: WARPED_STEM
     tier-gate: "nether/find_fortress"
@@ -1658,7 +1658,7 @@ quests:
     unlock:
       - "nether/root"
     fee: 470
-    profit: 500
+    profit: 600
     timer-minutes: 0
     icon: NETHER_WART
     tier-gate: "nether/find_fortress"
@@ -1672,7 +1672,7 @@ quests:
     unlock:
       - "nether/obtain_ancient_debris"
     fee: 700
-    profit: 760
+    profit: 1120
     timer-minutes: 0
     icon: ANCIENT_DEBRIS
     tier-gate: "nether/find_fortress"
@@ -1686,7 +1686,7 @@ quests:
     unlock:
       - "nether/obtain_crying_obsidian"
     fee: 590
-    profit: 600
+    profit: 800
     timer-minutes: 0
     icon: CRYING_OBSIDIAN
     tier-gate: "nether/find_fortress"
@@ -1700,7 +1700,7 @@ quests:
     unlock:
       - "nether/obtain_blaze_rod"
     fee: 530
-    profit: 560
+    profit: 720
     timer-minutes: 90
     icon: BLAZE_ROD
     tier-gate: "nether/find_fortress"
@@ -1714,7 +1714,7 @@ quests:
     unlock:
       - "nether/obtain_blaze_rod"
     fee: 530
-    profit: 600
+    profit: 800
     timer-minutes: 100
     icon: WITHER_SKELETON_SKULL
     tier-gate: "nether/find_fortress"
@@ -1728,7 +1728,7 @@ quests:
     unlock:
       - "nether/return_to_sender"
     fee: 530
-    profit: 560
+    profit: 720
     timer-minutes: 90
     icon: GHAST_TEAR
     tier-gate: "nether/find_fortress"
@@ -1742,7 +1742,7 @@ quests:
     unlock:
       - "nether/find_bastion"
     fee: 410
-    profit: 440
+    profit: 480
     timer-minutes: 0
     icon: GOLD_INGOT
     tier-gate: "nether/find_fortress"
@@ -1756,7 +1756,7 @@ quests:
     unlock:
       - "nether/find_bastion"
     fee: 640
-    profit: 650
+    profit: 900
     timer-minutes: 0
     icon: GOLD_INGOT
     tier-gate: "nether/find_fortress"
@@ -1770,7 +1770,7 @@ quests:
     unlock:
       - "nether/find_bastion"
     fee: 470
-    profit: 510
+    profit: 620
     timer-minutes: 75
     icon: PORKCHOP
     tier-gate: "nether/find_fortress"
@@ -1784,7 +1784,7 @@ quests:
     unlock:
       - "nether/obtain_blaze_rod"
     fee: 410
-    profit: 440
+    profit: 480
     timer-minutes: 0
     icon: MAGMA_CREAM
     tier-gate: "nether/find_fortress"
@@ -1798,7 +1798,7 @@ quests:
     unlock:
       - "nether/find_bastion"
     fee: 590
-    profit: 620
+    profit: 840
     timer-minutes: 0
     icon: GOLD_INGOT
     tier-gate: "nether/find_fortress"
@@ -1812,7 +1812,7 @@ quests:
     unlock:
       - "nether/obtain_blaze_rod"
     fee: 530
-    profit: 560
+    profit: 720
     timer-minutes: 0
     icon: NETHER_BRICK
     tier-gate: "nether/find_fortress"
@@ -1822,11 +1822,11 @@ quests:
     group-name: "Fortress & Bastion Hunts"
     name: "Zombified Piglin Purge"
     objectives:
-      - "KILL:ZOMBIFIED_PIGLIN:60@NETHER"
+      - "KILL:ZOMBIFIED_PIGLIN:40@NETHER"
     unlock:
       - "nether/root"
     fee: 360
-    profit: 440
+    profit: 480
     timer-minutes: 75
     icon: GOLD_NUGGET
     tier-gate: "nether/find_fortress"
@@ -1836,11 +1836,11 @@ quests:
     group-name: "Night Shift & Beasts"
     name: "Undead Annihilator"
     objectives:
-      - "KILL:ZOMBIE|HUSK|DROWNED|ZOMBIE_VILLAGER:80"
+      - "KILL:ZOMBIE|HUSK|DROWNED|ZOMBIE_VILLAGER:40"
     unlock:
       - "adventure/kill_a_mob"
     fee: 360
-    profit: 500
+    profit: 600
     timer-minutes: 100
     icon: ROTTEN_FLESH
     tier-gate: "nether/find_fortress"
@@ -1850,11 +1850,11 @@ quests:
     group-name: "Night Shift & Beasts"
     name: "Bone Collector"
     objectives:
-      - "KILL:SKELETON|STRAY|BOGGED:60"
+      - "KILL:SKELETON|STRAY|BOGGED:40"
     unlock:
       - "adventure/shoot_arrow"
     fee: 360
-    profit: 500
+    profit: 600
     timer-minutes: 100
     icon: BONE
     tier-gate: "nether/find_fortress"
@@ -1864,11 +1864,11 @@ quests:
     group-name: "Night Shift & Beasts"
     name: "Arachnophobia"
     objectives:
-      - "KILL:SPIDER|CAVE_SPIDER:70"
+      - "KILL:SPIDER|CAVE_SPIDER:40"
     unlock:
       - "adventure/kill_a_mob"
     fee: 360
-    profit: 460
+    profit: 520
     timer-minutes: 90
     icon: STRING
     tier-gate: "nether/find_fortress"
@@ -1882,7 +1882,7 @@ quests:
     unlock:
       - "adventure/shoot_arrow"
     fee: 410
-    profit: 530
+    profit: 660
     timer-minutes: 100
     icon: GUNPOWDER
     tier-gate: "nether/find_fortress"
@@ -1896,7 +1896,7 @@ quests:
     unlock:
       - "adventure/kill_a_mob"
     fee: 530
-    profit: 590
+    profit: 780
     timer-minutes: 0
     icon: PHANTOM_MEMBRANE
     tier-gate: "nether/find_fortress"
@@ -1910,7 +1910,7 @@ quests:
     unlock:
       - "story/shiny_gear"
     fee: 530
-    profit: 590
+    profit: 780
     timer-minutes: 0
     icon: GLASS_BOTTLE
     tier-gate: "nether/find_fortress"
@@ -1924,7 +1924,7 @@ quests:
     unlock:
       - "story/shiny_gear"
     fee: 530
-    profit: 620
+    profit: 840
     timer-minutes: 115
     icon: ENDER_PEARL
     tier-gate: "nether/find_fortress"
@@ -1938,7 +1938,7 @@ quests:
     unlock:
       - "story/follow_ender_eye"
     fee: 470
-    profit: 500
+    profit: 600
     timer-minutes: 0
     icon: STONE
     tier-gate: "nether/find_fortress"
@@ -1952,7 +1952,7 @@ quests:
     unlock:
       - "adventure/voluntary_exile"
     fee: 590
-    profit: 650
+    profit: 900
     timer-minutes: 115
     icon: EMERALD
     tier-gate: "nether/find_fortress"
@@ -1966,7 +1966,7 @@ quests:
     unlock:
       - "adventure/voluntary_exile"
     fee: 700
-    profit: 760
+    profit: 1120
     timer-minutes: 0
     icon: SADDLE
     tier-gate: "nether/find_fortress"
@@ -1980,7 +1980,7 @@ quests:
     unlock:
       - "story/shiny_gear"
     fee: 530
-    profit: 650
+    profit: 900
     timer-minutes: 125
     icon: PRISMARINE_SHARD
     tier-gate: "nether/find_fortress"
@@ -1994,7 +1994,7 @@ quests:
     unlock:
       - "story/mine_diamond"
     fee: 470
-    profit: 530
+    profit: 660
     timer-minutes: 70
     icon: PRISMARINE
     tier-gate: "nether/find_fortress"
@@ -2008,7 +2008,7 @@ quests:
     unlock:
       - "story/mine_diamond"
     fee: 590
-    profit: 620
+    profit: 840
     timer-minutes: 0
     icon: SEA_LANTERN
     tier-gate: "nether/find_fortress"
@@ -2018,11 +2018,11 @@ quests:
     group-name: "Ocean & Deep Sea"
     name: "Drowned Hunter"
     objectives:
-      - "KILL:DROWNED:50"
+      - "KILL:DROWNED:40"
     unlock:
       - "husbandry/fishy_business"
     fee: 410
-    profit: 500
+    profit: 600
     timer-minutes: 0
     icon: TRIDENT
     tier-gate: "nether/find_fortress"
@@ -2032,11 +2032,11 @@ quests:
     group-name: "Ocean & Deep Sea"
     name: "Deep Sea Haul"
     objectives:
-      - "FISH:ANY:200"
+      - "FISH:ANY:60"
     unlock:
       - "husbandry/fishy_business"
     fee: 410
-    profit: 610
+    profit: 820
     timer-minutes: 0
     icon: FISHING_ROD
     tier-gate: "nether/find_fortress"
@@ -2050,7 +2050,7 @@ quests:
     unlock:
       - "husbandry/fishy_business"
     fee: 470
-    profit: 550
+    profit: 700
     timer-minutes: 0
     icon: PUFFERFISH
     tier-gate: "nether/find_fortress"
@@ -2064,7 +2064,7 @@ quests:
     unlock:
       - "husbandry/tactical_fishing"
     fee: 640
-    profit: 780
+    profit: 1160
     timer-minutes: 0
     icon: TROPICAL_FISH
     tier-gate: "nether/find_fortress"
@@ -2078,7 +2078,7 @@ quests:
     unlock:
       - "husbandry/fishy_business"
     fee: 590
-    profit: 620
+    profit: 840
     timer-minutes: 0
     icon: ENCHANTED_BOOK
     tier-gate: "nether/find_fortress"
@@ -2092,7 +2092,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 410
-    profit: 460
+    profit: 520
     timer-minutes: 0
     icon: PRISMARINE
     tier-gate: "nether/find_fortress"
@@ -2106,7 +2106,7 @@ quests:
     unlock:
       - "husbandry/fishy_business"
     fee: 530
-    profit: 620
+    profit: 840
     timer-minutes: 0
     icon: OAK_BOAT
     tier-gate: "nether/find_fortress"
@@ -2116,11 +2116,11 @@ quests:
     group-name: "Master Farmers"
     name: "Wheat Baron"
     objectives:
-      - "HARVEST:WHEAT:128"
+      - "HARVEST:WHEAT:96"
     unlock:
       - "husbandry/plant_seed"
     fee: 360
-    profit: 460
+    profit: 520
     timer-minutes: 70
     icon: WHEAT
     tier-gate: "nether/find_fortress"
@@ -2130,11 +2130,11 @@ quests:
     group-name: "Master Farmers"
     name: "Carrot Tycoon"
     objectives:
-      - "HARVEST:CARROT:128"
+      - "HARVEST:CARROT:96"
     unlock:
       - "husbandry/plant_seed"
     fee: 360
-    profit: 460
+    profit: 520
     timer-minutes: 70
     icon: CARROT
     tier-gate: "nether/find_fortress"
@@ -2144,11 +2144,11 @@ quests:
     group-name: "Master Farmers"
     name: "Potato Mogul"
     objectives:
-      - "HARVEST:POTATO:128"
+      - "HARVEST:POTATO:96"
     unlock:
       - "husbandry/plant_seed"
     fee: 360
-    profit: 460
+    profit: 520
     timer-minutes: 70
     icon: POTATO
     tier-gate: "nether/find_fortress"
@@ -2163,7 +2163,7 @@ quests:
     unlock:
       - "husbandry/plant_seed"
     fee: 410
-    profit: 500
+    profit: 600
     timer-minutes: 0
     icon: MELON_SLICE
     tier-gate: "nether/find_fortress"
@@ -2177,7 +2177,7 @@ quests:
     unlock:
       - "husbandry/plant_seed"
     fee: 410
-    profit: 460
+    profit: 520
     timer-minutes: 0
     icon: BEETROOT
     tier-gate: "nether/find_fortress"
@@ -2191,7 +2191,7 @@ quests:
     unlock:
       - "husbandry/plant_seed"
     fee: 410
-    profit: 500
+    profit: 600
     timer-minutes: 0
     icon: SWEET_BERRIES
     tier-gate: "nether/find_fortress"
@@ -2205,7 +2205,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 530
-    profit: 560
+    profit: 720
     timer-minutes: 0
     icon: GLOW_BERRIES
     tier-gate: "nether/find_fortress"
@@ -2219,7 +2219,7 @@ quests:
     unlock:
       - "husbandry/plant_seed"
     fee: 470
-    profit: 530
+    profit: 660
     timer-minutes: 0
     icon: COCOA_BEANS
     tier-gate: "nether/find_fortress"
@@ -2233,7 +2233,7 @@ quests:
     unlock:
       - "husbandry/plant_seed"
     fee: 360
-    profit: 430
+    profit: 460
     timer-minutes: 0
     icon: SUGAR_CANE
     tier-gate: "nether/find_fortress"
@@ -2243,11 +2243,11 @@ quests:
     group-name: "Master Farmers"
     name: "Stable Master"
     objectives:
-      - "BREED:ANY:60"
+      - "BREED:ANY:30"
     unlock:
       - "husbandry/breed_an_animal"
     fee: 410
-    profit: 610
+    profit: 820
     timer-minutes: 0
     icon: HAY_BLOCK
     tier-gate: "nether/find_fortress"
@@ -2257,11 +2257,11 @@ quests:
     group-name: "Forge & Kitchen Elite"
     name: "Iron Foundry"
     objectives:
-      - "SMELT:IRON_INGOT:128"
+      - "SMELT:IRON_INGOT:96"
     unlock:
       - "story/iron_tools"
     fee: 410
-    profit: 550
+    profit: 700
     timer-minutes: 90
     icon: IRON_INGOT
     tier-gate: "nether/find_fortress"
@@ -2275,7 +2275,7 @@ quests:
     unlock:
       - "story/mine_diamond"
     fee: 530
-    profit: 590
+    profit: 780
     timer-minutes: 0
     icon: GOLD_INGOT
     tier-gate: "nether/find_fortress"
@@ -2285,11 +2285,11 @@ quests:
     group-name: "Forge & Kitchen Elite"
     name: "Copper Furnaces"
     objectives:
-      - "SMELT:COPPER_INGOT:128"
+      - "SMELT:COPPER_INGOT:96"
     unlock:
       - "story/iron_tools"
     fee: 360
-    profit: 440
+    profit: 480
     timer-minutes: 60
     icon: COPPER_INGOT
     tier-gate: "nether/find_fortress"
@@ -2303,7 +2303,7 @@ quests:
     unlock:
       - "nether/obtain_ancient_debris"
     fee: 700
-    profit: 720
+    profit: 1040
     timer-minutes: 0
     icon: NETHERITE_SCRAP
     tier-gate: "nether/find_fortress"
@@ -2313,11 +2313,11 @@ quests:
     group-name: "Forge & Kitchen Elite"
     name: "Glasswork Empire"
     objectives:
-      - "SMELT:GLASS:128"
+      - "SMELT:GLASS:96"
     unlock:
       - "story/smelt_iron"
     fee: 360
-    profit: 410
+    profit: 420
     timer-minutes: 50
     icon: GLASS
     tier-gate: "nether/find_fortress"
@@ -2331,7 +2331,7 @@ quests:
     unlock:
       - "husbandry/breed_an_animal"
     fee: 410
-    profit: 430
+    profit: 460
     timer-minutes: 0
     icon: COOKED_BEEF
     tier-gate: "nether/find_fortress"
@@ -2345,7 +2345,7 @@ quests:
     unlock:
       - "husbandry/breed_an_animal"
     fee: 410
-    profit: 440
+    profit: 480
     timer-minutes: 0
     icon: COOKED_PORKCHOP
     tier-gate: "nether/find_fortress"
@@ -2355,7 +2355,7 @@ quests:
     group-name: "Forge & Kitchen Elite"
     name: "Charcoal Baron"
     objectives:
-      - "SMELT:CHARCOAL:128"
+      - "SMELT:CHARCOAL:96"
     unlock:
       - "story/upgrade_tools"
     fee: 300
@@ -2373,7 +2373,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 410
-    profit: 530
+    profit: 660
     timer-minutes: 80
     icon: TERRACOTTA
     tier-gate: "nether/find_fortress"
@@ -2383,13 +2383,13 @@ quests:
     group-name: "Forge & Kitchen Elite"
     name: "Smelter's Gauntlet"
     objectives:
-      - "SMELT:IRON_INGOT:128"
+      - "SMELT:IRON_INGOT:96"
       - "SMELT:GOLD_INGOT:64"
-      - "SMELT:COPPER_INGOT:128"
+      - "SMELT:COPPER_INGOT:96"
     unlock:
       - "story/mine_diamond"
     fee: 530
-    profit: 590
+    profit: 780
     timer-minutes: 0
     icon: IRON_INGOT
     tier-gate: "nether/find_fortress"
@@ -2399,11 +2399,11 @@ quests:
     group-name: "Explorer's Trail"
     name: "Cross-Country Hike"
     objectives:
-      - "TRAVEL:FOOT:3000"
+      - "TRAVEL:FOOT:2000"
     unlock:
       - "story/iron_tools"
     fee: 410
-    profit: 640
+    profit: 880
     timer-minutes: 120
     icon: COMPASS
     tier-gate: "nether/find_fortress"
@@ -2413,11 +2413,11 @@ quests:
     group-name: "Explorer's Trail"
     name: "Biome Collector"
     objectives:
-      - "BIOME:ANY:18"
+      - "BIOME:ANY:10"
     unlock:
       - "adventure/sleep_in_bed"
     fee: 530
-    profit: 730
+    profit: 1060
     timer-minutes: 0
     icon: MAP
     tier-gate: "nether/find_fortress"
@@ -2431,7 +2431,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 470
-    profit: 590
+    profit: 780
     timer-minutes: 90
     icon: STONE
     tier-gate: "nether/find_fortress"
@@ -2446,7 +2446,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 410
-    profit: 500
+    profit: 600
     timer-minutes: 70
     icon: LILY_PAD
     tier-gate: "nether/find_fortress"
@@ -2460,7 +2460,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 640
-    profit: 650
+    profit: 900
     timer-minutes: 0
     icon: RED_MUSHROOM
     tier-gate: "nether/find_fortress"
@@ -2474,7 +2474,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 530
-    profit: 620
+    profit: 840
     timer-minutes: 0
     icon: CHERRY_SAPLING
     tier-gate: "nether/find_fortress"
@@ -2488,7 +2488,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 410
-    profit: 500
+    profit: 600
     timer-minutes: 70
     icon: ACACIA_SAPLING
     tier-gate: "nether/find_fortress"
@@ -2502,7 +2502,7 @@ quests:
     unlock:
       - "nether/ride_strider"
     fee: 530
-    profit: 620
+    profit: 840
     timer-minutes: 0
     icon: NETHERRACK
     tier-gate: "nether/find_fortress"
@@ -2516,7 +2516,7 @@ quests:
     unlock:
       - "story/shiny_gear"
     fee: 410
-    profit: 590
+    profit: 780
     timer-minutes: 100
     icon: COMPASS
     tier-gate: "nether/find_fortress"
@@ -2530,7 +2530,7 @@ quests:
     unlock:
       - "story/shiny_gear"
     fee: 590
-    profit: 690
+    profit: 980
     timer-minutes: 0
     icon: MOSS_BLOCK
     tier-gate: "nether/find_fortress"
@@ -2544,7 +2544,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 530
-    profit: 600
+    profit: 800
     timer-minutes: 80
     icon: SANDSTONE
     tier-gate: "nether/find_fortress"
@@ -2558,7 +2558,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 530
-    profit: 600
+    profit: 800
     timer-minutes: 80
     icon: TRIPWIRE_HOOK
     tier-gate: "nether/find_fortress"
@@ -2572,7 +2572,7 @@ quests:
     unlock:
       - "story/follow_ender_eye"
     fee: 590
-    profit: 650
+    profit: 900
     timer-minutes: 0
     icon: ENDER_EYE
     tier-gate: "nether/find_fortress"
@@ -2586,7 +2586,7 @@ quests:
     unlock:
       - "adventure/voluntary_exile"
     fee: 530
-    profit: 560
+    profit: 720
     timer-minutes: 0
     icon: EMERALD
     tier-gate: "nether/find_fortress"
@@ -2596,11 +2596,11 @@ quests:
     group-name: "Structure Raids"
     name: "Dungeon Crawl XL"
     objectives:
-      - "LOOT:chests/simple_dungeon:10"
+      - "LOOT:chests/simple_dungeon:8"
     unlock:
       - "story/shiny_gear"
     fee: 470
-    profit: 620
+    profit: 840
     timer-minutes: 0
     icon: BONE
     tier-gate: "nether/find_fortress"
@@ -2610,11 +2610,11 @@ quests:
     group-name: "Structure Raids"
     name: "Mineshaft Marathon"
     objectives:
-      - "LOOT:chests/abandoned_mineshaft:12"
+      - "LOOT:chests/abandoned_mineshaft:8"
     unlock:
       - "story/shiny_gear"
     fee: 470
-    profit: 650
+    profit: 900
     timer-minutes: 110
     icon: RAIL
     tier-gate: "nether/find_fortress"
@@ -2628,7 +2628,7 @@ quests:
     unlock:
       - "adventure/voluntary_exile"
     fee: 700
-    profit: 810
+    profit: 1220
     timer-minutes: 0
     icon: TOTEM_OF_UNDYING
     tier-gate: "nether/find_fortress"
@@ -2642,7 +2642,7 @@ quests:
     unlock:
       - "story/form_obsidian"
     fee: 530
-    profit: 650
+    profit: 900
     timer-minutes: 0
     icon: OBSIDIAN
     tier-gate: "nether/find_fortress"
@@ -2652,11 +2652,11 @@ quests:
     group-name: "Structure Raids"
     name: "Village Hero's Haul"
     objectives:
-      - "LOOT:chests/village/*:12"
+      - "LOOT:chests/village/*:8"
     unlock:
       - "adventure/trade"
     fee: 470
-    profit: 590
+    profit: 780
     timer-minutes: 0
     icon: BREAD
     tier-gate: "nether/find_fortress"
@@ -2670,7 +2670,7 @@ quests:
     unlock:
       - "husbandry/fishy_business"
     fee: 640
-    profit: 740
+    profit: 1080
     timer-minutes: 0
     icon: HEART_OF_THE_SEA
     tier-gate: "nether/find_fortress"
@@ -2684,7 +2684,7 @@ quests:
     unlock:
       - "story/shiny_gear"
     fee: 700
-    profit: 780
+    profit: 1160
     timer-minutes: 0
     icon: SPONGE
     tier-gate: "nether/find_fortress"
@@ -2698,7 +2698,7 @@ quests:
     unlock:
       - "adventure/kill_a_mob"
     fee: 640
-    profit: 740
+    profit: 1080
     timer-minutes: 0
     icon: TOTEM_OF_UNDYING
     tier-gate: "nether/find_fortress"
@@ -2708,11 +2708,11 @@ quests:
     group-name: "Boss & Elite Hunts"
     name: "Skull Hunter"
     objectives:
-      - "KILL:WITHER_SKELETON:60@NETHER"
+      - "KILL:WITHER_SKELETON:40@NETHER"
     unlock:
       - "nether/obtain_blaze_rod"
     fee: 590
-    profit: 800
+    profit: 1200
     timer-minutes: 175
     icon: WITHER_SKELETON_SKULL
     tier-gate: "nether/find_fortress"
@@ -2722,11 +2722,11 @@ quests:
     group-name: "Boss & Elite Hunts"
     name: "Blaze Rod Baron"
     objectives:
-      - "KILL:BLAZE:60@NETHER"
+      - "KILL:BLAZE:40@NETHER"
     unlock:
       - "nether/obtain_blaze_rod"
     fee: 530
-    profit: 710
+    profit: 1020
     timer-minutes: 150
     icon: BLAZE_ROD
     tier-gate: "nether/find_fortress"
@@ -2740,7 +2740,7 @@ quests:
     unlock:
       - "nether/return_to_sender"
     fee: 590
-    profit: 710
+    profit: 1020
     timer-minutes: 0
     icon: GHAST_TEAR
     tier-gate: "nether/find_fortress"
@@ -2754,7 +2754,7 @@ quests:
     unlock:
       - "adventure/voluntary_exile"
     fee: 700
-    profit: 780
+    profit: 1160
     timer-minutes: 0
     icon: TOTEM_OF_UNDYING
     tier-gate: "nether/find_fortress"
@@ -2768,7 +2768,7 @@ quests:
     unlock:
       - "adventure/voluntary_exile"
     fee: 530
-    profit: 620
+    profit: 840
     timer-minutes: 115
     icon: ROTTEN_FLESH
     tier-gate: "nether/find_fortress"
@@ -2782,7 +2782,7 @@ quests:
     unlock:
       - "adventure/voluntary_exile"
     fee: 470
-    profit: 590
+    profit: 780
     timer-minutes: 115
     icon: EMERALD
     tier-gate: "nether/find_fortress"
@@ -2798,7 +2798,7 @@ quests:
     unlock:
       - "nether/obtain_ancient_debris"
     fee: 700
-    profit: 870
+    profit: 1340
     timer-minutes: 0
     icon: ANCIENT_DEBRIS
     tier-gate: "nether/find_fortress"
@@ -2815,7 +2815,7 @@ quests:
     unlock:
       - "story/shiny_gear"
     fee: 700
-    profit: 950
+    profit: 1500
     timer-minutes: 0
     icon: DIAMOND
     tier-gate: "nether/find_fortress"
@@ -2829,7 +2829,7 @@ quests:
     unlock:
       - "end/enter_end_gateway"
     fee: 2100
-    profit: 2800
+    profit: 3747
     timer-minutes: 140
     icon: ENDER_PEARL
     tier-gate: "end/find_end_city"
@@ -2839,11 +2839,11 @@ quests:
     group-name: "End Expeditions"
     name: "End Stone Excavator"
     objectives:
-      - "MINE:END_STONE:256@END"
+      - "MINE:END_STONE:128@END"
     unlock:
       - "end/enter_end_gateway"
     fee: 1200
-    profit: 2000
+    profit: 2200
     timer-minutes: 0
     icon: END_STONE
     tier-gate: "end/find_end_city"
@@ -2857,7 +2857,7 @@ quests:
     unlock:
       - "end/find_end_city"
     fee: 1650
-    profit: 2500
+    profit: 3167
     timer-minutes: 100
     icon: PURPUR_BLOCK
     tier-gate: "end/find_end_city"
@@ -2871,7 +2871,7 @@ quests:
     unlock:
       - "end/enter_end_gateway"
     fee: 1450
-    profit: 2300
+    profit: 2780
     timer-minutes: 90
     icon: CHORUS_PLANT
     tier-gate: "end/find_end_city"
@@ -2885,7 +2885,7 @@ quests:
     unlock:
       - "end/find_end_city"
     fee: 2350
-    profit: 2950
+    profit: 4037
     timer-minutes: 150
     icon: SHULKER_SHELL
     tier-gate: "end/find_end_city"
@@ -2899,7 +2899,7 @@ quests:
     unlock:
       - "end/find_end_city"
     fee: 2350
-    profit: 2950
+    profit: 4037
     timer-minutes: 0
     icon: SHULKER_SHELL
     tier-gate: "end/find_end_city"
@@ -2913,7 +2913,7 @@ quests:
     unlock:
       - "end/find_end_city"
     fee: 2800
-    profit: 3250
+    profit: 4617
     timer-minutes: 0
     icon: DRAGON_HEAD
     tier-gate: "end/find_end_city"
@@ -2927,7 +2927,7 @@ quests:
     unlock:
       - "end/elytra"
     fee: 2100
-    profit: 2700
+    profit: 3553
     timer-minutes: 100
     icon: ELYTRA
     tier-gate: "end/find_end_city"
@@ -2941,7 +2941,7 @@ quests:
     unlock:
       - "end/enter_end_gateway"
     fee: 1900
-    profit: 2600
+    profit: 3360
     timer-minutes: 100
     icon: END_STONE
     tier-gate: "end/find_end_city"
@@ -2957,7 +2957,7 @@ quests:
     unlock:
       - "end/find_end_city"
     fee: 2100
-    profit: 3100
+    profit: 4327
     timer-minutes: 200
     icon: ENDER_PEARL
     tier-gate: "end/find_end_city"
@@ -2971,7 +2971,7 @@ quests:
     unlock:
       - "nether/obtain_ancient_debris"
     fee: 2800
-    profit: 3450
+    profit: 5003
     timer-minutes: 0
     icon: ANCIENT_DEBRIS
     tier-gate: "end/find_end_city"
@@ -2985,7 +2985,7 @@ quests:
     unlock:
       - "nether/obtain_ancient_debris"
     fee: 2800
-    profit: 3600
+    profit: 5293
     timer-minutes: 0
     icon: NETHERITE_SCRAP
     tier-gate: "end/find_end_city"
@@ -2995,11 +2995,11 @@ quests:
     group-name: "Netherite & Nether Mastery"
     name: "Quartz Empire"
     objectives:
-      - "MINE:NETHER_QUARTZ_ORE:128@NETHER"
+      - "MINE:NETHER_QUARTZ_ORE:96@NETHER"
     unlock:
       - "nether/find_fortress"
     fee: 1450
-    profit: 2450
+    profit: 3070
     timer-minutes: 110
     icon: QUARTZ
     tier-gate: "end/find_end_city"
@@ -3013,7 +3013,7 @@ quests:
     unlock:
       - "nether/distract_piglin"
     fee: 1900
-    profit: 2600
+    profit: 3360
     timer-minutes: 100
     icon: GOLD_INGOT
     tier-gate: "end/find_end_city"
@@ -3027,7 +3027,7 @@ quests:
     unlock:
       - "nether/find_bastion"
     fee: 2100
-    profit: 2700
+    profit: 3553
     timer-minutes: 100
     icon: GILDED_BLACKSTONE
     tier-gate: "end/find_end_city"
@@ -3041,7 +3041,7 @@ quests:
     unlock:
       - "nether/find_bastion"
     fee: 2100
-    profit: 2550
+    profit: 3263
     timer-minutes: 0
     icon: HOGLIN_SPAWN_EGG
     tier-gate: "end/find_end_city"
@@ -3051,11 +3051,11 @@ quests:
     group-name: "Netherite & Nether Mastery"
     name: "Skull Magnate"
     objectives:
-      - "KILL:WITHER_SKELETON:120@NETHER"
+      - "KILL:WITHER_SKELETON:80@NETHER"
     unlock:
       - "nether/get_wither_skull"
     fee: 2350
-    profit: 3350
+    profit: 4810
     timer-minutes: 0
     icon: WITHER_SKELETON_SKULL
     tier-gate: "end/find_end_city"
@@ -3065,11 +3065,11 @@ quests:
     group-name: "Netherite & Nether Mastery"
     name: "Blaze Baron"
     objectives:
-      - "KILL:BLAZE:120@NETHER"
+      - "KILL:BLAZE:80@NETHER"
     unlock:
       - "nether/obtain_blaze_rod"
     fee: 2100
-    profit: 3200
+    profit: 4520
     timer-minutes: 215
     icon: BLAZE_ROD
     tier-gate: "end/find_end_city"
@@ -3083,7 +3083,7 @@ quests:
     unlock:
       - "nether/loot_bastion"
     fee: 2550
-    profit: 3050
+    profit: 4230
     timer-minutes: 0
     icon: GOLD_INGOT
     tier-gate: "end/find_end_city"
@@ -3100,7 +3100,7 @@ quests:
       - "nether/find_fortress"
       - "nether/obtain_blaze_rod"
     fee: 2550
-    profit: 3700
+    profit: 5487
     timer-minutes: 265
     icon: WITHER_SKELETON_SKULL
     tier-gate: "end/find_end_city"
@@ -3114,7 +3114,7 @@ quests:
     unlock:
       - "nether/summon_wither"
     fee: 2800
-    profit: 3600
+    profit: 5293
     timer-minutes: 225
     icon: NETHER_STAR
     tier-gate: "end/find_end_city"
@@ -3128,7 +3128,7 @@ quests:
     unlock:
       - "nether/summon_wither"
     fee: 3000
-    profit: 4750
+    profit: 7517
     timer-minutes: 0
     icon: NETHER_STAR
     tier-gate: "end/find_end_city"
@@ -3142,7 +3142,7 @@ quests:
     unlock:
       - "end/respawn_dragon"
     fee: 3000
-    profit: 3950
+    profit: 5970
     timer-minutes: 0
     icon: DRAGON_HEAD
     tier-gate: "end/find_end_city"
@@ -3156,7 +3156,7 @@ quests:
     unlock:
       - "story/shiny_gear"
     fee: 2800
-    profit: 3850
+    profit: 5777
     timer-minutes: 275
     icon: SPONGE
     tier-gate: "end/find_end_city"
@@ -3170,7 +3170,7 @@ quests:
     unlock:
       - "adventure/avoid_vibration"
     fee: 3000
-    profit: 3950
+    profit: 5970
     timer-minutes: 0
     icon: SCULK_CATALYST
     tier-gate: "end/find_end_city"
@@ -3184,7 +3184,7 @@ quests:
     unlock:
       - "adventure/kill_a_mob"
     fee: 2800
-    profit: 4600
+    profit: 7227
     timer-minutes: 0
     icon: TOTEM_OF_UNDYING
     tier-gate: "end/find_end_city"
@@ -3194,11 +3194,11 @@ quests:
     group-name: "Boss Slayers"
     name: "Raid Breaker"
     objectives:
-      - "KILL:PILLAGER|VINDICATOR|EVOKER|RAVAGER|WITCH|VEX:100"
+      - "KILL:PILLAGER|VINDICATOR|EVOKER|RAVAGER|WITCH|VEX:80"
     unlock:
       - "adventure/voluntary_exile"
     fee: 2100
-    profit: 3100
+    profit: 4327
     timer-minutes: 200
     icon: EMERALD
     tier-gate: "end/find_end_city"
@@ -3212,7 +3212,7 @@ quests:
     unlock:
       - "adventure/voluntary_exile"
     fee: 2800
-    profit: 3750
+    profit: 5583
     timer-minutes: 250
     icon: SADDLE
     tier-gate: "end/find_end_city"
@@ -3226,7 +3226,7 @@ quests:
     unlock:
       - "adventure/totem_of_undying"
     fee: 2800
-    profit: 3700
+    profit: 5487
     timer-minutes: 0
     icon: TOTEM_OF_UNDYING
     tier-gate: "end/find_end_city"
@@ -3243,7 +3243,7 @@ quests:
       - "end/respawn_dragon"
       - "nether/summon_wither"
     fee: 3000
-    profit: 5000
+    profit: 8000
     timer-minutes: 0
     icon: SPONGE
     tier-gate: "end/find_end_city"
@@ -3257,7 +3257,7 @@ quests:
     unlock:
       - "adventure/avoid_vibration"
     fee: 1650
-    profit: 2500
+    profit: 3167
     timer-minutes: 100
     icon: SCULK
     tier-gate: "end/find_end_city"
@@ -3271,7 +3271,7 @@ quests:
     unlock:
       - "adventure/avoid_vibration"
     fee: 2800
-    profit: 3600
+    profit: 5293
     timer-minutes: 0
     icon: ECHO_SHARD
     tier-gate: "end/find_end_city"
@@ -3285,7 +3285,7 @@ quests:
     unlock:
       - "adventure/avoid_vibration"
     fee: 2550
-    profit: 3050
+    profit: 4230
     timer-minutes: 0
     icon: PACKED_ICE
     tier-gate: "end/find_end_city"
@@ -3295,11 +3295,11 @@ quests:
     group-name: "Deep Dark & Depths"
     name: "Deepslate Titan"
     objectives:
-      - "MINE:DEEPSLATE:256"
+      - "MINE:DEEPSLATE:128"
     unlock:
       - "story/mine_diamond"
     fee: 1200
-    profit: 2350
+    profit: 2877
     timer-minutes: 120
     icon: DEEPSLATE
     tier-gate: "end/find_end_city"
@@ -3313,7 +3313,7 @@ quests:
     unlock:
       - "story/shiny_gear"
     fee: 2550
-    profit: 3450
+    profit: 5003
     timer-minutes: 0
     icon: DIAMOND
     tier-gate: "end/find_end_city"
@@ -3327,7 +3327,7 @@ quests:
     unlock:
       - "story/mine_diamond"
     fee: 2550
-    profit: 3600
+    profit: 5293
     timer-minutes: 0
     icon: EMERALD
     tier-gate: "end/find_end_city"
@@ -3337,11 +3337,11 @@ quests:
     group-name: "Deep Dark & Depths"
     name: "Redstone Reactor"
     objectives:
-      - "MINE:REDSTONE_ORE|DEEPSLATE_REDSTONE_ORE:128"
+      - "MINE:REDSTONE_ORE|DEEPSLATE_REDSTONE_ORE:96"
     unlock:
       - "story/mine_diamond"
     fee: 1650
-    profit: 2550
+    profit: 3263
     timer-minutes: 110
     icon: REDSTONE
     tier-gate: "end/find_end_city"
@@ -3351,11 +3351,11 @@ quests:
     group-name: "Deep Dark & Depths"
     name: "Lapis Legion"
     objectives:
-      - "MINE:LAPIS_ORE|DEEPSLATE_LAPIS_ORE:128"
+      - "MINE:LAPIS_ORE|DEEPSLATE_LAPIS_ORE:96"
     unlock:
       - "story/enchant_item"
     fee: 1650
-    profit: 2550
+    profit: 3263
     timer-minutes: 110
     icon: LAPIS_LAZULI
     tier-gate: "end/find_end_city"
@@ -3369,7 +3369,7 @@ quests:
     unlock:
       - "story/mine_diamond"
     fee: 2100
-    profit: 3000
+    profit: 4133
     timer-minutes: 140
     icon: AMETHYST_SHARD
     tier-gate: "end/find_end_city"
@@ -3379,11 +3379,11 @@ quests:
     group-name: "Deep Dark & Depths"
     name: "Dark Descent"
     objectives:
-      - "MINE:#OVERWORLD_ORES:256"
+      - "MINE:#OVERWORLD_ORES:96"
     unlock:
       - "story/shiny_gear"
     fee: 1900
-    profit: 3100
+    profit: 4327
     timer-minutes: 0
     icon: DIAMOND_PICKAXE
     tier-gate: "end/find_end_city"
@@ -3397,7 +3397,7 @@ quests:
     unlock:
       - "adventure/voluntary_exile"
     fee: 2800
-    profit: 3600
+    profit: 5293
     timer-minutes: 0
     icon: TOTEM_OF_UNDYING
     tier-gate: "end/find_end_city"
@@ -3413,7 +3413,7 @@ quests:
     unlock:
       - "adventure/voluntary_exile"
     fee: 2550
-    profit: 3500
+    profit: 5100
     timer-minutes: 225
     icon: EMERALD
     tier-gate: "end/find_end_city"
@@ -3428,7 +3428,7 @@ quests:
     unlock:
       - "adventure/voluntary_exile"
     fee: 2100
-    profit: 3000
+    profit: 4133
     timer-minutes: 175
     icon: EMERALD
     tier-gate: "end/find_end_city"
@@ -3442,7 +3442,7 @@ quests:
     unlock:
       - "adventure/voluntary_exile"
     fee: 1900
-    profit: 3000
+    profit: 4133
     timer-minutes: 200
     icon: EMERALD
     tier-gate: "end/find_end_city"
@@ -3456,7 +3456,7 @@ quests:
     unlock:
       - "adventure/voluntary_exile"
     fee: 2100
-    profit: 3100
+    profit: 4327
     timer-minutes: 200
     icon: EMERALD
     tier-gate: "end/find_end_city"
@@ -3470,7 +3470,7 @@ quests:
     unlock:
       - "adventure/totem_of_undying"
     fee: 2800
-    profit: 3950
+    profit: 5970
     timer-minutes: 0
     icon: TOTEM_OF_UNDYING
     tier-gate: "end/find_end_city"
@@ -3484,7 +3484,7 @@ quests:
     unlock:
       - "story/shiny_gear"
     fee: 2100
-    profit: 3050
+    profit: 4230
     timer-minutes: 190
     icon: GLASS_BOTTLE
     tier-gate: "end/find_end_city"
@@ -3494,11 +3494,11 @@ quests:
     group-name: "Raids & Mansions"
     name: "Patrol Marathon"
     objectives:
-      - "KILL:PILLAGER:150"
+      - "KILL:PILLAGER:80"
     unlock:
       - "adventure/voluntary_exile"
     fee: 1900
-    profit: 3250
+    profit: 4617
     timer-minutes: 250
     icon: EMERALD
     tier-gate: "end/find_end_city"
@@ -3512,7 +3512,7 @@ quests:
     unlock:
       - "adventure/voluntary_exile"
     fee: 2100
-    profit: 3000
+    profit: 4133
     timer-minutes: 175
     icon: ROTTEN_FLESH
     tier-gate: "end/find_end_city"
@@ -3522,11 +3522,11 @@ quests:
     group-name: "Raids & Mansions"
     name: "Raid Master"
     objectives:
-      - "KILL:#RAIDERS:200"
+      - "KILL:#RAIDERS:80"
     unlock:
       - "adventure/hero_of_the_village"
     fee: 2550
-    profit: 4100
+    profit: 6260
     timer-minutes: 0
     icon: EMERALD
     tier-gate: "end/find_end_city"
@@ -3540,7 +3540,7 @@ quests:
     unlock:
       - "adventure/minecraft_trials_edition"
     fee: 2100
-    profit: 2850
+    profit: 3843
     timer-minutes: 120
     icon: TRIAL_KEY
     tier-gate: "end/find_end_city"
@@ -3554,7 +3554,7 @@ quests:
     unlock:
       - "adventure/under_lock_and_key"
     fee: 2350
-    profit: 3100
+    profit: 4327
     timer-minutes: 140
     icon: TRIAL_KEY
     tier-gate: "end/find_end_city"
@@ -3568,7 +3568,7 @@ quests:
     unlock:
       - "adventure/minecraft_trials_edition"
     fee: 2350
-    profit: 3100
+    profit: 4327
     timer-minutes: 175
     icon: WIND_CHARGE
     tier-gate: "end/find_end_city"
@@ -3582,7 +3582,7 @@ quests:
     unlock:
       - "adventure/minecraft_trials_edition"
     fee: 1900
-    profit: 2750
+    profit: 3650
     timer-minutes: 150
     icon: ARROW
     tier-gate: "end/find_end_city"
@@ -3596,7 +3596,7 @@ quests:
     unlock:
       - "adventure/minecraft_trials_edition"
     fee: 2100
-    profit: 3100
+    profit: 4327
     timer-minutes: 200
     icon: TRIAL_KEY
     tier-gate: "end/find_end_city"
@@ -3606,11 +3606,11 @@ quests:
     group-name: "Trial Chambers"
     name: "Chamber Looter"
     objectives:
-      - "LOOT:chests/trial_chambers/*:20"
+      - "LOOT:chests/trial_chambers/*:10"
     unlock:
       - "adventure/minecraft_trials_edition"
     fee: 2350
-    profit: 3350
+    profit: 4810
     timer-minutes: 0
     icon: TRIAL_KEY
     tier-gate: "end/find_end_city"
@@ -3620,11 +3620,11 @@ quests:
     group-name: "Trial Chambers"
     name: "Vault Veteran"
     objectives:
-      - "VAULT:ANY:8"
+      - "VAULT:ANY:5"
     unlock:
       - "adventure/revaulting"
     fee: 2550
-    profit: 3600
+    profit: 5293
     timer-minutes: 0
     icon: TRIAL_KEY
     tier-gate: "end/find_end_city"
@@ -3638,7 +3638,7 @@ quests:
     unlock:
       - "adventure/revaulting"
     fee: 3000
-    profit: 4200
+    profit: 6453
     timer-minutes: 0
     icon: OMINOUS_TRIAL_KEY
     tier-gate: "end/find_end_city"
@@ -3648,11 +3648,11 @@ quests:
     group-name: "Trial Chambers"
     name: "Trial Marathon"
     objectives:
-      - "KILL:#TRIAL_SPAWN_MOBS:200"
+      - "KILL:#TRIAL_SPAWN_MOBS:80"
     unlock:
       - "adventure/under_lock_and_key"
     fee: 2350
-    profit: 3450
+    profit: 5003
     timer-minutes: 0
     icon: TRIAL_KEY
     tier-gate: "end/find_end_city"
@@ -3662,11 +3662,11 @@ quests:
     group-name: "Trial Chambers"
     name: "Heavy Hitter"
     objectives:
-      - "KILL:#HOSTILES:150"
+      - "KILL:#HOSTILES:80"
     unlock:
       - "adventure/overoverkill"
     fee: 2550
-    profit: 3600
+    profit: 5293
     timer-minutes: 250
     icon: ROTTEN_FLESH
     tier-gate: "end/find_end_city"
@@ -3680,7 +3680,7 @@ quests:
     unlock:
       - "story/shiny_gear"
     fee: 2100
-    profit: 3250
+    profit: 4617
     timer-minutes: 225
     icon: PRISMARINE_SHARD
     tier-gate: "end/find_end_city"
@@ -3694,7 +3694,7 @@ quests:
     unlock:
       - "story/shiny_gear"
     fee: 2800
-    profit: 3600
+    profit: 5293
     timer-minutes: 0
     icon: SPONGE
     tier-gate: "end/find_end_city"
@@ -3708,7 +3708,7 @@ quests:
     unlock:
       - "story/shiny_gear"
     fee: 2550
-    profit: 3050
+    profit: 4230
     timer-minutes: 0
     icon: WET_SPONGE
     tier-gate: "end/find_end_city"
@@ -3718,11 +3718,11 @@ quests:
     group-name: "Monuments & Sea Legends"
     name: "Prismarine Palace"
     objectives:
-      - "MINE:PRISMARINE|PRISMARINE_BRICKS|DARK_PRISMARINE:192"
+      - "MINE:PRISMARINE|PRISMARINE_BRICKS|DARK_PRISMARINE:128"
     unlock:
       - "story/mine_diamond"
     fee: 1650
-    profit: 2750
+    profit: 3650
     timer-minutes: 140
     icon: PRISMARINE
     tier-gate: "end/find_end_city"
@@ -3736,7 +3736,7 @@ quests:
     unlock:
       - "story/mine_diamond"
     fee: 2100
-    profit: 3000
+    profit: 4133
     timer-minutes: 140
     icon: SEA_LANTERN
     tier-gate: "end/find_end_city"
@@ -3746,11 +3746,11 @@ quests:
     group-name: "Monuments & Sea Legends"
     name: "Trench Diver"
     objectives:
-      - "KILL:DROWNED:150"
+      - "KILL:DROWNED:80"
     unlock:
       - "husbandry/fishy_business"
     fee: 1650
-    profit: 3000
+    profit: 4133
     timer-minutes: 225
     icon: TRIDENT
     tier-gate: "end/find_end_city"
@@ -3764,7 +3764,7 @@ quests:
     unlock:
       - "husbandry/fishy_business"
     fee: 2350
-    profit: 3350
+    profit: 4810
     timer-minutes: 0
     icon: ENCHANTED_BOOK
     tier-gate: "end/find_end_city"
@@ -3778,7 +3778,7 @@ quests:
     unlock:
       - "husbandry/tactical_fishing"
     fee: 2550
-    profit: 3700
+    profit: 5487
     timer-minutes: 0
     icon: TROPICAL_FISH
     tier-gate: "end/find_end_city"
@@ -3792,7 +3792,7 @@ quests:
     unlock:
       - "husbandry/fishy_business"
     fee: 2100
-    profit: 3200
+    profit: 4520
     timer-minutes: 0
     icon: PUFFERFISH
     tier-gate: "end/find_end_city"
@@ -3807,7 +3807,7 @@ quests:
     unlock:
       - "story/iron_tools"
     fee: 1900
-    profit: 2950
+    profit: 4037
     timer-minutes: 0
     icon: PRISMARINE
     tier-gate: "end/find_end_city"
@@ -3824,7 +3824,7 @@ quests:
     unlock:
       - "story/shiny_gear"
     fee: 2800
-    profit: 4250
+    profit: 6550
     timer-minutes: 0
     icon: DIAMOND
     tier-gate: "end/find_end_city"
@@ -3841,7 +3841,7 @@ quests:
     unlock:
       - "story/shiny_gear"
     fee: 2350
-    profit: 3600
+    profit: 5293
     timer-minutes: 275
     icon: ENDER_PEARL
     tier-gate: "end/find_end_city"
@@ -3859,7 +3859,7 @@ quests:
     unlock:
       - "husbandry/plant_seed"
     fee: 1650
-    profit: 3150
+    profit: 4423
     timer-minutes: 200
     icon: WHEAT
     tier-gate: "end/find_end_city"
@@ -3876,7 +3876,7 @@ quests:
     unlock:
       - "husbandry/tactical_fishing"
     fee: 2350
-    profit: 3600
+    profit: 5293
     timer-minutes: 0
     icon: COD
     tier-gate: "end/find_end_city"
@@ -3893,7 +3893,7 @@ quests:
     unlock:
       - "story/mine_diamond"
     fee: 1900
-    profit: 3250
+    profit: 4617
     timer-minutes: 200
     icon: IRON_INGOT
     tier-gate: "end/find_end_city"
@@ -3903,12 +3903,12 @@ quests:
     group-name: "Grand Collections"
     name: "Explorer's Grand Slam"
     objectives:
-      - "BIOME:ANY:15"
+      - "BIOME:ANY:12"
       - "TRAVEL:FOOT:5000"
     unlock:
       - "adventure/sleep_in_bed"
     fee: 2100
-    profit: 3850
+    profit: 5777
     timer-minutes: 0
     icon: MAP
     tier-gate: "end/find_end_city"
@@ -3918,11 +3918,11 @@ quests:
     group-name: "Grand Collections"
     name: "Looter's Grand Slam"
     objectives:
-      - "LOOT:chests/*:20"
+      - "LOOT:chests/*:10"
     unlock:
       - "story/shiny_gear"
     fee: 2350
-    profit: 3750
+    profit: 5583
     timer-minutes: 0
     icon: CHEST
     tier-gate: "end/find_end_city"
@@ -3932,11 +3932,11 @@ quests:
     group-name: "Grand Collections"
     name: "Breeder's Grand Slam"
     objectives:
-      - "BREED:ANY:30"
+      - "BREED:ANY:20"
     unlock:
       - "husbandry/bred_all_animals"
     fee: 1900
-    profit: 3350
+    profit: 4810
     timer-minutes: 0
     icon: HAY_BLOCK
     tier-gate: "end/find_end_city"
@@ -3948,11 +3948,11 @@ quests:
     objectives:
       - "MINE:ANCIENT_DEBRIS:8@NETHER"
       - "KILL:SHULKER:8@END"
-      - "FISH:ANY:100@OVERWORLD"
+      - "FISH:ANY:80@OVERWORLD"
     unlock:
       - "end/find_end_city"
     fee: 2800
-    profit: 4100
+    profit: 6260
     timer-minutes: 0
     icon: ANCIENT_DEBRIS
     tier-gate: "end/find_end_city"
@@ -3962,11 +3962,11 @@ quests:
     group-name: "Grand Collections"
     name: "Master Chef"
     objectives:
-      - "SMELT:#COOKED_FOOD:250"
+      - "SMELT:#COOKED_FOOD:160"
     unlock:
       - "husbandry/balanced_diet"
     fee: 1650
-    profit: 3000
+    profit: 4133
     timer-minutes: 180
     icon: COOKED_BEEF
     tier-gate: "end/find_end_city"
@@ -3976,11 +3976,11 @@ quests:
     group-name: "Marathons"
     name: "Mountain Mover"
     objectives:
-      - "MINE:#STONE_TYPES:256"
+      - "MINE:#STONE_TYPES:128"
     unlock:
       - "story/mine_diamond"
     fee: 1000
-    profit: 2500
+    profit: 3167
     timer-minutes: 0
     icon: STONE_PICKAXE
     tier-gate: "end/find_end_city"
@@ -3990,11 +3990,11 @@ quests:
     group-name: "Marathons"
     name: "Ore Baron"
     objectives:
-      - "MINE:#OVERWORLD_ORES:256"
+      - "MINE:#OVERWORLD_ORES:96"
     unlock:
       - "story/shiny_gear"
     fee: 1900
-    profit: 3600
+    profit: 5293
     timer-minutes: 0
     icon: DIAMOND_PICKAXE
     tier-gate: "end/find_end_city"
@@ -4004,11 +4004,11 @@ quests:
     group-name: "Marathons"
     name: "Forest Eater"
     objectives:
-      - "MINE:#LOGS:256"
+      - "MINE:#LOGS:160"
     unlock:
       - "story/iron_tools"
     fee: 1200
-    profit: 2750
+    profit: 3650
     timer-minutes: 0
     icon: OAK_LOG
     tier-gate: "end/find_end_city"
@@ -4018,11 +4018,11 @@ quests:
     group-name: "Marathons"
     name: "Field Marshal"
     objectives:
-      - "HARVEST:ANY_CROP:500"
+      - "HARVEST:ANY_CROP:128"
     unlock:
       - "husbandry/plant_seed"
     fee: 1200
-    profit: 3000
+    profit: 4133
     timer-minutes: 0
     icon: GOLDEN_CARROT
     tier-gate: "end/find_end_city"
@@ -4032,11 +4032,11 @@ quests:
     group-name: "Marathons"
     name: "Great Wall Walk"
     objectives:
-      - "TRAVEL:FOOT:10000"
+      - "TRAVEL:FOOT:5000"
     unlock:
       - "story/iron_tools"
     fee: 1450
-    profit: 4150
+    profit: 6357
     timer-minutes: 0
     icon: COMPASS
     tier-gate: "end/find_end_city"
@@ -4046,11 +4046,11 @@ quests:
     group-name: "Marathons"
     name: "Slayer Ascendant"
     objectives:
-      - "KILL:#HOSTILES:250"
+      - "KILL:#HOSTILES:80"
     unlock:
       - "story/shiny_gear"
     fee: 1650
-    profit: 4150
+    profit: 6357
     timer-minutes: 0
     icon: ROTTEN_FLESH
     tier-gate: "end/find_end_city"
@@ -4060,11 +4060,11 @@ quests:
     group-name: "Marathons"
     name: "Angler Ascendant"
     objectives:
-      - "FISH:ANY:150"
+      - "FISH:ANY:80"
     unlock:
       - "husbandry/tactical_fishing"
     fee: 1450
-    profit: 3750
+    profit: 5583
     timer-minutes: 0
     icon: FISHING_ROD
     tier-gate: "end/find_end_city"
@@ -4074,11 +4074,11 @@ quests:
     group-name: "Marathons"
     name: "Furnace Emperor"
     objectives:
-      - "SMELT:ANY:500"
+      - "SMELT:ANY:160"
     unlock:
       - "story/mine_diamond"
     fee: 1450
-    profit: 3400
+    profit: 4907
     timer-minutes: 0
     icon: FURNACE
     tier-gate: "end/find_end_city"
@@ -4088,11 +4088,11 @@ quests:
     group-name: "Marathons"
     name: "Herd Master"
     objectives:
-      - "FEED:ANY:100"
+      - "FEED:ANY:40"
     unlock:
       - "husbandry/breed_an_animal"
     fee: 1200
-    profit: 2750
+    profit: 3650
     timer-minutes: 0
     icon: HAY_BLOCK
     tier-gate: "end/find_end_city"
@@ -4106,7 +4106,7 @@ quests:
     unlock:
       - "nether/fast_travel"
     fee: 1650
-    profit: 3100
+    profit: 4327
     timer-minutes: 0
     icon: COMPASS
     tier-gate: "end/find_end_city"
@@ -4116,13 +4116,13 @@ quests:
     group-name: "Legendary Gauntlets"
     name: "Three Realms Trial"
     objectives:
-      - "MINE:IRON_ORE|DEEPSLATE_IRON_ORE:128@OVERWORLD"
+      - "MINE:IRON_ORE|DEEPSLATE_IRON_ORE:96@OVERWORLD"
       - "KILL:BLAZE:30@NETHER"
       - "KILL:ENDERMAN:30@END"
     unlock:
       - "end/find_end_city"
     fee: 2550
-    profit: 4000
+    profit: 6067
     timer-minutes: 325
     icon: RAW_IRON
     tier-gate: "end/find_end_city"
@@ -4138,7 +4138,7 @@ quests:
     unlock:
       - "nether/obtain_ancient_debris"
     fee: 2800
-    profit: 4100
+    profit: 6260
     timer-minutes: 0
     icon: ANCIENT_DEBRIS
     tier-gate: "end/find_end_city"
@@ -4154,7 +4154,7 @@ quests:
     unlock:
       - "end/find_end_city"
     fee: 2800
-    profit: 4000
+    profit: 6067
     timer-minutes: 300
     icon: SHULKER_SHELL
     tier-gate: "end/find_end_city"
@@ -4169,7 +4169,7 @@ quests:
     unlock:
       - "adventure/avoid_vibration"
     fee: 3000
-    profit: 4350
+    profit: 6743
     timer-minutes: 0
     icon: SCULK_CATALYST
     tier-gate: "end/find_end_city"
@@ -4184,7 +4184,7 @@ quests:
     unlock:
       - "nether/summon_wither"
     fee: 3000
-    profit: 4250
+    profit: 6550
     timer-minutes: 325
     icon: NETHER_STAR
     tier-gate: "end/find_end_city"
@@ -4200,7 +4200,7 @@ quests:
     unlock:
       - "adventure/voluntary_exile"
     fee: 3000
-    profit: 4200
+    profit: 6453
     timer-minutes: 0
     icon: TOTEM_OF_UNDYING
     tier-gate: "end/find_end_city"
@@ -4216,7 +4216,7 @@ quests:
     unlock:
       - "story/shiny_gear"
     fee: 2800
-    profit: 4400
+    profit: 6840
     timer-minutes: 360
     icon: SPONGE
     tier-gate: "end/find_end_city"
@@ -4232,7 +4232,7 @@ quests:
     unlock:
       - "adventure/under_lock_and_key"
     fee: 2800
-    profit: 4100
+    profit: 6260
     timer-minutes: 325
     icon: WIND_CHARGE
     tier-gate: "end/find_end_city"
@@ -4242,13 +4242,13 @@ quests:
     group-name: "Legendary Gauntlets"
     name: "Legend of the Wanderer"
     objectives:
-      - "BIOME:ANY:20"
-      - "TRAVEL:FOOT:8000"
-      - "LOOT:chests/*:15"
+      - "BIOME:ANY:12"
+      - "TRAVEL:FOOT:5000"
+      - "LOOT:chests/*:10"
     unlock:
       - "adventure/sleep_in_bed"
     fee: 2800
-    profit: 4900
+    profit: 7807
     timer-minutes: 0
     icon: MAP
     tier-gate: "end/find_end_city"
@@ -4267,7 +4267,7 @@ quests:
       - "nether/summon_wither"
       - "adventure/avoid_vibration"
     fee: 3000
-    profit: 5000
+    profit: 8000
     timer-minutes: 0
     icon: DRAGON_HEAD
     tier-gate: "end/find_end_city"
