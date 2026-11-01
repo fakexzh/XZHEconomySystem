@@ -1105,7 +1105,14 @@ public final class QuestManager implements Listener {
         String id = material.name();
         boolean playerPlaced = playerPlacedBlocks.remove(blockKey(event.getBlock().getLocation()));
         if (playerPlaced) savePlacedBlockTracking();
-        if (!playerPlaced) incrementTarget(p, "break:" + id, 1);
+        if (!playerPlaced) {
+            incrementTarget(p, "break:" + id, 1);
+            // End City ship heads are wall-mounted and Bukkit reports DRAGON_WALL_HEAD.
+            // Count that naturally generated block for Dragon Head objectives too.
+            if (material == Material.DRAGON_WALL_HEAD) {
+                incrementTarget(p, "break:DRAGON_HEAD", 1);
+            }
+        }
         // Deepslate ore variants count toward the matching ore contracts too.
         if (!playerPlaced && id.startsWith("DEEPSLATE_") && id.endsWith("_ORE")) {
             incrementTarget(p, "break:" + id.substring("DEEPSLATE_".length()), 1);
