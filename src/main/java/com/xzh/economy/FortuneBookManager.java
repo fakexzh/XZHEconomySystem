@@ -63,7 +63,8 @@ public final class FortuneBookManager implements Listener {
     }
 
     public int getAppleWinChancePercent() {
-        double chance = getAppleWinChancePercent() / 100.0;
+        double chance = plugin.getConfig().getDouble("fortune-books.apple.win-chance", 0.5);
+        chance = Math.max(0.0, Math.min(1.0, chance));
         return (int) Math.round(chance * 100.0);
     }
 
