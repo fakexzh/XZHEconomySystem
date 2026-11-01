@@ -21,7 +21,7 @@ fortune-books:
   apple:
     price: 222
     reward: 1222
-    win-chance: 0.5
+    win-chance: 0.3
     cooldown-hours: 3
 
 # Global announcements: only noteworthy shop purchases; borrowing and full loan repayments.

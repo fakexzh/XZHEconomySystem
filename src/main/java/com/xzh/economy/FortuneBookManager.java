@@ -63,7 +63,7 @@ public final class FortuneBookManager implements Listener {
     }
 
     public int getAppleWinChancePercent() {
-        double chance = plugin.getConfig().getDouble("fortune-books.apple.win-chance", 0.5);
+        double chance = plugin.getConfig().getDouble("fortune-books.apple.win-chance", 0.3);
         chance = Math.max(0.0, Math.min(1.0, chance));
         return (int) Math.round(chance * 100.0);
     }
@@ -193,7 +193,7 @@ public final class FortuneBookManager implements Listener {
             return;
         }
 
-        double chance = Math.max(0.0, Math.min(1.0, plugin.getConfig().getDouble("fortune-books.apple.win-chance", 0.5)));
+        double chance = Math.max(0.0, Math.min(1.0, plugin.getConfig().getDouble("fortune-books.apple.win-chance", 0.3)));
         String outcome = ThreadLocalRandom.current().nextDouble() < chance ? "WIN" : "LOSE";
         String path = "pending." + id;
         data.set(path + ".outcome", outcome);

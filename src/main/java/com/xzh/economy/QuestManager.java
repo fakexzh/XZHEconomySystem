@@ -752,22 +752,10 @@ public final class QuestManager implements Listener {
 
     public void open(Player player) {
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Quests");
-        FortuneBookManager fortune = plugin.getFortuneBookManager();
-        int bookPrice = fortune.getApplePrice();
-        int bookReward = fortune.getAppleReward();
-        String cooldown = fortune.getAppleCooldownStatus(player.getUniqueId());
-        add(inv, 10, Material.WRITTEN_BOOK, ChatColor.LIGHT_PURPLE + "Fortune Book", "fortune-buy-apple", "book_of_apple",
-            List.of(ChatColor.YELLOW + "The Book of Apple",
-                    ChatColor.GRAY + "An enchanted apple will be placed in your inventory.",
-                    ChatColor.GRAY + "The book will guide you.",
-                    ChatColor.DARK_RED + "Every Fortune has a price. Every choice has a consequence.",
-                    ChatColor.WHITE + "Price: " + ChatColor.GOLD + bookPrice + " coins",
-                    ChatColor.WHITE + "Reward: " + ChatColor.GREEN + bookReward + " bank coins",
-                    ChatColor.WHITE + "Odds: " + ChatColor.YELLOW + fortune.getAppleOddsDescription(),
-                    ChatColor.WHITE + "Rebuy cooldown: " + ChatColor.AQUA + fortune.getAppleCooldownHours() + " hours",
-                    ChatColor.GRAY + "Inventory space required: 2 slots",
-                    ChatColor.GRAY + "Rebuy status: " + cooldown,
-                    ChatColor.YELLOW + "Click to purchase"));
+        add(inv, 10, Material.TRIAL_KEY, ChatColor.LIGHT_PURPLE + "Fortune Books", "section-fortune", "fortune-books",
+            List.of(ChatColor.GRAY + "Browse mysterious books of fate",
+                    ChatColor.GRAY + "The Book of Apple is currently available",
+                    ChatColor.YELLOW + "Click to browse"));
         add(inv, 13, Material.WRITABLE_BOOK, ChatColor.LIGHT_PURPLE + "Achievement Quest Packs", "section-packs", "packs",
             List.of(ChatColor.GRAY + "Hard multi-objective challenges",
                     ChatColor.GRAY + "Each locked pack explains its unlock requirement"));
@@ -775,6 +763,43 @@ public final class QuestManager implements Listener {
             List.of(ChatColor.GRAY + "Everyone contributes to shared progress",
                     ChatColor.GRAY + "Server reminders every 15 minutes"));
         add(inv, 22, Material.ARROW, ChatColor.WHITE + "Back to Shop", "back-shop", "");
+        player.openInventory(inv);
+    }
+
+    private void openFortuneBooks(Player player) {
+        FortuneBookManager fortune = plugin.getFortuneBookManager();
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Fortune Books");
+        int bookPrice = fortune.getApplePrice();
+        int bookReward = fortune.getAppleReward();
+        String cooldown = fortune.getAppleCooldownStatus(player.getUniqueId());
+        add(inv, 13, Material.WRITTEN_BOOK, ChatColor.LIGHT_PURPLE + "The Book of Apple", "fortune-select-apple", "book_of_apple",
+            List.of(ChatColor.GRAY + "A mysterious apple awaits its reader.",
+                    ChatColor.WHITE + "Price: " + ChatColor.GOLD + bookPrice + " coins",
+                    ChatColor.WHITE + "Reward: " + ChatColor.GREEN + bookReward + " bank coins",
+                    ChatColor.WHITE + "Actual odds: " + ChatColor.YELLOW + fortune.getAppleOddsDescription(),
+                    ChatColor.WHITE + "Rebuy cooldown: " + ChatColor.AQUA + fortune.getAppleCooldownHours() + " hours",
+                    ChatColor.GRAY + "Inventory space required: 2 slots",
+                    ChatColor.GRAY + "Rebuy status: " + cooldown,
+                    ChatColor.YELLOW + "Click to review purchase"));
+        add(inv, 22, Material.ARROW, ChatColor.WHITE + "Back", "back", "");
+        player.openInventory(inv);
+    }
+
+    private void confirmApplePurchase(Player player) {
+        FortuneBookManager fortune = plugin.getFortuneBookManager();
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Confirm Fortune Book Purchase");
+        add(inv, 13, Material.WRITTEN_BOOK, ChatColor.LIGHT_PURPLE + "The Book of Apple", "fortune-apple-info", "book_of_apple",
+            List.of(ChatColor.WHITE + "Price: " + ChatColor.GOLD + fortune.getApplePrice() + " coins",
+                    ChatColor.WHITE + "Reward: " + ChatColor.GREEN + fortune.getAppleReward() + " bank coins",
+                    ChatColor.WHITE + "Actual odds: " + ChatColor.YELLOW + fortune.getAppleOddsDescription(),
+                    ChatColor.WHITE + "Cooldown: " + ChatColor.AQUA + fortune.getAppleCooldownHours() + " hours",
+                    ChatColor.GRAY + "You need 2 empty inventory slots.",
+                    ChatColor.DARK_RED + "The losing outcome causes death.",
+                    ChatColor.YELLOW + "Accept only if you understand the risk."));
+        add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "Accept Purchase", "fortune-confirm-apple", "book_of_apple",
+            List.of(ChatColor.GRAY + "Purchase The Book of Apple"));
+        add(inv, 15, Material.RED_CONCRETE, ChatColor.RED + "Cancel", "fortune-cancel-apple", "book_of_apple",
+            List.of(ChatColor.GRAY + "Return to Fortune Books without paying"));
         player.openInventory(inv);
     }
 
@@ -812,6 +837,22 @@ public final class QuestManager implements Listener {
     }
 
     private void openPacks(Player player) {
+        UUID playerId = player.getUniqueId();
+        String activeId = data.getString(playerId + ".active", "");
+        if (!activeId.isBlank()) {
+            Inventory active = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "XZH Active Quest");
+            String activeName = data.getString(playerId + ".name", "Active quest");
+            int refund = Math.max(0, data.getInt(playerId + ".cost", 0)) / 2;
+            add(active, 11, Material.BARRIER, ChatColor.RED + "Cancel Active Quest", "cancel-active-pack", "",
+                List.of(ChatColor.WHITE + "Current quest: " + ChatColor.YELLOW + activeName,
+                        ChatColor.WHITE + "Refund: " + ChatColor.GREEN + refund + " coins (50% of purchase price)",
+                        ChatColor.GRAY + "Your current quest progress will be cleared.",
+                        ChatColor.YELLOW + "Click to cancel and browse achievement packs"));
+            add(active, 15, Material.ARROW, ChatColor.WHITE + "Go Back", "back", "",
+                List.of(ChatColor.GRAY + "Keep your active quest and return to the Quest menu"));
+            player.openInventory(active);
+            return;
+        }
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Pack Tiers");
         for (String tier : List.of("easy", "hard", "master")) {
             boolean unlocked = tierUnlocked(player, tier);
@@ -1814,8 +1855,11 @@ public final class QuestManager implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
         if (title == null || !(title.equals("XZH Quests") || title.equals("XZH Single Quests")
-                || title.startsWith("XZH Achievement Packs") || title.equals("XZH Pack Tiers") || title.startsWith("XZH Easy Packs") || title.startsWith("XZH Hard Packs") || title.startsWith("XZH Master Packs") || title.equals("Confirm quest pack")
-                || title.equals("XZH Community Chest"))) return;
+                || title.equals("XZH Fortune Books") || title.equals("Confirm Fortune Book Purchase")
+                || title.equals("XZH Active Quest") || title.startsWith("XZH Achievement Packs")
+                || title.equals("XZH Pack Tiers") || title.startsWith("XZH Easy Packs")
+                || title.startsWith("XZH Hard Packs") || title.startsWith("XZH Master Packs")
+                || title.equals("Confirm quest pack") || title.equals("XZH Community Chest"))) return;
         event.setCancelled(true);
         ItemStack item = event.getCurrentItem();
         if (item == null || !item.hasItemMeta()) return;
@@ -1827,8 +1871,12 @@ public final class QuestManager implements Listener {
             case "close" -> player.closeInventory();
             case "back-shop" -> plugin.getShopManager().openMain(player);
             case "section-single" -> openSingle(player);
-            case "fortune-buy-apple" -> plugin.getFortuneBookManager().purchaseApple(player);
+            case "section-fortune" -> openFortuneBooks(player);
+            case "fortune-select-apple" -> confirmApplePurchase(player);
+            case "fortune-confirm-apple" -> plugin.getFortuneBookManager().purchaseApple(player);
+            case "fortune-cancel-apple" -> openFortuneBooks(player);
             case "section-packs" -> openPacks(player);
+            case "cancel-active-pack" -> { cancelActiveQuest(player); openPacks(player); }
             case "section-global" -> openGlobal(player);
             case "single-buy" -> { try { buyRandom(player, Integer.parseInt(value)); } catch (NumberFormatException ignored) { } }
             case "single-secret-buy" -> buyRandom(player, 5);
