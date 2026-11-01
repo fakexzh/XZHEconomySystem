@@ -763,8 +763,8 @@ public final class QuestManager implements Listener {
                     ChatColor.DARK_RED + "Every Fortune has a price. Every choice has a consequence.",
                     ChatColor.WHITE + "Price: " + ChatColor.GOLD + bookPrice + " coins",
                     ChatColor.WHITE + "Reward: " + ChatColor.GREEN + bookReward + " bank coins",
-                    ChatColor.WHITE + "Odds: " + ChatColor.YELLOW + "50% reward / 50% death",
-                    ChatColor.WHITE + "Rebuy cooldown: " + ChatColor.AQUA + "3 hours",
+                    ChatColor.WHITE + "Odds: " + ChatColor.YELLOW + fortune.getAppleOddsDescription(),
+                    ChatColor.WHITE + "Rebuy cooldown: " + ChatColor.AQUA + fortune.getAppleCooldownHours() + " hours",
                     ChatColor.GRAY + "Inventory space required: 2 slots",
                     ChatColor.GRAY + "Rebuy status: " + cooldown,
                     ChatColor.YELLOW + "Click to purchase"));

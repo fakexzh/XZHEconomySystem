@@ -28,7 +28,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -61,6 +60,23 @@ public final class FortuneBookManager implements Listener {
 
     public int getAppleReward() {
         return Math.max(0, plugin.getConfig().getInt("fortune-books.apple.reward", 1222));
+    }
+
+    public int getAppleWinChancePercent() {
+        double chance = getAppleWinChancePercent() / 100.0;
+        return (int) Math.round(chance * 100.0);
+    }
+
+    public int getAppleLoseChancePercent() {
+        return 100 - getAppleWinChancePercent();
+    }
+
+    public String getAppleOddsDescription() {
+        return getAppleWinChancePercent() + "% reward / " + getAppleLoseChancePercent() + "% death";
+    }
+
+    public int getAppleCooldownHours() {
+        return Math.max(1, plugin.getConfig().getInt("fortune-books.apple.cooldown-hours", 3));
     }
 
     public String getAppleCooldownStatus(UUID playerId) {
@@ -107,7 +123,7 @@ public final class FortuneBookManager implements Listener {
             return;
         }
 
-        data.set(cooldownPath, now + Math.max(1L, plugin.getConfig().getLong("fortune-books.apple.cooldown-hours", 3L)) * 60L * 60L * 1000L);
+        data.set(cooldownPath, now + getAppleCooldownHours() * 60L * 60L * 1000L);
         save();
         player.getInventory().addItem(book, apple);
         plugin.tellFortune(player, "Purchased The Book of Apple for " + price + " coins. The Mysterious Apple is now in your inventory.");
@@ -123,7 +139,9 @@ public final class FortuneBookManager implements Listener {
         meta.setAuthor("Unknown");
         meta.setPages(List.of(
                 "A gift has been placed in your hands.\n\nA Mysterious Apple.\n\nEat it, and let fate decide your future.",
-                "A 50% chance to receive " + getAppleReward() + " coins in your bank.\n\nA 50% chance to meet your end.\n\nNo refunds. No second chances.\n\n— Unknown"
+                "A " + getAppleWinChancePercent() + "% chance to receive " + getAppleReward()
+                        + " coins in your bank.\n\nA " + getAppleLoseChancePercent()
+                        + "% chance to meet your end.\n\nNo refunds. No second chances.\n\n— Unknown"
         ));
         meta.getPersistentDataContainer().set(bookKey, PersistentDataType.STRING, APPLE_ID);
         item.setItemMeta(meta);
@@ -250,6 +268,11 @@ public final class FortuneBookManager implements Listener {
     private void beginLoss(Player player) {
         UUID id = player.getUniqueId();
         String path = "pending." + id;
+        if (player.isDead()) {
+            data.set(path, null);
+            save();
+            return;
+        }
         if (activeTasks.containsKey(id)) return;
         data.set(path + ".death-started", true);
         data.set(path + ".death-triggered", false);
@@ -303,7 +326,14 @@ public final class FortuneBookManager implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         UUID id = event.getEntity().getUniqueId();
         String path = "pending." + id;
-        if (data.getBoolean(path + ".death-triggered", false)) {
+        if (data.getString(path + ".outcome", "").equals("LOSE")) {
+            data.set(path, null);
+            save();
+            BukkitTask task = activeTasks.remove(id);
+            if (task != null) task.cancel();
+            Bukkit.broadcastMessage("§8[§5fortune§8] §e" + event.getEntity().getName()
+                    + " §fwas claimed by fate before the countdown could finish.");
+        } else if (data.getBoolean(path + ".death-triggered", false)) {
             data.set(path, null);
             save();
         }
