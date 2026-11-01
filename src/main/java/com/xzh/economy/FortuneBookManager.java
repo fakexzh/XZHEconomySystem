@@ -186,7 +186,7 @@ public final class FortuneBookManager implements Listener {
     }
 
     // Handle the special apple before vanilla hunger checks, so it remains usable at full hunger.
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler
     public void onMysteriousAppleRightClick(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) return;
         Action action = event.getAction();
