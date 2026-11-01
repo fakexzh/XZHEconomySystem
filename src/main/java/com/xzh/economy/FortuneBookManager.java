@@ -12,6 +12,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.block.Action;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -63,7 +66,7 @@ public final class FortuneBookManager implements Listener {
     }
 
     public int getAppleWinChancePercent() {
-        double chance = plugin.getConfig().getDouble("fortune-books.apple.win-chance", 0.3);
+        double chance = plugin.getConfig().getDouble("fortune-books.apple.win-chance", 0.2);
         chance = Math.max(0.0, Math.min(1.0, chance));
         return (int) Math.round(chance * 100.0);
     }
@@ -182,18 +185,48 @@ public final class FortuneBookManager implements Listener {
         return data.contains("pending." + id + ".outcome");
     }
 
-    @EventHandler
-    public void onAppleConsumed(PlayerItemConsumeEvent event) {
-        if (!isMysteriousApple(event.getItem())) return;
+    // Handle the special apple before vanilla hunger checks, so it remains usable at full hunger.
+    @EventHandler(ignoreCancelled = true)
+    public void onMysteriousAppleRightClick(PlayerInteractEvent event) {
+        if (event.getHand() != EquipmentSlot.HAND) return;
+        Action action = event.getAction();
+        if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) return;
+        ItemStack held = event.getItem();
+        if (!isMysteriousApple(held)) return;
+
+        event.setCancelled(true);
         Player player = event.getPlayer();
-        UUID id = player.getUniqueId();
-        if (hasPendingChallenge(id)) {
-            event.setCancelled(true);
+        if (hasPendingChallenge(player.getUniqueId())) {
             plugin.tellFortune(player, "Your current fate is still being decided. You cannot eat another Mysterious Apple yet.");
             return;
         }
 
-        double chance = Math.max(0.0, Math.min(1.0, plugin.getConfig().getDouble("fortune-books.apple.win-chance", 0.3)));
+        if (held.getAmount() <= 1) {
+            player.getInventory().setItemInMainHand(null);
+        } else {
+            held.setAmount(held.getAmount() - 1);
+            player.getInventory().setItemInMainHand(held);
+        }
+        beginAppleChallenge(player);
+    }
+
+    // Fallback for server/API paths that dispatch the normal consume event.
+    @EventHandler
+    public void onAppleConsumed(PlayerItemConsumeEvent event) {
+        if (!isMysteriousApple(event.getItem())) return;
+        Player player = event.getPlayer();
+        if (hasPendingChallenge(player.getUniqueId())) {
+            event.setCancelled(true);
+            plugin.tellFortune(player, "Your current fate is still being decided. You cannot eat another Mysterious Apple yet.");
+            return;
+        }
+        beginAppleChallenge(player);
+    }
+
+    private void beginAppleChallenge(Player player) {
+        UUID id = player.getUniqueId();
+        double chance = Math.max(0.0, Math.min(1.0,
+                plugin.getConfig().getDouble("fortune-books.apple.win-chance", 0.2)));
         String outcome = ThreadLocalRandom.current().nextDouble() < chance ? "WIN" : "LOSE";
         String path = "pending." + id;
         data.set(path + ".outcome", outcome);

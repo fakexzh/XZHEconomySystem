@@ -205,11 +205,11 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             getConfig().set("migrations.shop-villager-rebalance-20261026", true);
             changed = true;
         }
-        // Move existing servers from the original 50/50 Fortune Book default to the new 30/70 odds.
-        // The one-time marker preserves future owner-configured odds after this migration.
-        if (!getConfig().getBoolean("migrations.fortune-book-odds-20261101", false)) {
-            getConfig().set("fortune-books.apple.win-chance", 0.3);
-            getConfig().set("migrations.fortune-book-odds-20261101", true);
+        // Move existing servers to the newly approved 20/80 Fortune Book odds.
+        // A new one-time marker updates servers already migrated to 30/70 while preserving later owner edits.
+        if (!getConfig().getBoolean("migrations.fortune-book-odds-20261101-v2", false)) {
+            getConfig().set("fortune-books.apple.win-chance", 0.2);
+            getConfig().set("migrations.fortune-book-odds-20261101-v2", true);
             changed = true;
         }
         if (changed) {
