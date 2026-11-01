@@ -327,12 +327,15 @@ public final class FortuneBookManager implements Listener {
         UUID id = event.getEntity().getUniqueId();
         String path = "pending." + id;
         if (data.getString(path + ".outcome", "").equals("LOSE")) {
+            boolean deathWasTriggeredByFortune = data.getBoolean(path + ".death-triggered", false);
             data.set(path, null);
             save();
             BukkitTask task = activeTasks.remove(id);
             if (task != null) task.cancel();
-            Bukkit.broadcastMessage("§8[§5fortune§8] §e" + event.getEntity().getName()
-                    + " §fwas claimed by fate before the countdown could finish.");
+            if (!deathWasTriggeredByFortune) {
+                Bukkit.broadcastMessage("§8[§5fortune§8] §e" + event.getEntity().getName()
+                        + " §fwas claimed by fate before the countdown could finish.");
+            }
         } else if (data.getBoolean(path + ".death-triggered", false)) {
             data.set(path, null);
             save();
