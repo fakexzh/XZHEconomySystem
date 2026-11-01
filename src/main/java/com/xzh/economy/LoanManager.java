@@ -111,17 +111,17 @@ public final class LoanManager implements Listener {
         UUID id = player.getUniqueId();
         double owed = getOwed(id);
         if (owed <= 0) {
-            plugin.tellPublic(player, "You do not have an active loan.");
+            plugin.tellBank(player, "You do not have an active loan.");
             return true;
         }
         double balance = plugin.getCombinedBalance(id);
         double payment = Math.min(balance, owed);
         if (payment <= 0.0) {
-            plugin.tellPublic(player, "You have no available pocket or bank funds to repay this loan yet.");
+            plugin.tellBank(player, "You have no available pocket or bank funds to repay this loan yet.");
             return true;
         }
         if (!plugin.spendAvailableFunds(id, payment)) {
-            plugin.tellPublic(player, "Repayment failed because your available funds changed. Please try again.");
+            plugin.tellBank(player, "Repayment failed because your available funds changed. Please try again.");
             return true;
         }
         double remaining = Math.max(0.0, Math.round((owed - payment) * 100.0) / 100.0);
@@ -129,13 +129,13 @@ public final class LoanManager implements Listener {
             data.set(id.toString(), null);
             save();
             plugin.getHudManager().setLoan(id, 0, 0);
-            plugin.tellPublic(player, "Loan fully repaid: " + money(payment) + " coins.");
+            plugin.tellBank(player, "Loan fully repaid: " + money(payment) + " coins.");
             plugin.announceLoanRepaid(player.getName(), payment, false);
         } else {
             data.set(id + ".amount", remaining);
             save();
             plugin.getHudManager().setLoan(id, remaining, getDue(id), data.getLong(id + ".grace-until", getDue(id)));
-            plugin.tellPublic(player, "Partial loan repayment: " + money(payment) + " coins. Remaining debt: " + money(remaining) + " coins. Shop purchases stay locked if your loan is overdue.");
+            plugin.tellBank(player, "Partial loan repayment: " + money(payment) + " coins. Remaining debt: " + money(remaining) + " coins. Shop purchases stay locked if your loan is overdue.");
         }
         return true;
     }
@@ -143,7 +143,7 @@ public final class LoanManager implements Listener {
     private void grant(Player player, int amount, int days) {
         UUID id = player.getUniqueId();
         if (getOwed(id) > 0) {
-            plugin.tellPublic(player, "You already have an active loan.");
+            plugin.tellBank(player, "You already have an active loan.");
             return;
         }
         double principal = amount;
@@ -158,7 +158,7 @@ public final class LoanManager implements Listener {
         save();
         plugin.setBalance(id, plugin.getBalance(id) + principal);
         plugin.getHudManager().setLoan(id, total, dueAt, dueAt + 12L * 60L * 60L * 1000L);
-        plugin.tellPublic(player, "Loan approved: +" + amount + " coins. Repay " + money(total) + " within " + days + " days.");
+        plugin.tellBank(player, "Loan approved: +" + amount + " coins. Repay " + money(total) + " within " + days + " days.");
         plugin.announceLoanBorrow(player, amount, total, days);
     }
 
@@ -189,7 +189,7 @@ public final class LoanManager implements Listener {
                         data.set(key, null);
                         save();
                         plugin.getHudManager().setLoan(id, 0, 0);
-                        if (player != null) plugin.tellPublic(player, "Your overdue loan was automatically repaid: " + money(collected) + " coins.");
+                        if (player != null) plugin.tellBank(player, "Your overdue loan was automatically repaid: " + money(collected) + " coins.");
                         String name = player != null ? player.getName() : (Bukkit.getOfflinePlayer(id).getName() != null ? Bukkit.getOfflinePlayer(id).getName() : id.toString());
                         plugin.announceLoanRepaid(name, collected, true);
                         continue;
@@ -197,11 +197,11 @@ public final class LoanManager implements Listener {
                     data.set(key + ".amount", remaining);
                     plugin.getHudManager().setLoan(id, remaining, due, grace);
                     if (player != null) {
-                        plugin.tellPublic(player, "Your loan is overdue. " + money(collected) + " coins were collected from pocket first, then bank. Remaining debt: " + money(remaining) + ". Shop purchases are locked until full repayment.");
+                        plugin.tellBank(player, "Your loan is overdue. " + money(collected) + " coins were collected from pocket first, then bank. Remaining debt: " + money(remaining) + ". Shop purchases are locked until full repayment.");
                     }
                 } else {
                     Player player = Bukkit.getPlayer(id);
-                    if (player != null) plugin.tellPublic(player, "Your loan is overdue and you have no available funds to collect. Shop purchases are locked until full repayment.");
+                    if (player != null) plugin.tellBank(player, "Your loan is overdue and you have no available funds to collect. Shop purchases are locked until full repayment.");
                 }
                 save();
             }

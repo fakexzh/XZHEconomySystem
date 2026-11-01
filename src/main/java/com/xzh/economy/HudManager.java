@@ -103,7 +103,7 @@ public final class HudManager {
                         ? ChatColor.YELLOW + "●" : ChatColor.RED + "●"),
                 ChatColor.GREEN + formatMoney(bankBalance),
                 ChatColor.DARK_GRAY + " ",
-                ChatColor.GRAY + "Loan owed",
+                ChatColor.GRAY + "Loan",
                 (owed > 0 ? ChatColor.RED : ChatColor.GREEN) + formatMoney(owed),
                 (owed <= 0 ? ChatColor.RED : ChatColor.AQUA) + clip(owed <= 0 ? "NO LOAN" : remaining(dueAt, graceUntil), 38)
         ));

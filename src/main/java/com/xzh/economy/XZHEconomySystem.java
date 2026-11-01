@@ -218,6 +218,21 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
 
     public void tellPublic(CommandSender sender, String message) { tell(sender, message); }
 
+    /** Sends all shop-related player notices with the dedicated shop prefix. */
+    public void tellShop(CommandSender sender, String message) {
+        sender.sendMessage("§8[§6shop§8] §r" + message);
+    }
+
+    /** Sends quest, achievement-pack, and Community Chest notices consistently. */
+    public void tellQuest(CommandSender sender, String message) {
+        sender.sendMessage("§8[§dquest§8] §r" + message);
+    }
+
+    /** Sends bank and bank-loan notices with the dedicated bank prefix. */
+    public void tellBank(CommandSender sender, String message) {
+        sender.sendMessage("§8[§6bank§8] §r" + message);
+    }
+
     /** Announces only configured high-value, rare, or progression purchases. */
     public void announceSpecialPurchase(Player player, org.bukkit.Material material, int quantity, double total) {
         if (!getConfig().getBoolean("announcements.shop.enabled", true)) return;
@@ -228,7 +243,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         boolean progression = getConfig().getStringList("announcements.shop.progression-items").stream()
                 .anyMatch(name -> name.equalsIgnoreCase(material.name()));
         if (!expensive && !rare && !progression) return;
-        String prefix = "§8[§6SHOP§8] §r";
+        String prefix = "§8[§6shop§8] §r";
         if (progression) {
             Bukkit.broadcastMessage(prefix + "§e" + player.getName() + " §funlocked a progression item: §b"
                     + item + " §7(" + money(total) + " coins).");
@@ -240,14 +255,14 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
 
     public void announceLoanBorrow(Player player, int principal, double repayment, int days) {
         if (!getConfig().getBoolean("announcements.loan.borrowing", true)) return;
-        Bukkit.broadcastMessage("§8[§bBANK§8] §e" + player.getName() + " §fborrowed §6"
+        Bukkit.broadcastMessage("§8[§6bank§8] §e" + player.getName() + " §fborrowed §6"
                 + money(principal) + " coins§f. Repayment: §c" + money(repayment)
                 + " coins §fover §b" + days + " days§f.");
     }
 
     public void announceLoanRepaid(String playerName, double amount, boolean automatic) {
         if (!getConfig().getBoolean("announcements.loan.full-repayment", true)) return;
-        Bukkit.broadcastMessage("§8[§bBANK§8] §e" + playerName + " §ffully repaid their loan of §6"
+        Bukkit.broadcastMessage("§8[§6bank§8] §e" + playerName + " §ffully repaid their loan of §6"
                 + money(amount) + " coins§f" + (automatic ? " §7(automatic repayment)." : "."));
     }
 
@@ -367,7 +382,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         if (overflow > 0 && bankManager != null) {
             bankManager.setBalance(uuid, bankManager.getBalance(uuid) + overflow);
             Player recipient = Bukkit.getPlayer(uuid);
-            if (recipient != null) tell(recipient, "Your pocket wallet reached its limit; " + money(overflow) + " excess coins were secured in the bank.");
+            if (recipient != null) tellBank(recipient, "Your pocket wallet reached its limit; " + money(overflow) + " excess coins were secured in the bank.");
         }
         saveBalances();
         saveWalletStatus();
@@ -457,29 +472,29 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 return true;
             }
             case "quest", "quests" -> {
-                if (!(sender instanceof Player player)) { tell(sender, "Only players can use quests."); return true; }
+                if (!(sender instanceof Player player)) { tellQuest(sender, "Only players can use quests."); return true; }
                 if (args.length == 1 && args[0].equalsIgnoreCase("cancel")) {
                     questManager.cancelActiveQuest(player);
                     return true;
                 }
-                if (args.length != 0) { tell(sender, "Usage: /quest cancel or /quests"); return true; }
+                if (args.length != 0) { tellQuest(sender, "Usage: /quest cancel or /quests"); return true; }
                 questManager.open(player);
                 return true;
             }
             case "bank" -> {
-                if (!(sender instanceof Player player)) { tell(sender, "Only players can open the bank."); return true; }
+                if (!(sender instanceof Player player)) { tellBank(sender, "Only players can open the bank."); return true; }
                 bankManager.open(player);
                 return true;
             }
             case "loan" -> {
-                if (!(sender instanceof Player player)) { tell(sender, "Only players can use loans."); return true; }
+                if (!(sender instanceof Player player)) { tellBank(sender, "Only players can use loans."); return true; }
                 if (args.length == 1 && args[0].equalsIgnoreCase("repay")) return loanManager.repay(player);
-                if (args.length > 0) { tell(sender, "Usage: /loan [repay]"); return true; }
+                if (args.length > 0) { tellBank(sender, "Usage: /loan [repay]"); return true; }
                 bankManager.open(player);
                 return true;
             }
             case "books" -> {
-                if (!(sender instanceof Player player)) { tell(sender, "Only players can open the book shop."); return true; }
+                if (!(sender instanceof Player player)) { tellShop(sender, "Only players can open the book shop."); return true; }
                 bookShopManager.open(player);
                 return true;
             }
@@ -489,23 +504,23 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 return true;
             }
             case "shopadmin" -> {
-                if (!sender.hasPermission("xzh.admin")) { tell(sender, "No permission."); return true; }
+                if (!sender.hasPermission("xzh.admin")) { tellShop(sender, "No permission."); return true; }
                 if (args.length == 1 && args[0].equalsIgnoreCase("restock")) {
                     shopManager.restockAll();
-                    tell(sender, "Global shop stock has been restocked to configured limits.");
+                    tellShop(sender, "Global shop stock has been restocked to configured limits.");
                     return true;
                 }
                 if (args.length == 3 && args[0].equalsIgnoreCase("stock")) {
                     org.bukkit.Material material;
                     int amount;
                     try { material = org.bukkit.Material.valueOf(args[1].toUpperCase(Locale.ROOT)); amount = Integer.parseInt(args[2]); }
-                    catch (IllegalArgumentException ex) { tell(sender, "Usage: /shopadmin stock <MATERIAL> <amount>"); return true; }
-                    if (amount < 0 || amount > 1000000) { tell(sender, "Stock must be between 0 and 1000000."); return true; }
+                    catch (IllegalArgumentException ex) { tellShop(sender, "Usage: /shopadmin stock <MATERIAL> <amount>"); return true; }
+                    if (amount < 0 || amount > 1000000) { tellShop(sender, "Stock must be between 0 and 1000000."); return true; }
                     shopManager.setStock(material, amount);
-                    tell(sender, "Global stock for " + material.name() + " set to " + amount + ".");
+                    tellShop(sender, "Global stock for " + material.name() + " set to " + amount + ".");
                     return true;
                 }
-                tell(sender, "Usage: /shopadmin <restock|stock <MATERIAL> <amount>>");
+                tellShop(sender, "Usage: /shopadmin <restock|stock <MATERIAL> <amount>>");
                 return true;
             }
             case "pet", "unpet" -> {
@@ -513,7 +528,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 return petManager != null && petManager.handleCommand(player, command.getName(), args);
             }
             case "shop" -> {
-                if (!(sender instanceof Player player)) { tell(sender, "Only players can open the shop."); return true; }
+                if (!(sender instanceof Player player)) { tellShop(sender, "Only players can open the shop."); return true; }
                 if (shopManager != null) shopManager.openMain(player);
                 return true;
             }

@@ -108,7 +108,7 @@ public final class BookShopManager implements Listener {
 
     private void buy(Player player, String key) {
         if (plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) {
-            plugin.tellPublic(player, "Your loan is overdue. New purchases are locked until you repay it with /loan repay.");
+            plugin.tellShop(player, "Your loan is overdue. New purchases are locked until you repay it with /loan repay.");
             return;
         }
         Enchantment enchant = enchantment(key);
@@ -125,29 +125,29 @@ public final class BookShopManager implements Listener {
         int boughtToday = data.getInt(dailyCountPath, 0);
         int limit = dailyLimit(key);
         if (boughtToday >= limit) {
-            plugin.tellPublic(player, "You have reached today's limit of " + limit + " " + displayName(key) + " books. You can buy this enchantment again tomorrow.");
+            plugin.tellShop(player, "You have reached today's limit of " + limit + " " + displayName(key) + " books. You can buy this enchantment again tomorrow.");
             save();
             return;
         }
         String cooldownPath = "cooldowns." + player.getUniqueId() + "." + key;
         long until = data.getLong(cooldownPath, 0L);
         if (until > now) {
-            plugin.tellPublic(player, "You can buy " + displayName(key) + " again in " + remaining(until) + ".");
+            plugin.tellShop(player, "You can buy " + displayName(key) + " again in " + remaining(until) + ".");
             return;
         }
         resetStockIfNeeded();
         if (stock(key) <= 0) {
-            plugin.tellPublic(player, "That enchantment book is out of global stock for today.");
+            plugin.tellShop(player, "That enchantment book is out of global stock for today.");
             return;
         }
         double cost = price(key);
         if (plugin.getBalance(player.getUniqueId()) < cost) {
-            plugin.tellPublic(player, "Not enough coins. This book costs " + cost + ".");
+            plugin.tellShop(player, "Not enough coins. This book costs " + cost + ".");
             return;
         }
         ItemStack book = createBook(key);
         if (player.getInventory().firstEmpty() < 0) {
-            plugin.tellPublic(player, "Your inventory is full.");
+            plugin.tellShop(player, "Your inventory is full.");
             return;
         }
         // Persist the cooldown and stock decrement before delivery to avoid duplicate purchases after a crash.
@@ -157,7 +157,7 @@ public final class BookShopManager implements Listener {
         save();
         plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) - cost);
         player.getInventory().addItem(book);
-        plugin.tellPublic(player, "Purchased " + displayName(key) + " " + roman(enchant.getMaxLevel()) + " for " + cost + " coins.");
+        plugin.tellShop(player, "Purchased " + displayName(key) + " " + roman(enchant.getMaxLevel()) + " for " + cost + " coins.");
         player.closeInventory();
     }
 

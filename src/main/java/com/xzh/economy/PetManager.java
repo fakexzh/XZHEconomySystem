@@ -138,11 +138,11 @@ public final class PetManager implements Listener {
 
     private void purchase(Player player, PetOption option) {
         if (plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) {
-            plugin.tellPublic(player, "Your loan is overdue. Shop purchases are locked until you repay it.");
+            plugin.tellShop(player, "Your loan is overdue. Shop purchases are locked until you repay it.");
             return;
         }
         if (plugin.getCombinedBalance(player.getUniqueId()) < option.price()) {
-            plugin.tellPublic(player, "Not enough coins. This pet costs " + option.price() + " coins.");
+            plugin.tellShop(player, "Not enough coins. This pet costs " + option.price() + " coins.");
             return;
         }
         Location spawn = player.getLocation().clone().add(player.getLocation().getDirection().setY(0).normalize().multiply(1.5));
@@ -150,7 +150,7 @@ public final class PetManager implements Listener {
         Entity entity = player.getWorld().spawnEntity(spawn, option.type());
         if (!(entity instanceof Animals animal) || !(entity instanceof Mob mob)) {
             entity.remove();
-            plugin.tellPublic(player, "This pet could not be spawned. Your coins were not charged.");
+            plugin.tellShop(player, "This pet could not be spawned. Your coins were not charged.");
             return;
         }
         try {
@@ -174,16 +174,16 @@ public final class PetManager implements Listener {
         } catch (RuntimeException ex) {
             entity.remove();
             plugin.getLogger().warning("Could not initialize purchased pet " + option.id() + ": " + ex.getMessage());
-            plugin.tellPublic(player, "Pet creation failed. Your coins were not charged.");
+            plugin.tellShop(player, "Pet creation failed. Your coins were not charged.");
             return;
         }
         if (!plugin.spendAvailableFunds(player.getUniqueId(), option.price())) {
             entity.remove();
-            plugin.tellPublic(player, "Purchase cancelled because your balance changed. No coins were charged.");
+            plugin.tellShop(player, "Purchase cancelled because your balance changed. No coins were charged.");
             return;
         }
         plugin.getShopManager().recordExternalPurchase(player, option.display(), option.price());
-        plugin.tellPublic(player, "You purchased " + option.display() + " for " + option.price() + " coins. Your pet is now yours permanently.");
+        plugin.tellShop(player, "You purchased " + option.display() + " for " + option.price() + " coins. Your pet is now yours permanently.");
         player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.7f, 1.2f);
         player.closeInventory();
     }

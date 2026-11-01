@@ -401,7 +401,7 @@ public final class ShopManager implements Listener {
     private void promptShopSearch(Player player) {
         pendingShopSearch.put(player.getUniqueId(), true);
         player.closeInventory();
-        player.sendMessage(ChatColor.GOLD + "[SHOP] " + ChatColor.WHITE + "Type an item name to search. Type " + ChatColor.YELLOW + "cancel" + ChatColor.WHITE + " to stop.");
+        player.sendMessage(ChatColor.GOLD + "[shop] " + ChatColor.WHITE + "Type an item name to search. Type " + ChatColor.YELLOW + "cancel" + ChatColor.WHITE + " to stop.");
     }
 
     @EventHandler
@@ -414,12 +414,12 @@ public final class ShopManager implements Listener {
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (!player.isOnline()) return;
             if (query.equalsIgnoreCase("cancel")) {
-                player.sendMessage(ChatColor.GOLD + "[SHOP] " + ChatColor.GRAY + "Search cancelled.");
+                player.sendMessage(ChatColor.GOLD + "[shop] " + ChatColor.GRAY + "Search cancelled.");
                 openMain(player);
                 return;
             }
             if (query.isBlank()) {
-                player.sendMessage(ChatColor.GOLD + "[SHOP] " + ChatColor.RED + "Enter an item name to search.");
+                player.sendMessage(ChatColor.GOLD + "[shop] " + ChatColor.RED + "Enter an item name to search.");
                 promptShopSearch(player);
                 return;
             }
@@ -487,7 +487,7 @@ public final class ShopManager implements Listener {
     }
 
     private void openCategory(Player player, String category, int requestedPage) {
-        if (category.equals("upcoming")) { plugin.tellPublic(player, "Upcoming features will be available here soon."); player.closeInventory(); return; }
+        if (category.equals("upcoming")) { plugin.tellShop(player, "Upcoming features will be available here soon."); player.closeInventory(); return; }
         if (category.equals("travel")) { plugin.getBoatManager().open(player); return; }
         if (category.equals("food")) { openFoodMenu(player); return; }
         if (category.equals("xp")) { openXpMenu(player); return; }
@@ -670,7 +670,7 @@ public final class ShopManager implements Listener {
         else item.setAmount(item.getAmount() - 1);
         event.getPlayer().giveExp(points);
         event.getPlayer().updateInventory();
-        plugin.tellPublic(event.getPlayer(), "Consumed an XP bottle and received " + points + " XP points.");
+        plugin.tellShop(event.getPlayer(), "Consumed an XP bottle and received " + points + " XP points.");
     }
 
     private void openFoodMenu(Player player) {
@@ -844,10 +844,10 @@ public final class ShopManager implements Listener {
             case "transition" -> openPurchaseHistory(player);
             case "players-money" -> openOtherPlayersMoney(player);
             case "player-money-view" -> { /* view-only player balance head */ }
-            case "balance" -> plugin.tellPublic(player, "Pocket: " + money(plugin.getBalance(player.getUniqueId())) + " coins; Bank: " + money(plugin.getBankManager().getBalance(player.getUniqueId())) + " coins.");
+            case "balance" -> plugin.tellShop(player, "Pocket: " + money(plugin.getBalance(player.getUniqueId())) + " coins; Bank: " + money(plugin.getBankManager().getBalance(player.getUniqueId())) + " coins.");
             case "bank" -> plugin.getBankManager().open(player);
             case "help" -> {
-                plugin.tellPublic(player, "/shop, /bank, /balance, /pay, /quests, /deathinventory, /books");
+                plugin.tellShop(player, "/shop, /bank, /balance, /pay, /quests, /deathinventory, /books");
                 player.closeInventory();
             }
             case "category-page" -> {
@@ -869,21 +869,21 @@ public final class ShopManager implements Listener {
                 int points; int price;
                 try { points = Integer.parseInt(parts[0]); price = Integer.parseInt(parts[1]); } catch (NumberFormatException ex) { return; }
                 if (action.equals("xp-buy-confirm")) {
-                    if (plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) { plugin.tellPublic(player, "Your loan is overdue. Purchases are locked."); return; }
-                    if (plugin.getCombinedBalance(player.getUniqueId()) < price || !plugin.spendAvailableFunds(player.getUniqueId(), price)) { plugin.tellPublic(player, "Not enough coins."); return; }
+                    if (plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) { plugin.tellShop(player, "Your loan is overdue. Purchases are locked."); return; }
+                    if (plugin.getCombinedBalance(player.getUniqueId()) < price || !plugin.spendAvailableFunds(player.getUniqueId(), price)) { plugin.tellShop(player, "Not enough coins."); return; }
                     java.util.Map<Integer, ItemStack> leftovers = player.getInventory().addItem(customXpBottle(points));
-                    if (!leftovers.isEmpty()) { plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + price); plugin.tellPublic(player, "Inventory full; purchase cancelled and refunded."); }
+                    if (!leftovers.isEmpty()) { plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + price); plugin.tellShop(player, "Inventory full; purchase cancelled and refunded."); }
                     else {
                         recordPurchase(player, "XP Bottle (" + points + " XP)", 1, price);
-                        plugin.tellPublic(player, "Bought an XP bottle containing " + points + " XP for " + price + " coins.");
+                        plugin.tellShop(player, "Bought an XP bottle containing " + points + " XP for " + price + " coins.");
                     }
                 } else {
                     int actual = totalExperience(player);
-                    if (actual <= 0 || actual != points) { plugin.tellPublic(player, "Your XP changed; reopen the XP menu and confirm again."); openXpMenu(player); return; }
+                    if (actual <= 0 || actual != points) { plugin.tellShop(player, "Your XP changed; reopen the XP menu and confirm again."); openXpMenu(player); return; }
                     double payout = actual * plugin.getConfig().getDouble("shop.xp-value-per-point", 0.1);
                     player.setExp(0f); player.setLevel(0); player.setTotalExperience(0);
                     plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + payout);
-                    plugin.tellPublic(player, "Sold " + actual + " XP points for " + money(payout) + " coins.");
+                    plugin.tellShop(player, "Sold " + actual + " XP points for " + money(payout) + " coins.");
                 }
                 player.closeInventory();
             }
@@ -930,7 +930,7 @@ public final class ShopManager implements Listener {
                 if (material != null) {
                     int amount = selected != null && selected.potionType() != null
                             ? countPotion(player, selected) : count(player, material);
-                    if (amount < 1) plugin.tellPublic(player, "You don't have that item to sell.");
+                    if (amount < 1) plugin.tellShop(player, "You don't have that item to sell.");
                     else if (selected != null && selected.potionType() != null) openConfirm(player, selected, amount, false);
                     else openConfirm(player, material, amount, false);
                 }
@@ -953,7 +953,7 @@ public final class ShopManager implements Listener {
                         && material != Material.ENCHANTED_GOLDEN_APPLE
                         && material != Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE
                         && material != Material.TRIDENT && material != Material.TOTEM_OF_UNDYING) {
-                    plugin.tellPublic(player, "This item cannot be sold to the XZH shop because it is exploit-prone or intended to remain rare.");
+                    plugin.tellShop(player, "This item cannot be sold to the XZH shop because it is exploit-prone or intended to remain rare.");
                     player.closeInventory();
                     return;
                 }
@@ -961,23 +961,23 @@ public final class ShopManager implements Listener {
                 if (action.equals("buy") && material == Material.ELYTRA
                         && plugin.getConfig().getBoolean("restrictions.elytra-requires-end-visit", true)
                         && !hasVisitedEnd(player)) {
-                    plugin.tellPublic(player, "Elytra purchases unlock after you visit the End.");
+                    plugin.tellShop(player, "Elytra purchases unlock after you visit the End.");
                     player.closeInventory();
                     return;
                 }
                 if (action.equals("buy")) {
                     if (getStock(material) < quantity) {
-                        plugin.tellPublic(player, "Not enough global stock. Available: " + getStock(material) + ".");
+                        plugin.tellShop(player, "Not enough global stock. Available: " + getStock(material) + ".");
                         player.closeInventory();
                         return;
                     }
                     if (plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) {
-                        plugin.tellPublic(player, "Your loan is overdue. Shop purchases are locked until you repay it with /loan repay; selling is still allowed.");
+                        plugin.tellShop(player, "Your loan is overdue. Shop purchases are locked until you repay it with /loan repay; selling is still allowed.");
                         player.closeInventory();
                         return;
                     }
                     if (plugin.getCombinedBalance(player.getUniqueId()) + 1e-9 < total) {
-                        plugin.tellPublic(player, "Not enough coins.");
+                        plugin.tellShop(player, "Not enough coins.");
                         player.closeInventory();
                         return;
                     }
@@ -986,7 +986,7 @@ public final class ShopManager implements Listener {
                     int notGiven = leftovers.values().stream().mapToInt(ItemStack::getAmount).sum();
                     int delivered = quantity - notGiven;
                     if (delivered <= 0) {
-                        plugin.tellPublic(player, "Your inventory is full.");
+                        plugin.tellShop(player, "Your inventory is full.");
                         player.closeInventory();
                         return;
                     }
@@ -996,28 +996,28 @@ public final class ShopManager implements Listener {
                         // Return the delivered items and stock if a concurrent economy action changed the balance.
                         player.getInventory().removeItem(createStack(p, delivered));
                         setStock(material, getStock(material) + delivered);
-                        plugin.tellPublic(player, "Purchase cancelled: your available funds changed.");
+                        plugin.tellShop(player, "Purchase cancelled: your available funds changed.");
                         player.closeInventory();
                         return;
                     }
                     recordPurchase(player, prettyProduct(p), delivered, charged);
-                    plugin.tellPublic(player, "Bought " + delivered + " × " + prettyProduct(p) + " for " + money(charged) + " coins.");
+                    plugin.tellShop(player, "Bought " + delivered + " × " + prettyProduct(p) + " for " + money(charged) + " coins.");
                     plugin.announceSpecialPurchase(player, material, delivered, charged);
                 } else {
                     if (isFarmableSellItem(material)) {
                         int availableSellStock = getSellStock(player, material);
                         if (availableSellStock <= 0) {
-                            plugin.tellPublic(player, "You have used all your sell stock for " + pretty(material) + ". Your personal stock refills every 12 hours.");
+                            plugin.tellShop(player, "You have used all your sell stock for " + pretty(material) + ". Your personal stock refills every 12 hours.");
                             player.closeInventory();
                             return;
                         }
                         if (quantity > availableSellStock) {
                             quantity = availableSellStock;
-                            plugin.tellPublic(player, "Your personal sell limit applies. Selling only " + quantity + " item(s); your remaining stock refills every 12 hours.");
+                            plugin.tellShop(player, "Your personal sell limit applies. Selling only " + quantity + " item(s); your remaining stock refills every 12 hours.");
                         }
                     }
                     if (sellPrice(p) * quantity < 1) {
-                        plugin.tellPublic(player, "Items worth less than 1 coin cannot be sold.");
+                        plugin.tellShop(player, "Items worth less than 1 coin cannot be sold.");
                         player.closeInventory();
                         return;
                     }
@@ -1025,13 +1025,13 @@ public final class ShopManager implements Listener {
                     if (action.equals("sell-hand-confirm")) {
                         ItemStack held = player.getInventory().getItemInMainHand();
                         if (plugin.getPocketCoinManager().isCoin(held)) {
-                            plugin.tellPublic(player, "Physical pocket coins cannot be sold as shop items.");
+                            plugin.tellShop(player, "Physical pocket coins cannot be sold as shop items.");
                             player.closeInventory();
                             return;
                         }
                         if (held.getType() != material || held.getAmount() < quantity
                                 || (p.potionType() != null && !matchesPotion(held, p))) {
-                            plugin.tellPublic(player, "Your held item changed; nothing was sold.");
+                            plugin.tellShop(player, "Your held item changed; nothing was sold.");
                             player.closeInventory();
                             return;
                         }
@@ -1043,14 +1043,14 @@ public final class ShopManager implements Listener {
                         sold = p.potionType() != null ? removePotion(player, p, quantity) : remove(player, material, quantity);
                     }
                     if (sold < 1) {
-                        plugin.tellPublic(player, "No matching items found.");
+                        plugin.tellShop(player, "No matching items found.");
                         player.closeInventory();
                         return;
                     }
                     double earned = sellPrice(p) * sold;
                     consumeSellStock(player, material, sold);
                     plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + earned);
-                    plugin.tellPublic(player, "Sold " + sold + " × " + prettyProduct(p) + " for " + money(earned) + " coins.");
+                    plugin.tellShop(player, "Sold " + sold + " × " + prettyProduct(p) + " for " + money(earned) + " coins.");
                 }
                 player.closeInventory();
             }
@@ -1197,7 +1197,7 @@ public final class ShopManager implements Listener {
             count += entry.getValue();
         }
         if (count <= 0 || total < 1.0) {
-            plugin.tellPublic(player, "No eligible items worth at least 1 coin are available to sell. Your items will be returned.");
+            plugin.tellShop(player, "No eligible items worth at least 1 coin are available to sell. Your items will be returned.");
             player.closeInventory();
             return;
         }
@@ -1211,7 +1211,7 @@ public final class ShopManager implements Listener {
             else stack.setAmount(remaining);
         }
         plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + total);
-        plugin.tellPublic(player, "Sold " + count + " eligible item(s) for " + money(total) + " coins. Unsellable items were returned to your inventory.");
+        plugin.tellShop(player, "Sold " + count + " eligible item(s) for " + money(total) + " coins. Unsellable items were returned to your inventory.");
         player.closeInventory();
     }
 
