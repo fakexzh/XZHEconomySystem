@@ -16,6 +16,14 @@ bank:
   open-hour: 9
   close-hour: 20
 
+# Fortune Books. Each book has its own per-player rebuy cooldown.
+fortune-books:
+  apple:
+    price: 222
+    reward: 1222
+    win-chance: 0.5
+    cooldown-hours: 3
+
 # Global announcements: only noteworthy shop purchases; borrowing and full loan repayments.
 announcements:
   shop:

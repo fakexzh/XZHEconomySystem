@@ -39,6 +39,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     private BoatManager boatManager;
     private VillagerTradeManager villagerTradeManager;
     private PetManager petManager;
+    private FortuneBookManager fortuneBookManager;
 
     @Override
     public void onEnable() {
@@ -59,6 +60,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         walletStatus = YamlConfiguration.loadConfiguration(walletStatusFile);
         pocketCoinManager = new PocketCoinManager(this);
         bankManager = new BankManager(this);
+        fortuneBookManager = new FortuneBookManager(this);
         hudManager = new HudManager(this);
         hudManager.start();
         petManager = new PetManager(this);
@@ -95,6 +97,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         if (hudManager != null) hudManager.shutdown();
         if (petManager != null) petManager.shutdown();
         if (villagerTradeManager != null) villagerTradeManager.shutdown();
+        if (fortuneBookManager != null) fortuneBookManager.shutdown();
         saveBalances();
     }
 
@@ -209,6 +212,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     }
 
     public BankManager getBankManager() { return bankManager; }
+    public FortuneBookManager getFortuneBookManager() { return fortuneBookManager; }
     public LoanManager getLoanManager() { return loanManager; }
     public ShopManager getShopManager() { return shopManager; }
     public PetManager getPetManager() { return petManager; }
@@ -231,6 +235,11 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     /** Sends bank and bank-loan notices with the dedicated bank prefix. */
     public void tellBank(CommandSender sender, String message) {
         sender.sendMessage("§8[§6bank§8] §r" + message);
+    }
+
+    /** Sends Fortune Book notices with the dedicated fortune prefix. */
+    public void tellFortune(CommandSender sender, String message) {
+        sender.sendMessage("§8[§5fortune§8] §r" + message);
     }
 
     /** Announces only configured high-value, rare, or progression purchases. */

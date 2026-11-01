@@ -752,9 +752,22 @@ public final class QuestManager implements Listener {
 
     public void open(Player player) {
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Quests");
-        add(inv, 10, Material.MAP, ChatColor.YELLOW + "Single Quests", "section-single", "single",
-            List.of(ChatColor.GRAY + "Random challenge generated on every purchase",
-                    ChatColor.GRAY + "Shop offer refreshes every 2 hours"));
+        FortuneBookManager fortune = plugin.getFortuneBookManager();
+        int bookPrice = fortune.getApplePrice();
+        int bookReward = fortune.getAppleReward();
+        String cooldown = fortune.getAppleCooldownStatus(player.getUniqueId());
+        add(inv, 10, Material.WRITTEN_BOOK, ChatColor.LIGHT_PURPLE + "Fortune Book", "fortune-buy-apple", "book_of_apple",
+            List.of(ChatColor.YELLOW + "The Book of Apple",
+                    ChatColor.GRAY + "An enchanted apple will be placed in your inventory.",
+                    ChatColor.GRAY + "The book will guide you.",
+                    ChatColor.DARK_RED + "Every Fortune has a price. Every choice has a consequence.",
+                    ChatColor.WHITE + "Price: " + ChatColor.GOLD + bookPrice + " coins",
+                    ChatColor.WHITE + "Reward: " + ChatColor.GREEN + bookReward + " bank coins",
+                    ChatColor.WHITE + "Odds: " + ChatColor.YELLOW + "50% reward / 50% death",
+                    ChatColor.WHITE + "Rebuy cooldown: " + ChatColor.AQUA + "3 hours",
+                    ChatColor.GRAY + "Inventory space required: 2 slots",
+                    ChatColor.GRAY + "Rebuy status: " + cooldown,
+                    ChatColor.YELLOW + "Click to purchase"));
         add(inv, 13, Material.WRITABLE_BOOK, ChatColor.LIGHT_PURPLE + "Achievement Quest Packs", "section-packs", "packs",
             List.of(ChatColor.GRAY + "Hard multi-objective challenges",
                     ChatColor.GRAY + "Each locked pack explains its unlock requirement"));
@@ -1814,6 +1827,7 @@ public final class QuestManager implements Listener {
             case "close" -> player.closeInventory();
             case "back-shop" -> plugin.getShopManager().openMain(player);
             case "section-single" -> openSingle(player);
+            case "fortune-buy-apple" -> plugin.getFortuneBookManager().purchaseApple(player);
             case "section-packs" -> openPacks(player);
             case "section-global" -> openGlobal(player);
             case "single-buy" -> { try { buyRandom(player, Integer.parseInt(value)); } catch (NumberFormatException ignored) { } }
