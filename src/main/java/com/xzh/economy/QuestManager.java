@@ -8,6 +8,8 @@ import org.bukkit.World;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.block.Biome;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.advancement.Advancement;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -43,6 +45,7 @@ import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -312,7 +315,7 @@ public final class QuestManager implements Listener {
         result.add(new Pack("M013", "Quartz Empire", Material.IRON_PICKAXE, 1300, 4550, "minecraft:nether/find_fortress", "A Terrible Fortress", 140, List.of(new Objective("break:NETHER_QUARTZ_ORE", 350, "Mine 350 Nether Quartz Ore"))));
         result.add(new Pack("M037", "Redstone Reactor", Material.IRON_PICKAXE, 1300, 4550, "minecraft:story/mine_diamond", "Diamonds!", 140, List.of(new Objective("break:REDSTONE_ORE", 350, "Mine 350 Redstone Ore"))));
         result.add(new Pack("M073", "Farmer's Grand Slam", Material.WHEAT, 1350, 4550, "minecraft:husbandry/plant_seed", "A Seedy Place", 135, List.of(new Objective("harvest:WHEAT", 250, "Harvest 250 Wheat"), new Objective("harvest:CARROT", 250, "Harvest 250 Carrot"), new Objective("harvest:POTATO", 110, "Harvest 110 Potato"), new Objective("harvest:MELON_SLICE", 80, "Harvest 80 Melon Slice"), new Objective("harvest:PUMPKIN", 80, "Harvest 80 Pumpkin"))));
-        result.add(new Pack("M004", "Chorus Harvest", Material.IRON_PICKAXE, 1350, 4800, "minecraft:end/enter_end_gateway", "Remote Getaway", 150, List.of(new Objective("break:CHORUS_PLANT", 300, "Mine 300 Chorus Plant"))));
+        result.add(new Pack("M004", "Chorus Harvest", Material.IRON_PICKAXE, 1350, 4800, "minecraft:end/enter_end_gateway", "Remote Getaway", 150, List.of(new Objective("break:CHORUS_PLANT", 300, "Break 300 Chorus Plant blocks"))));
         result.add(new Pack("M003", "Purpur Pillager", Material.IRON_PICKAXE, 1450, 4750, "minecraft:end/find_end_city", "The City at the End of the Game", 135, List.of(new Objective("break:PURPUR_BLOCK", 200, "Mine 200 Purpur Block"))));
         result.add(new Pack("M038", "Lapis Legion", Material.IRON_PICKAXE, 1450, 4750, "minecraft:story/enchant_item", "Enchanter", 135, List.of(new Objective("break:LAPIS_ORE", 200, "Mine 200 Lapis Ore"))));
         result.add(new Pack("M064", "Prismarine Palace", Material.IRON_PICKAXE, 1450, 4750, "minecraft:story/mine_diamond", "Diamonds!", 135, List.of(new Objective("break:PRISMARINE", 200, "Mine 200 Prismarine"))));
@@ -325,7 +328,7 @@ public final class QuestManager implements Listener {
         result.add(new Pack("M059", "Blast Hunter", Material.ROTTEN_FLESH, 1900, 6050, "minecraft:adventure/under_lock_and_key", "Under Lock and Key", 0, List.of(new Objective("kill:CREEPER", 60, "Defeat 60 Creeper"))));
         result.add(new Pack("M077", "Spider Nest", Material.ROTTEN_FLESH, 1900, 6050, "minecraft:story/shiny_gear", "Cover Me with Diamonds", 0, List.of(new Objective("kill:SPIDER", 45, "Defeat 45 Spider"), new Objective("kill:CAVE_SPIDER", 35, "Defeat 35 Cave Spider"))));
         result.add(new Pack("M087", "Salmon Run Master", Material.FISHING_ROD, 1900, 6050, "minecraft:husbandry/tactical_fishing", "Tactical Fishing", 0, List.of(new Objective("fish:SALMON", 60, "Catch 60 Salmon"))));
-        result.add(new Pack("M010", "Endgame Supply Run", Material.NETHER_STAR, 1900, 6300, "minecraft:end/find_end_city", "The City at the End of the Game", 230, List.of(new Objective("kill:ENDERMAN", 12, "Defeat 12 Enderman"), new Objective("break:END_STONE", 550, "Mine 550 End Stone"), new Objective("break:CHORUS_PLANT", 120, "Mine 120 Chorus Plant"))));
+        result.add(new Pack("M010", "Endgame Supply Run", Material.NETHER_STAR, 1900, 6300, "minecraft:end/find_end_city", "The City at the End of the Game", 230, List.of(new Objective("kill:ENDERMAN", 12, "Defeat 12 Enderman"), new Objective("break:END_STONE", 550, "Mine 550 End Stone"), new Objective("break:CHORUS_PLANT", 120, "Break 120 Chorus Plant blocks"))));
         result.add(new Pack("M018", "Blaze Baron", Material.NETHER_STAR, 1900, 6550, "minecraft:nether/obtain_blaze_rod", "Into Fire", 250, List.of(new Objective("kill:BLAZE", 60, "Defeat 60 Blaze"))));
         result.add(new Pack("M066", "Trench Diver", Material.NETHER_STAR, 1900, 6550, "minecraft:husbandry/fishy_business", "Fishy Business", 250, List.of(new Objective("kill:DROWNED", 60, "Defeat 60 Drowned"))));
         result.add(new Pack("M016", "Hoglin Husbandry", Material.WHEAT, 1950, 4950, "minecraft:nether/find_bastion", "Those Were the Days", 0, List.of(new Objective("breed:HOGLIN", 14, "Breed 14 Hoglins"))));
@@ -1106,6 +1109,7 @@ public final class QuestManager implements Listener {
         boolean playerPlaced = playerPlacedBlocks.remove(blockKey(event.getBlock().getLocation()));
         if (playerPlaced) savePlacedBlockTracking();
         if (!playerPlaced) {
+            if (material == Material.CHORUS_PLANT) trackChorusPlantCollapse(p, event.getBlock());
             incrementTarget(p, "break:" + id, 1);
             // End City ship heads are wall-mounted and Bukkit reports DRAGON_WALL_HEAD.
             // Count that naturally generated block for Dragon Head objectives too.
@@ -1157,6 +1161,56 @@ public final class QuestManager implements Listener {
             matureCrop = true;
         }
         if (matureCrop) recordGlobalProgress(p, "crop", 1);
+    }
+
+    /**
+     * Chorus plants collapse in connected sections when their support is removed.
+     * Bukkit only fires BlockBreakEvent for the block the player actually breaks,
+     * so snapshot the connected plant blocks and count the ones that disappear
+     * after vanilla physics has finished processing the collapse.
+     */
+    private void trackChorusPlantCollapse(Player player, Block brokenBlock) {
+        List<Location> connectedBlocks = new ArrayList<>();
+        ArrayDeque<Block> queue = new ArrayDeque<>();
+        Set<String> visited = new HashSet<>();
+        queue.add(brokenBlock);
+
+        BlockFace[] faces = {
+                BlockFace.UP, BlockFace.DOWN,
+                BlockFace.NORTH, BlockFace.SOUTH,
+                BlockFace.EAST, BlockFace.WEST
+        };
+
+        while (!queue.isEmpty() && visited.size() < 8192) {
+            Block current = queue.removeFirst();
+            if (current.getType() != Material.CHORUS_PLANT) continue;
+
+            String key = blockKey(current.getLocation());
+            if (!visited.add(key)) continue;
+
+            // The directly broken block is already counted by onBreak().
+            if (!current.getLocation().equals(brokenBlock.getLocation())) {
+                connectedBlocks.add(current.getLocation().clone());
+            }
+
+            for (BlockFace face : faces) {
+                Block neighbor = current.getRelative(face);
+                if (neighbor.getType() == Material.CHORUS_PLANT) queue.addLast(neighbor);
+            }
+        }
+
+        if (connectedBlocks.isEmpty()) return;
+
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!player.isOnline()) return;
+            int collapsed = 0;
+            for (Location location : connectedBlocks) {
+                if (location.getBlock().getType() == Material.AIR) collapsed++;
+            }
+            if (collapsed > 0) {
+                incrementTarget(player, "break:CHORUS_PLANT", collapsed);
+            }
+        });
     }
 
     @EventHandler
