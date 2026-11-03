@@ -43,6 +43,9 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        GuiIcons.setEnabled(getConfig().getBoolean("gui-icons.enabled", true));
+        // The resource-pack URL/hash stay blank until the owner supplies a direct downloadable URL.
+        getServer().getPluginManager().registerEvents(new ResourcePackSender(this), this);
         migrateEconomyConfig();
         transactionsFile = new File(getDataFolder(), "transactions.log");
         balancesFile = new File(getDataFolder(), "balances.yml");
