@@ -2,7 +2,7 @@ name: Build plugin
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master, integrated-release, 'feature/**', 'fix/**' ]
+    branches: [ main, master, integrated-release, 'feature/**', 'feat/**', 'fix/**' ]
   pull_request:
     branches: [ main, master, integrated-release ]
 permissions:
