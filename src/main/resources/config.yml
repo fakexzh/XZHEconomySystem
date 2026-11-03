@@ -397,5 +397,5 @@ gui-icons:
 # Assumption: leave blank until the owner hosts the exact ZIP at a stable direct-download URL.
 resource-pack:
   url: ""
-  sha1: ""
+  sha1: "d0b1d8c2c2cfd76394a099b5cc703584f2baa056"
   required: false
