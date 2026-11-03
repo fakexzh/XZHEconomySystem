@@ -25,6 +25,7 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityTameEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.FurnaceExtractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -1258,9 +1259,37 @@ public final class QuestManager implements Listener {
                 || player.getGameMode() == org.bukkit.GameMode.CREATIVE
                 || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         ItemStack result = event.getCurrentItem();
-        if (result != null && result.getType() != Material.AIR) {
-            incrementTarget(player, "collect:" + result.getType().name(), result.getAmount());
+        if (result == null || result.getType() == Material.AIR) return;
+
+        Material craftedType = result.getType();
+        if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
+            // Shift-click crafts repeatedly and moves the output directly into storage.
+            // The result slot's displayed stack is usually only one item, not the
+            // total amount actually inserted by the bulk craft. Measure the real
+            // inventory delta after Bukkit completes the click to avoid undercounting.
+            int before = countInventoryMaterial(player.getInventory(), craftedType);
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (!player.isOnline()) return;
+                int gained = countInventoryMaterial(player.getInventory(), craftedType) - before;
+                if (gained > 0) {
+                    incrementTarget(player, "collect:" + craftedType.name(), gained);
+                }
+            });
+            return;
         }
+
+        // Normal crafting takes one result onto the cursor.
+        incrementTarget(player, "collect:" + craftedType.name(), result.getAmount());
+    }
+
+    private int countInventoryMaterial(Inventory inventory, Material material) {
+        int total = 0;
+        for (ItemStack stack : inventory.getStorageContents()) {
+            if (stack != null && stack.getType() == material) {
+                total += stack.getAmount();
+            }
+        }
+        return total;
     }
 
     @EventHandler
