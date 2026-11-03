@@ -40,6 +40,7 @@ public final class GuiIcons {
             Map.entry("section-single", "quest_scroll"),
             Map.entry("section-packs", "quest_scroll"),
             Map.entry("search", "magnifier"),
+            Map.entry("shop-search", "magnifier"),
             Map.entry("bank", "vault"),
             Map.entry("transition", "ledger"),
             Map.entry("players-money", "player_coins"),
