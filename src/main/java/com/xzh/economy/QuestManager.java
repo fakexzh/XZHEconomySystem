@@ -1893,65 +1893,138 @@ public final class QuestManager implements Listener {
 
     private void openGlobal(Player player) {
         resetEventIfNeeded();
-        Inventory inv=Bukkit.createInventory(null,27,ChatColor.DARK_PURPLE+"XZH Community Chest");
-        if(!"active".equals(data.getString("event.phase",""))) {
-            long left=Math.max(0,data.getLong("event.cooldown-until",0)-System.currentTimeMillis());
-            add(inv,13,Material.CLOCK,ChatColor.GOLD+"Next Community Quest","global-info","global",
-                List.of(ChatColor.WHITE+"Starts in: "+ChatColor.YELLOW+formatGlobalTime(left),ChatColor.GRAY+"All players share one objective."));
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Community Chest");
+        if (!"active".equals(data.getString("event.phase", ""))) {
+            long left = Math.max(0, data.getLong("event.cooldown-until", 0) - System.currentTimeMillis());
+            add(inv, 13, Material.CLOCK, ChatColor.GOLD + "Next Community Quest", "global-info", "global",
+                List.of(ChatColor.WHITE + "Starts in: " + ChatColor.YELLOW + formatGlobalTime(left),
+                        ChatColor.GRAY + "Each player has separate progress."));
         } else {
-            int count=data.getInt("event.objective-count",0), progress=communityProgressTotal(), goal=Math.max(1,communityGoalTotal());
-            List<String> lore=new ArrayList<>();
-            lore.add(ChatColor.WHITE+"Progress: "+ChatColor.GREEN+progress+"/"+goal+" ("+(progress*100/goal)+"%)");
-            for(int i=0;i<count&&i<8;i++){String k="event.objectives."+i;lore.add(ChatColor.GRAY+data.getString(k+".description","Objective")+ChatColor.WHITE+" "+data.getInt(k+".progress",0)+"/"+data.getInt(k+".goal",1));}
-            lore.add(ChatColor.WHITE+"Your contribution: "+ChatColor.AQUA+communityContribution(player.getUniqueId())+"/"+goal);
-            long end=data.getLong("event.ends-at",0);
-            lore.add(ChatColor.WHITE+"Time limit: "+ChatColor.YELLOW+(end==0?"No time limit":formatGlobalTime(Math.max(0,end-System.currentTimeMillis()))));
-            lore.add(ChatColor.GREEN+"First finisher: full reward");
-            lore.add(ChatColor.GRAY+"10%+ contributors: 10% reward");
-            Material icon=Material.matchMaterial(data.getString("event.icon","NETHER_STAR")); if(icon==null||!icon.isItem())icon=Material.NETHER_STAR;
-            add(inv,13,icon,ChatColor.GOLD+data.getString("event.name","Community Quest"),"global-info","global",lore);
-            add(inv,11,Material.GOLD_INGOT,ChatColor.GREEN+"Winner reward","global-info","global",
-                List.of(ChatColor.WHITE+"Full reward: "+ChatColor.GOLD+data.getInt("event.reward",0)+" coins"));
-        }
-        add(inv,15,Material.ARROW,ChatColor.WHITE+"Back","back",""); player.openInventory(inv);
-    }
-
-    private int communityProgressTotal(){int n=0;for(int i=0;i<data.getInt("event.objective-count",0);i++){String k="event.objectives."+i;n+=Math.min(data.getInt(k+".goal",1),data.getInt(k+".progress",0));}return n;}
-    private int communityGoalTotal(){int n=0;for(int i=0;i<data.getInt("event.objective-count",0);i++)n+=Math.max(1,data.getInt("event.objectives."+i+".goal",1));return n;}
-    private int communityContribution(UUID id){int n=0;for(int i=0;i<data.getInt("event.objective-count",0);i++){String k="event.objectives."+i;int g=Math.max(1,data.getInt(k+".goal",1));n+=Math.min(g,data.getInt("event.contribution."+id+".objectives."+i,0));}return n;}
-
-    private void recordCommunityTarget(Player player,String target,int amount){
-        if(amount<=0)return; resetEventIfNeeded(); if(!"active".equals(data.getString("event.phase","")))return;
-        long end=data.getLong("event.ends-at",0); if(end>0&&end<=System.currentTimeMillis()){finishCommunityQuest(null,false);return;}
-        int count=data.getInt("event.objective-count",0); boolean changed=false; UUID id=player.getUniqueId();
-        for(int i=0;i<count;i++){String k="event.objectives."+i;if(!target.equals(data.getString(k+".target","")))continue;
-            int goal=Math.max(1,data.getInt(k+".goal",1)),cur=Math.min(goal,data.getInt(k+".progress",0)),added=Math.min(amount,goal-cur);
-            if(added<=0)continue;data.set(k+".progress",cur+added);
-            String cp="event.contribution."+id+".objectives."+i;data.set(cp,Math.min(goal,data.getInt(cp,0)+added));changed=true;
-        }
-        if(!changed)return;save();boolean done=true;
-        for(int i=0;i<count;i++){String k="event.objectives."+i;if(data.getInt(k+".progress",0)<data.getInt(k+".goal",1)){done=false;break;}}
-        if(done)finishCommunityQuest(player,true);
-    }
-
-    private void finishCommunityQuest(Player winner,boolean completed){
-        if(!"active".equals(data.getString("event.phase","")))return;
-        long now=System.currentTimeMillis();String name=data.getString("event.name","Community Quest");
-        int reward=Math.max(0,data.getInt("event.reward",0)),goal=Math.max(1,communityGoalTotal());
-        UUID winnerId=winner==null?null:winner.getUniqueId();int threshold=(int)Math.ceil(goal*.10),bonuses=0;
-        if(completed&&winnerId!=null){
-            plugin.setBalance(winnerId,plugin.getBalance(winnerId)+reward);
-            plugin.tellQuest(winner,"You won "+reward+" coins for completing "+name+".");
-            org.bukkit.configuration.ConfigurationSection cs=data.getConfigurationSection("event.contribution");
-            if(cs!=null)for(String raw:cs.getKeys(false)){UUID id;try{id=UUID.fromString(raw);}catch(IllegalArgumentException ex){continue;}
-                if(id.equals(winnerId)||communityContribution(id)<threshold)continue;
-                int bonus=Math.max(1,(int)Math.round(reward*.10));plugin.setBalance(id,plugin.getBalance(id)+bonus);
-                Player online=Bukkit.getPlayer(id);if(online!=null)plugin.tellQuest(online,"You earned "+bonus+" coins for contributing at least 10% to "+name+".");bonuses++;
+            UUID id = player.getUniqueId();
+            int count = data.getInt("event.objective-count", 0);
+            int progress = communityPlayerProgress(id);
+            int goal = Math.max(1, communityGoalTotal());
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.WHITE + "Your progress: " + ChatColor.GREEN + progress + "/" + goal
+                    + " (" + (progress * 100 / goal) + "%)");
+            for (int i = 0; i < count && i < 8; i++) {
+                String k = "event.objectives." + i;
+                lore.add(ChatColor.GRAY + data.getString(k + ".description", "Objective")
+                        + ChatColor.WHITE + " " + data.getInt("event.player-progress." + id + ".objectives." + i + ".progress", 0)
+                        + "/" + data.getInt(k + ".goal", 1));
             }
-            Bukkit.broadcastMessage("§8[§dquest§8] §r"+ChatColor.GREEN+winner.getName()+" completed "+name+" and won "+reward+" coins. "+bonuses+" qualifying contributor(s) received 10% rewards.");
-        }else Bukkit.broadcastMessage("§8[§dquest§8] §r"+ChatColor.YELLOW+name+" expired. No winner. The next event starts after a 1-hour cooldown.");
-        data.set("event.phase","cooldown");data.set("event.completed",completed);data.set("event.winner",winnerId==null?"":winnerId.toString());
-        data.set("event.ended-at",now);data.set("event.cooldown-until",now+3600000L);data.set("event.ends-at",0L);save();
+            long end = data.getLong("event.ends-at", 0);
+            lore.add(ChatColor.WHITE + "Time remaining: " + ChatColor.YELLOW
+                    + formatGlobalTime(Math.max(0, end - System.currentTimeMillis())));
+            lore.add(ChatColor.GREEN + "First finisher: full reward");
+            lore.add(ChatColor.GRAY + "Other players at 10%+: 10% reward");
+            Material icon = Material.matchMaterial(data.getString("event.icon", "NETHER_STAR"));
+            if (icon == null || !icon.isItem()) icon = Material.NETHER_STAR;
+            add(inv, 13, icon, ChatColor.GOLD + data.getString("event.name", "Community Quest"),
+                    "global-info", "global", lore);
+            add(inv, 11, Material.GOLD_INGOT, ChatColor.GREEN + "Winner reward", "global-info", "global",
+                    List.of(ChatColor.WHITE + "Full reward: " + ChatColor.GOLD + data.getInt("event.reward", 0) + " coins"));
+        }
+        add(inv, 15, Material.ARROW, ChatColor.WHITE + "Back", "back", "");
+        player.openInventory(inv);
+    }
+
+    private int communityGoalTotal() {
+        int total = 0;
+        for (int i = 0; i < data.getInt("event.objective-count", 0); i++) {
+            total += Math.max(1, data.getInt("event.objectives." + i + ".goal", 1));
+        }
+        return total;
+    }
+
+    private int communityPlayerProgress(UUID id) {
+        int total = 0;
+        for (int i = 0; i < data.getInt("event.objective-count", 0); i++) {
+            String key = "event.objectives." + i;
+            int goal = Math.max(1, data.getInt(key + ".goal", 1));
+            int progress = data.getInt("event.player-progress." + id + ".objectives." + i + ".progress", 0);
+            total += Math.min(goal, progress);
+        }
+        return total;
+    }
+
+    private void recordCommunityTarget(Player player, String target, int amount) {
+        if (amount <= 0) return;
+        resetEventIfNeeded();
+        if (!"active".equals(data.getString("event.phase", ""))) return;
+        long end = data.getLong("event.ends-at", 0);
+        if (end > 0 && end <= System.currentTimeMillis()) {
+            finishCommunityQuest(null, false);
+            return;
+        }
+        UUID id = player.getUniqueId();
+        int count = data.getInt("event.objective-count", 0);
+        boolean changed = false;
+        for (int i = 0; i < count; i++) {
+            String key = "event.objectives." + i;
+            if (!target.equals(data.getString(key + ".target", ""))) continue;
+            int goal = Math.max(1, data.getInt(key + ".goal", 1));
+            String playerKey = "event.player-progress." + id + ".objectives." + i + ".progress";
+            int current = Math.min(goal, data.getInt(playerKey, 0));
+            int updated = Math.min(goal, current + amount);
+            if (updated <= current) continue;
+            data.set(playerKey, updated);
+            changed = true;
+        }
+        if (!changed) return;
+        save();
+        boolean completed = true;
+        for (int i = 0; i < count; i++) {
+            String key = "event.objectives." + i;
+            int goal = Math.max(1, data.getInt(key + ".goal", 1));
+            if (data.getInt("event.player-progress." + id + ".objectives." + i + ".progress", 0) < goal) {
+                completed = false;
+                break;
+            }
+        }
+        if (completed) finishCommunityQuest(player, true);
+    }
+
+    private void finishCommunityQuest(Player winner, boolean completed) {
+        if (!"active".equals(data.getString("event.phase", ""))) return;
+        long now = System.currentTimeMillis();
+        String name = data.getString("event.name", "Community Quest");
+        int reward = Math.max(0, data.getInt("event.reward", 0));
+        int goal = Math.max(1, communityGoalTotal());
+        UUID winnerId = winner == null ? null : winner.getUniqueId();
+        int threshold = (int) Math.ceil(goal * 0.10);
+        int bonuses = 0;
+        if (completed && winnerId != null) {
+            plugin.setBalance(winnerId, plugin.getBalance(winnerId) + reward);
+            plugin.tellQuest(winner, "You won " + reward + " coins for completing " + name + ".");
+        }
+        org.bukkit.configuration.ConfigurationSection participants = data.getConfigurationSection("event.player-progress");
+        if (participants != null) {
+            for (String raw : participants.getKeys(false)) {
+                UUID id;
+                try { id = UUID.fromString(raw); } catch (IllegalArgumentException ex) { continue; }
+                if (id.equals(winnerId) || communityPlayerProgress(id) < threshold) continue;
+                int bonus = Math.max(1, (int) Math.round(reward * 0.10));
+                plugin.setBalance(id, plugin.getBalance(id) + bonus);
+                Player online = Bukkit.getPlayer(id);
+                if (online != null) plugin.tellQuest(online, "You earned " + bonus + " coins for contributing at least 10% to " + name + ".");
+                bonuses++;
+            }
+        }
+        if (completed && winnerId != null) {
+            Bukkit.broadcastMessage("§8[§dquest§8] §r§a" + winner.getName() + " completed " + name
+                    + " first and won §e" + reward + " coins§a. §e" + bonuses + " qualifying player(s) received 10% rewards.");
+        } else {
+            Bukkit.broadcastMessage("§8[§dquest§8] §r§e" + name + " reached its 90-minute time limit. "
+                    + bonuses + " qualifying player(s) received 10% contribution rewards. No full-reward winner.");
+        }
+        data.set("event.phase", "cooldown");
+        data.set("event.completed", completed);
+        data.set("event.winner", winnerId == null ? "" : winnerId.toString());
+        data.set("event.ended-at", now);
+        data.set("event.cooldown-until", now + 3600000L);
+        data.set("event.ends-at", 0L);
+        save();
     }
 
     private String formatGlobalTime(long millis){long m=Math.max(0,millis)/60000L;return (m/60)+"h "+(m%60)+"m";}
@@ -1966,25 +2039,26 @@ public final class QuestManager implements Listener {
         }
 
         String questName = data.getString("event.name", "Community Quest");
-        int progress = communityProgressTotal();
-        int goal = Math.max(1, communityGoalTotal());
-        int percent = (int) Math.floor(progress * 100.0 / goal);
         int reward = Math.max(0, data.getInt("event.reward", 0));
         long endsAt = data.getLong("event.ends-at", 0L);
 
         StringBuilder status = new StringBuilder("§6Quest: §e")
                 .append(questName)
                 .append(" §8| §e").append(reward).append(" coins")
-                .append(" §8| §a").append(percent).append("%");
+                .append(" §8| §7Individual progress");
         if (endsAt > 0L) {
             status.append(" §8| §b").append(formatGlobalTime(Math.max(0L, endsAt - now)));
         }
         return status.toString();
     }
 
-    private void broadcastGlobalProgress(){
-        resetEventIfNeeded();if(!"active".equals(data.getString("event.phase","")))return;
-        Bukkit.broadcastMessage("§8[§dquest§8] §r"+ChatColor.YELLOW+data.getString("event.name","Community Quest")+": "+communityProgressTotal()+"/"+Math.max(1,communityGoalTotal())+" total progress.");
+    private void broadcastGlobalProgress() {
+        resetEventIfNeeded();
+        if (!"active".equals(data.getString("event.phase", ""))) return;
+        long left = Math.max(0L, data.getLong("event.ends-at", 0L) - System.currentTimeMillis());
+        Bukkit.broadcastMessage("§8[§dquest§8] §r§e" + data.getString("event.name", "Community Quest")
+                + " is active. Progress is individual; first finisher wins the full reward. §7Time left: §b"
+                + formatGlobalTime(left) + "§7. Players reaching 10% receive a 10% reward.");
     }
 
     private void refreshSingleShopIfDue() {
@@ -2180,9 +2254,14 @@ public final class QuestManager implements Listener {
         data.set("event.winner","");data.set("event.objective-count",p.objectives().size());
         int total=0;for(int i=0;i<p.objectives().size();i++){Objective o=p.objectives().get(i);String k="event.objectives."+i;
             data.set(k+".target",o.target());data.set(k+".goal",o.goal());data.set(k+".description",o.description());data.set(k+".progress",0);total+=Math.max(1,o.goal());}
-        data.set("event.total-goal",total);data.set("event.timer-minutes",p.timerMinutes());
-        data.set("event.ends-at",p.timerMinutes()>0?now+p.timerMinutes()*60000L:0L);data.set("event.cooldown-until",0L);save();
-        if(announce){String time=p.timerMinutes()>0?p.timerMinutes()+" minutes":"no time limit";
+        int timerMinutes = p.timerMinutes() > 0 ? p.timerMinutes() : 90;
+        data.set("event.total-goal", total);
+        data.set("event.timer-minutes", timerMinutes);
+        data.set("event.ends-at", now + timerMinutes * 60000L);
+        data.set("event.cooldown-until", 0L);
+        save();
+        if (announce) {
+            String time = timerMinutes + " minutes";
             Bukkit.broadcastMessage("§8[§dquest§8] §r"+ChatColor.YELLOW+"New Community Quest: "+p.name()+". "+packDescription(p)
                 +" Time limit: "+time+". Reward: "+p.reward()+" coins for the first finisher; 10% contributors receive 10%.");}
     }
