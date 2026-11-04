@@ -15,7 +15,7 @@ import org.bukkit.inventory.meta.ItemMeta;
  * inside shop categories are never tagged because only known button actions/titles are mapped.
  */
 public final class GuiIcons {
-    private static volatile boolean enabled = true;
+    private static volatile boolean enabled = false;
 
     private static final Map<String, String> CATEGORY = Map.ofEntries(
             Map.entry("ores", "ore_chunk"),
