@@ -90,7 +90,7 @@ public final class BankManager implements Listener {
             return;
         }
         UUID id = player.getUniqueId();
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.GOLD + "XZH BANK");
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.GOLD + "Bank");
         add(inv, 4, Material.GOLD_INGOT, ChatColor.YELLOW + "Your balances", "refresh", 0,
                 List.of(ChatColor.WHITE + "Pocket: " + ChatColor.YELLOW + money(plugin.getBalance(id)) + " coins",
                         ChatColor.WHITE + "Bank: " + ChatColor.GREEN + money(getBalance(id)) + " coins",
@@ -144,7 +144,7 @@ public final class BankManager implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (!"XZH BANK".equals(title)) return;
+        if (!"Bank".equals(title)) return;
         event.setCancelled(true);
         if (event.getClickedInventory() == null || event.getClickedInventory() != event.getView().getTopInventory()) return;
         ItemStack item = event.getCurrentItem();
