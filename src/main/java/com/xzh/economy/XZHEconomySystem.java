@@ -250,9 +250,9 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     }
 
     /** Announces only configured high-value, rare, or progression purchases. */
-    public void announceSpecialPurchase(Player player, org.bukkit.Material material, int quantity, double total) {
+    public void announceSpecialPurchase(Player player, String displayName, org.bukkit.Material material, int quantity, double total) {
         if (!getConfig().getBoolean("announcements.shop.enabled", true)) return;
-        String item = material.name().toLowerCase(Locale.ROOT).replace('_', ' ');
+        String item = displayName == null || displayName.isBlank() ? material.name().toLowerCase(Locale.ROOT).replace('_', ' ') : displayName;
         boolean expensive = total >= getConfig().getDouble("announcements.shop.minimum-purchase-total", 1000.0);
         boolean rare = getConfig().getStringList("announcements.shop.rare-items").stream()
                 .anyMatch(name -> name.equalsIgnoreCase(material.name()));
@@ -264,7 +264,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             Bukkit.broadcastMessage(prefix + "§a" + player.getName() + " §funlocked a progression item: §f"
                     + item + " §7(§e" + money(total) + " coins§7).");
         } else {
-            Bukkit.broadcastMessage(prefix + "§a" + player.getName() + " §fpurchased §f" + quantity + " × "
+            Bukkit.broadcastMessage(prefix + "§a" + player.getName() + " §fbought §f" + quantity + " × "
                     + item + " §ffor §e" + money(total) + " coins§f.");
         }
     }
