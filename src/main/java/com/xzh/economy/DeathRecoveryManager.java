@@ -292,8 +292,8 @@ public final class DeathRecoveryManager implements Listener {
     private void add(Inventory inv, int slot, Material material, String title, String action, List<String> lore) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(title);
-        meta.setLore(lore);
+        meta.setDisplayName(title.contains("§") ? title : ChatColor.YELLOW + title);
+        meta.setLore(lore.stream().map(line -> line.contains("§") ? line : ChatColor.GRAY + line).toList());
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         item.setItemMeta(meta);
         inv.setItem(slot, item);
