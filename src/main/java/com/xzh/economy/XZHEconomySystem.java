@@ -438,7 +438,11 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
 
     private String colorMessage(String message) {
         String colored = org.bukkit.ChatColor.translateAlternateColorCodes('&', message == null ? "" : message);
-        if (colored.startsWith("§")) return colored;
+        String leadingColor = "";
+        if (colored.length() >= 2 && colored.charAt(0) == '§') {
+            leadingColor = colored.substring(0, 2);
+            colored = colored.substring(2);
+        }
         String lower = colored.trim().toLowerCase(Locale.ROOT);
 
         boolean error = lower.startsWith("no ") || lower.startsWith("not ") || lower.startsWith("invalid")
@@ -457,12 +461,11 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         if (action.find()) {
             result = "§a" + action.group(1) + "§f" + result.substring(action.end());
         } else {
-            result = "§f" + result;
+            result = (leadingColor.isEmpty() ? "§f" : leadingColor) + result;
         }
 
         // Currency values stand out in yellow while item names and explanatory text stay white.
-        result = result.replaceAll("(?i)(?<![§0-9a-fk-or])([0-9][0-9,]*(?:\\.[0-9]+)?)\\s+(coins?|coin)", "§e$1 $2§f");
-        return result;
+        return result.replaceAll("(?i)(?<![§0-9a-fk-or])([0-9][0-9,]*(?:\\.[0-9]+)?)\\s+(coins?|coin)", "§e$1 $2§f");
     }
 
     private void tell(CommandSender sender, String message) {
