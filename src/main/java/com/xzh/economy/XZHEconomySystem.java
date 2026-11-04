@@ -28,6 +28,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     private HudManager hudManager;
     private BankManager bankManager;
     private ShopManager shopManager;
+    private FishShopManager fishShopManager;
     private LoanManager loanManager;
     private QuestManager questManager;
     private DeathRecoveryManager deathRecoveryManager;
@@ -64,6 +65,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         hudManager = new HudManager(this);
         hudManager.start();
         petManager = new PetManager(this);
+        fishShopManager = new FishShopManager(this);
         shopManager = new ShopManager(this);
         boatManager = new BoatManager(this);
         bookShopManager = new BookShopManager(this);
@@ -222,6 +224,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     public FortuneBookManager getFortuneBookManager() { return fortuneBookManager; }
     public LoanManager getLoanManager() { return loanManager; }
     public ShopManager getShopManager() { return shopManager; }
+    public FishShopManager getFishShopManager() { return fishShopManager; }
     public PetManager getPetManager() { return petManager; }
     public BookShopManager getBookShopManager() { return bookShopManager; }
     public QuestManager getQuestManager() { return questManager; }
