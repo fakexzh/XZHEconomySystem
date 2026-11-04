@@ -61,7 +61,7 @@ public final class UtilityManager implements Listener {
     public boolean handle(CommandSender sender, String command, String[] args) {
         String cmd = command.toLowerCase(Locale.ROOT);
         if (!(sender instanceof Player p) && !cmd.equals("list") && !cmd.equals("help")) {
-            sender.sendMessage("This command can only be used by a player.");
+            plugin.tellPublic(sender, "This command can only be used by a player.");
             return true;
         }
         Player player = sender instanceof Player ? (Player) sender : null;
@@ -158,7 +158,7 @@ public final class UtilityManager implements Listener {
                 quoteByTarget.put(target.getUniqueId(), current);
                 msg(player, "Teleport request sent to " + target.getName() + ".");
                 net.md_5.bungee.api.chat.TextComponent details = new net.md_5.bungee.api.chat.TextComponent(
-                        "§6Teleport request from §d" + player.getName() + " §8| §bDistance: §f" + current.distanceLabel()
+                        "§8[§6economy§8] §r§6Teleport request from §d" + player.getName() + " §8| §bDistance: §f" + current.distanceLabel()
                                 + " §8| §eTravel cost: §6✦ " + current.cost() + " coins ");
                 net.md_5.bungee.api.chat.TextComponent accept = new net.md_5.bungee.api.chat.TextComponent("§a[ ACCEPT ]");
                 accept.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
@@ -288,7 +288,7 @@ public final class UtilityManager implements Listener {
             case "afk" -> {
                 boolean value = !afk.getOrDefault(player.getUniqueId(), false);
                 afk.put(player.getUniqueId(), value);
-                Bukkit.broadcastMessage(ChatColor.GRAY + player.getName() + (value ? " is now AFK." : " is no longer AFK."));
+                Bukkit.broadcastMessage("§8[§6economy§8] §e" + player.getName() + " §f" + (value ? "is now AFK." : "is no longer AFK."));
                 return true;
             }
             case "helpxzh" -> {
@@ -303,11 +303,11 @@ public final class UtilityManager implements Listener {
                 return true;
             }
             case "help" -> {
-                sender.sendMessage(ChatColor.GOLD + "Economy commands:");
-                sender.sendMessage(ChatColor.WHITE + "/balance, /pay, /shop, /books, /loan, /quests, /deathinventory");
-                sender.sendMessage(ChatColor.WHITE + "/spawn, /home, /warp, /tpa, /tpaccept, /tpdeny, /back, /rtp");
-                sender.sendMessage(ChatColor.WHITE + "/msg, /reply, /ignore, /afk, /near, /list, /top, /kit");
-                if (sender.hasPermission("xzh.admin")) sender.sendMessage(ChatColor.WHITE + "/xzhadmin, /eco, /shopadmin, /setspawn, /setwarp, /delwarp");
+                plugin.tellPublic(sender, ChatColor.GOLD + "Economy commands:");
+                plugin.tellPublic(sender, ChatColor.WHITE + "/balance, /pay, /shop, /books, /loan, /quests, /deathinventory");
+                plugin.tellPublic(sender, ChatColor.WHITE + "/spawn, /home, /warp, /tpa, /tpaccept, /tpdeny, /back, /rtp");
+                plugin.tellPublic(sender, ChatColor.WHITE + "/msg, /reply, /ignore, /afk, /near, /list, /top, /kit");
+                if (sender.hasPermission("xzh.admin")) plugin.tellPublic(sender, ChatColor.WHITE + "/xzhadmin, /eco, /shopadmin, /setspawn, /setwarp, /delwarp");
                 return true;
             }
             case "kit" -> {
@@ -340,7 +340,7 @@ public final class UtilityManager implements Listener {
             }
             case "list" -> {
                 String names = Bukkit.getOnlinePlayers().stream().map(Player::getName).sorted().collect(java.util.stream.Collectors.joining(", "));
-                sender.sendMessage(ChatColor.GOLD + "Online (" + Bukkit.getOnlinePlayers().size() + "): " + ChatColor.WHITE + names);
+                plugin.tellPublic(sender, ChatColor.GOLD + "Online (" + Bukkit.getOnlinePlayers().size() + "): " + ChatColor.WHITE + names);
                 return true;
             }
             case "near" -> {
@@ -426,7 +426,7 @@ public final class UtilityManager implements Listener {
                 }
                 if (seconds > 1) {
                     seconds--;
-                    player.sendMessage("§8[§6XZH§8] §bHOME §8» §fTeleporting in §e" + seconds + "§f...");
+                    plugin.tellPublic(player, "§bHOME §8» §fTeleporting in §e" + seconds + "§f...");
                     return;
                 }
                 Location destination = bedHome(id);
@@ -589,7 +589,7 @@ public final class UtilityManager implements Listener {
 
     private void showTpaPreview(Player requester, Player target, TpaQuote quote) {
         net.md_5.bungee.api.chat.TextComponent line = new net.md_5.bungee.api.chat.TextComponent(
-                "§6Teleport to §d@" + target.getName() + " §8| §bDistance: §f" + quote.distanceLabel()
+                "§8[§6economy§8] §r§6Teleport to §d@" + target.getName() + " §8| §bDistance: §f" + quote.distanceLabel()
                         + " §8| §eTravel cost: §6✦ " + quote.cost() + " coins");
         net.md_5.bungee.api.chat.TextComponent send = new net.md_5.bungee.api.chat.TextComponent("§a[ SEND ]");
         send.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
@@ -610,12 +610,7 @@ public final class UtilityManager implements Listener {
         return args[0].toLowerCase(Locale.ROOT);
     }
     private void msg(Player player, String text) {
-        String lower = text.toLowerCase(Locale.ROOT);
-        String color = lower.contains("death") || lower.contains("died") ? "§c"
-                : lower.contains("back") || lower.contains("returned") ? "§6"
-                : lower.contains("teleport") || lower.contains("tpa") || lower.contains("tp request") ? "§b"
-                : "§f";
-        player.sendMessage("§8[§6XZH§8] " + color + text);
+        plugin.tellPublic(player, text);
     }
     private void save() {
         try { data.save(file); }
