@@ -267,6 +267,17 @@ shop:
     netherite_upgrade_smithing_template: 10
     elytra: 3
 
+# Custom fish market and collection library.
+fish-market:
+  sell-multiplier: 0.35
+  prices:
+    common: 20
+    uncommon: 40
+    rare: 80
+    epic: 160
+    legendary: 400
+    mythical: 1000
+
 # Quest pack stock resets to these values each server-local day.
 quests:
   pack-stock:
