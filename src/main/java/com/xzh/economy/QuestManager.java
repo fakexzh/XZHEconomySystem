@@ -1984,7 +1984,7 @@ public final class QuestManager implements Listener {
 
     private void broadcastGlobalProgress(){
         resetEventIfNeeded();if(!"active".equals(data.getString("event.phase","")))return;
-        Bukkit.broadcastMessage(ChatColor.GOLD+"[quest] "+ChatColor.YELLOW+data.getString("event.name","Community Quest")+": "+communityProgressTotal()+"/"+Math.max(1,communityGoalTotal())+" total progress.");
+        Bukkit.broadcastMessage("§8[§dquest§8] §r"+ChatColor.YELLOW+data.getString("event.name","Community Quest")+": "+communityProgressTotal()+"/"+Math.max(1,communityGoalTotal())+" total progress.");
     }
 
     private void refreshSingleShopIfDue() {
@@ -2183,7 +2183,7 @@ public final class QuestManager implements Listener {
         data.set("event.total-goal",total);data.set("event.timer-minutes",p.timerMinutes());
         data.set("event.ends-at",p.timerMinutes()>0?now+p.timerMinutes()*60000L:0L);data.set("event.cooldown-until",0L);save();
         if(announce){String time=p.timerMinutes()>0?p.timerMinutes()+" minutes":"no time limit";
-            Bukkit.broadcastMessage(ChatColor.GOLD+"[quest] "+ChatColor.YELLOW+"New Community Quest: "+p.name()+". "+packDescription(p)
+            Bukkit.broadcastMessage("§8[§dquest§8] §r"+ChatColor.YELLOW+"New Community Quest: "+p.name()+". "+packDescription(p)
                 +" Time limit: "+time+". Reward: "+p.reward()+" coins for the first finisher; 10% contributors receive 10%.");}
     }
 
