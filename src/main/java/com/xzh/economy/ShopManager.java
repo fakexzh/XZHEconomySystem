@@ -305,6 +305,7 @@ public final class ShopManager implements Listener {
         player.openInventory(inv);
     }
 
+    // Market uses vanilla display icons; only the Bank denomination buttons use custom coin textures.
     private void openMarket(Player player) {
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "SHOP: Market");
         add(inv, 10, Material.IRON_INGOT, "Ores", "category", "ores");
