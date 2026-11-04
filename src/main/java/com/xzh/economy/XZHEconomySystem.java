@@ -231,22 +231,22 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
 
     /** Sends all shop-related player notices with the dedicated shop prefix. */
     public void tellShop(CommandSender sender, String message) {
-        sender.sendMessage("§8[§5shop§8] §r" + colorMessage(message));
+        sender.sendMessage("§8[§5shop§8] §r" + colorMessage(message, "§d", "§f", "§e"));
     }
 
     /** Sends quest, achievement-pack, and Community Chest notices consistently. */
     public void tellQuest(CommandSender sender, String message) {
-        sender.sendMessage("§8[§dquest§8] §r" + colorMessage(message));
+        sender.sendMessage("§8[§dquest§8] §r" + colorMessage(message, "§b", "§f", "§6"));
     }
 
     /** Sends bank and bank-loan notices with the dedicated bank prefix. */
     public void tellBank(CommandSender sender, String message) {
-        sender.sendMessage("§8[§6bank§8] §r" + colorMessage(message));
+        sender.sendMessage("§8[§6bank§8] §r" + colorMessage(message, "§a", "§f", "§6"));
     }
 
     /** Sends Fortune Book notices with the dedicated fortune prefix. */
     public void tellFortune(CommandSender sender, String message) {
-        sender.sendMessage("§8[§5fortune§8] §r" + colorMessage(message));
+        sender.sendMessage("§8[§5fortune§8] §r" + colorMessage(message, "§d", "§f", "§5"));
     }
 
     /** Announces only configured high-value, rare, or progression purchases. */
@@ -437,6 +437,11 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     }
 
     private String colorMessage(String message) {
+        return colorMessage(message, "§a", "§f", "§e");
+    }
+
+    /** Applies category-specific semantic colors: action, explanatory text, and currency. */
+    private String colorMessage(String message, String successColor, String neutralColor, String currencyColor) {
         String colored = org.bukkit.ChatColor.translateAlternateColorCodes('&', message == null ? "" : message);
         String leadingColor = "";
         if (colored.length() >= 2 && colored.charAt(0) == '§') {
@@ -459,13 +464,13 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         String successPattern = "(?i)^(Purchased|Bought|Sold|Deposited|Withdrew|Transferred|Received|Completed|Approved|Set|Cleared|Recovered|Started|Unlocked|Fully repaid|Partial loan repayment|Returned)";
         java.util.regex.Matcher action = java.util.regex.Pattern.compile(successPattern).matcher(result);
         if (action.find()) {
-            result = "§a" + action.group(1) + "§f" + result.substring(action.end());
+            result = successColor + action.group(1) + neutralColor + result.substring(action.end());
         } else {
-            result = (leadingColor.isEmpty() ? "§f" : leadingColor) + result;
+            result = (leadingColor.isEmpty() ? neutralColor : leadingColor) + result;
         }
 
-        // Currency values stand out in yellow while item names and explanatory text stay white.
-        return result.replaceAll("(?i)(?<![§0-9a-fk-or])([0-9][0-9,]*(?:\\.[0-9]+)?)\\s+(coins?|coin)", "§e$1 $2§f");
+        // Each feature supplies its own currency accent while preserving explicit inline colors.
+        return result.replaceAll("(?i)(?<![§0-9a-fk-or])([0-9][0-9,]*(?:\\.[0-9]+)?)\\s+(coins?|coin)", currencyColor + "$1 $2" + neutralColor);
     }
 
     private void tell(CommandSender sender, String message) {
