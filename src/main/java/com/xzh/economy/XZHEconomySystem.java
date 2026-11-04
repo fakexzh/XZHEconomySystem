@@ -438,7 +438,25 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
 
     private String colorMessage(String message) {
         String colored = org.bukkit.ChatColor.translateAlternateColorCodes('&', message == null ? "" : message);
-        return colored.startsWith("§") ? colored : "§f" + colored;
+        if (colored.startsWith("§")) return colored;
+        String lower = colored.trim().toLowerCase(Locale.ROOT);
+        if (lower.startsWith("no ") || lower.startsWith("not ") || lower.startsWith("invalid")
+                || lower.startsWith("unable") || lower.startsWith("cannot") || lower.startsWith("could not")
+                || lower.startsWith("failed") || lower.startsWith("your loan is overdue")
+                || lower.startsWith("you already") || lower.startsWith("you have reached")
+                || lower.startsWith("you do not") || lower.startsWith("that player")
+                || lower.startsWith("choose another") || lower.startsWith("enter a valid")) {
+            return "§c" + colored;
+        }
+        if (lower.startsWith("purchased") || lower.startsWith("bought") || lower.startsWith("sold")
+                || lower.startsWith("deposited") || lower.startsWith("withdrew") || lower.startsWith("transferred")
+                || lower.startsWith("received") || lower.startsWith("completed") || lower.startsWith("approved")
+                || lower.startsWith("set ") || lower.startsWith("cleared") || lower.startsWith("recovered")
+                || lower.startsWith("started") || lower.startsWith("unlocked") || lower.startsWith("fully repaid")
+                || lower.startsWith("partial loan repayment") || lower.startsWith("returned")) {
+            return "§a" + colored;
+        }
+        return "§f" + colored;
     }
 
     private void tell(CommandSender sender, String message) {
