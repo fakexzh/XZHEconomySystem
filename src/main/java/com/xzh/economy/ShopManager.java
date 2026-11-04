@@ -276,12 +276,12 @@ public final class ShopManager implements Listener {
 
         // Row 3: six primary destinations, centered as one group.
         add(inv, 19, Material.ENDER_CHEST, "Market", "market", "market");
-        add(inv, 20, Material.PANDA_SPAWN_EGG, "Pet Shop", "pets", "baby-pets",
+        add(inv, 21, Material.PANDA_SPAWN_EGG, "Pet Shop", "pets", "baby-pets",
                 List.of(ChatColor.GRAY + "Permanent baby pets with owner controls.", ChatColor.YELLOW + "Click to browse pets."));
-        add(inv, 21, Material.OAK_BOAT, "Travel Shop", "travel-shop", "travel");
-        add(inv, 22, Material.END_CRYSTAL, "Quest Shop", "quests", "quests");
-        add(inv, 23, Material.SCULK_SENSOR, "Death Inventory", "deathinventory", "deathinventory");
-        add(inv, 24, Material.STONE_BRICKS, "Upcoming", "category", "upcoming",
+        add(inv, 22, Material.OAK_BOAT, "Travel Shop", "travel-shop", "travel");
+        add(inv, 23, Material.END_CRYSTAL, "Quest Shop", "quests", "quests");
+        add(inv, 24, Material.SCULK_SENSOR, "Death Inventory", "deathinventory", "deathinventory");
+        add(inv, 25, Material.STONE_BRICKS, "Upcoming", "category", "upcoming",
                 List.of(ChatColor.GRAY + "New features will appear here."));
 
         // Row 5: bank and account utilities.
@@ -308,22 +308,22 @@ public final class ShopManager implements Listener {
     // Market uses vanilla display icons; only the Bank denomination buttons use custom coin textures.
     private void openMarket(Player player) {
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "SHOP: Market");
+        // Two centered rows of six categories; Help has been removed.
         add(inv, 10, Material.IRON_INGOT, "Ores", "category", "ores");
         add(inv, 11, Material.MOSSY_STONE_BRICKS, "Blocks", "category", "blocks");
         add(inv, 12, Material.NETHERITE_CHESTPLATE, "Armor", "category", "armor");
         add(inv, 13, Material.NETHERITE_PICKAXE, "Tools", "category", "tools");
         add(inv, 14, Material.APPLE, "Food", "category", "food");
         add(inv, 15, Material.BEETROOT_SEEDS, "Seeds & Farming", "category", "seeds");
-        add(inv, 16, Material.CRAFTING_TABLE, "Essentials", "category", "essentials");
-        add(inv, 17, Material.ELYTRA, "Special Items", "category", "special");
-        add(inv, 19, Material.LIGHT_BLUE_DYE, "Flowers & Dyes", "category", "flowers-dyes");
-        add(inv, 20, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
-        add(inv, 21, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
-        add(inv, 22, Material.POTION, "Potions", "category", "potions");
-        PotionMeta potionMeta = (PotionMeta) inv.getItem(22).getItemMeta();
+        add(inv, 19, Material.ANVIL, "Essentials", "category", "essentials");
+        add(inv, 20, Material.ELYTRA, "Special Items", "category", "special");
+        add(inv, 21, Material.LIGHT_BLUE_DYE, "Flowers & Dyes", "category", "flowers-dyes");
+        add(inv, 22, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
+        add(inv, 23, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
+        add(inv, 24, Material.POTION, "Potions", "category", "potions");
+        PotionMeta potionMeta = (PotionMeta) inv.getItem(24).getItemMeta();
         potionMeta.setBasePotionType(PotionType.HEALING);
-        inv.getItem(22).setItemMeta(potionMeta);
-        add(inv, 31, Material.BOOK, "Help", "help", "help");
+        inv.getItem(24).setItemMeta(potionMeta);
         add(inv, 49, Material.ARROW, "Back to Shop", "back", "main");
         player.openInventory(inv);
     }
@@ -795,7 +795,7 @@ public final class ShopManager implements Listener {
     private void add(Inventory inv, int slot, Material material, String title, String action, String value) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.WHITE + title);
+        meta.setDisplayName(title.contains("§") ? title : ChatColor.YELLOW + title);
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         meta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, value);
         item.setItemMeta(meta);
@@ -807,7 +807,7 @@ public final class ShopManager implements Listener {
         ItemStack item = inv.getItem(slot);
         if (item == null) return;
         ItemMeta meta = item.getItemMeta();
-        meta.setLore(lore);
+        meta.setLore(lore.stream().map(line -> line.contains("§") ? line : ChatColor.GRAY + line).toList());
         item.setItemMeta(meta);
     }
 
@@ -851,10 +851,6 @@ public final class ShopManager implements Listener {
             case "player-money-view" -> { /* view-only player balance head */ }
             case "balance" -> plugin.tellShop(player, "Pocket: " + money(plugin.getBalance(player.getUniqueId())) + " coins; Bank: " + money(plugin.getBankManager().getBalance(player.getUniqueId())) + " coins.");
             case "bank" -> plugin.getBankManager().open(player);
-            case "help" -> {
-                plugin.tellShop(player, "/shop, /bank, /balance, /pay, /quests, /deathinventory, /books");
-                player.closeInventory();
-            }
             case "category-page" -> {
                 String[] bits = value.split(":");
                 if (bits.length == 2) {
