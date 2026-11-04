@@ -32,7 +32,7 @@ import java.util.UUID;
 
 public final class UtilityManager implements Listener {
     private static final long TPA_TTL = 60_000L;
-    private final JavaPlugin plugin;
+    private final XZHEconomySystem plugin;
     private final File file;
     private final YamlConfiguration data;
     private final Map<UUID, UUID> requestsByTarget = new HashMap<>();
@@ -47,7 +47,7 @@ public final class UtilityManager implements Listener {
     private final Map<UUID, BukkitRunnable> homeCountdowns = new HashMap<>();
     private final Map<UUID, Location> homeCountdownStarts = new HashMap<>();
 
-    public UtilityManager(JavaPlugin plugin) {
+    public UtilityManager(XZHEconomySystem plugin) {
         this.plugin = plugin;
         file = new File(plugin.getDataFolder(), "locations.yml");
         data = YamlConfiguration.loadConfiguration(file);
