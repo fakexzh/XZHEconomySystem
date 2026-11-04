@@ -1006,7 +1006,7 @@ public final class ShopManager implements Listener {
                     }
                     recordPurchase(player, prettyProduct(p), delivered, charged);
                     plugin.tellShop(player, "Bought " + delivered + " × " + prettyProduct(p) + " for " + money(charged) + " coins.");
-                    plugin.announceSpecialPurchase(player, material, delivered, charged);
+                    plugin.announceSpecialPurchase(player, prettyProduct(p), material, delivered, charged);
                 } else {
                     if (isFarmableSellItem(material)) {
                         int availableSellStock = getSellStock(player, material);
