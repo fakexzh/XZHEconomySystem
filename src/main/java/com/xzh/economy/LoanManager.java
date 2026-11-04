@@ -53,7 +53,7 @@ public final class LoanManager implements Listener {
     }
 
     public void open(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "XZH BANK: Loans");
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "Bank: Loans");
         UUID id = player.getUniqueId();
         double owed = getOwed(id);
         if (owed > 0) {
@@ -78,7 +78,7 @@ public final class LoanManager implements Listener {
     }
 
     private void openTerms(Player player, int amount) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "XZH BANK: Choose loan term");
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "Bank: Choose loan term");
         int[] slots = {10, 12, 14, 16};
         for (int i = 0; i < TERMS.length; i++) {
             int days = TERMS[i];
@@ -96,13 +96,13 @@ public final class LoanManager implements Listener {
 
     private void openConfirm(Player player, int amount, int days) {
         double total = Math.ceil(amount * (1 + rateFor(days) * days));
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "XZH BANK: Confirm loan");
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Bank: Confirm loan");
         add(inv, 13, Material.GOLD_INGOT, ChatColor.YELLOW + "Borrow " + amount + " coins",
                 "info", amount, days, List.of(
                 ChatColor.WHITE + "Term: " + days + " days",
                 ChatColor.WHITE + "Total repayment: " + ChatColor.RED + money(total),
                 ChatColor.GRAY + "12-hour grace period after due time."));
-        add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "XZH BANK: Confirm loan", "confirm", amount, days, List.of());
+        add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "Bank: Confirm loan", "confirm", amount, days, List.of());
         add(inv, 15, Material.RED_CONCRETE, ChatColor.RED + "Cancel", "cancel", 0, 0, List.of());
         player.openInventory(inv);
     }
@@ -234,7 +234,7 @@ public final class LoanManager implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (title == null || !(title.equals("XZH BANK: Loans") || title.equals("XZH BANK: Choose loan term") || title.equals("XZH BANK: Confirm loan"))) return;
+        if (title == null || !(title.equals("Bank: Loans") || title.equals("Bank: Choose loan term") || title.equals("Bank: Confirm loan"))) return;
         event.setCancelled(true);
         ItemStack item = event.getCurrentItem();
         if (item == null || !item.hasItemMeta()) return;

@@ -88,13 +88,13 @@ public final class PocketCoinManager implements Listener {
         // distinguish official currency from ordinary gold nuggets.
         ItemStack item = new ItemStack(Material.GOLD_NUGGET, amount);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.GOLD + "XZH Coin " + ChatColor.YELLOW + "(" + denomination + ")");
+        meta.setDisplayName(ChatColor.GOLD + "Coin " + ChatColor.YELLOW + "(" + denomination + ")");
         // Minecraft 26.3 reads custom model data through the component's float list.
         // Set that component explicitly so the resource-pack range_dispatch sees the denomination.
         var customModelData = meta.getCustomModelDataComponent();
         customModelData.setFloats(List.of((float) denomination));
         meta.setCustomModelDataComponent(customModelData);
-        meta.setLore(List.of(ChatColor.GRAY + "Official XZH pocket currency",
+        meta.setLore(List.of(ChatColor.GRAY + "Official pocket currency",
                 ChatColor.GRAY + "Value: " + denomination + " coin" + (denomination == 1 ? "" : "s"),
                 ChatColor.DARK_GRAY + "Dropped on death; bank deposits are safe."));
         meta.getPersistentDataContainer().set(denominationKey, PersistentDataType.INTEGER, denomination);

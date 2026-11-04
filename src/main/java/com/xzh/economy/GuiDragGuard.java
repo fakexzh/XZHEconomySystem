@@ -13,11 +13,11 @@ import org.bukkit.plugin.java.JavaPlugin;
  */
 public final class GuiDragGuard implements Listener {
     private static final String[] PROTECTED_TITLES = {
-            "XZH Shop", "Shop: ", "Choose quantity", "Confirm transaction",
-            "XZH Enchantment Books ", "Confirm enchanted book",
-            "XZH Loans", "Choose loan term", "Confirm loan",
-            "XZH Quest Packs", "Confirm quest pack", "Confirm abandon quest", "XZH Global Event",
-            "Death Inventory Recovery", "XZH Admin"
+            "Shop", "Shop: ", "Choose quantity", "Confirm transaction",
+            "Enchantment Books ", "Confirm enchanted book",
+            "Loans", "Choose loan term", "Confirm loan",
+            "Quest Packs", "Confirm quest pack", "Confirm abandon quest", "Global Event",
+            "Death Inventory Recovery", "Admin"
     };
 
     public GuiDragGuard(JavaPlugin plugin) {

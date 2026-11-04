@@ -46,7 +46,7 @@ public final class AdminManager implements Listener {
             player.sendMessage(ChatColor.RED + "No permission.");
             return;
         }
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_RED + "XZH Admin");
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_RED + "Admin");
         add(inv, 10, Material.GOLD_INGOT, "Set player balance", "balance",
                 List.of("Set an online or previously known player's balance"));
         add(inv, 12, Material.CHEST, "Set global stock", "stock",
@@ -76,7 +76,7 @@ public final class AdminManager implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (!"XZH Admin".equals(ChatColor.stripColor(event.getView().getTitle()))) return;
+        if (!"Admin".equals(ChatColor.stripColor(event.getView().getTitle()))) return;
         event.setCancelled(true);
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || !clicked.hasItemMeta()) return;

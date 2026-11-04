@@ -751,7 +751,7 @@ public final class QuestManager implements Listener {
     }
 
     public void open(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Quests");
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "Quests");
         add(inv, 10, Material.MAP, ChatColor.YELLOW + "Single Quests", "section-single", "single",
             List.of(ChatColor.GRAY + "Random challenge generated on every purchase",
                     ChatColor.GRAY + "Shop offer refreshes every 2 hours"));
@@ -771,7 +771,7 @@ public final class QuestManager implements Listener {
         refreshSecretQuestIfDue();
         long next = data.getLong("single-shop.next-refresh", nextRefresh(System.currentTimeMillis()));
         long mins = Math.max(0, (next - System.currentTimeMillis()) / 60000L);
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "XZH Single Quests");
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "Single Quests");
         // Secret Quest is intentionally the first item in the menu; its 30-minute cycle is unchanged.
         add(inv, 10, Material.ENDER_EYE, ChatColor.LIGHT_PURPLE + "??? Secret Quest", "single-secret-buy", "secret",
             List.of(ChatColor.WHITE + "Purchase price: " + ChatColor.YELLOW + data.getInt("single-shop.secret.cost", 250) + " coins",
@@ -799,7 +799,7 @@ public final class QuestManager implements Listener {
     }
 
     private void openPacks(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Pack Tiers");
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "Pack Tiers");
         for (String tier : List.of("easy", "hard", "master")) {
             boolean unlocked = tierUnlocked(player, tier);
             Material icon = tier.equals("easy") ? Material.AXOLOTL_SPAWN_EGG
@@ -826,7 +826,7 @@ public final class QuestManager implements Listener {
         int pages = Math.max(1, (list.size() + 44) / 45);
         int pg = Math.max(0, Math.min(page, pages - 1));
         String label = tier.substring(0, 1).toUpperCase(Locale.ROOT) + tier.substring(1);
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "XZH " + label + " Packs " + (pg + 1));
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + label + " Packs " + (pg + 1));
         for (int i = pg * 45; i < Math.min(list.size(), pg * 45 + 45); i++) {
             Pack pack = list.get(i);
             boolean done = completedPack(player.getUniqueId(), pack.id());
@@ -1479,7 +1479,7 @@ public final class QuestManager implements Listener {
         int contribution = data.getInt("event.contribution." + id, 0);
         long remaining = Math.max(0L, data.getLong("event.ends-at", System.currentTimeMillis()) - System.currentTimeMillis());
         boolean completed = data.getBoolean("event.completed", false);
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Community Chest");
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "Community Chest");
         add(inv, 13, Material.NETHER_STAR, ChatColor.GOLD + data.getString("event.name", "Community Chest"), "global-info", "global",
             List.of(ChatColor.WHITE + data.getString("event.description", "Work together to complete the objective."),
                     ChatColor.WHITE + "Shared progress: " + progress + "/" + goal,
@@ -1800,9 +1800,9 @@ public final class QuestManager implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (title == null || !(title.equals("XZH Quests") || title.equals("XZH Single Quests")
-                || title.startsWith("XZH Achievement Packs") || title.equals("XZH Pack Tiers") || title.startsWith("XZH Easy Packs") || title.startsWith("XZH Hard Packs") || title.startsWith("XZH Master Packs") || title.equals("Confirm quest pack")
-                || title.equals("XZH Community Chest"))) return;
+        if (title == null || !(title.equals("Quests") || title.equals("Single Quests")
+                || title.startsWith("Achievement Packs") || title.equals("Pack Tiers") || title.startsWith("Easy Packs") || title.startsWith("Hard Packs") || title.startsWith("Master Packs") || title.equals("Confirm quest pack")
+                || title.equals("Community Chest"))) return;
         event.setCancelled(true);
         ItemStack item = event.getCurrentItem();
         if (item == null || !item.hasItemMeta()) return;

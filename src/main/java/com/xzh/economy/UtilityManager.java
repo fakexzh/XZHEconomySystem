@@ -426,7 +426,7 @@ public final class UtilityManager implements Listener {
                 }
                 if (seconds > 1) {
                     seconds--;
-                    player.sendMessage("§8[§6XZH§8] §bHOME §8» §fTeleporting in §e" + seconds + "§f...");
+                    player.sendMessage("§bHOME §8» §fTeleporting in §e" + seconds + "§f...");
                     return;
                 }
                 Location destination = bedHome(id);
@@ -615,7 +615,7 @@ public final class UtilityManager implements Listener {
                 : lower.contains("back") || lower.contains("returned") ? "§6"
                 : lower.contains("teleport") || lower.contains("tpa") || lower.contains("tp request") ? "§b"
                 : "§f";
-        player.sendMessage("§8[§6XZH§8] " + color + text);
+        player.sendMessage(color + text);
     }
     private void save() {
         try { data.save(file); }

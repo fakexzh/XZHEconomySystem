@@ -17,7 +17,7 @@ public final class VaultEconomyProvider implements Economy {
     public VaultEconomyProvider(XZHEconomySystem plugin) { this.plugin = plugin; }
 
     @Override public boolean isEnabled() { return plugin.isEnabled(); }
-    @Override public String getName() { return "XZHEconomySystem"; }
+    @Override public String getName() { return "Economy"; }
     @Override public boolean hasBankSupport() { return false; }
     @Override public int fractionalDigits() { return 2; }
     @Override public String format(double amount) { return String.format(Locale.US, "%.2f %s", amount, currencyNamePlural()); }

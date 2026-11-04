@@ -424,7 +424,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     }
 
     private void tell(CommandSender sender, String message) {
-        sender.sendMessage("§8[§6XZH§8] §r" + message);
+        sender.sendMessage("" + message);
     }
 
     @Override
@@ -536,7 +536,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 return true;
             }
             case "xzh" -> {
-                tell(sender, "§eXZHEconomySystem §7v" + getPluginMeta().getVersion());
+                tell(sender, "§eEconomy §7v" + getPluginMeta().getVersion());
                 tell(sender, "§f/balance §7- check your coins");
                 tell(sender, "§f/pay <player> <amount> §7- send coins");
                 tell(sender, "§f/sendmoney <player> <amount> §7- request a confirmed transfer to them");

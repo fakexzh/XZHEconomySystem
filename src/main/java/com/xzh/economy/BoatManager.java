@@ -28,7 +28,7 @@ import java.util.Map;
  * not inferred from a mutable display name.
  */
 public final class BoatManager implements Listener {
-    private static final String GUI = "XZH TRAVEL";
+    private static final String GUI = "Travel";
     private final XZHEconomySystem plugin;
     private final NamespacedKey tierKey;
     private final NamespacedKey chestKey;
@@ -39,11 +39,11 @@ public final class BoatManager implements Listener {
 
     private final List<BoatOffer> offers = List.of(
         new BoatOffer("basic", "Basic Bamboo Raft", Material.BAMBOO_RAFT, Material.BAMBOO_CHEST_RAFT,
-            300, 200, "Classic bamboo raft", "XZH Travel"),
+            300, 200, "Classic bamboo raft", "Travel"),
         new BoatOffer("aura", "Aura Pale Oak Boat", Material.PALE_OAK_BOAT, Material.PALE_OAK_CHEST_BOAT,
-            700, 500, "Pale oak boat", "XZH Travel"),
+            700, 500, "Pale oak boat", "Travel"),
         new BoatOffer("super", "Super Spruce Boat", Material.SPRUCE_BOAT, Material.SPRUCE_CHEST_BOAT,
-            1600, 1300, "Spruce boat", "XZH Travel")
+            1600, 1300, "Spruce boat", "Travel")
     );
 
     public BoatManager(XZHEconomySystem plugin) {
@@ -81,7 +81,7 @@ public final class BoatManager implements Listener {
         ItemMeta im = info.getItemMeta();
         im.setDisplayName(ChatColor.WHITE + "Travel");
         im.setLore(List.of(
-            ChatColor.GRAY + "Premium XZH boats and a Nautilus travel companion.",
+            ChatColor.GRAY + "Premium boats and a Nautilus travel companion.",
             ChatColor.GRAY + "Nautilus Spawn Egg: " + ChatColor.YELLOW + "2,000 coins",
             ChatColor.GRAY + "Natural horse/donkey and nautilus spawning are disabled."
         ));
@@ -145,7 +145,7 @@ public final class BoatManager implements Listener {
     }
 
     private void openBoatOptions(Player player, BoatOffer offer) {
-        Inventory confirm = Bukkit.createInventory(null, 27, "Confirm XZH Boat");
+        Inventory confirm = Bukkit.createInventory(null, 27, "Confirm Boat");
         confirm.setItem(11, choiceItem(offer, false));
         confirm.setItem(13, choiceItem(offer, true));
         confirm.setItem(26, backItem());
@@ -156,7 +156,7 @@ public final class BoatManager implements Listener {
     public void onConfirmClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (!"Confirm XZH Boat".equals(title) && !"Confirm Travel Item".equals(title)
+        if (!"Confirm Boat".equals(title) && !"Confirm Travel Item".equals(title)
                 && !"Choose boat quantity".equals(title) && !"Choose travel quantity".equals(title)) return;
         event.setCancelled(true);
         ItemStack clicked = event.getCurrentItem();
@@ -170,7 +170,7 @@ public final class BoatManager implements Listener {
             if ("horse".equals(tier) || "donkey".equals(tier) || "nautilus".equals(tier)) openTravelQuantity(player, tier, 1);
             return;
         }
-        if (title.equals("Confirm XZH Boat")) {
+        if (title.equals("Confirm Boat")) {
             if ("back".equals(tier)) { open(player); return; }
             BoatOffer offer = find(tier);
             if (offer == null) return;
@@ -316,7 +316,7 @@ public final class BoatManager implements Listener {
         meta.setDisplayName(ChatColor.GOLD + name);
         meta.setLore(List.of(
             ChatColor.WHITE + "Price: " + ChatColor.YELLOW + money(travelPrice(tier)) + " coins",
-            ChatColor.GRAY + ("nautilus".equals(tier) ? "Only available from the XZH Travel shop." : "Feeding and taming are allowed; breeding is disabled."),
+            ChatColor.GRAY + ("nautilus".equals(tier) ? "Only available from the Travel shop." : "Feeding and taming are allowed; breeding is disabled."),
             ChatColor.GREEN + "Click to review purchase"
         ));
         meta.getPersistentDataContainer().set(tierKey, PersistentDataType.STRING, tier);
@@ -423,7 +423,7 @@ public final class BoatManager implements Listener {
         });
         meta.getPersistentDataContainer().set(tierKey, PersistentDataType.STRING, offer.tier());
         meta.getPersistentDataContainer().set(chestKey, PersistentDataType.BYTE, (byte) (chest ? 1 : 0));
-        meta.setDisplayName(ChatColor.WHITE + "XZH " + offer.name() + (chest ? " with Chest" : ""));
+        meta.setDisplayName(ChatColor.WHITE + offer.name() + (chest ? " with Chest" : ""));
         meta.setLore(List.of(ChatColor.GRAY + offer.finish(), ChatColor.GRAY + offer.branding()));
         item.setItemMeta(meta);
         return item;
