@@ -1650,7 +1650,7 @@ public final class QuestManager implements Listener {
         for(String t:targets) {
             String key=id+":"+t; double accumulated=travelRemainders.getOrDefault(key,0.0)+step;
             int whole=(int)Math.floor(accumulated); travelRemainders.put(key,accumulated-whole);
-            if(whole>0) incrementTarget(player,t,whole);
+            if(whole>0) incrementTarget(player,t,whole,false);
         }
     }
 
@@ -1719,8 +1719,12 @@ public final class QuestManager implements Listener {
     }
 
     private void incrementTarget(Player player, String target, int amount) {
+        incrementTarget(player, target, amount, true);
+    }
+
+    private void incrementTarget(Player player, String target, int amount, boolean countCommunity) {
         if (amount <= 0) return;
-        recordCommunityTarget(player, target, amount);
+        if (countCommunity) recordCommunityTarget(player, target, amount);
         UUID id = player.getUniqueId();
         if (data.getString(id + ".active", "").isBlank()) return;
         int count = data.getInt(id + ".objective-count", 0);
