@@ -231,7 +231,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
 
     /** Sends all shop-related player notices with the dedicated shop prefix. */
     public void tellShop(CommandSender sender, String message) {
-        sender.sendMessage("§8[§6shop§8] §r" + colorMessage(message));
+        sender.sendMessage("§8[§5shop§8] §r" + colorMessage(message));
     }
 
     /** Sends quest, achievement-pack, and Community Chest notices consistently. */
@@ -259,13 +259,13 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         boolean progression = getConfig().getStringList("announcements.shop.progression-items").stream()
                 .anyMatch(name -> name.equalsIgnoreCase(material.name()));
         if (!expensive && !rare && !progression) return;
-        String prefix = "§8[§6shop§8] §r";
+        String prefix = "§8[§5shop§8] §r";
         if (progression) {
-            Bukkit.broadcastMessage(prefix + "§e" + player.getName() + " §funlocked a progression item: §b"
-                    + item + " §7(" + money(total) + " coins).");
+            Bukkit.broadcastMessage(prefix + "§a" + player.getName() + " §funlocked a progression item: §f"
+                    + item + " §7(§e" + money(total) + " coins§7).");
         } else {
-            Bukkit.broadcastMessage(prefix + "§e" + player.getName() + " §fpurchased §b" + quantity + " × "
-                    + item + " §ffor §6" + money(total) + " coins§f.");
+            Bukkit.broadcastMessage(prefix + "§a" + player.getName() + " §fpurchased §f" + quantity + " × "
+                    + item + " §ffor §e" + money(total) + " coins§f.");
         }
     }
 
@@ -440,23 +440,29 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         String colored = org.bukkit.ChatColor.translateAlternateColorCodes('&', message == null ? "" : message);
         if (colored.startsWith("§")) return colored;
         String lower = colored.trim().toLowerCase(Locale.ROOT);
-        if (lower.startsWith("no ") || lower.startsWith("not ") || lower.startsWith("invalid")
+
+        boolean error = lower.startsWith("no ") || lower.startsWith("not ") || lower.startsWith("invalid")
                 || lower.startsWith("unable") || lower.startsWith("cannot") || lower.startsWith("could not")
                 || lower.startsWith("failed") || lower.startsWith("your loan is overdue")
                 || lower.startsWith("you already") || lower.startsWith("you have reached")
                 || lower.startsWith("you do not") || lower.startsWith("that player")
-                || lower.startsWith("choose another") || lower.startsWith("enter a valid")) {
-            return "§c" + colored;
+                || lower.startsWith("choose another") || lower.startsWith("enter a valid")
+                || lower.startsWith("purchase cancelled") || lower.startsWith("transfer failed")
+                || lower.startsWith("repayment failed");
+        if (error) return "§c" + colored;
+
+        String result = colored;
+        String successPattern = "(?i)^(Purchased|Bought|Sold|Deposited|Withdrew|Transferred|Received|Completed|Approved|Set|Cleared|Recovered|Started|Unlocked|Fully repaid|Partial loan repayment|Returned)";
+        java.util.regex.Matcher action = java.util.regex.Pattern.compile(successPattern).matcher(result);
+        if (action.find()) {
+            result = "§a" + action.group(1) + "§f" + result.substring(action.end());
+        } else {
+            result = "§f" + result;
         }
-        if (lower.startsWith("purchased") || lower.startsWith("bought") || lower.startsWith("sold")
-                || lower.startsWith("deposited") || lower.startsWith("withdrew") || lower.startsWith("transferred")
-                || lower.startsWith("received") || lower.startsWith("completed") || lower.startsWith("approved")
-                || lower.startsWith("set ") || lower.startsWith("cleared") || lower.startsWith("recovered")
-                || lower.startsWith("started") || lower.startsWith("unlocked") || lower.startsWith("fully repaid")
-                || lower.startsWith("partial loan repayment") || lower.startsWith("returned")) {
-            return "§a" + colored;
-        }
-        return "§f" + colored;
+
+        // Currency values stand out in yellow while item names and explanatory text stay white.
+        result = result.replaceAll("(?i)(?<![§0-9a-fk-or])([0-9][0-9,]*(?:\\.[0-9]+)?)\\s+(coins?|coin)", "§e$1 $2§f");
+        return result;
     }
 
     private void tell(CommandSender sender, String message) {
