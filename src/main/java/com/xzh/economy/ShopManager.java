@@ -279,7 +279,6 @@ public final class ShopManager implements Listener {
         add(inv, 20, Material.PANDA_SPAWN_EGG, "Pet Shop", "pets", "baby-pets", List.of(ChatColor.GRAY + "Permanent baby pets with owner controls."));
         ItemStack travelIcon = new ItemStack(Material.PALE_OAK_BOAT);
         ItemMeta travelMeta = travelIcon.getItemMeta();
-        travelMeta.setCustomModelData(1002);
         travelMeta.setDisplayName(ChatColor.YELLOW + "Travel Shop");
         travelMeta.setLore(List.of(ChatColor.GRAY + "Browse boats and travel options."));
         travelMeta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "category");
@@ -291,7 +290,7 @@ public final class ShopManager implements Listener {
         add(inv, 24, Material.STONE_BRICKS, "Upcoming", "category", "upcoming", List.of(ChatColor.GRAY + "New features will appear here."));
 
         // Row 5: financial/account destinations grouped together.
-        ItemStack bankIcon = plugin.getPocketCoinManager().createCoin(1000, 1);
+        ItemStack bankIcon = new ItemStack(Material.CHEST);
         ItemMeta bankMeta = bankIcon.getItemMeta();
         bankMeta.setDisplayName(ChatColor.WHITE + "Bank");
         bankMeta.setLore(List.of(ChatColor.GRAY + "Open your bank account."));
