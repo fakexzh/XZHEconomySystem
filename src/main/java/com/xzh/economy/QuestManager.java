@@ -1949,7 +1949,7 @@ public final class QuestManager implements Listener {
                 Player online=Bukkit.getPlayer(id);if(online!=null)plugin.tellQuest(online,"You earned "+bonus+" coins for contributing at least 10% to "+name+".");bonuses++;
             }
             Bukkit.broadcastMessage("§8[§dquest§8] §r"+ChatColor.GREEN+winner.getName()+" completed "+name+" and won "+reward+" coins. "+bonuses+" qualifying contributor(s) received 10% rewards.");
-        }else Bukkit.broadcastMessage(ChatColor.GOLD+"[quest] "+ChatColor.YELLOW+name+" expired. No winner. The next event starts after a 1-hour cooldown.");
+        }else Bukkit.broadcastMessage("§8[§dquest§8] §r"+ChatColor.YELLOW+name+" expired. No winner. The next event starts after a 1-hour cooldown.");
         data.set("event.phase","cooldown");data.set("event.completed",completed);data.set("event.winner",winnerId==null?"":winnerId.toString());
         data.set("event.ended-at",now);data.set("event.cooldown-until",now+3600000L);data.set("event.ends-at",0L);save();
     }
