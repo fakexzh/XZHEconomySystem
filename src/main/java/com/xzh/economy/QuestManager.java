@@ -2230,8 +2230,8 @@ public final class QuestManager implements Listener {
         if (slot >= inv.getSize()) return;
         ItemStack stack = new ItemStack(material);
         ItemMeta meta = stack.getItemMeta();
-        meta.setDisplayName(name);
-        meta.setLore(lore);
+        meta.setDisplayName(name.contains("§") ? name : ChatColor.YELLOW + name);
+        meta.setLore(lore.stream().map(line -> line.contains("§") ? line : ChatColor.GRAY + line).toList());
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         meta.getPersistentDataContainer().set(valueKey, PersistentDataType.STRING, value);
         stack.setItemMeta(meta);
