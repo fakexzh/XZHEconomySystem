@@ -268,14 +268,14 @@ public final class ShopManager implements Listener {
     }
 
     public void openMain(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP");
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "Shop");
 
         // Search remains exactly where it was: centered in Row 1.
         add(inv, 4, Material.SPYGLASS, "Search Items", "shop-search", "search",
                 List.of(ChatColor.GRAY + "Search the shop by item name.", ChatColor.YELLOW + "Click, then type your search in chat."));
 
         // Row 3: special destinations, centered as one six-button group.
-        add(inv, 19, Material.CHEST, "Market", "market", "market", List.of(ChatColor.GRAY + "Browse all regular shop categories."));
+        add(inv, 19, Material.ENDER_CHEST, "Market", "market", "market", List.of(ChatColor.GRAY + "Browse all regular shop categories."));
         add(inv, 20, Material.PANDA_SPAWN_EGG, "Pet Shop", "pets", "baby-pets", List.of(ChatColor.GRAY + "Permanent baby pets with owner controls."));
         ItemStack travelIcon = new ItemStack(Material.PALE_OAK_BOAT);
         ItemMeta travelMeta = travelIcon.getItemMeta();
@@ -293,7 +293,7 @@ public final class ShopManager implements Listener {
         // Row 5: financial/account destinations grouped together.
         ItemStack bankIcon = plugin.getPocketCoinManager().createCoin(1000, 1);
         ItemMeta bankMeta = bankIcon.getItemMeta();
-        bankMeta.setDisplayName(ChatColor.WHITE + "XZH BANK");
+        bankMeta.setDisplayName(ChatColor.WHITE + "Bank");
         bankMeta.setLore(List.of(ChatColor.GRAY + "Open your bank account."));
         bankMeta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "bank");
         bankMeta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, "bank");
@@ -308,7 +308,7 @@ public final class ShopManager implements Listener {
         add(inv, 41, Material.PLAYER_HEAD, "Other Players' Money", "players-money", "players-money");
 
         // Row 6: Sell Hand stays in its existing slot.
-        add(inv, 49, Material.CHEST, "Hand Sell (multiple items)", "sell-hand", "hand",
+        add(inv, 49, Material.HOPPER_MINECART, "Hand Sell (multiple items)", "sell-hand", "hand",
                 List.of(ChatColor.WHITE + "Place multiple item stacks into the sell slots.",
                         ChatColor.GRAY + "The menu totals eligible items and respects your personal sell stock.",
                         ChatColor.YELLOW + "Confirm to sell; unsellable items return to you."));
@@ -316,13 +316,13 @@ public final class ShopManager implements Listener {
     }
 
     private void openMarket(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP: Market");
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "Shop: Market");
         add(inv, 10, Material.IRON_INGOT, "Ores", "category", "ores");
-        add(inv, 11, Material.BRICKS, "Blocks", "category", "blocks");
+        add(inv, 11, Material.MOSSY_STONE_BRICKS, "Blocks", "category", "blocks");
         add(inv, 12, Material.NETHERITE_CHESTPLATE, "Armor", "category", "armor");
         add(inv, 13, Material.NETHERITE_PICKAXE, "Tools", "category", "tools");
-        add(inv, 14, Material.COOKED_BEEF, "Food", "category", "food");
-        add(inv, 15, Material.WHEAT_SEEDS, "Seeds & Farming", "category", "seeds");
+        add(inv, 14, Material.APPLE, "Food", "category", "food");
+        add(inv, 15, Material.BEETROOT_SEEDS, "Seeds & Farming", "category", "seeds");
         add(inv, 16, Material.CRAFTING_TABLE, "Essentials", "category", "essentials");
         ItemStack special = new ItemStack(Material.ELYTRA);
         ItemMeta specialMeta = special.getItemMeta();
@@ -331,7 +331,7 @@ public final class ShopManager implements Listener {
         specialMeta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, "special");
         special.setItemMeta(specialMeta);
         inv.setItem(19, special);
-        add(inv, 20, Material.POPPY, "Flowers & Dyes", "category", "flowers-dyes");
+        add(inv, 20, Material.LIGHT_BLUE_DYE, "Flowers & Dyes", "category", "flowers-dyes");
         add(inv, 21, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
         add(inv, 22, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
         add(inv, 23, Material.POTION, "Potions", "category", "potions");
@@ -341,7 +341,7 @@ public final class ShopManager implements Listener {
     }
 
     private void openOtherPlayersMoney(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP: Players' Money");
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "Shop: Players' Money");
         int slot = 0;
         for (Player target : Bukkit.getOnlinePlayers().stream()
                 .sorted(java.util.Comparator.comparing(Player::getName, String.CASE_INSENSITIVE_ORDER)).toList()) {
@@ -367,7 +367,7 @@ public final class ShopManager implements Listener {
     }
 
     private void openPurchaseHistory(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "XZH SHOP: Transaction History");
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "Shop: Transaction History");
         List<String> entries = historyData.getStringList("players." + player.getUniqueId() + ".purchases");
         int[] slots = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21};
         int shown = Math.min(entries.size(), slots.length);
@@ -463,7 +463,7 @@ public final class ShopManager implements Listener {
                 .toList();
         int pages = Math.max(1, (matches.size() + 44) / 45);
         int page = Math.max(0, Math.min(requestedPage, pages - 1));
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP: Search " + (page + 1));
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "Shop: Search " + (page + 1));
         int start = page * 45;
         int end = Math.min(matches.size(), start + 45);
         for (int index = start; index < end; index++) {
@@ -509,7 +509,7 @@ public final class ShopManager implements Listener {
         List<Product> list = products.stream().filter(p -> p.category().equals(category)).sorted(java.util.Comparator.comparingInt(this::productOrder).thenComparing(p -> p.material().name())).toList();
         int pages = Math.max(1, (list.size() + 44) / 45);
         int page = Math.max(0, Math.min(requestedPage, pages - 1));
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP: " + category + " " + (page + 1));
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "Shop: " + category + " " + (page + 1));
         int start = page * 45;
         int end = Math.min(list.size(), start + 45);
         for (int index = start; index < end; index++) {
@@ -563,7 +563,7 @@ public final class ShopManager implements Listener {
     }
 
     private void openXpMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "XZH SHOP: XP");
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "Shop: XP");
         int[] points = {25, 100, 250, 500};
         int[] prices = {8, 25, 55, 100};
         int[] slots = {10, 12, 14, 16};
@@ -689,7 +689,7 @@ public final class ShopManager implements Listener {
     }
 
     private void openFoodMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "XZH SHOP: food");
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "Shop: food");
         add(inv, 11, Material.COOKED_BEEF, "Cooked Food", "category", "food-cooked");
         add(inv, 15, Material.BEEF, "Raw Food", "category", "food-raw");
         add(inv, 22, Material.ARROW, "Back", "back", "main");
@@ -831,11 +831,11 @@ public final class ShopManager implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
         if (title == null) return;
-        if (title.equals("XZH Hand Sell")) {
+        if (title.equals("Hand Sell")) {
             handleHandSellClick(event, player);
             return;
         }
-        if (!title.startsWith("XZH SHOP")
+        if (!title.startsWith("Shop")
                 && !title.equals("Choose quantity") && !title.equals("Confirm transaction")
                 && !title.equals("Confirm XP transaction") && !title.equals("Confirm Sell Hand")) return;
         event.setCancelled(true);
@@ -972,7 +972,7 @@ public final class ShopManager implements Listener {
                         && material != Material.ENCHANTED_GOLDEN_APPLE
                         && material != Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE
                         && material != Material.TRIDENT && material != Material.TOTEM_OF_UNDYING) {
-                    plugin.tellShop(player, "This item cannot be sold to the XZH shop because it is exploit-prone or intended to remain rare.");
+                    plugin.tellShop(player, "This item cannot be sold to the shop because it is exploit-prone or intended to remain rare.");
                     player.closeInventory();
                     return;
                 }
@@ -1079,7 +1079,7 @@ public final class ShopManager implements Listener {
 
 
     private void openHandSell(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH Hand Sell");
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "Hand Sell");
         ItemStack filler = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
         ItemMeta fillerMeta = filler.getItemMeta();
         fillerMeta.setDisplayName(ChatColor.DARK_GRAY + "Place items in the slots above");
@@ -1114,7 +1114,7 @@ public final class ShopManager implements Listener {
         }
         event.setCancelled(false);
         Bukkit.getScheduler().runTask(plugin, () -> {
-            if (player.isOnline() && "XZH Hand Sell".equals(ChatColor.stripColor(player.getOpenInventory().getTitle()))
+            if (player.isOnline() && "Hand Sell".equals(ChatColor.stripColor(player.getOpenInventory().getTitle()))
                     && player.getOpenInventory().getTopInventory() == top) updateHandSellMenu(player);
         });
     }
@@ -1122,7 +1122,7 @@ public final class ShopManager implements Listener {
     @EventHandler
     public void onHandSellDrag(InventoryDragEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (!"XZH Hand Sell".equals(ChatColor.stripColor(event.getView().getTitle()))) return;
+        if (!"Hand Sell".equals(ChatColor.stripColor(event.getView().getTitle()))) return;
         for (int raw : event.getRawSlots()) {
             if (raw >= 45 && raw < event.getView().getTopInventory().getSize()) {
                 event.setCancelled(true);
@@ -1130,7 +1130,7 @@ public final class ShopManager implements Listener {
             }
         }
         Bukkit.getScheduler().runTask(plugin, () -> {
-            if (player.isOnline() && "XZH Hand Sell".equals(ChatColor.stripColor(player.getOpenInventory().getTitle()))) {
+            if (player.isOnline() && "Hand Sell".equals(ChatColor.stripColor(player.getOpenInventory().getTitle()))) {
                 updateHandSellMenu(player);
             }
         });
@@ -1139,7 +1139,7 @@ public final class ShopManager implements Listener {
     @EventHandler
     public void onHandSellClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player player)) return;
-        if (!"XZH Hand Sell".equals(ChatColor.stripColor(event.getView().getTitle()))) return;
+        if (!"Hand Sell".equals(ChatColor.stripColor(event.getView().getTitle()))) return;
         Inventory inv = event.getInventory();
         for (int slot = 0; slot < 45; slot++) {
             ItemStack item = inv.getItem(slot);
@@ -1151,7 +1151,7 @@ public final class ShopManager implements Listener {
     }
 
     private void updateHandSellMenu(Player player) {
-        if (!"XZH Hand Sell".equals(ChatColor.stripColor(player.getOpenInventory().getTitle()))) return;
+        if (!"Hand Sell".equals(ChatColor.stripColor(player.getOpenInventory().getTitle()))) return;
         Inventory inv = player.getOpenInventory().getTopInventory();
         Map<Integer, Integer> sellAmounts = handSellableAmounts(player, inv);
         double total = 0.0;
