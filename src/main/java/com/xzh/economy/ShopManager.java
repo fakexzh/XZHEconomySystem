@@ -281,8 +281,8 @@ public final class ShopManager implements Listener {
         add(inv, 22, Material.OAK_BOAT, "Travel Shop", "travel-shop", "travel");
         add(inv, 23, Material.END_CRYSTAL, "Quest Shop", "quests", "quests");
         add(inv, 24, Material.SCULK_SENSOR, "Death Inventory", "deathinventory", "deathinventory");
-        add(inv, 25, Material.STONE_BRICKS, "Upcoming", "category", "upcoming",
-                List.of(ChatColor.GRAY + "New features will appear here."));
+        add(inv, 25, Material.COD, "Fish Shop", "fish-shop", "fish-shop",
+                List.of(ChatColor.GRAY + "Buy and sell custom fish.", ChatColor.GRAY + "Track your 203-species collection."));
 
         // Row 5: bank and account utilities.
         ItemStack bankIcon = plugin.getPocketCoinManager().createCoin(100, 1);
@@ -832,6 +832,7 @@ public final class ShopManager implements Listener {
         switch (action) {
             case "category" -> openCategory(player, value);
             case "market" -> openMarket(player);
+            case "fish-shop" -> plugin.getFishShopManager().openMain(player);
             case "travel-shop" -> plugin.getBoatManager().open(player);
             case "pets" -> plugin.getPetManager().openShop(player);
             case "shop-search", "search-again" -> promptShopSearch(player);
