@@ -528,7 +528,7 @@ public final class VillagerTradeManager implements Listener {
         Map<String, Long> used = playerUsedOffers.computeIfAbsent(playerId, ignored -> new HashMap<>());
         if (used.getOrDefault(offer.id(), 0L) > now) {
             event.setCancelled(true);
-            event.getPlayer().sendMessage(ChatColor.RED + "You already used this offer. It resets 2 hours after your trade.");
+            plugin.tellShop(event.getPlayer(), "You already used this offer. It resets 2 hours after your trade.");
             return;
         }
         long expiresAt = now + OFFER_COOLDOWN_MILLIS;
