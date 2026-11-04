@@ -231,22 +231,22 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
 
     /** Sends all shop-related player notices with the dedicated shop prefix. */
     public void tellShop(CommandSender sender, String message) {
-        sender.sendMessage("§8[§6shop§8] §r" + message);
+        sender.sendMessage("§8[§6shop§8] §r" + colorMessage(message));
     }
 
     /** Sends quest, achievement-pack, and Community Chest notices consistently. */
     public void tellQuest(CommandSender sender, String message) {
-        sender.sendMessage("§8[§dquest§8] §r" + message);
+        sender.sendMessage("§8[§dquest§8] §r" + colorMessage(message));
     }
 
     /** Sends bank and bank-loan notices with the dedicated bank prefix. */
     public void tellBank(CommandSender sender, String message) {
-        sender.sendMessage("§8[§6bank§8] §r" + message);
+        sender.sendMessage("§8[§6bank§8] §r" + colorMessage(message));
     }
 
     /** Sends Fortune Book notices with the dedicated fortune prefix. */
     public void tellFortune(CommandSender sender, String message) {
-        sender.sendMessage("§8[§5fortune§8] §r" + message);
+        sender.sendMessage("§8[§5fortune§8] §r" + colorMessage(message));
     }
 
     /** Announces only configured high-value, rare, or progression purchases. */
@@ -436,8 +436,13 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         return getConfig().getString("currency-name", "coins");
     }
 
+    private String colorMessage(String message) {
+        String colored = org.bukkit.ChatColor.translateAlternateColorCodes('&', message == null ? "" : message);
+        return colored.startsWith("§") ? colored : "§f" + colored;
+    }
+
     private void tell(CommandSender sender, String message) {
-        sender.sendMessage("§8[§6XZH§8] §r" + message);
+        sender.sendMessage("§8[§6economy§8] §r" + colorMessage(message));
     }
 
     @Override
