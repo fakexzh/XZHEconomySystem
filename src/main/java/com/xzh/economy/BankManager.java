@@ -97,7 +97,7 @@ public final class BankManager implements Listener {
                         ChatColor.GRAY + "Bank is OPEN",
                         ChatColor.GRAY + hoursMessage()));
 
-        add(inv, 9, plugin.getPocketCoinManager().createCoin(1, 1), ChatColor.GREEN + "Deposit 10", "deposit", 10,
+        add(inv, 9, plugin.getPocketCoinManager().createCoin(10, 1), ChatColor.GREEN + "Deposit 10", "deposit", 10,
                 List.of(ChatColor.GRAY + "Move 10 pocket coins into your bank."));
         add(inv, 10, plugin.getPocketCoinManager().createCoin(100, 1), ChatColor.GREEN + "Deposit 100", "deposit", 100,
                 List.of(ChatColor.GRAY + "Move 100 pocket coins into your bank."));
@@ -106,7 +106,7 @@ public final class BankManager implements Listener {
         add(inv, 12, Material.BUNDLE, ChatColor.YELLOW + "Deposit all", "deposit-all", 0,
                 List.of(ChatColor.GRAY + "Deposit your entire pocket balance."));
 
-        add(inv, 14, plugin.getPocketCoinManager().createCoin(1, 1), ChatColor.AQUA + "Withdraw 10", "withdraw", 10,
+        add(inv, 14, plugin.getPocketCoinManager().createCoin(10, 1), ChatColor.AQUA + "Withdraw 10", "withdraw", 10,
                 List.of(ChatColor.GRAY + "Move 10 bank coins into your pocket."));
         add(inv, 15, plugin.getPocketCoinManager().createCoin(100, 1), ChatColor.AQUA + "Withdraw 100", "withdraw", 100,
                 List.of(ChatColor.GRAY + "Move 100 bank coins into your pocket."));
