@@ -270,40 +270,27 @@ public final class ShopManager implements Listener {
     public void openMain(Player player) {
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP");
 
-        // Search sits alone at the top.
+        // Search remains exactly where it was: centered in Row 1.
         add(inv, 4, Material.SPYGLASS, "Search Items", "shop-search", "search",
                 List.of(ChatColor.GRAY + "Search the shop by item name.", ChatColor.YELLOW + "Click, then type your search in chat."));
 
-        // Rows 2 and 3: four categories, one empty separator slot, then four more.
-        add(inv, 9, Material.IRON_INGOT, "Ores", "category", "ores");
-        add(inv, 10, Material.BRICKS, "Blocks", "category", "blocks");
-        add(inv, 11, Material.NETHERITE_CHESTPLATE, "Armor", "category", "armor");
-        add(inv, 12, Material.NETHERITE_PICKAXE, "Tools", "category", "tools");
-        add(inv, 14, Material.COOKED_BEEF, "Food", "category", "food");
-        add(inv, 15, Material.WHEAT_SEEDS, "Seeds & Farming", "category", "seeds");
-        add(inv, 16, Material.CRAFTING_TABLE, "Essentials", "category", "essentials");
-        add(inv, 17, Material.ELYTRA, "Special Items", "category", "special");
-        inv.getItem(17).addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.UNBREAKING, 1);
-
-        add(inv, 18, Material.POPPY, "Flowers & Dyes", "category", "flowers-dyes");
-        add(inv, 19, Material.PANDA_SPAWN_EGG, "Baby Pets", "pets", "baby-pets", List.of(ChatColor.GRAY + "Permanent baby pets with owner controls.", ChatColor.YELLOW + "Click to browse pets."));
-        add(inv, 20, Material.PALE_OAK_BOAT, "Travel", "category", "travel");
-        ItemStack travelIcon = inv.getItem(20);
+        // Row 3: special destinations, centered as one six-button group.
+        add(inv, 19, Material.CHEST, "Market", "market", "market", List.of(ChatColor.GRAY + "Browse all regular shop categories."));
+        add(inv, 20, Material.PANDA_SPAWN_EGG, "Pet Shop", "pets", "baby-pets", List.of(ChatColor.GRAY + "Permanent baby pets with owner controls."));
+        ItemStack travelIcon = new ItemStack(Material.PALE_OAK_BOAT);
         ItemMeta travelMeta = travelIcon.getItemMeta();
         travelMeta.setCustomModelData(1002);
+        travelMeta.setDisplayName(ChatColor.YELLOW + "Travel Shop");
+        travelMeta.setLore(List.of(ChatColor.GRAY + "Browse boats and travel options."));
+        travelMeta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "category");
+        travelMeta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, "travel");
         travelIcon.setItemMeta(travelMeta);
-        add(inv, 21, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
-        add(inv, 23, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
-        add(inv, 24, Material.POTION, "Potions", "category", "potions");
-        ItemStack potionIcon = inv.getItem(24);
-        org.bukkit.inventory.meta.PotionMeta potionMeta = (org.bukkit.inventory.meta.PotionMeta) potionIcon.getItemMeta();
-        potionMeta.setBasePotionType(PotionType.HEALING);
-        potionIcon.setItemMeta(potionMeta);
-        add(inv, 25, Material.END_CRYSTAL, "Quest Packs", "quests", "quests");
-        add(inv, 26, Material.STONE_BRICKS, "Upcoming", "category", "upcoming", List.of(ChatColor.GRAY + "New features will appear here."));
+        inv.setItem(21, travelIcon);
+        add(inv, 22, Material.ENCHANTED_BOOK, "Quest Shop", "quests", "quests");
+        add(inv, 23, Material.SCULK_SENSOR, "Death Inventory", "deathinventory", "deathinventory");
+        add(inv, 24, Material.STONE_BRICKS, "Upcoming", "category", "upcoming", List.of(ChatColor.GRAY + "New features will appear here."));
 
-        // Row 4 (slots 27–35) intentionally stays empty.
-        // Row 5: account, history, player balances, recovery, and help grouped in the center.
+        // Row 5: financial/account destinations grouped together.
         ItemStack bankIcon = plugin.getPocketCoinManager().createCoin(1000, 1);
         ItemMeta bankMeta = bankIcon.getItemMeta();
         bankMeta.setDisplayName(ChatColor.WHITE + "XZH BANK");
@@ -312,21 +299,44 @@ public final class ShopManager implements Listener {
         bankMeta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, "bank");
         GuiIcons.apply(bankMeta, "vault");
         bankIcon.setItemMeta(bankMeta);
-        inv.setItem(38, bankIcon);
-        add(inv, 39, Material.PAPER, "Transition", "transition", "history", List.of(ChatColor.GRAY + "Your recent shop purchases."));
-        ItemStack receiptButton = inv.getItem(39);
+        inv.setItem(39, bankIcon);
+        add(inv, 40, Material.PAPER, "Transaction History", "transition", "history", List.of(ChatColor.GRAY + "Your recent shop purchases."));
+        ItemStack receiptButton = inv.getItem(40);
         ItemMeta receiptMeta = receiptButton.getItemMeta();
         GuiIcons.apply(receiptMeta, "receipt");
         receiptButton.setItemMeta(receiptMeta);
-        add(inv, 40, Material.PLAYER_HEAD, "Other Players' Money", "players-money", "players-money");
-        add(inv, 41, Material.SCULK_SENSOR, "Death Inventory", "deathinventory", "deathinventory");
-        add(inv, 42, Material.BOOK, "Help", "help", "help");
+        add(inv, 41, Material.PLAYER_HEAD, "Other Players' Money", "players-money", "players-money");
 
-        // Hand Sell is intentionally alone at the bottom.
+        // Row 6: Sell Hand stays in its existing slot.
         add(inv, 49, Material.CHEST, "Hand Sell (multiple items)", "sell-hand", "hand",
                 List.of(ChatColor.WHITE + "Place multiple item stacks into the sell slots.",
                         ChatColor.GRAY + "The menu totals eligible items and respects your personal sell stock.",
                         ChatColor.YELLOW + "Confirm to sell; unsellable items return to you."));
+        player.openInventory(inv);
+    }
+
+    private void openMarket(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "XZH SHOP: Market");
+        add(inv, 10, Material.IRON_INGOT, "Ores", "category", "ores");
+        add(inv, 11, Material.BRICKS, "Blocks", "category", "blocks");
+        add(inv, 12, Material.NETHERITE_CHESTPLATE, "Armor", "category", "armor");
+        add(inv, 13, Material.NETHERITE_PICKAXE, "Tools", "category", "tools");
+        add(inv, 14, Material.COOKED_BEEF, "Food", "category", "food");
+        add(inv, 15, Material.WHEAT_SEEDS, "Seeds & Farming", "category", "seeds");
+        add(inv, 16, Material.CRAFTING_TABLE, "Essentials", "category", "essentials");
+        ItemStack special = new ItemStack(Material.ELYTRA);
+        ItemMeta specialMeta = special.getItemMeta();
+        specialMeta.setDisplayName(ChatColor.YELLOW + "Special Items");
+        specialMeta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "category");
+        specialMeta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, "special");
+        special.setItemMeta(specialMeta);
+        inv.setItem(19, special);
+        add(inv, 20, Material.POPPY, "Flowers & Dyes", "category", "flowers-dyes");
+        add(inv, 21, Material.ENCHANTED_BOOK, "Enchantment Books", "books", "books");
+        add(inv, 22, Material.EXPERIENCE_BOTTLE, "XP", "category", "xp");
+        add(inv, 23, Material.POTION, "Potions", "category", "potions");
+        add(inv, 24, Material.BOOK, "Help", "help", "help");
+        add(inv, 49, Material.ARROW, "Back to Shop", "back", "main");
         player.openInventory(inv);
     }
 
@@ -357,7 +367,7 @@ public final class ShopManager implements Listener {
     }
 
     private void openPurchaseHistory(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "XZH SHOP: Transition");
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_GREEN + "XZH SHOP: Transaction History");
         List<String> entries = historyData.getStringList("players." + player.getUniqueId() + ".purchases");
         int[] slots = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21};
         int shown = Math.min(entries.size(), slots.length);
@@ -836,6 +846,7 @@ public final class ShopManager implements Listener {
         String value = meta.getPersistentDataContainer().get(materialKey, PersistentDataType.STRING);
         if (action == null || value == null) return;
         switch (action) {
+            case "market" -> openMarket(player);
             case "category" -> openCategory(player, value);
             case "pets" -> plugin.getPetManager().openShop(player);
             case "shop-search", "search-again" -> promptShopSearch(player);
