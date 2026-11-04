@@ -1956,12 +1956,25 @@ public final class QuestManager implements Listener {
 
     private String formatGlobalTime(long millis){long m=Math.max(0,millis)/60000L;return (m/60)+"h "+(m%60)+"m";}
 
-    /** Compact shared quest status for the Survival plugin's TAB footer. */
-    public String getGlobalQuestTabText(){
+    /** Compact shared Community Chest status for the Survival plugin's TAB footer. */
+    public String getGlobalQuestTabText() {
         resetEventIfNeeded();
-        if(!"active".equals(data.getString("event.phase",""))){long left=Math.max(0,data.getLong("event.cooldown-until",0)-System.currentTimeMillis());return "§6Community Quest: §fNext event in "+formatGlobalTime(left);}
-        int p=communityProgressTotal(),g=Math.max(1,communityGoalTotal());
-        return "§6Community Quest: §f"+data.getString("event.name","Shared objective")+" §8("+p+"/"+g+", "+(p*100/g)+"%)";
+        long now = System.currentTimeMillis();
+        if (!"active".equals(data.getString("event.phase", ""))) {
+            long left = Math.max(0L, data.getLong("event.cooldown-until", 0L) - now);
+            return "§6Chest §8| §7Next quest in §b" + formatGlobalTime(left);
+        }
+
+        int progress = communityProgressTotal();
+        int goal = Math.max(1, communityGoalTotal());
+        int percent = (int) Math.floor(progress * 100.0 / goal);
+        int reward = Math.max(0, data.getInt("event.reward", 0));
+        long endsAt = data.getLong("event.ends-at", 0L);
+        String time = endsAt > 0L
+                ? formatGlobalTime(Math.max(0L, endsAt - now))
+                : "No limit";
+
+        return "§6Chest §8| §e" + reward + " coins §8| §b" + time + " §8| §a" + percent + "%";
     }
 
     private void broadcastGlobalProgress(){
