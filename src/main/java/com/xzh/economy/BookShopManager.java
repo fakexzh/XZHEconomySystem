@@ -59,7 +59,7 @@ public final class BookShopManager implements Listener {
         List<String> available = KEYS.stream().filter(k -> enchantment(k) != null).toList();
         int pages = Math.max(1, (available.size() + 44) / 45);
         int currentPage = Math.max(0, Math.min(page, pages - 1));
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "XZH Enchantment Books " + (currentPage + 1));
+        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_PURPLE + "Enchantment Books " + (currentPage + 1));
         int start = currentPage * 45;
         int end = Math.min(available.size(), start + 45);
         for (int i = start; i < end; i++) {
@@ -76,7 +76,7 @@ public final class BookShopManager implements Listener {
             lore.add(ChatColor.WHITE + "Personal cooldown: " + (until > System.currentTimeMillis()
                     ? ChatColor.RED + remaining(until) : ChatColor.GREEN + "Available"));
             lore.add(ChatColor.GRAY + "Click to review and confirm");
-            meta.setLore(lore);
+            meta.setLore(lore.stream().map(line -> line.contains("§") ? line : ChatColor.GRAY + line).toList());
             meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "select");
             meta.getPersistentDataContainer().set(bookKey, PersistentDataType.STRING, key);
             item.setItemMeta(meta);
@@ -165,7 +165,7 @@ public final class BookShopManager implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (title == null || !(title.startsWith("XZH Enchantment Books ") || title.equals("Confirm enchanted book"))) return;
+        if (title == null || !(title.startsWith("Enchantment Books ") || title.equals("Confirm enchanted book"))) return;
         event.setCancelled(true);
         ItemStack item = event.getCurrentItem();
         if (item == null || !item.hasItemMeta()) return;
