@@ -1010,8 +1010,8 @@ public final class QuestManager implements Listener {
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) updateHud(player);
         }, 20L, 20L);
-        // Shared global reminder and progress broadcast every 15 minutes while the event is active.
-        Bukkit.getScheduler().runTaskTimer(plugin, this::broadcastGlobalProgress, 20L * 60L * 15L, 20L * 60L * 15L);
+        // Shared global reminder and progress broadcast every 30 minutes while the event is active.
+        Bukkit.getScheduler().runTaskTimer(plugin, this::broadcastGlobalProgress, 20L * 60L * 30L, 20L * 60L * 30L);
         if (!data.contains("single-shop.next-refresh")) {
             data.set("single-shop.next-refresh", 0L);
             data.set("single-shop.refresh-id", 0);
