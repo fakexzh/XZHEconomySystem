@@ -367,29 +367,6 @@ public final class QuestManager implements Listener {
     private record Objective(String target, int goal, String description) {}
     private record Pack(String id, String name, Material icon, int cost, int reward, String advancement, String unlockTitle, int timerMinutes, List<Objective> objectives) {}
     private record RandomQuest(String name, Material icon, int cost, int reward, Objective objective) {}
-    private record GlobalQuest(String name, Material icon, String target, int goal, String description) {}
-    private final List<GlobalQuest> globalQuestPool = List.of(
-        new GlobalQuest("Community Ore Rush", Material.IRON_PICKAXE, "ore", 40, "Mine ores together"),
-        new GlobalQuest("Deep Mining Expedition", Material.DEEPSLATE_DIAMOND_ORE, "ore", 80, "Mine deep ores together"),
-        new GlobalQuest("Stoneworker Union", Material.STONE_PICKAXE, "ore", 120, "Keep the mining crews busy"),
-        new GlobalQuest("Monster Patrol", Material.ROTTEN_FLESH, "mob", 80, "Defeat monsters together"),
-        new GlobalQuest("Night Watch", Material.SHIELD, "mob", 180, "Protect the settlement from monsters"),
-        new GlobalQuest("Dangerous Hunt", Material.NETHER_STAR, "mob", 300, "Complete a demanding monster hunt"),
-        new GlobalQuest("Fishing Fleet", Material.FISHING_ROD, "fish", 10, "Catch fish together"),
-        new GlobalQuest("Deepwater Haul", Material.COD, "fish", 20, "Bring in a major fishing haul"),
-        new GlobalQuest("Anglers Marathon", Material.SALMON, "fish", 30, "Keep fishing until the goal is met"),
-        new GlobalQuest("Forest Cleanup", Material.OAK_LOG, "wood", 30, "Chop logs together"),
-        new GlobalQuest("Lumber Guild", Material.SPRUCE_LOG, "wood", 60, "Supply the community with timber"),
-        new GlobalQuest("Great Reforestation", Material.BIRCH_LOG, "wood", 100, "Gather a huge amount of wood"),
-        new GlobalQuest("Harvest Festival", Material.CARROT, "crop", 25, "Harvest crops together"),
-        new GlobalQuest("Farmers Market", Material.WHEAT, "crop", 45, "Collect a crop surplus"),
-        new GlobalQuest("Grand Harvest", Material.PUMPKIN, "crop", 70, "Complete a demanding farming drive"),
-        new GlobalQuest("Community Food Drive", Material.POTATO, "crop", 35, "Stock the community food supply"),
-        new GlobalQuest("Carrot Cartel", Material.CARROT, "crop", 45, "Gather carrots for the community"),
-        new GlobalQuest("Wheat Supply Run", Material.WHEAT, "crop", 60, "Harvest wheat for a large order"),
-        new GlobalQuest("Woodland Supply Run", Material.JUNGLE_LOG, "wood", 45, "Gather timber for building")
-    );
-
     private final XZHEconomySystem plugin;
     private final File file;
     private final YamlConfiguration data;
@@ -397,6 +374,7 @@ public final class QuestManager implements Listener {
     private final NamespacedKey valueKey;
     private final Random random = new Random();
     private final Map<String, Double> travelRemainders = new HashMap<>();
+    private final Map<String, Double> communityTravelRemainders = new HashMap<>();
     // Prevent block-break quests from being farmed by placing and repeatedly breaking the same blocks.
     private final Set<String> playerPlacedBlocks = new HashSet<>();
 
@@ -1430,10 +1408,8 @@ public final class QuestManager implements Listener {
         }
         if (!playerPlaced && (material.name().endsWith("_ORE") || material == Material.ANCIENT_DEBRIS)) {
             incrementTarget(p, "break:ANY_ORE", 1);
-            recordGlobalProgress(p, "ore", 1);
         }
         if (!playerPlaced && (material.name().endsWith("_LOG") || material.name().endsWith("_STEM"))) {
-            recordGlobalProgress(p, "wood", 1);
         }
         boolean matureCrop = false;
         if (event.getBlock().getBlockData() instanceof Ageable ageable
@@ -1467,7 +1443,6 @@ public final class QuestManager implements Listener {
             incrementTarget(p, "harvest:PUMPKIN", 1);
             matureCrop = true;
         }
-        if (matureCrop) recordGlobalProgress(p, "crop", 1);
     }
 
     /**
@@ -1556,7 +1531,6 @@ public final class QuestManager implements Listener {
                 .anyMatch(key -> key.getKey().equalsIgnoreCase("roaming_boss"))) {
             incrementTarget(p, "kill:@ROAMING_BOSS", 1);
         }
-        if (event.getEntity() instanceof org.bukkit.entity.Monster) recordGlobalProgress(p, "mob", 1);
     }
 
     @EventHandler
@@ -1656,59 +1630,51 @@ public final class QuestManager implements Listener {
 
     private void recordTravelMovement(Player player, Location from, Location to) {
         UUID id = player.getUniqueId();
-        if (from == null || to == null || from.getWorld() == null || to.getWorld() == null
-                || from.getWorld() != to.getWorld()) {
-            clearTravelRemainders(id);
-            return;
+        if (from == null || to == null || from.getWorld() == null || to.getWorld() == null || from.getWorld() != to.getWorld()) {
+            clearTravelRemainders(id); return;
         }
-        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE
-                || player.getGameMode() == org.bukkit.GameMode.SPECTATOR
-                || data.getString(id + ".active", "").isBlank()) return;
-
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         double step = from.distance(to);
-        // Reject abnormal same-world jumps while allowing fast Elytra and vehicle movement.
-        if (step <= 0.0 || step > 32.0) {
-            if (step > 32.0) clearTravelRemainders(id);
-            return;
+        if (step <= 0 || step > 32) { if (step > 32) clearTravelRemainders(id); return; }
+        Biome fromBiome = from.getBlock().getBiome(), toBiome = to.getBlock().getBiome();
+        if (fromBiome != toBiome) incrementTarget(player, "visit-biome:" + toBiome.name(), 1);
+        recordCommunityTravel(player, to, step, fromBiome, toBiome);
+        if (data.getString(id + ".active", "").isBlank()) return;
+        Set<String> targets = new HashSet<>();
+        for (int i=0;i<data.getInt(id+".objective-count",0);i++) {
+            String t=data.getString(id+".objectives."+i+".target","");
+            if (t.equals("travel")) targets.add(t);
+            else if (t.startsWith("travel-world:") && t.substring(13).equalsIgnoreCase(to.getWorld().getEnvironment().name())) targets.add(t);
+            else if (t.startsWith("travel-biome:") && t.substring(13).equalsIgnoreCase(toBiome.name()) && fromBiome==toBiome) targets.add(t);
         }
+        for(String t:targets) {
+            String key=id+":"+t; double accumulated=travelRemainders.getOrDefault(key,0.0)+step;
+            int whole=(int)Math.floor(accumulated); travelRemainders.put(key,accumulated-whole);
+            if(whole>0) incrementTarget(player,t,whole);
+        }
+    }
 
-        Biome fromBiome = from.getBlock().getBiome();
-        Biome toBiome = to.getBlock().getBiome();
-        if (fromBiome != toBiome) {
-            incrementTarget(player, "visit-biome:" + toBiome.name(), 1);
-            if (data.getString(id + ".active", "").isBlank()) return;
+    private void recordCommunityTravel(Player player, Location to, double step, Biome fromBiome, Biome toBiome) {
+        if (!"active".equals(data.getString("event.phase",""))) return;
+        Set<String> targets=new HashSet<>();
+        for(int i=0;i<data.getInt("event.objective-count",0);i++) {
+            String t=data.getString("event.objectives."+i+".target","");
+            if(t.equals("travel")) targets.add(t);
+            else if(t.startsWith("travel-world:") && t.substring(13).equalsIgnoreCase(to.getWorld().getEnvironment().name())) targets.add(t);
+            else if(t.startsWith("travel-biome:") && t.substring(13).equalsIgnoreCase(toBiome.name()) && fromBiome==toBiome) targets.add(t);
         }
-
-        int count = data.getInt(id + ".objective-count", 0);
-        Set<String> matchingDistanceTargets = new HashSet<>();
-        for (int i = 0; i < count; i++) {
-            String target = data.getString(id + ".objectives." + i + ".target", "");
-            if (target.equals("travel")) {
-                matchingDistanceTargets.add(target);
-            } else if (target.startsWith("travel-world:")) {
-                String environment = target.substring("travel-world:".length());
-                if (environment.equalsIgnoreCase(to.getWorld().getEnvironment().name())) {
-                    matchingDistanceTargets.add(target);
-                }
-            } else if (target.startsWith("travel-biome:")) {
-                String biome = target.substring("travel-biome:".length());
-                if (biome.equalsIgnoreCase(toBiome.name()) && fromBiome == toBiome) {
-                    matchingDistanceTargets.add(target);
-                }
-            }
-        }
-        for (String target : matchingDistanceTargets) {
-            String remainderKey = id + ":" + target;
-            double accumulated = travelRemainders.getOrDefault(remainderKey, 0.0) + step;
-            int wholeBlocks = (int) Math.floor(accumulated);
-            travelRemainders.put(remainderKey, accumulated - wholeBlocks);
-            if (wholeBlocks > 0) incrementTarget(player, target, wholeBlocks);
+        for(String t:targets) {
+            String key=player.getUniqueId()+":community:"+t;
+            double accumulated=communityTravelRemainders.getOrDefault(key,0.0)+step;
+            int whole=(int)Math.floor(accumulated); communityTravelRemainders.put(key,accumulated-whole);
+            if(whole>0) recordCommunityTarget(player,t,whole);
         }
     }
 
     private void clearTravelRemainders(UUID playerId) {
         String prefix = playerId + ":";
         travelRemainders.keySet().removeIf(key -> key.startsWith(prefix));
+        communityTravelRemainders.keySet().removeIf(key -> key.startsWith(prefix));
     }
 
     @EventHandler
@@ -1717,7 +1683,6 @@ public final class QuestManager implements Listener {
         Player player = event.getPlayer();
         if (player.getGameMode() == org.bukkit.GameMode.CREATIVE || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         incrementTarget(player, "fish:" + caught.getItemStack().getType().name(), 1);
-        recordGlobalProgress(player, "fish", 1);
     }
 
     @EventHandler
@@ -1755,6 +1720,7 @@ public final class QuestManager implements Listener {
 
     private void incrementTarget(Player player, String target, int amount) {
         if (amount <= 0) return;
+        recordCommunityTarget(player, target, amount);
         UUID id = player.getUniqueId();
         if (data.getString(id + ".active", "").isBlank()) return;
         int count = data.getInt(id + ".objective-count", 0);
@@ -1923,116 +1889,80 @@ public final class QuestManager implements Listener {
 
     private void openGlobal(Player player) {
         resetEventIfNeeded();
-        UUID id = player.getUniqueId();
-        int progress = data.getInt("event.progress", 0);
-        int goal = data.getInt("event.goal", configuredEventGoal());
-        int contribution = data.getInt("event.contribution." + id, 0);
-        long remaining = Math.max(0L, data.getLong("event.ends-at", System.currentTimeMillis()) - System.currentTimeMillis());
-        boolean completed = data.getBoolean("event.completed", false);
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Community Chest");
-        add(inv, 13, Material.NETHER_STAR, ChatColor.GOLD + data.getString("event.name", "Community Chest"), "global-info", "global",
-            List.of(ChatColor.WHITE + data.getString("event.description", "Work together to complete the objective."),
-                    ChatColor.WHITE + "Shared progress: " + progress + "/" + goal,
-                    ChatColor.WHITE + "Your contribution: " + contribution,
-                    ChatColor.WHITE + "Reward: " + data.getInt("event.reward", configuredEventReward()) + " coins each",
-                    ChatColor.WHITE + "Time left: " + formatGlobalTime(remaining),
-                    completed ? ChatColor.GREEN + "Completed! Rewards have been paid." : ChatColor.GRAY + "Contribute before the deadline to earn the reward."));
-        add(inv, 11, Material.GOLD_INGOT, ChatColor.GREEN + "Contributor rewards", "global-info", "global",
-            List.of(ChatColor.WHITE + "Rewards are paid automatically when",
-                    ChatColor.WHITE + "the community completes the objective.",
-                    ChatColor.GRAY + "Only players who contributed receive a reward."));
-        add(inv, 15, Material.ARROW, ChatColor.WHITE + "Back", "back", "");
-        player.openInventory(inv);
-    }
-
-    private void recordGlobalProgress(Player player, String target, int amount) {
-        if (amount <= 0 || data.getBoolean("event.completed", false)) return;
-        if (data.getLong("event.ends-at", 0L) <= System.currentTimeMillis()) {
-            resetEventIfNeeded();
-            if (data.getBoolean("event.completed", false)) return;
+        Inventory inv=Bukkit.createInventory(null,27,ChatColor.DARK_PURPLE+"XZH Community Chest");
+        if(!"active".equals(data.getString("event.phase",""))) {
+            long left=Math.max(0,data.getLong("event.cooldown-until",0)-System.currentTimeMillis());
+            add(inv,13,Material.CLOCK,ChatColor.GOLD+"Next Community Quest","global-info","global",
+                List.of(ChatColor.WHITE+"Starts in: "+ChatColor.YELLOW+formatGlobalTime(left),ChatColor.GRAY+"All players share one objective."));
+        } else {
+            int count=data.getInt("event.objective-count",0), progress=communityProgressTotal(), goal=Math.max(1,communityGoalTotal());
+            List<String> lore=new ArrayList<>();
+            lore.add(ChatColor.WHITE+"Progress: "+ChatColor.GREEN+progress+"/"+goal+" ("+(progress*100/goal)+"%)");
+            for(int i=0;i<count&&i<8;i++){String k="event.objectives."+i;lore.add(ChatColor.GRAY+data.getString(k+".description","Objective")+ChatColor.WHITE+" "+data.getInt(k+".progress",0)+"/"+data.getInt(k+".goal",1));}
+            lore.add(ChatColor.WHITE+"Your contribution: "+ChatColor.AQUA+communityContribution(player.getUniqueId())+"/"+goal);
+            long end=data.getLong("event.ends-at",0);
+            lore.add(ChatColor.WHITE+"Time limit: "+ChatColor.YELLOW+(end==0?"No time limit":formatGlobalTime(Math.max(0,end-System.currentTimeMillis()))));
+            lore.add(ChatColor.GREEN+"First finisher: full reward");
+            lore.add(ChatColor.GRAY+"10%+ contributors: 10% reward");
+            Material icon=Material.matchMaterial(data.getString("event.icon","NETHER_STAR")); if(icon==null||!icon.isItem())icon=Material.NETHER_STAR;
+            add(inv,13,icon,ChatColor.GOLD+data.getString("event.name","Community Quest"),"global-info","global",lore);
+            add(inv,11,Material.GOLD_INGOT,ChatColor.GREEN+"Winner reward","global-info","global",
+                List.of(ChatColor.WHITE+"Full reward: "+ChatColor.GOLD+data.getInt("event.reward",0)+" coins"));
         }
-        if (!target.equals(data.getString("event.target", "ore"))) return;
-        int goal = Math.max(1, data.getInt("event.goal", configuredEventGoal()));
-        int progress = Math.min(goal, data.getInt("event.progress", 0) + amount);
-        data.set("event.progress", progress);
-        String contributionPath = "event.contribution." + player.getUniqueId();
-        data.set(contributionPath, data.getInt(contributionPath, 0) + amount);
-        save();
-        if (progress >= goal) completeGlobalQuest();
+        add(inv,15,Material.ARROW,ChatColor.WHITE+"Back","back",""); player.openInventory(inv);
     }
 
-    private void completeGlobalQuest() {
-        if (data.getBoolean("event.completed", false)) return;
-        data.set("event.completed", true);
-        save();
-        int reward = data.getInt("event.reward", configuredEventReward());
-        org.bukkit.configuration.ConfigurationSection contributors = data.getConfigurationSection("event.contribution");
-        int paid = 0;
-        if (contributors != null) {
-            for (String rawId : contributors.getKeys(false)) {
-                try {
-                    UUID id = UUID.fromString(rawId);
-                    int contribution = data.getInt("event.contribution." + rawId, 0);
-                    if (contribution <= 0) continue;
-                    plugin.setBalance(id, plugin.getBalance(id) + reward);
-                    Player online = Bukkit.getPlayer(id);
-                    if (online != null) plugin.tellQuest(online, "§aGlobal quest reward received: " + reward + " coins for contributing to " + data.getString("event.name", "the community chest") + ".");
-                    paid++;
-                } catch (IllegalArgumentException ignored) { }
+    private int communityProgressTotal(){int n=0;for(int i=0;i<data.getInt("event.objective-count",0);i++){String k="event.objectives."+i;n+=Math.min(data.getInt(k+".goal",1),data.getInt(k+".progress",0));}return n;}
+    private int communityGoalTotal(){int n=0;for(int i=0;i<data.getInt("event.objective-count",0);i++)n+=Math.max(1,data.getInt("event.objectives."+i+".goal",1));return n;}
+    private int communityContribution(UUID id){int n=0;for(int i=0;i<data.getInt("event.objective-count",0);i++){String k="event.objectives."+i;int g=Math.max(1,data.getInt(k+".goal",1));n+=Math.min(g,data.getInt("event.contribution."+id+".objectives."+i,0));}return n;}
+
+    private void recordCommunityTarget(Player player,String target,int amount){
+        if(amount<=0)return; resetEventIfNeeded(); if(!"active".equals(data.getString("event.phase","")))return;
+        long end=data.getLong("event.ends-at",0); if(end>0&&end<=System.currentTimeMillis()){finishCommunityQuest(null,false);return;}
+        int count=data.getInt("event.objective-count",0); boolean changed=false; UUID id=player.getUniqueId();
+        for(int i=0;i<count;i++){String k="event.objectives."+i;if(!target.equals(data.getString(k+".target","")))continue;
+            int goal=Math.max(1,data.getInt(k+".goal",1)),cur=Math.min(goal,data.getInt(k+".progress",0)),added=Math.min(amount,goal-cur);
+            if(added<=0)continue;data.set(k+".progress",cur+added);
+            String cp="event.contribution."+id+".objectives."+i;data.set(cp,Math.min(goal,data.getInt(cp,0)+added));changed=true;
+        }
+        if(!changed)return;save();boolean done=true;
+        for(int i=0;i<count;i++){String k="event.objectives."+i;if(data.getInt(k+".progress",0)<data.getInt(k+".goal",1)){done=false;break;}}
+        if(done)finishCommunityQuest(player,true);
+    }
+
+    private void finishCommunityQuest(Player winner,boolean completed){
+        if(!"active".equals(data.getString("event.phase","")))return;
+        long now=System.currentTimeMillis();String name=data.getString("event.name","Community Quest");
+        int reward=Math.max(0,data.getInt("event.reward",0)),goal=Math.max(1,communityGoalTotal());
+        UUID winnerId=winner==null?null:winner.getUniqueId();int threshold=(int)Math.ceil(goal*.10),bonuses=0;
+        if(completed&&winnerId!=null){
+            plugin.setBalance(winnerId,plugin.getBalance(winnerId)+reward);
+            plugin.tellQuest(winner,"You won "+reward+" coins for completing "+name+".");
+            org.bukkit.configuration.ConfigurationSection cs=data.getConfigurationSection("event.contribution");
+            if(cs!=null)for(String raw:cs.getKeys(false)){UUID id;try{id=UUID.fromString(raw);}catch(IllegalArgumentException ex){continue;}
+                if(id.equals(winnerId)||communityContribution(id)<threshold)continue;
+                int bonus=Math.max(1,(int)Math.round(reward*.10));plugin.setBalance(id,plugin.getBalance(id)+bonus);
+                Player online=Bukkit.getPlayer(id);if(online!=null)plugin.tellQuest(online,"You earned "+bonus+" coins for contributing at least 10% to "+name+".");bonuses++;
             }
-        }
-        Bukkit.broadcastMessage(ChatColor.GOLD + "[quest] " + ChatColor.GREEN
-                + data.getString("event.name", "Community Chest") + " completed! " + paid
-                + " contributor(s) received " + reward + " coins each.");
-        save();
-        // A successful early completion immediately opens the next four-hour community challenge.
-        startNewGlobalQuest(System.currentTimeMillis(), true);
+            Bukkit.broadcastMessage(ChatColor.GOLD+"[quest] "+ChatColor.GREEN+winner.getName()+" completed "+name+" and won "+reward+" coins. "+bonuses+" qualifying contributor(s) received 10% rewards.");
+        }else Bukkit.broadcastMessage(ChatColor.GOLD+"[quest] "+ChatColor.YELLOW+name+" expired. No winner. The next event starts after a 1-hour cooldown.");
+        data.set("event.phase","cooldown");data.set("event.completed",completed);data.set("event.winner",winnerId==null?"":winnerId.toString());
+        data.set("event.ended-at",now);data.set("event.cooldown-until",now+3600000L);data.set("event.ends-at",0L);save();
     }
 
-    private String formatGlobalTime(long millis) {
-        long minutes = Math.max(0L, millis) / 60000L;
-        return (minutes / 60L) + "h " + (minutes % 60L) + "m";
-    }
-
-    private void recordEventOre(Player player) {
-        resetEventIfNeeded();
-        int goal = data.getInt("event.goal", configuredEventGoal());
-        int progress = Math.min(goal, data.getInt("event.progress", 0) + 1);
-        data.set("event.progress", progress);
-        UUID id = player.getUniqueId();
-        String path = "event.contribution." + id;
-        data.set(path, data.getInt(path, 0) + 1);
-        save();
-    }
+    private String formatGlobalTime(long millis){long m=Math.max(0,millis)/60000L;return (m/60)+"h "+(m%60)+"m";}
 
     /** Compact shared quest status for the Survival plugin's TAB footer. */
-    public String getGlobalQuestTabText() {
+    public String getGlobalQuestTabText(){
         resetEventIfNeeded();
-        int progress = Math.max(0, data.getInt("event.progress", 0));
-        int goal = Math.max(1, data.getInt("event.goal", configuredEventGoal()));
-        int percent = Math.min(100, (int) Math.floor(progress * 100.0 / goal));
-        long remaining = Math.max(0L, data.getLong("event.ends-at", System.currentTimeMillis()) - System.currentTimeMillis());
-        String target = data.getString("event.target", "ore");
-        String objective = switch (target.toLowerCase(Locale.ROOT)) {
-            case "ore" -> "Mine " + progress + "/" + goal + " Ores";
-            case "mob" -> "Defeat " + progress + "/" + goal + " Mobs";
-            case "fish" -> "Catch " + progress + "/" + goal + " Fish";
-            case "wood" -> "Chop " + progress + "/" + goal + " Logs";
-            case "crop" -> "Harvest " + progress + "/" + goal + " Crops";
-            default -> data.getString("event.description", "Complete the community objective") + " (" + progress + "/" + goal + ")";
-        };
-        return "§6Community Chest: §f" + objective + " §8(" + percent + "%, " + formatGlobalTime(remaining) + ")";
+        if(!"active".equals(data.getString("event.phase",""))){long left=Math.max(0,data.getLong("event.cooldown-until",0)-System.currentTimeMillis());return "§6Community Quest: §fNext event in "+formatGlobalTime(left);}
+        int p=communityProgressTotal(),g=Math.max(1,communityGoalTotal());
+        return "§6Community Quest: §f"+data.getString("event.name","Shared objective")+" §8("+p+"/"+g+", "+(p*100/g)+"%)";
     }
 
-    private void broadcastGlobalProgress() {
-        resetEventIfNeeded();
-        if (data.getBoolean("event.completed", false)) return;
-        String message = ChatColor.GOLD + "[quest] " + ChatColor.YELLOW
-            + data.getString("event.name", "Community Chest") + ": " + data.getInt("event.progress", 0) + "/"
-            + data.getInt("event.goal", configuredEventGoal()) + " — "
-            + data.getString("event.description", "Help complete the community objective.")
-            + " Time left: " + formatGlobalTime(Math.max(0L, data.getLong("event.ends-at", 0L) - System.currentTimeMillis())) + ".";
-        Bukkit.broadcastMessage(message);
+    private void broadcastGlobalProgress(){
+        resetEventIfNeeded();if(!"active".equals(data.getString("event.phase","")))return;
+        Bukkit.broadcastMessage(ChatColor.GOLD+"[quest] "+ChatColor.YELLOW+data.getString("event.name","Community Quest")+": "+communityProgressTotal()+"/"+Math.max(1,communityGoalTotal())+" total progress.");
     }
 
     private void refreshSingleShopIfDue() {
@@ -2211,39 +2141,28 @@ public final class QuestManager implements Listener {
         return player.getAdvancementProgress(advancement).isDone();
     }
 
-    private void resetEventIfNeeded() {
-        long now = System.currentTimeMillis();
-        long endAt = data.getLong("event.ends-at", 0L);
-        if (data.getString("event.name", "").isBlank() || endAt <= now) {
-            startNewGlobalQuest(now, true);
-            return;
-        }
-        if (!data.contains("event.progress")) data.set("event.progress", 0);
-        if (!data.contains("event.reward")) data.set("event.reward", configuredEventReward());
-        if (!data.contains("event.completed")) data.set("event.completed", false);
+    private void resetEventIfNeeded(){
+        long now=System.currentTimeMillis();String phase=data.getString("event.phase","");
+        if(phase.isBlank()){startNewGlobalQuest(now,true);return;}
+        if("cooldown".equals(phase)){if(data.getLong("event.cooldown-until",0)<=now)startNewGlobalQuest(now,true);return;}
+        if(!"active".equals(phase)){startNewGlobalQuest(now,true);return;}
+        long end=data.getLong("event.ends-at",0);if(end>0&&end<=now)finishCommunityQuest(null,false);
     }
 
-    private void startNewGlobalQuest(long now, boolean announce) {
-        GlobalQuest selected = globalQuestPool.get(random.nextInt(globalQuestPool.size()));
-        int goal = Math.max(1, (int) Math.round(selected.goal() * (0.80 + random.nextDouble() * 0.40)));
-        int reward = rewardForGlobalQuest(selected, goal);
-        data.set("event", null);
-        data.set("event.name", selected.name());
-        data.set("event.icon", selected.icon().name());
-        data.set("event.target", selected.target());
-        data.set("event.description", selected.description());
-        data.set("event.progress", 0);
-        data.set("event.goal", goal);
-        data.set("event.reward", reward);
-        data.set("event.ends-at", now + 4L * 60L * 60L * 1000L);
-        data.set("event.completed", false);
-        data.set("event.started-at", now);
-        save();
-        if (announce) {
-            Bukkit.broadcastMessage(ChatColor.GOLD + "[quest] " + ChatColor.YELLOW
-                    + "New 4-hour community quest: " + selected.name() + " — " + selected.description()
-                    + ". Reward: " + reward + " coins for each contributor. Work together before the deadline!");
-        }
+    private void startNewGlobalQuest(long now,boolean announce){
+        if(packs.isEmpty()){plugin.getLogger().severe("No quest packs available for Community Chest.");return;}
+        Pack p=packs.get(random.nextInt(packs.size()));data.set("event",null);
+        data.set("event.phase","active");data.set("event.pack-id",p.id());data.set("event.name",p.name());
+        data.set("event.icon",questIconForPack(p).name());data.set("event.description",packDescription(p));
+        data.set("event.reward",p.reward());data.set("event.started-at",now);data.set("event.completed",false);
+        data.set("event.winner","");data.set("event.objective-count",p.objectives().size());
+        int total=0;for(int i=0;i<p.objectives().size();i++){Objective o=p.objectives().get(i);String k="event.objectives."+i;
+            data.set(k+".target",o.target());data.set(k+".goal",o.goal());data.set(k+".description",o.description());data.set(k+".progress",0);total+=Math.max(1,o.goal());}
+        data.set("event.total-goal",total);data.set("event.timer-minutes",p.timerMinutes());
+        data.set("event.ends-at",p.timerMinutes()>0?now+p.timerMinutes()*60000L:0L);data.set("event.cooldown-until",0L);save();
+        if(announce){String time=p.timerMinutes()>0?p.timerMinutes()+" minutes":"no time limit";
+            Bukkit.broadcastMessage(ChatColor.GOLD+"[quest] "+ChatColor.YELLOW+"New Community Quest: "+p.name()+". "+packDescription(p)
+                +" Time limit: "+time+". Reward: "+p.reward()+" coins for the first finisher; 10% contributors receive 10%.");}
     }
 
     @EventHandler
@@ -2292,7 +2211,7 @@ public final class QuestManager implements Listener {
             case "locked" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> plugin.tellQuest(player, "Unlock " + p.unlockTitle() + ": " + unlockHowTo(p)));
             case "pack-select" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> confirmPack(player, p));
             case "pack-buy" -> packs.stream().filter(p -> p.id().equals(value)).findFirst().ifPresent(p -> buyPack(player, p));
-            case "global-claim" -> plugin.tellQuest(player, "Global quest rewards are paid automatically to contributors when the community completes the objective.");
+            case "global-claim" -> plugin.tellQuest(player, "The first finisher wins the full reward. Players who contribute at least 10% earn 10%.");
             case "back" -> open(player);
             case "back-packs" -> { Pack pack = packs.stream().filter(p -> p.id().equals(value)).findFirst().orElse(null); if (pack == null) openPacks(player); else openPacks(player, tierOf(pack), 0); }
             default -> { }
@@ -2314,24 +2233,6 @@ public final class QuestManager implements Listener {
         stack.setItemMeta(meta);
         inv.setItem(slot, stack);
     }
-
-    private int configuredEventGoal() { return Math.max(1, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.goal", 500))); }
-    private int rewardForGlobalQuest(GlobalQuest quest, int goal) {
-        double effort = switch (quest.target()) {
-            case "mob" -> 1.35;
-            case "ore" -> 1.25;
-            case "fish" -> 1.55;
-            case "wood" -> 0.80;
-            case "crop" -> 0.75;
-            default -> 1.0;
-        };
-        double base = Math.max(100.0, Math.min(5000.0, goal * effort * 2.0));
-        double varied = base * (0.80 + random.nextDouble() * 0.40);
-        int ceiling = Math.max(100, Math.min(10000, plugin.getConfig().getInt("quests.global-event.reward-ceiling", 5000)));
-        return Math.max(100, Math.min(ceiling, (int) Math.round(varied)));
-    }
-    private int configuredEventReward() { return Math.max(100, Math.min(10000, plugin.getConfig().getInt("quests.global-event.reward", 200))); }
-    private int configuredEventClaims() { return Math.max(0, Math.min(1_000_000, plugin.getConfig().getInt("quests.global-event.claims-per-day", 25))); }
 
     private void save() {
         try { data.save(file); } catch (IOException e) { plugin.getLogger().severe("Could not save quests.yml: " + e.getMessage()); }
