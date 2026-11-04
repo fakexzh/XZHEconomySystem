@@ -17,7 +17,7 @@ public final class GuiDragGuard implements Listener {
             "XZH Enchantment Books ", "Confirm enchanted book",
             "XZH Loans", "Choose loan term", "Confirm loan",
             "XZH Quest Packs", "Confirm quest pack", "Confirm abandon quest", "XZH Global Event",
-            "Death Inventory Recovery", "XZH Admin"
+            "Death Inventory Recovery", "XZH Admin", "Fish Shop"
     };
 
     public GuiDragGuard(JavaPlugin plugin) {
