@@ -1049,7 +1049,7 @@ public final class QuestManager implements Listener {
                     ChatColor.GRAY + "Each locked pack explains its unlock requirement"));
         add(inv, 16, Material.NETHER_STAR, ChatColor.GOLD + "Community Chest", "section-global", "global",
             List.of(ChatColor.GRAY + "Everyone contributes to shared progress",
-                    ChatColor.GRAY + "Server reminders every 15 minutes"));
+                    ChatColor.GRAY + "Server reminders every 30 minutes"));
         add(inv, 22, Material.ARROW, ChatColor.WHITE + "Back to Shop", "back-shop", "");
         player.openInventory(inv);
     }
@@ -1948,7 +1948,7 @@ public final class QuestManager implements Listener {
                 int bonus=Math.max(1,(int)Math.round(reward*.10));plugin.setBalance(id,plugin.getBalance(id)+bonus);
                 Player online=Bukkit.getPlayer(id);if(online!=null)plugin.tellQuest(online,"You earned "+bonus+" coins for contributing at least 10% to "+name+".");bonuses++;
             }
-            Bukkit.broadcastMessage(ChatColor.GOLD+"[quest] "+ChatColor.GREEN+winner.getName()+" completed "+name+" and won "+reward+" coins. "+bonuses+" qualifying contributor(s) received 10% rewards.");
+            Bukkit.broadcastMessage("§8[§dquest§8] §r"+ChatColor.GREEN+winner.getName()+" completed "+name+" and won "+reward+" coins. "+bonuses+" qualifying contributor(s) received 10% rewards.");
         }else Bukkit.broadcastMessage(ChatColor.GOLD+"[quest] "+ChatColor.YELLOW+name+" expired. No winner. The next event starts after a 1-hour cooldown.");
         data.set("event.phase","cooldown");data.set("event.completed",completed);data.set("event.winner",winnerId==null?"":winnerId.toString());
         data.set("event.ended-at",now);data.set("event.cooldown-until",now+3600000L);data.set("event.ends-at",0L);save();
