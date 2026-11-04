@@ -111,7 +111,7 @@ public final class MoneyRequestManager implements Listener {
     private void add(Inventory inv, int slot, Material material, String name, String action) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(name);
+        meta.setDisplayName(name.contains("§") ? name : ChatColor.YELLOW + name);
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         item.setItemMeta(meta);
         inv.setItem(slot, item);
@@ -160,7 +160,7 @@ public final class MoneyRequestManager implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player recipient)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (!"XZH Transfer Request".equals(title) && !"XZH Money Request".equals(title)) return;
+        if (!"Transfer Request".equals(title) && !"Money Request".equals(title)) return;
         event.setCancelled(true);
         ItemStack item = event.getCurrentItem();
         if (item == null || !item.hasItemMeta()) return;
