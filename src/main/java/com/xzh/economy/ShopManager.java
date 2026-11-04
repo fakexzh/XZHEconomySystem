@@ -403,7 +403,7 @@ public final class ShopManager implements Listener {
     private void promptShopSearch(Player player) {
         pendingShopSearch.put(player.getUniqueId(), true);
         player.closeInventory();
-        player.sendMessage(ChatColor.GOLD + "[shop] " + ChatColor.WHITE + "Type an item name to search. Type " + ChatColor.YELLOW + "cancel" + ChatColor.WHITE + " to stop.");
+        plugin.tellShop(player, "Type an item name to search. Type &ecancel&f to stop.");
     }
 
     @EventHandler
@@ -416,12 +416,12 @@ public final class ShopManager implements Listener {
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (!player.isOnline()) return;
             if (query.equalsIgnoreCase("cancel")) {
-                player.sendMessage(ChatColor.GOLD + "[shop] " + ChatColor.GRAY + "Search cancelled.");
+                plugin.tellShop(player, "Search cancelled.");
                 openMain(player);
                 return;
             }
             if (query.isBlank()) {
-                player.sendMessage(ChatColor.GOLD + "[shop] " + ChatColor.RED + "Enter an item name to search.");
+                plugin.tellShop(player, "&cEnter an item name to search.");
                 promptShopSearch(player);
                 return;
             }
