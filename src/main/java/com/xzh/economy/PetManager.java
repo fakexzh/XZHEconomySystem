@@ -251,7 +251,7 @@ public final class PetManager implements Listener {
             entity.setCustomNameVisible(true);
             if (hand.getAmount() <= 1) event.getPlayer().getInventory().setItem(event.getHand(), null);
             else hand.setAmount(hand.getAmount() - 1);
-            event.getPlayer().sendMessage("§8[§dPET§8] §fYour pet is now named " + customName + ".");
+            plugin.tellPublic(event.getPlayer(), "Your pet is now named " + customName + ".");
             event.getPlayer().playSound(entity.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.7f, 1.1f);
             return;
         }
@@ -269,7 +269,7 @@ public final class PetManager implements Listener {
         if (shouldSit) mob.getPathfinder().stopPathfinding();
         entity.setPose(shouldSit ? Pose.SITTING : Pose.STANDING, true);
         mob.setVelocity(new org.bukkit.util.Vector(0, mob.getVelocity().getY(), 0));
-        player.sendMessage("§8[§dPET§8] §f" + petName(entity) + (sitting ? " is now standing." : " is now resting."));
+        plugin.tellPublic(player, petName(entity) + (sitting ? " is now standing." : " is now resting."));
         player.playSound(entity.getLocation(), Sound.ENTITY_CAT_PURR, 0.5f, sitting ? 1.3f : 0.8f);
     }
 
