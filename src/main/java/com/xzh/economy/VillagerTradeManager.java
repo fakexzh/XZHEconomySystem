@@ -388,7 +388,7 @@ public final class VillagerTradeManager implements Listener {
         UUID playerId = player.getUniqueId();
         UUID villagerId = villager.getUniqueId();
         Villager.Profession profession = villager.getProfession();
-        player.sendMessage(ChatColor.DARK_GRAY + "[" + ChatColor.GOLD + "XZH" + ChatColor.DARK_GRAY + "] "
+        player.sendMessage(ChatColor.DARK_GRAY + "[" + ChatColor.GOLD + "Trade" + ChatColor.DARK_GRAY + "] "
                 + ChatColor.YELLOW + "Villager offers refresh every 2 hours after each successful trade.");
         releaseVillager(playerId, null);
         originalVillagerAi.putIfAbsent(villagerId, villager.hasAI());
@@ -401,7 +401,7 @@ public final class VillagerTradeManager implements Listener {
                 releaseVillager(playerId, villagerId);
                 return;
             }
-            Merchant merchant = Bukkit.createMerchant(ChatColor.GOLD + "XZH " + profession.name().replace('_', ' '));
+            Merchant merchant = Bukkit.createMerchant(ChatColor.GOLD + profession.name().replace('_', ' '));
             RecipeSet recipeSet = buildRecipeSet(profession, playerId);
             merchant.setRecipes(recipeSet.recipes());
             merchantSessions.put(merchant, new MerchantSession(playerId, profession, villagerId, recipeSet.offerIds()));
