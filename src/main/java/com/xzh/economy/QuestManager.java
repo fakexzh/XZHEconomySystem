@@ -2008,7 +2008,7 @@ public final class QuestManager implements Listener {
             }
             for (int i = 0; i < choices.size(); i++) data.set("single-shop.offers." + i, choices.get(i));
             save();
-            Bukkit.broadcastMessage(ChatColor.GOLD + "[quest] Five new random single-quest offers are available!");
+            Bukkit.broadcastMessage("§8[§dquest§8] §r§eFive new random single-quest offers are available!");
         }
     }
 
