@@ -2029,23 +2029,25 @@ public final class QuestManager implements Listener {
 
     private String formatGlobalTime(long millis){long m=Math.max(0,millis)/60000L;return (m/60)+"h "+(m%60)+"m";}
 
+    private String formatQuestCountdown(long millis) {
+        long seconds = Math.max(0L, millis) / 1000L;
+        long minutes = seconds / 60L;
+        long remainder = seconds % 60L;
+        return String.format(Locale.ROOT, "%d:%02dm", minutes, remainder);
+    }
+
     /** Player-specific Community Quest status for the Survival plugin's TAB footer. */
     public String getGlobalQuestTabText(Player player) {
         resetEventIfNeeded();
         long now = System.currentTimeMillis();
         if (!"active".equals(data.getString("event.phase", ""))) {
             long left = Math.max(0L, data.getLong("event.cooldown-until", 0L) - now);
-            return "§fCommunity Quest §8| §7Next quest in §b" + formatGlobalTime(left);
+            return "§6Community Quest §8| §fNext event in: §e" + formatQuestCountdown(left);
         }
 
         UUID playerId = player.getUniqueId();
-        int goal = Math.max(1, communityGoalTotal());
-        int progress = Math.min(goal, communityPlayerProgress(playerId));
-        int percent = Math.min(100, (int) Math.floor(progress * 100.0 / goal));
         int reward = Math.max(0, data.getInt("event.reward", 0));
         long endsAt = data.getLong("event.ends-at", 0L);
-        String questName = data.getString("event.name", "Community Quest");
-
         StringBuilder objectives = new StringBuilder();
         int objectiveCount = data.getInt("event.objective-count", 0);
         for (int i = 0; i < objectiveCount; i++) {
@@ -2056,15 +2058,15 @@ public final class QuestManager implements Listener {
             int objectiveGoal = Math.max(1, data.getInt(key + ".goal", 1));
             int objectiveProgress = Math.min(objectiveGoal,
                     data.getInt("event.player-progress." + playerId + ".objectives." + i + ".progress", 0));
-            if (objectives.length() > 0) objectives.append(" §8| §a");
+            if (objectives.length() > 0) objectives.append(" §8| §b");
             objectives.append(label).append(": ").append(objectiveProgress).append("/").append(objectiveGoal);
         }
         if (objectives.length() == 0) objectives.append("No objective available");
 
         String remaining = formatGlobalTime(Math.max(0L, endsAt - now));
-        return "§fCommunity Quest §8| §5" + questName + " §8| §a" + objectives
-                + "\n§fTime remaining: §a" + remaining + " §8| §a" + percent + "%"
-                + " §8| §fReward: §e" + reward + " coins §7(for winner)";
+        return "§6Community Quest §8| §b" + objectives
+                + "\n§fTime: " + remaining
+                + " §8| §aReward: " + reward + " coins §7(winner)";
     }
 
     private void broadcastGlobalProgress() {
