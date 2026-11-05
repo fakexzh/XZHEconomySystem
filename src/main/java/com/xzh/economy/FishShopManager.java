@@ -110,7 +110,7 @@ public final class FishShopManager implements Listener {
             meta.setDisplayName(rarityColor(fish.rarity()) + fish.name());
             meta.setLore(List.of(ChatColor.GRAY + "Rarity: " + rarityColor(fish.rarity()) + fish.rarity(),
                     ChatColor.GRAY + "Typical weight: " + String.format(Locale.ROOT, "%.2f kg", fish.typicalWeight()),
-                    ChatColor.YELLOW + "Typical price: " + priceFor(fish, fish.typicalWeight()) + " coins",
+                    ChatColor.YELLOW + "Typical price: " + typicalPrice(fish) + " coins",
                     ChatColor.GREEN + "Click to preview a specimen and confirm purchase."));
             meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "buy-select");
             meta.getPersistentDataContainer().set(valueKey, PersistentDataType.STRING, fish.id());
@@ -354,14 +354,43 @@ public final class FishShopManager implements Listener {
         return min + (max - min) * Math.max(0, Math.min(1, ratio));
     }
 
-    private int price(FishSpecimen fish) { return priceFor(fish.species(), fish.weight()); }
+    private int price(FishSpecimen fish) {
+        return priceFor(fish.species(), fish.weight(), fish.length(), fish.height(), fish.width());
+    }
 
-    private int priceFor(FishSpecies fish, double weight) {
-        double base = fish.basePrice() > 0 ? fish.basePrice()
-                : plugin.getConfig().getDouble("fish-market.prices." + fish.rarity().toLowerCase(Locale.ROOT),
-                defaultRarityPrice(fish.rarity()));
-        double factor = fish.typicalWeight() <= 0 ? 1 : Math.max(0.5, Math.min(2.0, weight / fish.typicalWeight()));
-        return Math.max(1, (int) Math.round(base * factor));
+    private int typicalPrice(FishSpecies fish) {
+        double normalized = fish.typicalWeight() <= fish.minWeight() ? 0
+                : (fish.typicalWeight() - fish.minWeight()) / Math.max(0.000001, fish.maxWeight() - fish.minWeight());
+        return priceFor(fish, fish.typicalWeight(),
+                interpolate(fish.minLength(), fish.maxLength(), normalized),
+                interpolate(fish.minHeight(), fish.maxHeight(), normalized),
+                interpolate(fish.minWidth(), fish.maxWidth(), normalized));
+    }
+
+    private int priceFor(FishSpecies fish, double weight, double length, double height, double width) {
+        String rarityPath = "fish-market.prices." + fish.rarity().toLowerCase(Locale.ROOT);
+        double configured = plugin.getConfig().getDouble(rarityPath, defaultRarityPrice(fish.rarity()));
+        // Upgrade untouched legacy defaults while preserving any server-admin custom prices.
+        if (Math.abs(configured - legacyRarityPrice(fish.rarity())) < 0.000001) {
+            configured = defaultRarityPrice(fish.rarity());
+        }
+        double base = fish.basePrice() > 0 ? fish.basePrice() : configured;
+        double weightFactor = relativeFactor(weight, fish.typicalWeight());
+        double lengthFactor = relativeFactor(length, typicalDimension(fish.minLength(), fish.maxLength(), fish));
+        double heightFactor = relativeFactor(height, typicalDimension(fish.minHeight(), fish.maxHeight(), fish));
+        double widthFactor = relativeFactor(width, typicalDimension(fish.minWidth(), fish.maxWidth(), fish));
+        double factor = Math.pow(weightFactor * lengthFactor * heightFactor * widthFactor, 0.25);
+        return Math.max(1, (int) Math.round(base * Math.max(0.5, Math.min(2.0, factor))));
+    }
+
+    private double typicalDimension(double min, double max, FishSpecies fish) {
+        double normalized = fish.typicalWeight() <= fish.minWeight() ? 0
+                : (fish.typicalWeight() - fish.minWeight()) / Math.max(0.000001, fish.maxWeight() - fish.minWeight());
+        return interpolate(min, max, normalized);
+    }
+
+    private double relativeFactor(double value, double typical) {
+        return typical <= 0 ? 1 : Math.max(0.5, Math.min(2.0, value / typical));
     }
 
     private int sellPrice(ItemStack fish) {
@@ -369,14 +398,37 @@ public final class FishShopManager implements Listener {
         FishSpecies definition = species.get(data.get(speciesKey, PersistentDataType.STRING));
         if (definition == null) return 0;
         double weight = data.getOrDefault(weightKey, PersistentDataType.DOUBLE, definition.typicalWeight());
-        int base = priceFor(definition, weight);
+        double length = data.getOrDefault(lengthKey, PersistentDataType.DOUBLE,
+                (definition.minLength() + definition.maxLength()) / 2.0);
+        double height = data.getOrDefault(heightKey, PersistentDataType.DOUBLE,
+                (definition.minHeight() + definition.maxHeight()) / 2.0);
+        double width = data.getOrDefault(widthKey, PersistentDataType.DOUBLE,
+                (definition.minWidth() + definition.maxWidth()) / 2.0);
+        int base = priceFor(definition, weight, length, height, width);
         double multiplier = plugin.getConfig().getDouble("fish-market.sell-multiplier", 0.35);
         return Math.max(1, (int) Math.round(base * Math.max(0, Math.min(1, multiplier))));
     }
 
     private int defaultRarityPrice(String rarity) {
-        return switch (rarity) { case "UNCOMMON" -> 40; case "RARE" -> 80; case "EPIC" -> 160;
-            case "LEGENDARY" -> 400; case "MYTHICAL" -> 1000; default -> 20; };
+        return switch (rarity) {
+            case "UNCOMMON" -> 25;
+            case "RARE" -> 100;
+            case "EPIC" -> 500;
+            case "LEGENDARY" -> 2500;
+            case "MYTHICAL" -> 25000;
+            default -> 5;
+        };
+    }
+
+    private int legacyRarityPrice(String rarity) {
+        return switch (rarity) {
+            case "UNCOMMON" -> 40;
+            case "RARE" -> 80;
+            case "EPIC" -> 160;
+            case "LEGENDARY" -> 400;
+            case "MYTHICAL" -> 1000;
+            default -> 20;
+        };
     }
 
     private List<FishSpecies> orderedSpecies() {
