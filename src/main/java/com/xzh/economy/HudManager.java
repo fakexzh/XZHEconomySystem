@@ -39,6 +39,7 @@ public final class HudManager {
     }
 
     public void start() {
+        new TablistManager(plugin).start();
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 updateSidebar(player);
