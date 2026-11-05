@@ -45,6 +45,7 @@ public final class FishShopManager implements Listener {
     private final Map<String, FishSpecies> species = new HashMap<>();
     private final Map<UUID, FishSpecimen> pendingBuys = new HashMap<>();
     private final Map<UUID, ItemStack> pendingSells = new HashMap<>();
+    private final Map<UUID, List<String>> pendingSellAll = new HashMap<>();
     private final File collectionFile;
 
     private record FishSpecies(String id, String name, String rarity, String model,
@@ -144,6 +145,12 @@ public final class FishShopManager implements Listener {
         }
         if (fishItems.isEmpty()) add(inv, 22, Material.BARRIER, "No custom fish found", "noop", "noop",
                 "Catch fish with your fishing rod before selling them here.");
+        else {
+            long totalValue = fishItems.stream().mapToLong(this::sellPrice).sum();
+            add(inv, 47, Material.GOLD_INGOT, "Sell All", "sell-all", "all",
+                    "Custom fish: " + fishItems.size(), "Total payout: " + totalValue + " coins",
+                    "Click to review and confirm.");
+        }
         add(inv, 45, Material.ARROW, "Back", "main", "main", "Return to Fish Shop.");
         if (page > 0) add(inv, 48, Material.PAPER, "Previous page", "sell-page", String.valueOf(page - 1), "Previous fish.");
         add(inv, 49, Material.HOPPER, "Page " + (page + 1) + "/" + pages, "noop", "noop", "Fish available to sell: " + fishItems.size());
@@ -208,6 +215,55 @@ public final class FishShopManager implements Listener {
         player.openInventory(inv);
     }
 
+    private void openSellAllConfirm(Player player) {
+        List<String> specimenIds = new ArrayList<>();
+        long totalValue = 0;
+        for (ItemStack item : player.getInventory().getStorageContents()) {
+            if (!isCustomFish(item)) continue;
+            String id = item.getItemMeta().getPersistentDataContainer().get(fishIdKey, PersistentDataType.STRING);
+            if (id == null || specimenIds.contains(id)) continue;
+            specimenIds.add(id);
+            totalValue += sellPrice(item);
+        }
+        if (specimenIds.isEmpty()) {
+            plugin.tellShop(player, "You have no custom fish to sell.");
+            openSell(player, 0);
+            return;
+        }
+        pendingSellAll.put(player.getUniqueId(), List.copyOf(specimenIds));
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + TITLE_PREFIX + ": Confirm Sell All");
+        add(inv, 13, Material.HOPPER, "Sell " + specimenIds.size() + " Fish", "noop", "noop",
+                "Total payout: " + totalValue + " coins", "Only XZH custom fish will be sold.");
+        add(inv, 11, Material.LIME_CONCRETE, "Confirm Sell All", "sell-all-confirm", "all",
+                "Payout: " + totalValue + " coins.");
+        add(inv, 15, Material.RED_CONCRETE, "Cancel", "sell-menu", "sell", "Keep all your fish.");
+        add(inv, 22, Material.ARROW, "Back to fish list", "sell-menu", "sell", "Return to your fish.");
+        player.openInventory(inv);
+    }
+
+    private void confirmSellAll(Player player) {
+        List<String> specimenIds = pendingSellAll.remove(player.getUniqueId());
+        if (specimenIds == null || specimenIds.isEmpty()) return;
+        long totalPayout = 0;
+        int sold = 0;
+        for (String id : specimenIds) {
+            ItemStack held = findSpecimen(player, id);
+            if (held == null) continue;
+            int payout = sellPrice(held);
+            removeSpecimen(player, id);
+            totalPayout += payout;
+            sold++;
+        }
+        if (sold == 0) {
+            plugin.tellShop(player, "No listed fish were found in your inventory.");
+            openSell(player, 0);
+            return;
+        }
+        plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + totalPayout);
+        plugin.tellShop(player, "Sold " + sold + " custom fish for " + totalPayout + " coins.");
+        player.closeInventory();
+    }
+
     private void openSellConfirm(Player player, ItemStack fish) {
         String id = fish.getItemMeta().getPersistentDataContainer().get(fishIdKey, PersistentDataType.STRING);
         if (id == null) return;
@@ -242,6 +298,8 @@ public final class FishShopManager implements Listener {
             case "collection-page" -> openCollection(player, parsePage(value));
             case "buy-select" -> openBuyConfirm(player, value);
             case "sell-select" -> openSellConfirm(player, clicked);
+            case "sell-all" -> openSellAllConfirm(player);
+            case "sell-all-confirm" -> confirmSellAll(player);
             case "buy-confirm" -> confirmBuy(player, value);
             case "sell-confirm" -> confirmSell(player, value);
             case "main" -> openMain(player);
