@@ -33,7 +33,10 @@ public final class TablistManager {
             int ping = Math.max(0, viewer.getPing());
             viewer.setPlayerListName("§f" + viewer.getName() + " §8| §e" + ping + "ms");
             String communityChest = quests.getGlobalQuestTabText(viewer);
-            viewer.setPlayerListHeaderFooter("", "\n" + communityChest);
+            String paidQuest = quests.getPaidQuestTabText(viewer);
+            String footer = "\n" + communityChest;
+            if (!paidQuest.isBlank()) footer += "\n\n" + paidQuest;
+            viewer.setPlayerListHeaderFooter("", footer);
         }
     }
 }
