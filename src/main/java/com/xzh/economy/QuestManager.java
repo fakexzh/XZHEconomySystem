@@ -1004,7 +1004,8 @@ public final class QuestManager implements Listener {
         valueKey = new NamespacedKey(plugin, "quest_value");
         Bukkit.getPluginManager().registerEvents(this, plugin);
         resetEventIfNeeded();
-        Bukkit.getScheduler().runTaskTimer(plugin, this::resetEventIfNeeded, 20L * 60L, 20L * 60L);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::resetEventIfNeeded, 20L, 20L);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::refreshOpenCommunityChests, 20L, 20L);
         Bukkit.getScheduler().runTaskTimer(plugin, this::refreshSingleShopIfDue, 20L * 60L, 20L * 60L);
         Bukkit.getScheduler().runTaskTimer(plugin, this::refreshSecretQuestIfDue, 20L * 60L, 20L * 60L);
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
@@ -1048,8 +1049,9 @@ public final class QuestManager implements Listener {
             List.of(ChatColor.GRAY + "Hard multi-objective challenges",
                     ChatColor.GRAY + "Each locked pack explains its unlock requirement"));
         add(inv, 16, Material.NETHER_STAR, ChatColor.GOLD + "Community Chest", "section-global", "global",
-            List.of(ChatColor.GRAY + "Everyone contributes to shared progress",
-                    ChatColor.GRAY + "Server reminders every 30 minutes"));
+            List.of(ChatColor.GRAY + "Track your own Community Quest progress",
+                    ChatColor.GRAY + "First finisher wins; contributors can earn rewards",
+                    ChatColor.GRAY + "90-minute fallback timer if no limit is configured"));
         add(inv, 22, Material.ARROW, ChatColor.WHITE + "Back to Shop", "back-shop", "");
         player.openInventory(inv);
     }
@@ -1893,12 +1895,17 @@ public final class QuestManager implements Listener {
 
     private void openGlobal(Player player) {
         resetEventIfNeeded();
+        player.openInventory(createGlobalInventory(player));
+    }
+
+    private Inventory createGlobalInventory(Player player) {
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_PURPLE + "XZH Community Chest");
         if (!"active".equals(data.getString("event.phase", ""))) {
             long left = Math.max(0, data.getLong("event.cooldown-until", 0) - System.currentTimeMillis());
             add(inv, 13, Material.CLOCK, ChatColor.GOLD + "Next Community Quest", "global-info", "global",
                 List.of(ChatColor.WHITE + "Starts in: " + ChatColor.YELLOW + formatGlobalTime(left),
-                        ChatColor.GRAY + "Each player has separate progress."));
+                        ChatColor.GRAY + "Every player has separate progress.",
+                        ChatColor.GRAY + "Next event starts after the 1-hour cooldown."));
         } else {
             UUID id = player.getUniqueId();
             int count = data.getInt("event.objective-count", 0);
@@ -1906,27 +1913,42 @@ public final class QuestManager implements Listener {
             int goal = Math.max(1, communityGoalTotal());
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.WHITE + "Your progress: " + ChatColor.GREEN + progress + "/" + goal
-                    + " (" + (progress * 100 / goal) + "%)");
+                    + ChatColor.GRAY + " (" + (progress * 100 / goal) + "%)");
             for (int i = 0; i < count && i < 8; i++) {
                 String k = "event.objectives." + i;
-                lore.add(ChatColor.GRAY + data.getString(k + ".description", "Objective")
-                        + ChatColor.WHITE + " " + data.getInt("event.player-progress." + id + ".objectives." + i + ".progress", 0)
-                        + "/" + data.getInt(k + ".goal", 1));
+                int objectiveProgress = data.getInt("event.player-progress." + id + ".objectives." + i + ".progress", 0);
+                int objectiveGoal = Math.max(1, data.getInt(k + ".goal", 1));
+                lore.add(ChatColor.AQUA + data.getString(k + ".description", "Objective")
+                        + ChatColor.WHITE + " — " + ChatColor.GREEN + Math.min(objectiveProgress, objectiveGoal)
+                        + ChatColor.WHITE + "/" + objectiveGoal);
             }
-            long end = data.getLong("event.ends-at", 0);
+            long end = data.getLong("event.ends-at", 0L);
             lore.add(ChatColor.WHITE + "Time remaining: " + ChatColor.YELLOW
-                    + formatGlobalTime(Math.max(0, end - System.currentTimeMillis())));
+                    + formatGlobalTime(Math.max(0L, end - System.currentTimeMillis())));
             lore.add(ChatColor.GREEN + "First finisher: full reward");
-            lore.add(ChatColor.GRAY + "Other players at 10%+: 10% reward");
+            lore.add(ChatColor.GRAY + "10%+ contribution: 10% reward");
             Material icon = Material.matchMaterial(data.getString("event.icon", "NETHER_STAR"));
             if (icon == null || !icon.isItem()) icon = Material.NETHER_STAR;
             add(inv, 13, icon, ChatColor.GOLD + data.getString("event.name", "Community Quest"),
                     "global-info", "global", lore);
             add(inv, 11, Material.GOLD_INGOT, ChatColor.GREEN + "Winner reward", "global-info", "global",
-                    List.of(ChatColor.WHITE + "Full reward: " + ChatColor.GOLD + data.getInt("event.reward", 0) + " coins"));
+                    List.of(ChatColor.WHITE + "Full reward: " + ChatColor.GOLD + data.getInt("event.reward", 0) + " coins",
+                            ChatColor.GRAY + "The first player to finish every objective wins."));
         }
         add(inv, 15, Material.ARROW, ChatColor.WHITE + "Back", "back", "");
-        player.openInventory(inv);
+        return inv;
+    }
+
+    private void refreshOpenCommunityChests() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (!ChatColor.DARK_PURPLE.toString().concat("XZH Community Chest")
+                    .equals(player.getOpenInventory().getTitle())) continue;
+            Inventory current = player.getOpenInventory().getTopInventory();
+            Inventory refreshed = createGlobalInventory(player);
+            for (int slot = 0; slot < current.getSize(); slot++) {
+                current.setItem(slot, refreshed.getItem(slot));
+            }
+        }
     }
 
     private int communityGoalTotal() {
@@ -2259,7 +2281,19 @@ public final class QuestManager implements Listener {
         if(phase.isBlank()){startNewGlobalQuest(now,true);return;}
         if("cooldown".equals(phase)){if(data.getLong("event.cooldown-until",0)<=now)startNewGlobalQuest(now,true);return;}
         if(!"active".equals(phase)){startNewGlobalQuest(now,true);return;}
-        long end=data.getLong("event.ends-at",0);if(end>0&&end<=now)finishCommunityQuest(null,false);
+        long end = data.getLong("event.ends-at", 0L);
+        if (end <= 0L) {
+            int configuredMinutes = data.getInt("event.timer-minutes", 90);
+            int timerMinutes = configuredMinutes > 0 ? configuredMinutes : 90;
+            long startedAt = data.getLong("event.started-at", now);
+            if (startedAt <= 0L) startedAt = now;
+            data.set("event.started-at", startedAt);
+            data.set("event.timer-minutes", timerMinutes);
+            end = startedAt + timerMinutes * 60000L;
+            data.set("event.ends-at", end);
+            save();
+        }
+        if (end <= now) finishCommunityQuest(null,false);
     }
 
     private void startNewGlobalQuest(long now,boolean announce){
