@@ -105,6 +105,8 @@ public final class FishShopManager implements Listener {
             FishSpecies fish = all.get(i);
             ItemStack icon = new ItemStack(Material.COD);
             ItemMeta meta = icon.getItemMeta();
+            NamespacedKey catalogueModel = NamespacedKey.fromString(fish.model() + "_medium");
+            if (catalogueModel != null) meta.setItemModel(catalogueModel);
             meta.setDisplayName(rarityColor(fish.rarity()) + fish.name());
             meta.setLore(List.of(ChatColor.GRAY + "Rarity: " + rarityColor(fish.rarity()) + fish.rarity(),
                     ChatColor.GRAY + "Typical weight: " + String.format(Locale.ROOT, "%.2f kg", fish.typicalWeight()),
@@ -165,6 +167,10 @@ public final class FishShopManager implements Listener {
             int count = data.getInt(path + ".count", 0);
             ItemStack icon = new ItemStack(count > 0 ? Material.COD : Material.GRAY_DYE);
             ItemMeta meta = icon.getItemMeta();
+            if (count > 0) {
+                NamespacedKey collectionModel = NamespacedKey.fromString(fish.model() + "_medium");
+                if (collectionModel != null) meta.setItemModel(collectionModel);
+            }
             meta.setDisplayName((count > 0 ? ChatColor.GREEN : ChatColor.GRAY) + fish.name());
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.GRAY + "Rarity: " + rarityColor(fish.rarity()) + fish.rarity());
@@ -307,6 +313,7 @@ public final class FishShopManager implements Listener {
                 ChatColor.GRAY + String.format(Locale.ROOT, "Length: %.2f cm", fish.length()),
                 ChatColor.GRAY + String.format(Locale.ROOT, "Height: %.2f cm", fish.height()),
                 ChatColor.GRAY + String.format(Locale.ROOT, "Width: %.2f cm", fish.width()),
+                ChatColor.YELLOW + "Value: " + price(fish) + " coins",
                 ChatColor.DARK_GRAY + "Specimen #" + fish.id().toString().substring(0, 8)));
         PersistentDataContainer data = meta.getPersistentDataContainer();
         data.set(fishIdKey, PersistentDataType.STRING, fish.id().toString());
