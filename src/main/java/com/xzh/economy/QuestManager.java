@@ -2091,6 +2091,38 @@ public final class QuestManager implements Listener {
                 + " §8| §aReward: " + reward + " coins §7(winner)";
     }
 
+    /** Player-specific tablist status for an active quest purchased from a quest pack. */
+    public String getPaidQuestTabText(Player player) {
+        UUID playerId = player.getUniqueId();
+        String activeId = data.getString(playerId + ".active", "");
+        if (activeId == null || !activeId.startsWith("pack:")) return "";
+
+        String questName = data.getString(playerId + ".name", "Quest Pack");
+        StringBuilder text = new StringBuilder("§9Paid Quest §8| §b").append(questName);
+        int objectiveCount = data.getInt(playerId + ".objective-count", 0);
+        for (int i = 0; i < objectiveCount; i++) {
+            String key = playerId + ".objectives." + i;
+            String description = data.getString(key + ".description", "Objective");
+            String label = description.replaceAll("\\b[0-9][0-9,]*\\b", "")
+                    .replaceAll("\\s+", " ").trim();
+            if (label.isEmpty()) label = "Objective";
+            int goal = Math.max(1, data.getInt(key + ".goal", 1));
+            int progress = Math.min(goal, Math.max(0, data.getInt(key + ".progress", 0)));
+            text.append("\n§b").append(label).append(" §8: §f")
+                    .append(progress).append("/").append(goal);
+        }
+
+        long limitSeconds = timerLimitSeconds(playerId, activeId);
+        if (limitSeconds > 0L) {
+            long startedAt = data.getLong(playerId + ".started-at", System.currentTimeMillis());
+            long elapsed = Math.max(0L, (System.currentTimeMillis() - startedAt) / 1000L);
+            long remaining = Math.max(0L, limitSeconds - elapsed);
+            text.append("\n§fTime: §b")
+                    .append(String.format(Locale.ROOT, "%02d:%02d", remaining / 60L, remaining % 60L));
+        }
+        return text.toString();
+    }
+
     private void broadcastGlobalProgress() {
         resetEventIfNeeded();
         if (!"active".equals(data.getString("event.phase", ""))) return;
