@@ -205,21 +205,26 @@ public final class FishShopManager implements Listener {
                 NamespacedKey collectionModel = NamespacedKey.fromString(fish.model() + "_medium");
                 if (collectionModel != null) meta.setItemModel(collectionModel);
             }
-            meta.setDisplayName((count > 0 ? ChatColor.GREEN : ChatColor.GRAY) + fish.name());
+            String fishTooltipName = (count > 0 ? ChatColor.GREEN : ChatColor.GRAY) + fish.name();
+            // Explicitly populate both modern item_name and custom_name components.
+            // Also clear hide_tooltip so resource-pack/item metadata cannot suppress the tooltip.
+            meta.setHideTooltip(false);
+            meta.setItemName(fishTooltipName);
+            meta.setDisplayName(fishTooltipName);
             List<String> lore = new ArrayList<>();
+            lore.add(count > 0 ? ChatColor.GREEN + "Discovered species" : ChatColor.YELLOW + "Undiscovered species");
             lore.add(ChatColor.GRAY + "Rarity: " + rarityColor(fish.rarity()) + fish.rarity());
             lore.add(ChatColor.YELLOW + "Found in: " + ChatColor.WHITE + habitatHint(fish));
             lore.add(ChatColor.YELLOW + "Rod: " + ChatColor.WHITE + rodHint(fish));
             lore.add(ChatColor.YELLOW + "Time: " + ChatColor.WHITE + "Any time");
             if (count > 0) {
-                lore.add(ChatColor.GREEN + "Discovered");
                 lore.add(ChatColor.GRAY + "Caught: " + ChatColor.WHITE + count);
                 lore.add(ChatColor.GRAY + "Best weight: " + ChatColor.WHITE
                         + String.format(Locale.ROOT, "%.2f kg", data.getDouble(path + ".best-weight-kg", 0)));
                 lore.add(ChatColor.GRAY + "Best size: " + ChatColor.WHITE + data.getString(path + ".best-size-category", "UNKNOWN"));
                 lore.add(ChatColor.GRAY + "Best length: " + ChatColor.WHITE
                         + String.format(Locale.ROOT, "%.2f cm", data.getDouble(path + ".best-length-cm", 0)));
-            } else lore.add(ChatColor.RED + "Not discovered yet");
+            } else lore.add(ChatColor.RED + "Find and catch this fish to unlock its collection entry.");
             meta.setLore(lore);
             inv.setItem(CONTENT_SLOTS[i - start], icon);
         }
