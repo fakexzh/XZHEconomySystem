@@ -110,13 +110,9 @@ public final class ShopManager implements Listener {
         new Product("food-cooked", Material.COOKED_PORKCHOP, 16, 4.8),
         new Product("food-cooked", Material.COOKED_CHICKEN, 12, 3.6),
         new Product("food-cooked", Material.BAKED_POTATO, 7, 2.1),
-        new Product("food-cooked", Material.COOKED_COD, 10, 4.5),
-        new Product("food-cooked", Material.COOKED_SALMON, 12, 5.5),
         new Product("food-raw", Material.BEEF, 8, 2.4),
         new Product("food-raw", Material.PORKCHOP, 9, 2.7),
         new Product("food-raw", Material.CHICKEN, 7, 2.1),
-        new Product("food-raw", Material.COD, 5, 3),
-        new Product("food-raw", Material.SALMON, 6, 3.5),
         new Product("food-raw", Material.MUTTON, 7, 2.1),
         new Product("food-raw", Material.RABBIT, 7, 2.1),
         new Product("food-raw", Material.MILK_BUCKET, 60, 50),
@@ -173,6 +169,12 @@ public final class ShopManager implements Listener {
         new Product("special", Material.ELYTRA, 10000, 0)
     ));
 
+    private boolean isVanillaFishItem(Material material) {
+        return material == Material.COD || material == Material.SALMON
+                || material == Material.TROPICAL_FISH || material == Material.PUFFERFISH
+                || material == Material.COOKED_COD || material == Material.COOKED_SALMON;
+    }
+
     public ShopManager(XZHEconomySystem plugin) {
         this.plugin = plugin;
         this.actionKey = new NamespacedKey(plugin, "shop_action");
@@ -195,7 +197,7 @@ public final class ShopManager implements Listener {
         }
         // Add every edible food item so players can sell crops, fish, cooked food, and other food.
         for (Material material : Material.values()) {
-            if (material.isItem() && material.isEdible()
+            if (material.isItem() && material.isEdible() && !isVanillaFishItem(material)
                     && products.stream().noneMatch(p -> p.material() == material && p.potionType() == null)) {
                 String category = material.name().startsWith("COOKED_") || material.name().equals("BAKED_POTATO")
                         || material.name().equals("BREAD") || material.name().equals("COOKIE") || material.name().equals("CAKE")

@@ -267,16 +267,17 @@ shop:
     netherite_upgrade_smithing_template: 10
     elytra: 3
 
-# Custom fish market and collection library.
+# XZH curated fish market and collection library.
+# Keep all transactions disabled until the server owner configures prices.
 fish-market:
+  prices-configured: false
   sell-multiplier: 0.35
   prices:
-    common: 5
-    uncommon: 25
-    rare: 100
-    epic: 500
-    legendary: 2500
-    mythical: 25000
+    common: 0
+    uncommon: 0
+    rare: 0
+    legendary: 0
+    mythical: 0
 
 # Quest pack stock resets to these values each server-local day.
 quests:
