@@ -17,12 +17,17 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -30,6 +35,14 @@ import java.util.concurrent.ThreadLocalRandom;
 public final class FishShopManager implements Listener {
     private static final int[] CONTENT_SLOTS = {10,11,12,13,14,15,16,19,20,21,22,23,24,25,28,29,30,31,32,33,34,37,38,39,40,41,42,43};
     private static final String TITLE_PREFIX = "Fish Shop";
+    private static final Set<String> CURATED_FISH_IDS = Set.of(
+            "alpha_spiderfish", "catfish", "deadly_fin", "flarefin_koi", "king_of_the_pond",
+            "ocean_sunfish", "rabbitfish", "seven_finned_death", "oarfish", "wyverntail",
+            "princess_fish", "red_snapper", "mystery_fish", "arowana", "the_sounding",
+            "the_beastfish", "tropical_barracuda", "saddled_bichir", "netherwrasse",
+            "olive_flounder", "sturgeon", "pain_eel", "dorado", "eel", "touchy_fish",
+            "moray_eel", "rusty_marlin", "football_fish", "unicorn_fish", "volcanic_bass",
+            "laviathan_fry");
     private final XZHEconomySystem plugin;
     private final NamespacedKey actionKey;
     private final NamespacedKey valueKey;
@@ -69,7 +82,25 @@ public final class FishShopManager implements Listener {
         if (!file.exists()) plugin.saveResource("fish.yml", false);
         YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         ConfigurationSection root = yaml.getConfigurationSection("fish");
-        if (root == null) throw new IllegalStateException("Fish catalogue is missing its fish section.");
+        // Existing server installations keep their old fish.yml when a plugin JAR is replaced.
+        // Back it up once, then install the bundled 31-species catalogue so removed fish cannot
+        // remain purchasable/sellable through stale on-disk configuration.
+        if (root == null || !isCuratedCatalogue(root)) {
+            File backup = new File(plugin.getDataFolder(), "fish.yml.before-xzh-31.yml");
+            try {
+                if (file.exists() && !backup.exists()) {
+                    Files.copy(file.toPath(), backup.toPath(), StandardCopyOption.COPY_ATTRIBUTES);
+                }
+                plugin.saveResource("fish.yml", true);
+            } catch (IOException ex) {
+                throw new IllegalStateException("Could not migrate the fish catalogue to the curated 31 species.", ex);
+            }
+            yaml = YamlConfiguration.loadConfiguration(file);
+            root = yaml.getConfigurationSection("fish");
+        }
+        if (root == null || !isCuratedCatalogue(root)) {
+            throw new IllegalStateException("Fish catalogue migration did not produce the required 31-species catalogue.");
+        }
         for (String id : root.getKeys(false)) {
             ConfigurationSection f = root.getConfigurationSection(id);
             if (f == null) continue;
@@ -85,6 +116,18 @@ public final class FishShopManager implements Listener {
         }
         if (species.isEmpty()) throw new IllegalStateException("Fish catalogue contains no species.");
         plugin.getLogger().info("Fish Shop loaded " + species.size() + " species.");
+    }
+
+    private boolean isCuratedCatalogue(ConfigurationSection root) {
+        Set<String> ids = new HashSet<>(root.getKeys(false));
+        if (!ids.equals(CURATED_FISH_IDS)) return false;
+        for (String id : CURATED_FISH_IDS) {
+            ConfigurationSection fish = root.getConfigurationSection(id);
+            if (fish == null || fish.getString("habitat.description", "").isBlank()
+                    || fish.getString("habitat.rod", "").isBlank()
+                    || fish.getString("habitat.time", "").isBlank()) return false;
+        }
+        return true;
     }
 
     public void openMain(Player player) {
