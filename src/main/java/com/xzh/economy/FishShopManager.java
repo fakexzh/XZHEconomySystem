@@ -248,6 +248,7 @@ public final class FishShopManager implements Listener {
                         + String.format(Locale.ROOT, "%.2f cm", data.getDouble(path + ".best-length-cm", 0)));
             } else lore.add(ChatColor.RED + "Not discovered yet");
             meta.setLore(lore);
+            icon.setItemMeta(meta);
             inv.setItem(CONTENT_SLOTS[i - start], icon);
         }
         double completion = all.isEmpty() ? 0 : discovered * 100.0 / all.size();
