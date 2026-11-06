@@ -17,6 +17,12 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -67,6 +73,30 @@ public final class FishShopManager implements Listener {
         File file = new File(plugin.getDataFolder(), "fish.yml");
         if (!file.exists()) plugin.saveResource("fish.yml", false);
         YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        YamlConfiguration bundled;
+        try (InputStream resource = plugin.getResource("fish.yml")) {
+            if (resource == null) throw new IllegalStateException("Bundled fish.yml is missing.");
+            bundled = YamlConfiguration.loadConfiguration(
+                    new InputStreamReader(resource, StandardCharsets.UTF_8));
+        } catch (IOException ex) {
+            throw new IllegalStateException("Could not read the bundled XZH fish catalogue.", ex);
+        }
+        ConfigurationSection bundledRoot = bundled.getConfigurationSection("fish");
+        if (bundledRoot == null) throw new IllegalStateException("Bundled fish catalogue is missing its fish section.");
+        ConfigurationSection existingRoot = yaml.getConfigurationSection("fish");
+        if (existingRoot == null || !existingRoot.getKeys(false).equals(bundledRoot.getKeys(false))) {
+            File backup = new File(plugin.getDataFolder(), "fish.yml.before-xzh-31.yml");
+            try {
+                if (file.exists() && !backup.exists()) Files.copy(file.toPath(), backup.toPath());
+                try (InputStream resource = plugin.getResource("fish.yml")) {
+                    if (resource == null) throw new IOException("Bundled fish.yml is missing.");
+                    Files.copy(resource, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                }
+            } catch (IOException ex) {
+                throw new IllegalStateException("Could not migrate fish.yml to the 31 selected XZH fish.", ex);
+            }
+            yaml = YamlConfiguration.loadConfiguration(file);
+        }
         ConfigurationSection root = yaml.getConfigurationSection("fish");
         if (root == null) throw new IllegalStateException("Fish catalogue is missing its fish section.");
         for (String id : root.getKeys(false)) {
@@ -158,8 +188,9 @@ public final class FishShopManager implements Listener {
         YamlConfiguration data = YamlConfiguration.loadConfiguration(collectionFile);
         String playerPath = "players." + player.getUniqueId();
         int catches = data.getInt(playerPath + ".total-catches", 0);
-        int discovered = data.getInt(playerPath + ".unique-species", 0);
         List<FishSpecies> all = orderedSpecies();
+        int discovered = (int) all.stream().filter(fish ->
+                data.getInt(playerPath + ".species." + fish.id() + ".count", 0) > 0).count();
         int pages = Math.max(1, (all.size() + CONTENT_SLOTS.length - 1) / CONTENT_SLOTS.length);
         int page = Math.max(0, Math.min(requestedPage, pages - 1));
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_AQUA + TITLE_PREFIX + ": Collection " + (page + 1));
