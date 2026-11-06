@@ -17,6 +17,12 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -50,7 +56,7 @@ public final class FishShopManager implements Listener {
     private record FishSpecies(String id, String name, String rarity, String model,
                                double minWeight, double maxWeight, double typicalWeight,
                                double minLength, double maxLength, double minHeight, double maxHeight,
-                               double minWidth, double maxWidth, double basePrice) {}
+                               double minWidth, double maxWidth, List<String> biomes, double basePrice) {}
     private record FishSpecimen(UUID id, FishSpecies species, double weight, double length,
                                 double height, double width, String size, long caughtAt) {}
 
@@ -67,6 +73,30 @@ public final class FishShopManager implements Listener {
         File file = new File(plugin.getDataFolder(), "fish.yml");
         if (!file.exists()) plugin.saveResource("fish.yml", false);
         YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        YamlConfiguration bundled;
+        try (InputStream resource = plugin.getResource("fish.yml")) {
+            if (resource == null) throw new IllegalStateException("Bundled fish.yml is missing.");
+            bundled = YamlConfiguration.loadConfiguration(
+                    new InputStreamReader(resource, StandardCharsets.UTF_8));
+        } catch (IOException ex) {
+            throw new IllegalStateException("Could not read the bundled XZH fish catalogue.", ex);
+        }
+        ConfigurationSection bundledRoot = bundled.getConfigurationSection("fish");
+        if (bundledRoot == null) throw new IllegalStateException("Bundled fish catalogue is missing its fish section.");
+        ConfigurationSection existingRoot = yaml.getConfigurationSection("fish");
+        if (existingRoot == null || !existingRoot.getKeys(false).equals(bundledRoot.getKeys(false))) {
+            File backup = new File(plugin.getDataFolder(), "fish.yml.before-xzh-31.yml");
+            try {
+                if (file.exists() && !backup.exists()) Files.copy(file.toPath(), backup.toPath());
+                try (InputStream resource = plugin.getResource("fish.yml")) {
+                    if (resource == null) throw new IOException("Bundled fish.yml is missing.");
+                    Files.copy(resource, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                }
+            } catch (IOException ex) {
+                throw new IllegalStateException("Could not migrate fish.yml to the 31 selected XZH fish.", ex);
+            }
+            yaml = YamlConfiguration.loadConfiguration(file);
+        }
         ConfigurationSection root = yaml.getConfigurationSection("fish");
         if (root == null) throw new IllegalStateException("Fish catalogue is missing its fish section.");
         for (String id : root.getKeys(false)) {
@@ -79,7 +109,7 @@ public final class FishShopManager implements Listener {
                     f.getDouble("dimensions.length.minimum"), f.getDouble("dimensions.length.maximum"),
                     f.getDouble("dimensions.height.minimum"), f.getDouble("dimensions.height.maximum"),
                     f.getDouble("dimensions.width.minimum"), f.getDouble("dimensions.width.maximum"),
-                    f.getDouble("value.base-price")));
+                    f.getStringList("habitat.biomes"), f.getDouble("value.base-price")));
         }
         if (species.isEmpty()) throw new IllegalStateException("Fish catalogue contains no species.");
         plugin.getLogger().info("Fish Shop loaded " + species.size() + " species.");
@@ -110,9 +140,10 @@ public final class FishShopManager implements Listener {
             meta.setDisplayName(rarityColor(fish.rarity()) + fish.name());
             meta.setLore(List.of(ChatColor.GRAY + "Rarity: " + rarityColor(fish.rarity()) + fish.rarity(),
                     ChatColor.GRAY + "Typical weight: " + String.format(Locale.ROOT, "%.2f kg", fish.typicalWeight()),
-                    ChatColor.YELLOW + "Typical price: " + typicalPrice(fish) + " coins",
-                    ChatColor.GREEN + "Click to preview a specimen and confirm purchase."));
-            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "buy-select");
+                    ChatColor.YELLOW + (pricesConfigured() ? "Typical price: " + typicalPrice(fish) + " coins" : "Price: Coming later"),
+                    pricesConfigured() ? ChatColor.GREEN + "Click to preview a specimen." : ChatColor.RED + "Purchases are not enabled yet."));
+            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING,
+                    pricesConfigured() ? "buy-select" : "buy-disabled");
             meta.getPersistentDataContainer().set(valueKey, PersistentDataType.STRING, fish.id());
             icon.setItemMeta(meta);
             inv.setItem(CONTENT_SLOTS[i - start], icon);
@@ -135,9 +166,11 @@ public final class FishShopManager implements Listener {
             ItemStack icon = fishItems.get(i).clone();
             ItemMeta meta = icon.getItemMeta();
             String specimenId = meta.getPersistentDataContainer().get(fishIdKey, PersistentDataType.STRING);
-            meta.setLore(append(meta.getLore(), ChatColor.YELLOW + "Sell value: " + sellPrice(icon) + " coins",
-                    ChatColor.GREEN + "Click to review sale."));
-            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "sell-select");
+            meta.setLore(append(meta.getLore(),
+                    pricesConfigured() ? ChatColor.YELLOW + "Sell value: " + sellPrice(icon) + " coins" : ChatColor.YELLOW + "Sell price: Coming later",
+                    pricesConfigured() ? ChatColor.GREEN + "Click to review sale." : ChatColor.RED + "Selling is not enabled yet."));
+            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING,
+                    pricesConfigured() ? "sell-select" : "sell-disabled");
             meta.getPersistentDataContainer().set(valueKey, PersistentDataType.STRING, specimenId == null ? "" : specimenId);
             icon.setItemMeta(meta);
             inv.setItem(CONTENT_SLOTS[i - start], icon);
@@ -155,8 +188,9 @@ public final class FishShopManager implements Listener {
         YamlConfiguration data = YamlConfiguration.loadConfiguration(collectionFile);
         String playerPath = "players." + player.getUniqueId();
         int catches = data.getInt(playerPath + ".total-catches", 0);
-        int discovered = data.getInt(playerPath + ".unique-species", 0);
         List<FishSpecies> all = orderedSpecies();
+        int discovered = (int) all.stream().filter(fish ->
+                data.getInt(playerPath + ".species." + fish.id() + ".count", 0) > 0).count();
         int pages = Math.max(1, (all.size() + CONTENT_SLOTS.length - 1) / CONTENT_SLOTS.length);
         int page = Math.max(0, Math.min(requestedPage, pages - 1));
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_AQUA + TITLE_PREFIX + ": Collection " + (page + 1));
@@ -171,18 +205,26 @@ public final class FishShopManager implements Listener {
                 NamespacedKey collectionModel = NamespacedKey.fromString(fish.model() + "_medium");
                 if (collectionModel != null) meta.setItemModel(collectionModel);
             }
-            meta.setDisplayName((count > 0 ? ChatColor.GREEN : ChatColor.GRAY) + fish.name());
+            String fishTooltipName = (count > 0 ? ChatColor.GREEN : ChatColor.GRAY) + fish.name();
+            // Explicitly populate both modern item_name and custom_name components.
+            // Also clear hide_tooltip so resource-pack/item metadata cannot suppress the tooltip.
+            meta.setHideTooltip(false);
+            meta.setItemName(fishTooltipName);
+            meta.setDisplayName(fishTooltipName);
             List<String> lore = new ArrayList<>();
+            lore.add(count > 0 ? ChatColor.GREEN + "Discovered species" : ChatColor.YELLOW + "Undiscovered species");
             lore.add(ChatColor.GRAY + "Rarity: " + rarityColor(fish.rarity()) + fish.rarity());
+            lore.add(ChatColor.YELLOW + "Found in: " + ChatColor.WHITE + habitatHint(fish));
+            lore.add(ChatColor.YELLOW + "Rod: " + ChatColor.WHITE + rodHint(fish));
+            lore.add(ChatColor.YELLOW + "Time: " + ChatColor.WHITE + "Any time");
             if (count > 0) {
-                lore.add(ChatColor.GREEN + "Discovered");
                 lore.add(ChatColor.GRAY + "Caught: " + ChatColor.WHITE + count);
                 lore.add(ChatColor.GRAY + "Best weight: " + ChatColor.WHITE
                         + String.format(Locale.ROOT, "%.2f kg", data.getDouble(path + ".best-weight-kg", 0)));
                 lore.add(ChatColor.GRAY + "Best size: " + ChatColor.WHITE + data.getString(path + ".best-size-category", "UNKNOWN"));
                 lore.add(ChatColor.GRAY + "Best length: " + ChatColor.WHITE
                         + String.format(Locale.ROOT, "%.2f cm", data.getDouble(path + ".best-length-cm", 0)));
-            } else lore.add(ChatColor.RED + "Not discovered yet");
+            } else lore.add(ChatColor.RED + "Find and catch this fish to unlock its collection entry.");
             meta.setLore(lore);
             inv.setItem(CONTENT_SLOTS[i - start], icon);
         }
@@ -196,6 +238,10 @@ public final class FishShopManager implements Listener {
     }
 
     private void openBuyConfirm(Player player, String speciesId) {
+        if (!pricesConfigured()) {
+            plugin.tellShop(player, "Fish prices have not been set yet.");
+            return;
+        }
         FishSpecies fish = species.get(speciesId);
         if (fish == null) return;
         FishSpecimen specimen = generate(fish);
@@ -209,6 +255,10 @@ public final class FishShopManager implements Listener {
     }
 
     private void openSellConfirm(Player player, ItemStack fish) {
+        if (!pricesConfigured()) {
+            plugin.tellShop(player, "Fish prices have not been set yet.");
+            return;
+        }
         String id = fish.getItemMeta().getPersistentDataContainer().get(fishIdKey, PersistentDataType.STRING);
         if (id == null) return;
         pendingSells.put(player.getUniqueId(), fish.clone());
@@ -242,6 +292,7 @@ public final class FishShopManager implements Listener {
             case "collection-page" -> openCollection(player, parsePage(value));
             case "buy-select" -> openBuyConfirm(player, value);
             case "sell-select" -> openSellConfirm(player, clicked);
+            case "buy-disabled", "sell-disabled" -> plugin.tellShop(player, "Fish prices have not been set yet.");
             case "buy-confirm" -> confirmBuy(player, value);
             case "sell-confirm" -> confirmSell(player, value);
             case "main" -> openMain(player);
@@ -252,6 +303,10 @@ public final class FishShopManager implements Listener {
     }
 
     private void confirmBuy(Player player, String speciesId) {
+        if (!pricesConfigured()) {
+            plugin.tellShop(player, "Fish prices have not been set yet.");
+            return;
+        }
         FishSpecimen specimen = pendingBuys.get(player.getUniqueId());
         if (specimen == null || !specimen.species().id().equals(speciesId)) return;
         if (plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) {
@@ -280,6 +335,10 @@ public final class FishShopManager implements Listener {
     }
 
     private void confirmSell(Player player, String specimenId) {
+        if (!pricesConfigured()) {
+            plugin.tellShop(player, "Fish prices have not been set yet.");
+            return;
+        }
         ItemStack pending = pendingSells.get(player.getUniqueId());
         if (pending == null || !isCustomFish(pending)) return;
         String actualId = pending.getItemMeta().getPersistentDataContainer().get(fishIdKey, PersistentDataType.STRING);
@@ -327,6 +386,41 @@ public final class FishShopManager implements Listener {
         data.set(caughtAtKey, PersistentDataType.LONG, fish.caughtAt());
         item.setItemMeta(meta);
         return item;
+    }
+
+    private boolean pricesConfigured() {
+        return plugin.getConfig().getBoolean("fish-market.prices-configured", false);
+    }
+
+    private String rodHint(FishSpecies fish) {
+        return fish.biomes().contains("NETHER")
+                ? "Netherite Fishing Rod (required; lava fishing)"
+                : "Any Fishing Rod";
+    }
+
+    private String habitatHint(FishSpecies fish) {
+        return fish.biomes().stream().map(this::biomeLabel).distinct()
+                .collect(java.util.stream.Collectors.joining(", "));
+    }
+
+    private String biomeLabel(String biome) {
+        return switch (biome) {
+            case "RIVER" -> "River";
+            case "FROZEN_RIVER" -> "Frozen River";
+            case "SWAMP" -> "Swamp";
+            case "MANGROVE_SWAMP" -> "Mangrove Swamp";
+            case "WARM_OCEAN" -> "Warm Ocean";
+            case "LUKEWARM_OCEAN" -> "Lukewarm Ocean";
+            case "DEEP_LUKEWARM_OCEAN" -> "Deep Lukewarm Ocean";
+            case "OCEAN" -> "Ocean";
+            case "DEEP_OCEAN" -> "Deep Ocean";
+            case "COLD_OCEAN" -> "Cold Ocean";
+            case "DEEP_COLD_OCEAN" -> "Deep Cold Ocean";
+            case "FROZEN_OCEAN" -> "Frozen Ocean";
+            case "DEEP_FROZEN_OCEAN" -> "Deep Frozen Ocean";
+            case "NETHER" -> "Nether lava";
+            default -> biome.replace('_', ' ').toLowerCase(Locale.ROOT);
+        };
     }
 
     private FishSpecimen generate(FishSpecies fish) {
