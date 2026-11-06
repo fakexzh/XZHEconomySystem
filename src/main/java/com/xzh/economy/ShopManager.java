@@ -282,7 +282,7 @@ public final class ShopManager implements Listener {
         add(inv, 23, Material.END_CRYSTAL, "Quest Shop", "quests", "quests");
         add(inv, 24, Material.SCULK_SENSOR, "Death Inventory", "deathinventory", "deathinventory");
         add(inv, 25, Material.COD, "Fish Shop", "fish-shop", "fish-shop",
-                List.of(ChatColor.GRAY + "Buy and sell custom fish.", ChatColor.GRAY + "Track your 203-species collection."));
+                List.of(ChatColor.GRAY + "Buy and sell custom fish.", ChatColor.GRAY + "Track your 31-species collection."));
 
         // Row 5: bank and account utilities.
         ItemStack bankIcon = plugin.getPocketCoinManager().createCoin(100, 1);
