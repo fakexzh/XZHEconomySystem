@@ -16,7 +16,6 @@ fish:
       time: "Any time"
       biomes: [SWAMP, MANGROVE_SWAMP]
       water-depth: { minimum: 0, maximum: 64 }
-      water-depth: { minimum: 0, maximum: 64 }
   catfish:
     display-name: "Catfish"
     rarity: COMMON
@@ -32,7 +31,6 @@ fish:
       rod: "Any fishing rod"
       time: "Any time"
       biomes: [RIVER]
-      water-depth: { minimum: 0, maximum: 64 }
       water-depth: { minimum: 0, maximum: 64 }
   deadly_fin:
     display-name: "Deadly Fin"
@@ -50,7 +48,6 @@ fish:
       time: "Any time"
       biomes: [DEEP_OCEAN, COLD_OCEAN, FROZEN_OCEAN]
       water-depth: { minimum: 0, maximum: 64 }
-      water-depth: { minimum: 0, maximum: 64 }
   flarefin_koi:
     display-name: "Flarefin Koi"
     rarity: COMMON
@@ -66,7 +63,6 @@ fish:
       rod: "Any fishing rod"
       time: "Any time"
       biomes: [WARM_OCEAN, LUKEWARM_OCEAN]
-      water-depth: { minimum: 0, maximum: 64 }
       water-depth: { minimum: 0, maximum: 64 }
   king_of_the_pond:
     display-name: "King of the Pond"
@@ -84,7 +80,6 @@ fish:
       time: "Any time"
       biomes: [RIVER]
       water-depth: { minimum: 0, maximum: 64 }
-      water-depth: { minimum: 0, maximum: 64 }
   ocean_sunfish:
     display-name: "Ocean Sunfish"
     rarity: COMMON
@@ -100,7 +95,6 @@ fish:
       rod: "Any fishing rod"
       time: "Any time"
       biomes: [WARM_OCEAN, LUKEWARM_OCEAN]
-      water-depth: { minimum: 0, maximum: 64 }
       water-depth: { minimum: 0, maximum: 64 }
   rabbitfish:
     display-name: "Rabbitfish"
@@ -118,7 +112,6 @@ fish:
       time: "Any time"
       biomes: [WARM_OCEAN, LUKEWARM_OCEAN]
       water-depth: { minimum: 0, maximum: 64 }
-      water-depth: { minimum: 0, maximum: 64 }
   seven_finned_death:
     display-name: "Seven Finned Death"
     rarity: COMMON
@@ -134,7 +127,6 @@ fish:
       rod: "Any fishing rod"
       time: "Any time"
       biomes: [DEEP_OCEAN]
-      water-depth: { minimum: 0, maximum: 64 }
       water-depth: { minimum: 0, maximum: 64 }
   oarfish:
     display-name: "Oarfish"
@@ -152,7 +144,6 @@ fish:
       time: "Any time"
       biomes: [DEEP_OCEAN, COLD_OCEAN, FROZEN_OCEAN]
       water-depth: { minimum: 0, maximum: 64 }
-      water-depth: { minimum: 0, maximum: 64 }
   wyverntail:
     display-name: "Wyverntail"
     rarity: COMMON
@@ -168,7 +159,6 @@ fish:
       rod: "Any fishing rod"
       time: "Any time"
       biomes: [WARM_OCEAN, LUKEWARM_OCEAN]
-      water-depth: { minimum: 0, maximum: 64 }
       water-depth: { minimum: 0, maximum: 64 }
   princess_fish:
     display-name: "Princess Fish"
@@ -186,7 +176,6 @@ fish:
       time: "Any time"
       biomes: [RIVER]
       water-depth: { minimum: 0, maximum: 64 }
-      water-depth: { minimum: 0, maximum: 64 }
   red_snapper:
     display-name: "Red Snapper"
     rarity: UNCOMMON
@@ -202,7 +191,6 @@ fish:
       rod: "Any fishing rod"
       time: "Any time"
       biomes: [WARM_OCEAN, LUKEWARM_OCEAN]
-      water-depth: { minimum: 0, maximum: 64 }
       water-depth: { minimum: 0, maximum: 64 }
   mystery_fish:
     display-name: "Mystery Fish"
@@ -220,7 +208,6 @@ fish:
       time: "Any time"
       biomes: [SWAMP, MANGROVE_SWAMP, DEEP_OCEAN]
       water-depth: { minimum: 0, maximum: 64 }
-      water-depth: { minimum: 0, maximum: 64 }
   arowana:
     display-name: "Arowana"
     rarity: UNCOMMON
@@ -236,7 +223,6 @@ fish:
       rod: "Any fishing rod"
       time: "Any time"
       biomes: [RIVER]
-      water-depth: { minimum: 0, maximum: 64 }
       water-depth: { minimum: 0, maximum: 64 }
   the_sounding:
     display-name: "The Sounding"
@@ -254,7 +240,6 @@ fish:
       time: "Any time"
       biomes: [DEEP_OCEAN]
       water-depth: { minimum: 0, maximum: 64 }
-      water-depth: { minimum: 0, maximum: 64 }
   the_beastfish:
     display-name: "The Beastfish"
     rarity: UNCOMMON
@@ -270,7 +255,6 @@ fish:
       rod: "Any fishing rod"
       time: "Any time"
       biomes: [DEEP_OCEAN]
-      water-depth: { minimum: 0, maximum: 64 }
       water-depth: { minimum: 0, maximum: 64 }
   tropical_barracuda:
     display-name: "Tropical Barracuda"
@@ -288,7 +272,6 @@ fish:
       time: "Any time"
       biomes: [WARM_OCEAN, LUKEWARM_OCEAN]
       water-depth: { minimum: 0, maximum: 64 }
-      water-depth: { minimum: 0, maximum: 64 }
   saddled_bichir:
     display-name: "Saddled Bichir"
     rarity: UNCOMMON
@@ -304,7 +287,6 @@ fish:
       rod: "Any fishing rod"
       time: "Any time"
       biomes: [SWAMP, MANGROVE_SWAMP]
-      water-depth: { minimum: 0, maximum: 64 }
       water-depth: { minimum: 0, maximum: 64 }
   netherwrasse:
     display-name: "Netherwrasse"
@@ -322,7 +304,6 @@ fish:
       time: "Any time"
       biomes: [NETHER]
       water-depth: { minimum: 0, maximum: 64 }
-      water-depth: { minimum: 0, maximum: 64 }
   olive_flounder:
     display-name: "Olive Flounder"
     rarity: UNCOMMON
@@ -338,7 +319,6 @@ fish:
       rod: "Any fishing rod"
       time: "Any time"
       biomes: [COLD_OCEAN, FROZEN_OCEAN]
-      water-depth: { minimum: 0, maximum: 64 }
       water-depth: { minimum: 0, maximum: 64 }
   sturgeon:
     display-name: "Sturgeon"
@@ -356,7 +336,6 @@ fish:
       time: "Any time"
       biomes: [RIVER, COLD_OCEAN, FROZEN_OCEAN]
       water-depth: { minimum: 0, maximum: 64 }
-      water-depth: { minimum: 0, maximum: 64 }
   pain_eel:
     display-name: "Pain Eel"
     rarity: RARE
@@ -372,7 +351,6 @@ fish:
       rod: "Any fishing rod"
       time: "Any time"
       biomes: [DEEP_OCEAN, COLD_OCEAN, FROZEN_OCEAN]
-      water-depth: { minimum: 0, maximum: 64 }
       water-depth: { minimum: 0, maximum: 64 }
   dorado:
     display-name: "Dorado"
@@ -390,7 +368,6 @@ fish:
       time: "Any time"
       biomes: [WARM_OCEAN, LUKEWARM_OCEAN]
       water-depth: { minimum: 0, maximum: 64 }
-      water-depth: { minimum: 0, maximum: 64 }
   eel:
     display-name: "Eel"
     rarity: RARE
@@ -406,7 +383,6 @@ fish:
       rod: "Any fishing rod"
       time: "Any time"
       biomes: [RIVER, SWAMP, MANGROVE_SWAMP]
-      water-depth: { minimum: 0, maximum: 64 }
       water-depth: { minimum: 0, maximum: 64 }
   touchy_fish:
     display-name: "Touchy Fish"
@@ -424,7 +400,6 @@ fish:
       time: "Any time"
       biomes: [DEEP_OCEAN]
       water-depth: { minimum: 0, maximum: 64 }
-      water-depth: { minimum: 0, maximum: 64 }
   moray_eel:
     display-name: "Moray Eel"
     rarity: RARE
@@ -440,7 +415,6 @@ fish:
       rod: "Any fishing rod"
       time: "Any time"
       biomes: [WARM_OCEAN, LUKEWARM_OCEAN]
-      water-depth: { minimum: 0, maximum: 64 }
       water-depth: { minimum: 0, maximum: 64 }
   rusty_marlin:
     display-name: "Rusty Marlin"
@@ -458,7 +432,6 @@ fish:
       time: "Any time"
       biomes: [DEEP_OCEAN]
       water-depth: { minimum: 0, maximum: 64 }
-      water-depth: { minimum: 0, maximum: 64 }
   football_fish:
     display-name: "Football Fish"
     rarity: LEGENDARY
@@ -474,7 +447,6 @@ fish:
       rod: "Any fishing rod"
       time: "Any time"
       biomes: [DEEP_OCEAN]
-      water-depth: { minimum: 0, maximum: 64 }
       water-depth: { minimum: 0, maximum: 64 }
   unicorn_fish:
     display-name: "Unicorn Fish"
@@ -492,7 +464,6 @@ fish:
       time: "Any time"
       biomes: [WARM_OCEAN, LUKEWARM_OCEAN]
       water-depth: { minimum: 0, maximum: 64 }
-      water-depth: { minimum: 0, maximum: 64 }
   volcanic_bass:
     display-name: "Volcanic Bass"
     rarity: LEGENDARY
@@ -509,7 +480,6 @@ fish:
       time: "Any time"
       biomes: [NETHER]
       water-depth: { minimum: 0, maximum: 64 }
-      water-depth: { minimum: 0, maximum: 64 }
   laviathan_fry:
     display-name: "Laviathan Fry"
     rarity: MYTHICAL
@@ -525,5 +495,4 @@ fish:
       rod: "Any fishing rod"
       time: "Any time"
       biomes: [DEEP_OCEAN]
-      water-depth: { minimum: 0, maximum: 64 }
       water-depth: { minimum: 0, maximum: 64 }
