@@ -153,9 +153,11 @@ public final class FishShopManager implements Listener {
                 "Catch fish with your fishing rod before selling them here.");
         else {
             long totalValue = fishItems.stream().mapToLong(this::sellPrice).sum();
-            add(inv, 47, Material.GOLD_INGOT, "Sell All", "sell-all", "all",
-                    "Custom fish: " + fishItems.size(), "Total payout: " + totalValue + " coins",
-                    "Click to review and confirm.");
+            add(inv, 47, pricesConfigured() ? Material.GOLD_INGOT : Material.BARRIER,
+                    pricesConfigured() ? "Sell All" : "Selling Disabled", "sell-all", "all",
+                    "Custom fish: " + fishItems.size(),
+                    pricesConfigured() ? "Total payout: " + totalValue + " coins" : "Prices are not configured yet.",
+                    pricesConfigured() ? "Click to review and confirm." : "Selling will unlock after prices are set.");
         }
         add(inv, 45, Material.ARROW, "Back", "main", "main", "Return to Fish Shop.");
         if (page > 0) add(inv, 48, Material.PAPER, "Previous page", "sell-page", String.valueOf(page - 1), "Previous fish.");
