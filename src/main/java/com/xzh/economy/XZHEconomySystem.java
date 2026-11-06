@@ -137,6 +137,22 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         if (getConfig().contains("time-control")) { getConfig().set("time-control", null); changed = true; }
         if (!getConfig().contains("announcements.bank.enabled")) { getConfig().set("announcements.bank.enabled", true); changed = true; }
 
+        // Existing servers keep config.yml when a JAR is replaced. One-time fish-market
+        // migration activates the approved 31-fish prices in those existing config files.
+        // The migration marker ensures later owner edits are never overwritten on restart.
+        if (!getConfig().getBoolean("migrations.fish-market-pricing-20261106", false)) {
+            getConfig().set("fish-market.prices-configured", true);
+            getConfig().set("fish-market.sell-multiplier", 0.35);
+            getConfig().set("fish-market.prices.common", 143);
+            getConfig().set("fish-market.prices.uncommon", 286);
+            getConfig().set("fish-market.prices.rare", 857);
+            getConfig().set("fish-market.prices.legendary", 2854);
+            getConfig().set("fish-market.prices.mythical", 8569);
+            getConfig().set("migrations.fish-market-pricing-20261106", true);
+            changed = true;
+            getLogger().info("Enabled approved 31-fish market prices for existing server configurations.");
+        }
+
         // One-time migration is necessary because Bukkit does not overwrite an existing config.yml.
         // Apply the explicitly approved 2026-10-22 shop and enchantment-book prices to existing servers.
         if (!getConfig().getBoolean("migrations.price-rebalance-20261022", false)) {
