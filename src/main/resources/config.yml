@@ -93,6 +93,8 @@ shop:
     melon_slice: 512
     cod: 256
     salmon: 256
+    tropical_fish: 256
+    pufferfish: 256
     cooked_cod: 256
     cooked_salmon: 256
     egg: 256
@@ -156,6 +158,12 @@ shop:
     cooked_salmon:
       buy: 12
       sell: 5.5
+    tropical_fish:
+      buy: 5
+      sell: 1
+    pufferfish:
+      buy: 5
+      sell: 1
   stock-limits:
     coal: 2000
     iron_ingot: 1000
@@ -177,6 +185,12 @@ shop:
     tnt: 128
     firework_rocket: 256
     milk_bucket: 20
+    cod: 1000
+    salmon: 1000
+    tropical_fish: 1000
+    pufferfish: 1000
+    cooked_cod: 1000
+    cooked_salmon: 1000
     bread: 1000
     cooked_beef: 1000
     iron_pickaxe: 100
