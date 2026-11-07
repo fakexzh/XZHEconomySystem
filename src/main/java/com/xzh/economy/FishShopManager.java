@@ -297,7 +297,7 @@ public final class FishShopManager implements Listener {
         }
         if (sold == 0) {
             plugin.tellShop(player, "No listed fish were found in your inventory.");
-            openSell(player, 0);
+            openMain(player);
             return;
         }
         plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + totalPayout);
