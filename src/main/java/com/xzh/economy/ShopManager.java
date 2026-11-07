@@ -110,11 +110,17 @@ public final class ShopManager implements Listener {
         new Product("food-cooked", Material.COOKED_PORKCHOP, 16, 4.8),
         new Product("food-cooked", Material.COOKED_CHICKEN, 12, 3.6),
         new Product("food-cooked", Material.BAKED_POTATO, 7, 2.1),
+        new Product("food-cooked", Material.COOKED_COD, 10, 4.5),
+        new Product("food-cooked", Material.COOKED_SALMON, 12, 5.5),
         new Product("food-raw", Material.BEEF, 8, 2.4),
         new Product("food-raw", Material.PORKCHOP, 9, 2.7),
         new Product("food-raw", Material.CHICKEN, 7, 2.1),
         new Product("food-raw", Material.MUTTON, 7, 2.1),
         new Product("food-raw", Material.RABBIT, 7, 2.1),
+        new Product("food-raw", Material.COD, 5, 3),
+        new Product("food-raw", Material.SALMON, 6, 3.5),
+        new Product("food-raw", Material.TROPICAL_FISH, 5, 1),
+        new Product("food-raw", Material.PUFFERFISH, 5, 1),
         new Product("food-raw", Material.MILK_BUCKET, 60, 50),
         new Product("equipment", Material.IRON_PICKAXE, 120, 36),
         new Product("equipment", Material.DIAMOND_PICKAXE, 450, 22),
@@ -1014,13 +1020,13 @@ public final class ShopManager implements Listener {
                     if (isFarmableSellItem(material)) {
                         int availableSellStock = getSellStock(player, material);
                         if (availableSellStock <= 0) {
-                            plugin.tellShop(player, "You have used all your sell stock for " + pretty(material) + ". Your personal stock refills every 12 hours.");
+                            plugin.tellShop(player, "You have used all your sell stock for " + pretty(material) + ". Your personal stock refills every 6 hours.");
                             player.closeInventory();
                             return;
                         }
                         if (quantity > availableSellStock) {
                             quantity = availableSellStock;
-                            plugin.tellShop(player, "Your personal sell limit applies. Selling only " + quantity + " item(s); your remaining stock refills every 12 hours.");
+                            plugin.tellShop(player, "Your personal sell limit applies. Selling only " + quantity + " item(s); your remaining stock refills every 6 hours.");
                         }
                     }
                     if (sellPrice(p) * quantity < 1) {
@@ -1234,6 +1240,16 @@ public final class ShopManager implements Listener {
         }
         if (!stockData.contains("last-restock-date")) {
             stockData.set("last-restock-date", LocalDate.now().toString());
+            changed = true;
+        }
+        // Restore the six vanilla fish to a full global buy stock once on existing servers.
+        // This does not reset any other product stock or alter player sell-stock balances.
+        if (!stockData.getBoolean("migrations.vanilla-fish-food-shop-stock-restored", false)) {
+            for (Material fish : List.of(Material.COD, Material.SALMON, Material.TROPICAL_FISH,
+                    Material.PUFFERFISH, Material.COOKED_COD, Material.COOKED_SALMON)) {
+                stockData.set("items." + fish.name().toLowerCase(Locale.ROOT), stockLimit(fish));
+            }
+            stockData.set("migrations.vanilla-fish-food-shop-stock-restored", true);
             changed = true;
         }
         if (changed) saveStock();
