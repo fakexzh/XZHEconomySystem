@@ -10,6 +10,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.player.PlayerFishEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -57,7 +61,6 @@ public final class FishShopManager implements Listener {
     private final NamespacedKey caughtAtKey = NamespacedKey.fromString("villagerworkstation:fish_caught_at");
     private final Map<String, FishSpecies> species = new HashMap<>();
     private final Map<UUID, FishSpecimen> pendingBuys = new HashMap<>();
-    private final Map<UUID, ItemStack> pendingSells = new HashMap<>();
     private final Map<UUID, List<String>> pendingSellAll = new HashMap<>();
     private final File collectionFile;
 
@@ -132,8 +135,22 @@ public final class FishShopManager implements Listener {
 
     public void openMain(Player player) {
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_AQUA + TITLE_PREFIX);
-        add(inv, 20, Material.COD, "Buy Fish", "buy-menu", "buy", "Browse the catalogue and buy a generated specimen.");
-        add(inv, 22, Material.SALMON, "Sell Fish", "sell-menu", "sell", "Sell custom fish specimens from your inventory.");
+
+        ItemStack buyIcon = new ItemStack(Material.COD);
+        ItemMeta buyMeta = buyIcon.getItemMeta();
+        NamespacedKey customFishModel = NamespacedKey.fromString("barely_default:fish_alpha_spiderfish_medium");
+        if (customFishModel != null) buyMeta.setItemModel(customFishModel);
+        buyMeta.setDisplayName(ChatColor.YELLOW + "Buy Fish");
+        buyMeta.setLore(List.of(ChatColor.GRAY + "Browse and buy XZH custom fish specimens."));
+        buyMeta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "buy-menu");
+        buyMeta.getPersistentDataContainer().set(valueKey, PersistentDataType.STRING, "buy");
+        buyIcon.setItemMeta(buyMeta);
+        inv.setItem(20, buyIcon);
+
+        add(inv, 22, Material.SNOWBALL, "Sell All", "sell-all", "all",
+                "Sell every eligible XZH custom fish in your inventory.",
+                "Review the total payout before confirming.");
+
         add(inv, 24, Material.BOOK, "Fish Collection", "collection-menu", "collection",
                 "Browse all " + species.size() + " species and your catch discoveries.");
         add(inv, 49, Material.ARROW, "Back to Shop", "back-shop", "back", "Return to the main shop.");
@@ -158,8 +175,10 @@ public final class FishShopManager implements Listener {
                     ChatColor.GRAY + "Rod: " + ChatColor.WHITE + fish.rod(),
                     ChatColor.GRAY + "Time: " + ChatColor.WHITE + fish.time(),
                     ChatColor.GRAY + "Typical weight: " + String.format(Locale.ROOT, "%.2f kg", fish.typicalWeight()),
-                    pricesConfigured() ? ChatColor.YELLOW + "Typical price: " + typicalPrice(fish) + " coins"
-                            : ChatColor.RED + "Price: Not configured yet"));
+                    pricesConfigured() ? ChatColor.GREEN + "Buy price: " + typicalPrice(fish) + " coins"
+                            : ChatColor.RED + "Buy price: Not configured",
+                    pricesConfigured() ? ChatColor.YELLOW + "Sell price: " + typicalSellPrice(fish) + " coins"
+                            : ChatColor.RED + "Sell price: Not configured"));
             meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "buy-select");
             meta.getPersistentDataContainer().set(valueKey, PersistentDataType.STRING, fish.id());
             icon.setItemMeta(meta);
@@ -169,43 +188,6 @@ public final class FishShopManager implements Listener {
         if (page > 0) add(inv, 48, Material.PAPER, "Previous page", "buy-page", String.valueOf(page - 1), "Previous species.");
         add(inv, 49, Material.BOOK, "Page " + (page + 1) + "/" + pages, "noop", "noop", "Catalogue species: " + all.size());
         if (page + 1 < pages) add(inv, 50, Material.PAPER, "Next page", "buy-page", String.valueOf(page + 1), "Next species.");
-        player.openInventory(inv);
-    }
-
-    private void openSell(Player player, int requestedPage) {
-        List<ItemStack> fishItems = new ArrayList<>();
-        for (ItemStack stack : player.getInventory().getStorageContents()) if (isCustomFish(stack)) fishItems.add(stack);
-        int pages = Math.max(1, (fishItems.size() + CONTENT_SLOTS.length - 1) / CONTENT_SLOTS.length);
-        int page = Math.max(0, Math.min(requestedPage, pages - 1));
-        Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_AQUA + TITLE_PREFIX + ": Sell " + (page + 1));
-        int start = page * CONTENT_SLOTS.length;
-        for (int i = start; i < Math.min(fishItems.size(), start + CONTENT_SLOTS.length); i++) {
-            ItemStack icon = fishItems.get(i).clone();
-            ItemMeta meta = icon.getItemMeta();
-            String specimenId = meta.getPersistentDataContainer().get(fishIdKey, PersistentDataType.STRING);
-            meta.setLore(append(meta.getLore(), pricesConfigured()
-                    ? ChatColor.YELLOW + "Sell value: " + sellPrice(icon) + " coins"
-                    : ChatColor.RED + "Selling disabled until prices are configured.",
-                    ChatColor.GREEN + "Click to review sale."));
-            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "sell-select");
-            meta.getPersistentDataContainer().set(valueKey, PersistentDataType.STRING, specimenId == null ? "" : specimenId);
-            icon.setItemMeta(meta);
-            inv.setItem(CONTENT_SLOTS[i - start], icon);
-        }
-        if (fishItems.isEmpty()) add(inv, 22, Material.BARRIER, "No custom fish found", "noop", "noop",
-                "Catch fish with your fishing rod before selling them here.");
-        else {
-            long totalValue = fishItems.stream().mapToLong(this::sellPrice).sum();
-            add(inv, 47, pricesConfigured() ? Material.GOLD_INGOT : Material.BARRIER,
-                    pricesConfigured() ? "Sell All" : "Selling Disabled", "sell-all", "all",
-                    "Custom fish: " + fishItems.size(),
-                    pricesConfigured() ? "Total payout: " + totalValue + " coins" : "Prices are not configured yet.",
-                    pricesConfigured() ? "Click to review and confirm." : "Selling will unlock after prices are set.");
-        }
-        add(inv, 45, Material.ARROW, "Back", "main", "main", "Return to Fish Shop.");
-        if (page > 0) add(inv, 48, Material.PAPER, "Previous page", "sell-page", String.valueOf(page - 1), "Previous fish.");
-        add(inv, 49, Material.HOPPER, "Page " + (page + 1) + "/" + pages, "noop", "noop", "Fish available to sell: " + fishItems.size());
-        if (page + 1 < pages) add(inv, 50, Material.PAPER, "Next page", "sell-page", String.valueOf(page + 1), "Next fish.");
         player.openInventory(inv);
     }
 
@@ -284,8 +266,8 @@ public final class FishShopManager implements Listener {
             totalValue += sellPrice(item);
         }
         if (specimenIds.isEmpty()) {
-            plugin.tellShop(player, "You have no custom fish to sell.");
-            openSell(player, 0);
+            plugin.tellShop(player, "You have no eligible XZH custom fish to sell.");
+            openMain(player);
             return;
         }
         pendingSellAll.put(player.getUniqueId(), List.copyOf(specimenIds));
@@ -294,8 +276,8 @@ public final class FishShopManager implements Listener {
                 "Total payout: " + totalValue + " coins", "Only XZH custom fish will be sold.");
         add(inv, 11, Material.LIME_CONCRETE, "Confirm Sell All", "sell-all-confirm", "all",
                 "Payout: " + totalValue + " coins.");
-        add(inv, 15, Material.RED_CONCRETE, "Cancel", "sell-menu", "sell", "Keep all your fish.");
-        add(inv, 22, Material.ARROW, "Back to fish list", "sell-menu", "sell", "Return to your fish.");
+        add(inv, 15, Material.RED_CONCRETE, "Cancel", "main", "main", "Keep all your fish.");
+        add(inv, 22, Material.ARROW, "Back", "main", "main", "Return to Fish Shop.");
         player.openInventory(inv);
     }
 
@@ -323,18 +305,6 @@ public final class FishShopManager implements Listener {
         player.closeInventory();
     }
 
-    private void openSellConfirm(Player player, ItemStack fish) {
-        String id = fish.getItemMeta().getPersistentDataContainer().get(fishIdKey, PersistentDataType.STRING);
-        if (id == null) return;
-        pendingSells.put(player.getUniqueId(), fish.clone());
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + TITLE_PREFIX + ": Confirm Sell");
-        inv.setItem(13, fish.clone());
-        add(inv, 11, Material.LIME_CONCRETE, "Confirm Sale", "sell-confirm", id, "Payout: " + sellPrice(fish) + " coins.");
-        add(inv, 15, Material.RED_CONCRETE, "Cancel", "sell-menu", "sell", "Keep this fish.");
-        add(inv, 22, Material.ARROW, "Back to fish list", "sell-menu", "sell", "Return to your fish.");
-        player.openInventory(inv);
-    }
-
     @EventHandler
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
@@ -350,17 +320,13 @@ public final class FishShopManager implements Listener {
         if (action == null) return;
         switch (action) {
             case "buy-menu" -> openBuy(player, 0);
-            case "sell-menu" -> openSell(player, 0);
             case "collection-menu" -> openCollection(player, 0);
             case "buy-page" -> openBuy(player, parsePage(value));
-            case "sell-page" -> openSell(player, parsePage(value));
             case "collection-page" -> openCollection(player, parsePage(value));
             case "buy-select" -> { if (pricesConfigured()) openBuyConfirm(player, value); else plugin.tellShop(player, "Fish prices have not been configured yet."); }
-            case "sell-select" -> { if (pricesConfigured()) openSellConfirm(player, clicked); else plugin.tellShop(player, "Fish prices have not been configured yet."); }
             case "sell-all" -> { if (pricesConfigured()) openSellAllConfirm(player); else plugin.tellShop(player, "Fish prices have not been configured yet."); }
             case "sell-all-confirm" -> confirmSellAll(player);
             case "buy-confirm" -> confirmBuy(player, value);
-            case "sell-confirm" -> confirmSell(player, value);
             case "main" -> openMain(player);
             case "back-shop" -> plugin.getShopManager().openMain(player);
             case "buy-back" -> openBuy(player, parsePage(value));
@@ -397,27 +363,6 @@ public final class FishShopManager implements Listener {
         player.closeInventory();
     }
 
-    private void confirmSell(Player player, String specimenId) {
-        if (!pricesConfigured()) { plugin.tellShop(player, "Fish prices have not been configured yet."); return; }
-        ItemStack pending = pendingSells.get(player.getUniqueId());
-        if (pending == null || !isCustomFish(pending)) return;
-        String actualId = pending.getItemMeta().getPersistentDataContainer().get(fishIdKey, PersistentDataType.STRING);
-        if (!specimenId.equals(actualId)) return;
-        ItemStack held = findSpecimen(player, specimenId);
-        if (held == null) {
-            plugin.tellShop(player, "That fish is no longer in your inventory.");
-            pendingSells.remove(player.getUniqueId());
-            openSell(player, 0);
-            return;
-        }
-        int payout = sellPrice(held);
-        removeSpecimen(player, specimenId);
-        plugin.setBalance(player.getUniqueId(), plugin.getBalance(player.getUniqueId()) + payout);
-        pendingSells.remove(player.getUniqueId());
-        plugin.tellShop(player, "Sold " + speciesName(held) + " for " + payout + " coins.");
-        player.closeInventory();
-    }
-
     private ItemStack createFishItem(FishSpecimen fish) {
         ItemStack item = new ItemStack(Material.COD);
         ItemMeta meta = item.getItemMeta();
@@ -432,7 +377,11 @@ public final class FishShopManager implements Listener {
                 ChatColor.GRAY + String.format(Locale.ROOT, "Length: %.2f cm", fish.length()),
                 ChatColor.GRAY + String.format(Locale.ROOT, "Height: %.2f cm", fish.height()),
                 ChatColor.GRAY + String.format(Locale.ROOT, "Width: %.2f cm", fish.width()),
-                ChatColor.YELLOW + "Value: " + price(fish) + " coins",
+                ChatColor.GREEN + "Buy price: " + price(fish) + " coins",
+                ChatColor.YELLOW + "Sell price: " + sellPrice(fish) + " coins",
+                ChatColor.GRAY + "Found in: " + fish.species().habitat(),
+                ChatColor.GRAY + "Rod: " + fish.species().rod(),
+                ChatColor.GRAY + "Time: " + fish.species().time(),
                 ChatColor.DARK_GRAY + "Specimen #" + fish.id().toString().substring(0, 8)));
         PersistentDataContainer data = meta.getPersistentDataContainer();
         data.set(fishIdKey, PersistentDataType.STRING, fish.id().toString());
@@ -514,18 +463,36 @@ public final class FishShopManager implements Listener {
     }
 
     private int sellPrice(ItemStack fish) {
-        if (!pricesConfigured()) return 0;
+        if (fish == null || !fish.hasItemMeta()) return 0;
         PersistentDataContainer data = fish.getItemMeta().getPersistentDataContainer();
         FishSpecies definition = species.get(data.get(speciesKey, PersistentDataType.STRING));
         if (definition == null) return 0;
         double weight = data.getOrDefault(weightKey, PersistentDataType.DOUBLE, definition.typicalWeight());
         double length = data.getOrDefault(lengthKey, PersistentDataType.DOUBLE,
-                (definition.minLength() + definition.maxLength()) / 2.0);
+                typicalDimension(definition.minLength(), definition.maxLength(), definition));
         double height = data.getOrDefault(heightKey, PersistentDataType.DOUBLE,
-                (definition.minHeight() + definition.maxHeight()) / 2.0);
+                typicalDimension(definition.minHeight(), definition.maxHeight(), definition));
         double width = data.getOrDefault(widthKey, PersistentDataType.DOUBLE,
-                (definition.minWidth() + definition.maxWidth()) / 2.0);
-        int base = priceFor(definition, weight, length, height, width);
+                typicalDimension(definition.minWidth(), definition.maxWidth(), definition));
+        return sellPrice(definition, weight, length, height, width);
+    }
+
+    private int sellPrice(FishSpecimen fish) {
+        return sellPrice(fish.species(), fish.weight(), fish.length(), fish.height(), fish.width());
+    }
+
+    private int typicalSellPrice(FishSpecies fish) {
+        double normalized = fish.typicalWeight() <= fish.minWeight() ? 0
+                : (fish.typicalWeight() - fish.minWeight()) / Math.max(0.000001, fish.maxWeight() - fish.minWeight());
+        return sellPrice(fish, fish.typicalWeight(),
+                interpolate(fish.minLength(), fish.maxLength(), normalized),
+                interpolate(fish.minHeight(), fish.maxHeight(), normalized),
+                interpolate(fish.minWidth(), fish.maxWidth(), normalized));
+    }
+
+    private int sellPrice(FishSpecies fish, double weight, double length, double height, double width) {
+        if (!pricesConfigured()) return 0;
+        int base = priceFor(fish, weight, length, height, width);
         double multiplier = plugin.getConfig().getDouble("fish-market.sell-multiplier", 0.35);
         return Math.max(1, (int) Math.round(base * Math.max(0, Math.min(1, multiplier))));
     }
@@ -570,6 +537,81 @@ public final class FishShopManager implements Listener {
         return switch (rarity) { case "COMMON" -> ChatColor.WHITE; case "UNCOMMON" -> ChatColor.GREEN;
             case "RARE" -> ChatColor.BLUE; case "EPIC" -> ChatColor.DARK_PURPLE;
             case "LEGENDARY" -> ChatColor.GOLD; case "MYTHICAL" -> ChatColor.LIGHT_PURPLE; default -> ChatColor.GRAY; };
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Bukkit.getScheduler().runTask(plugin, () -> refreshInventoryFishInfo(event.getPlayer()));
+    }
+
+    @EventHandler
+    public void onInventoryOpen(InventoryOpenEvent event) {
+        if (event.getPlayer() instanceof Player player) refreshInventoryFishInfo(player);
+    }
+
+    @EventHandler
+    public void onFishPickup(EntityPickupItemEvent event) {
+        if (event.getEntity() instanceof Player player && isCustomFish(event.getItem().getItemStack())) {
+            Bukkit.getScheduler().runTask(plugin, () -> refreshInventoryFishInfo(player));
+        }
+    }
+
+    @EventHandler
+    public void onFishingCatch(PlayerFishEvent event) {
+        if (event.getState() == PlayerFishEvent.State.CAUGHT_FISH) {
+            Player player = event.getPlayer();
+            Bukkit.getScheduler().runTask(plugin, () -> refreshInventoryFishInfo(player));
+        }
+    }
+
+    @EventHandler
+    public void onPlayerInventoryClick(InventoryClickEvent event) {
+        if (event.getWhoClicked() instanceof Player player) {
+            Bukkit.getScheduler().runTask(plugin, () -> refreshInventoryFishInfo(player));
+        }
+    }
+
+    private void refreshInventoryFishInfo(Player player) {
+        if (!player.isOnline()) return;
+        ItemStack[] contents = player.getInventory().getStorageContents();
+        boolean changed = false;
+        for (int slot = 0; slot < contents.length; slot++) {
+            ItemStack item = contents[slot];
+            if (!isCustomFish(item)) continue;
+            ItemMeta meta = item.getItemMeta();
+            PersistentDataContainer data = meta.getPersistentDataContainer();
+            FishSpecies definition = species.get(data.get(speciesKey, PersistentDataType.STRING));
+            if (definition == null) continue;
+
+            double weight = data.getOrDefault(weightKey, PersistentDataType.DOUBLE, definition.typicalWeight());
+            double length = data.getOrDefault(lengthKey, PersistentDataType.DOUBLE,
+                    typicalDimension(definition.minLength(), definition.maxLength(), definition));
+            double height = data.getOrDefault(heightKey, PersistentDataType.DOUBLE,
+                    typicalDimension(definition.minHeight(), definition.maxHeight(), definition));
+            double width = data.getOrDefault(widthKey, PersistentDataType.DOUBLE,
+                    typicalDimension(definition.minWidth(), definition.maxWidth(), definition));
+            int buy = priceFor(definition, weight, length, height, width);
+            int sell = sellPrice(definition, weight, length, height, width);
+
+            List<String> lore = new ArrayList<>();
+            for (String line : meta.getLore() == null ? List.<String>of() : meta.getLore()) {
+                String plain = ChatColor.stripColor(line);
+                if (plain == null || !(plain.startsWith("Buy price:") || plain.startsWith("Sell price:")
+                        || plain.startsWith("Found in:") || plain.startsWith("Rod:") || plain.startsWith("Time:"))) {
+                    lore.add(line);
+                }
+            }
+            lore.add(ChatColor.GREEN + "Buy price: " + buy + " coins");
+            lore.add(ChatColor.YELLOW + "Sell price: " + sell + " coins");
+            lore.add(ChatColor.GRAY + "Found in: " + definition.habitat());
+            lore.add(ChatColor.GRAY + "Rod: " + definition.rod());
+            lore.add(ChatColor.GRAY + "Time: " + definition.time());
+            meta.setLore(lore);
+            item.setItemMeta(meta);
+            player.getInventory().setItem(slot, item);
+            changed = true;
+        }
+        if (changed) player.updateInventory();
     }
 
     private boolean isCustomFish(ItemStack item) {
