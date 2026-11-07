@@ -258,8 +258,12 @@ public final class FishShopManager implements Listener {
     private void openSellAllConfirm(Player player) {
         List<String> specimenIds = new ArrayList<>();
         long totalValue = 0;
-        for (ItemStack item : player.getInventory().getStorageContents()) {
+        ItemStack[] inventoryContents = player.getInventory().getStorageContents();
+        for (int slot = 0; slot < inventoryContents.length; slot++) {
+            ItemStack item = inventoryContents[slot];
+            normalizeFishMetadata(item);
             if (!isCustomFish(item)) continue;
+            player.getInventory().setItem(slot, item);
             String id = item.getItemMeta().getPersistentDataContainer().get(fishIdKey, PersistentDataType.STRING);
             if (id == null || specimenIds.contains(id)) continue;
             specimenIds.add(id);
@@ -551,7 +555,9 @@ public final class FishShopManager implements Listener {
 
     @EventHandler
     public void onFishPickup(EntityPickupItemEvent event) {
-        if (event.getEntity() instanceof Player player && isCustomFish(event.getItem().getItemStack())) {
+        if (event.getEntity() instanceof Player player) {
+            ItemStack pickedUp = event.getItem().getItemStack();
+            if (normalizeFishMetadata(pickedUp)) event.getItem().setItemStack(pickedUp);
             Bukkit.getScheduler().runTask(plugin, () -> refreshInventoryFishInfo(player));
         }
     }
@@ -577,6 +583,7 @@ public final class FishShopManager implements Listener {
         boolean changed = false;
         for (int slot = 0; slot < contents.length; slot++) {
             ItemStack item = contents[slot];
+            normalizeFishMetadata(item);
             if (!isCustomFish(item)) continue;
             ItemMeta meta = item.getItemMeta();
             PersistentDataContainer data = meta.getPersistentDataContainer();
@@ -612,6 +619,45 @@ public final class FishShopManager implements Listener {
             changed = true;
         }
         if (changed) player.updateInventory();
+    }
+
+    /**
+     * Repairs older/raw datapack fish that have a curated custom item model but
+     * lack VillagerWorkstation specimen PDC. Only known catalogue models qualify.
+     */
+    private boolean normalizeFishMetadata(ItemStack item) {
+        if (item == null || item.getType() != Material.COD || !item.hasItemMeta()) return false;
+        ItemMeta meta = item.getItemMeta();
+        NamespacedKey model = meta.getItemModel();
+        if (model == null || !model.getNamespace().equals("barely_default")
+                || !model.getKey().startsWith("fish_")) return false;
+        String id = model.getKey().substring("fish_".length());
+        for (String size : List.of("_small", "_medium", "_large", "_giant")) {
+            if (id.endsWith(size)) { id = id.substring(0, id.length() - size.length()); break; }
+        }
+        FishSpecies definition = species.get(id);
+        if (definition == null) return false;
+
+        PersistentDataContainer data = meta.getPersistentDataContainer();
+        if (!data.has(fishIdKey, PersistentDataType.STRING)) {
+            data.set(fishIdKey, PersistentDataType.STRING, UUID.randomUUID().toString());
+        }
+        data.set(speciesKey, PersistentDataType.STRING, definition.id());
+        data.set(rarityKey, PersistentDataType.STRING, definition.rarity());
+        data.set(weightKey, PersistentDataType.DOUBLE,
+                data.getOrDefault(weightKey, PersistentDataType.DOUBLE, definition.typicalWeight()));
+        data.set(lengthKey, PersistentDataType.DOUBLE, data.getOrDefault(lengthKey, PersistentDataType.DOUBLE,
+                typicalDimension(definition.minLength(), definition.maxLength(), definition)));
+        data.set(heightKey, PersistentDataType.DOUBLE, data.getOrDefault(heightKey, PersistentDataType.DOUBLE,
+                typicalDimension(definition.minHeight(), definition.maxHeight(), definition)));
+        data.set(widthKey, PersistentDataType.DOUBLE, data.getOrDefault(widthKey, PersistentDataType.DOUBLE,
+                typicalDimension(definition.minWidth(), definition.maxWidth(), definition)));
+        data.set(categoryKey, PersistentDataType.STRING,
+                data.getOrDefault(categoryKey, PersistentDataType.STRING, "MEDIUM"));
+        data.set(caughtAtKey, PersistentDataType.LONG,
+                data.getOrDefault(caughtAtKey, PersistentDataType.LONG, System.currentTimeMillis()));
+        item.setItemMeta(meta);
+        return true;
     }
 
     private boolean isCustomFish(ItemStack item) {
