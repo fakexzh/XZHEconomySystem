@@ -137,6 +137,44 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         if (getConfig().contains("time-control")) { getConfig().set("time-control", null); changed = true; }
         if (!getConfig().contains("announcements.bank.enabled")) { getConfig().set("announcements.bank.enabled", true); changed = true; }
 
+        // Restore the six vanilla fish in the Food Shop for existing servers.
+        // Only fill missing settings so any owner-defined prices or stock caps remain authoritative.
+        if (!getConfig().getBoolean("migrations.vanilla-fish-food-shop-20261108", false)) {
+            String[][] vanillaFishPrices = {
+                {"cod", "5", "3"}, {"salmon", "6", "3.5"},
+                {"tropical_fish", "5", "1"}, {"pufferfish", "5", "1"},
+                {"cooked_cod", "10", "4.5"}, {"cooked_salmon", "12", "5.5"}
+            };
+            for (String[] fish : vanillaFishPrices) {
+                String base = "shop.prices." + fish[0];
+                if (!getConfig().contains(base + ".buy")) {
+                    getConfig().set(base + ".buy", Double.parseDouble(fish[1]));
+                    changed = true;
+                }
+                if (!getConfig().contains(base + ".sell")) {
+                    getConfig().set(base + ".sell", Double.parseDouble(fish[2]));
+                    changed = true;
+                }
+                String buyStock = "shop.stock-limits." + fish[0];
+                if (!getConfig().contains(buyStock)) {
+                    getConfig().set(buyStock, 1000);
+                    changed = true;
+                }
+                String sellStock = "shop.sell-stock-limits." + fish[0];
+                if (!getConfig().contains(sellStock)) {
+                    getConfig().set(sellStock, 256);
+                    changed = true;
+                }
+            }
+            if (!getConfig().contains("shop.sell-stock-restock-hours")) {
+                getConfig().set("shop.sell-stock-restock-hours", 6);
+                changed = true;
+            }
+            getConfig().set("migrations.vanilla-fish-food-shop-20261108", true);
+            changed = true;
+            getLogger().info("Restored vanilla fish to the Food Shop.");
+        }
+
         // Existing servers keep config.yml when a JAR is replaced. One-time fish-market
         // migration activates the approved 31-fish prices in those existing config files.
         // The migration marker ensures later owner edits are never overwritten on restart.
