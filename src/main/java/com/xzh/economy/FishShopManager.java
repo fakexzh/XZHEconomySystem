@@ -685,8 +685,13 @@ public final class FishShopManager implements Listener {
         if (model == null || !model.getNamespace().equals("barely_default")
                 || !model.getKey().startsWith("fish_")) return false;
         String id = model.getKey().substring("fish_".length());
+        String modelSize = null;
         for (String size : List.of("_small", "_medium", "_large", "_giant")) {
-            if (id.endsWith(size)) { id = id.substring(0, id.length() - size.length()); break; }
+            if (id.endsWith(size)) {
+                id = id.substring(0, id.length() - size.length());
+                modelSize = size.substring(1).toUpperCase(Locale.ROOT);
+                break;
+            }
         }
         FishSpecies definition = species.get(id);
         if (definition == null) return false;
@@ -706,7 +711,8 @@ public final class FishShopManager implements Listener {
         data.set(widthKey, PersistentDataType.DOUBLE, data.getOrDefault(widthKey, PersistentDataType.DOUBLE,
                 typicalDimension(definition.minWidth(), definition.maxWidth(), definition)));
         data.set(categoryKey, PersistentDataType.STRING,
-                data.getOrDefault(categoryKey, PersistentDataType.STRING, "MEDIUM"));
+                data.getOrDefault(categoryKey, PersistentDataType.STRING,
+                        modelSize == null ? "MEDIUM" : modelSize));
         data.set(caughtAtKey, PersistentDataType.LONG,
                 data.getOrDefault(caughtAtKey, PersistentDataType.LONG, System.currentTimeMillis()));
         item.setItemMeta(meta);
