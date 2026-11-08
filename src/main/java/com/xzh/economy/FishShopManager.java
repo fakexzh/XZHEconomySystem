@@ -147,9 +147,10 @@ public final class FishShopManager implements Listener {
         buyIcon.setItemMeta(buyMeta);
         inv.setItem(20, buyIcon);
 
-        add(inv, 22, Material.SNOWBALL, "Sell All", "sell-all", "all",
-                "Sell every eligible XZH custom fish in your inventory.",
-                "Review the total payout before confirming.");
+        add(inv, 22, Material.HOPPER_MINECART, "Sell Hand (multiple items)", "sell-hand", "hand",
+                "Place multiple fish stacks into the sell slots.",
+                "The normal Shop Sell Hand menu will calculate the payout.",
+                "All eligible fish sizes can be sold.");
 
         add(inv, 24, Material.BOOK, "Fish Collection", "collection-menu", "collection",
                 "Browse all " + species.size() + " species and your catch discoveries.");
@@ -242,10 +243,45 @@ public final class FishShopManager implements Listener {
         player.openInventory(inv);
     }
 
-    private void openBuyConfirm(Player player, String speciesId) {
+    private void openBuySizes(Player player, String speciesId) {
         FishSpecies fish = species.get(speciesId);
         if (fish == null) return;
-        FishSpecimen specimen = generate(fish);
+        Inventory inv = Bukkit.createInventory(null, 27,
+                ChatColor.DARK_AQUA + TITLE_PREFIX + ": " + fish.name() + " Sizes");
+        String[] sizes = {"SMALL", "MEDIUM", "LARGE"};
+        int[] slots = {10, 13, 16};
+        Material[] icons = {Material.COD, Material.SALMON, Material.PUFFERFISH};
+        for (int i = 0; i < sizes.length; i++) {
+            String size = sizes[i];
+            FishSpecimen example = typicalSpecimenForSize(fish, size);
+            ItemStack icon = new ItemStack(icons[i]);
+            ItemMeta meta = icon.getItemMeta();
+            NamespacedKey model = NamespacedKey.fromString(fish.model() + "_" + size.toLowerCase(Locale.ROOT));
+            if (model != null) meta.setItemModel(model);
+            meta.setDisplayName(ChatColor.AQUA + size.charAt(0) + size.substring(1).toLowerCase(Locale.ROOT)
+                    + " " + fish.name());
+            meta.setLore(List.of(
+                    ChatColor.GRAY + "Size: " + ChatColor.WHITE + size,
+                    ChatColor.GRAY + String.format(Locale.ROOT, "Typical weight: %.2f kg", example.weight()),
+                    ChatColor.GREEN + "Buy price: " + price(example) + " coins",
+                    ChatColor.YELLOW + "Sell price: " + sellPrice(example) + " coins",
+                    ChatColor.GRAY + "Found in: " + fish.habitat(),
+                    ChatColor.GRAY + "Rod: " + fish.rod(),
+                    ChatColor.GRAY + "Time: " + fish.time(),
+                    ChatColor.YELLOW + "Click to choose this size."));
+            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "buy-size-select");
+            meta.getPersistentDataContainer().set(valueKey, PersistentDataType.STRING, speciesId + "|" + size);
+            icon.setItemMeta(meta);
+            inv.setItem(slots[i], icon);
+        }
+        add(inv, 22, Material.ARROW, "Back to catalogue", "buy-back", "0", "Return to the fish catalogue.");
+        player.openInventory(inv);
+    }
+
+    private void openBuyConfirm(Player player, String speciesId, String requestedSize) {
+        FishSpecies fish = species.get(speciesId);
+        if (fish == null || !List.of("SMALL", "MEDIUM", "LARGE").contains(requestedSize.toUpperCase(Locale.ROOT))) return;
+        FishSpecimen specimen = generate(fish, requestedSize);
         pendingBuys.put(player.getUniqueId(), specimen);
         Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + TITLE_PREFIX + ": Confirm Buy");
         inv.setItem(13, createFishItem(specimen));
@@ -327,9 +363,12 @@ public final class FishShopManager implements Listener {
             case "collection-menu" -> openCollection(player, 0);
             case "buy-page" -> openBuy(player, parsePage(value));
             case "collection-page" -> openCollection(player, parsePage(value));
-            case "buy-select" -> { if (pricesConfigured()) openBuyConfirm(player, value); else plugin.tellShop(player, "Fish prices have not been configured yet."); }
-            case "sell-all" -> { if (pricesConfigured()) openSellAllConfirm(player); else plugin.tellShop(player, "Fish prices have not been configured yet."); }
-            case "sell-all-confirm" -> confirmSellAll(player);
+            case "buy-select" -> { if (pricesConfigured()) openBuySizes(player, value); else plugin.tellShop(player, "Fish prices have not been configured yet."); }
+            case "buy-size-select" -> {
+                String[] selection = value == null ? new String[0] : value.split("\\|", 2);
+                if (selection.length == 2) openBuyConfirm(player, selection[0], selection[1]);
+            }
+            case "sell-hand" -> plugin.getShopManager().openFishHandSell(player);
             case "buy-confirm" -> confirmBuy(player, value);
             case "main" -> openMain(player);
             case "back-shop" -> plugin.getShopManager().openMain(player);
@@ -401,14 +440,28 @@ public final class FishShopManager implements Listener {
         return item;
     }
 
-    private FishSpecimen generate(FishSpecies fish) {
+    private FishSpecimen generate(FishSpecies fish, String requestedSize) {
         ThreadLocalRandom random = ThreadLocalRandom.current();
-        double weight = triangular(random, fish.minWeight(), fish.maxWeight(), fish.typicalWeight());
-        double normalized = (weight - fish.minWeight()) / Math.max(0.000001, fish.maxWeight() - fish.minWeight());
+        String size = requestedSize.toUpperCase(Locale.ROOT);
+        double bandStart = switch (size) { case "SMALL" -> 0.00; case "MEDIUM" -> 0.25; case "LARGE" -> 0.50; default -> 0.00; };
+        double bandEnd = switch (size) { case "SMALL" -> 0.25; case "MEDIUM" -> 0.50; case "LARGE" -> 0.75; default -> 0.25; };
+        double weightRange = fish.maxWeight() - fish.minWeight();
+        double normalized = bandStart + (bandEnd - bandStart) * random.nextDouble();
+        double weight = fish.minWeight() + weightRange * normalized;
         double length = interpolate(fish.minLength(), fish.maxLength(), normalized) * random.nextDouble(0.96, 1.041);
         double height = interpolate(fish.minHeight(), fish.maxHeight(), normalized) * random.nextDouble(0.96, 1.041);
         double width = interpolate(fish.minWidth(), fish.maxWidth(), normalized) * random.nextDouble(0.96, 1.041);
-        String size = normalized < 0.25 ? "SMALL" : normalized < 0.50 ? "MEDIUM" : normalized < 0.75 ? "LARGE" : "GIANT";
+        return new FishSpecimen(UUID.randomUUID(), fish, round(weight), round(length), round(height), round(width), size,
+                System.currentTimeMillis());
+    }
+
+    private FishSpecimen typicalSpecimenForSize(FishSpecies fish, String requestedSize) {
+        String size = requestedSize.toUpperCase(Locale.ROOT);
+        double normalized = switch (size) { case "SMALL" -> 0.125; case "MEDIUM" -> 0.375; case "LARGE" -> 0.625; default -> 0.375; };
+        double weight = interpolate(fish.minWeight(), fish.maxWeight(), normalized);
+        double length = interpolate(fish.minLength(), fish.maxLength(), normalized);
+        double height = interpolate(fish.minHeight(), fish.maxHeight(), normalized);
+        double width = interpolate(fish.minWidth(), fish.maxWidth(), normalized);
         return new FishSpecimen(UUID.randomUUID(), fish, round(weight), round(length), round(height), round(width), size,
                 System.currentTimeMillis());
     }
@@ -658,6 +711,14 @@ public final class FishShopManager implements Listener {
                 data.getOrDefault(caughtAtKey, PersistentDataType.LONG, System.currentTimeMillis()));
         item.setItemMeta(meta);
         return true;
+    }
+
+    public boolean isHandSellFish(ItemStack item) {
+        return isCustomFish(item);
+    }
+
+    public int getHandSellFishPrice(ItemStack item) {
+        return isCustomFish(item) ? sellPrice(item) : 0;
     }
 
     private boolean isCustomFish(ItemStack item) {
