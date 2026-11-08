@@ -179,7 +179,8 @@ public final class FishShopManager implements Listener {
                     pricesConfigured() ? ChatColor.GREEN + "Buy price: " + typicalPrice(fish) + " coins"
                             : ChatColor.RED + "Buy price: Not configured",
                     pricesConfigured() ? ChatColor.YELLOW + "Sell price: " + typicalSellPrice(fish) + " coins"
-                            : ChatColor.RED + "Sell price: Not configured"));
+                            : ChatColor.RED + "Sell price: Not configured",
+                    ChatColor.YELLOW + "Click to choose Small, Medium or Large."));
             meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "buy-select");
             meta.getPersistentDataContainer().set(valueKey, PersistentDataType.STRING, fish.id());
             icon.setItemMeta(meta);
