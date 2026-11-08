@@ -275,6 +275,11 @@ public final class ShopManager implements Listener {
         Bukkit.getScheduler().runTaskTimer(plugin, this::restockIfDue, 20L * 60L, 20L * 60L);
     }
 
+    /** Opens the same multi-slot Sell Hand workflow for Fish Shop specimens. */
+    public void openFishHandSell(Player player) {
+        openHandSell(player);
+    }
+
     public void openMain(Player player) {
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_GREEN + "SHOP");
 
@@ -1178,7 +1183,7 @@ public final class ShopManager implements Listener {
             double unitPrice = handSellUnitPrice(stack);
             if (unitPrice <= 0.0) continue;
             int allowed = stack.getAmount();
-            if (isFarmableSellItem(material)) {
+            if (isFarmableSellItem(material) && !plugin.getFishShopManager().isHandSellFish(stack)) {
                 int alreadyReserved = reservedStock.getOrDefault(material, 0);
                 int available = Math.max(0, getSellStock(player, material) - alreadyReserved);
                 allowed = Math.min(allowed, available);
@@ -1192,6 +1197,9 @@ public final class ShopManager implements Listener {
 
     private double handSellUnitPrice(ItemStack stack) {
         if (stack == null || stack.getType().isAir()) return 0.0;
+        if (plugin.getFishShopManager().isHandSellFish(stack)) {
+            return plugin.getFishShopManager().getHandSellFishPrice(stack);
+        }
         Product p = productForStack(stack);
         if (p != null) return sellPrice(p);
         double configured = plugin.getConfig().getDouble(
@@ -1218,7 +1226,9 @@ public final class ShopManager implements Listener {
             ItemStack stack = inv.getItem(entry.getKey());
             if (stack == null) continue;
             int sold = entry.getValue();
-            if (isFarmableSellItem(stack.getType())) consumeSellStock(player, stack.getType(), sold);
+            if (isFarmableSellItem(stack.getType()) && !plugin.getFishShopManager().isHandSellFish(stack)) {
+                consumeSellStock(player, stack.getType(), sold);
+            }
             int remaining = stack.getAmount() - sold;
             if (remaining <= 0) inv.setItem(entry.getKey(), null);
             else stack.setAmount(remaining);
