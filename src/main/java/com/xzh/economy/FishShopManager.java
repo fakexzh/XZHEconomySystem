@@ -714,6 +714,7 @@ public final class FishShopManager implements Listener {
     }
 
     public boolean isHandSellFish(ItemStack item) {
+        normalizeFishMetadata(item);
         return isCustomFish(item);
     }
 
