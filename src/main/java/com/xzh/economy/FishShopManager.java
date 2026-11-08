@@ -259,7 +259,7 @@ public final class FishShopManager implements Listener {
             ItemMeta meta = icon.getItemMeta();
             NamespacedKey model = NamespacedKey.fromString(fish.model() + "_" + size.toLowerCase(Locale.ROOT));
             if (model != null) meta.setItemModel(model);
-            meta.setDisplayName(ChatColor.AQUA + size.charAt(0) + size.substring(1).toLowerCase(Locale.ROOT)
+            meta.setDisplayName(ChatColor.AQUA.toString() + size.charAt(0) + size.substring(1).toLowerCase(Locale.ROOT)
                     + " " + fish.name());
             meta.setLore(List.of(
                     ChatColor.GRAY + "Size: " + ChatColor.WHITE + size,
