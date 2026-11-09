@@ -222,15 +222,24 @@ public final class UtilityManager implements Listener {
                     msg(player, "Teleport cancelled because the requester cannot afford the travel cost.");
                     return true;
                 }
-                boolean teleported = requester.teleport(player.getLocation());
-                if (!teleported) {
-                    msg(requester, "Teleport failed; no fee was charged.");
-                    msg(player, "Teleport failed; no fee was charged.");
+                // Capture both balances so a failed teleport can roll back the exact debit.
+                double pocketBefore = economy.getBalance(requesterId);
+                double bankBefore = economy.getBankManager() == null
+                        ? 0.0 : economy.getBankManager().getBalance(requesterId);
+                if (!economy.spendAvailableFunds(requesterId, current.cost())) {
+                    msg(requester, "Teleport cancelled because the travel fee could not be collected.");
+                    msg(player, "Teleport cancelled because the requester could not pay the travel fee.");
                     return true;
                 }
-                if (!economy.spendAvailableFunds(requesterId, current.cost())) {
-                    msg(requester, "Teleport succeeded, but payment could not be collected. Please contact an admin.");
-                    msg(player, "Teleport request accepted.");
+                boolean teleported = requester.teleport(player.getLocation());
+                if (!teleported) {
+                    // Refund to the original pocket/bank split; no fee remains charged.
+                    economy.setBalance(requesterId, pocketBefore);
+                    if (economy.getBankManager() != null) {
+                        economy.getBankManager().setBalance(requesterId, bankBefore);
+                    }
+                    msg(requester, "Teleport failed; your full travel fee was refunded.");
+                    msg(player, "Teleport failed; the travel fee was refunded.");
                     return true;
                 }
                 msg(player, "Teleport request accepted.");
