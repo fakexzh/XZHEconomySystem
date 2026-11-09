@@ -4,7 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
-/** Owns the Economy plugin's player-list names and Community Chest footer. */
+/** Owns the Economy plugin's player-list names, biome header, and quest footer. */
 public final class TablistManager {
     private final XZHEconomySystem plugin;
     private BukkitTask refreshTask;
@@ -40,14 +40,16 @@ public final class TablistManager {
                 biomeName.append(Character.toUpperCase(word.charAt(0)))
                         .append(word.substring(1));
             }
+
             int ping = Math.max(0, viewer.getPing());
-            viewer.setPlayerListName("§b" + biomeName + " §f" + viewer.getName()
-                    + " §8| §e" + ping + "ms");
+            viewer.setPlayerListName("§f" + viewer.getName() + " §8| §e" + ping + "ms");
+
             String communityChest = quests.getGlobalQuestTabText(viewer);
             String paidQuest = quests.getPaidQuestTabText(viewer);
             String footer = "\n" + communityChest;
             if (!paidQuest.isBlank()) footer += "\n\n" + paidQuest;
-            viewer.setPlayerListHeaderFooter("", footer);
+
+            viewer.setPlayerListHeaderFooter("§b" + biomeName, footer);
         }
     }
 }
