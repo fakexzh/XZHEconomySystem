@@ -676,47 +676,87 @@ public final class FishShopManager implements Listener {
     }
 
     /**
-     * Repairs older/raw datapack fish that have a curated custom item model but
-     * lack VillagerWorkstation specimen PDC. Only known catalogue models qualify.
+     * Repairs raw datapack specimens from either their item model or their
+     * known catalogue display name. Rebuilds the complete specimen lore and PDC
+     * while preserving any valid measurements already stored on the item.
      */
     private boolean normalizeFishMetadata(ItemStack item) {
         if (item == null || item.getType() != Material.COD || !item.hasItemMeta()) return false;
         ItemMeta meta = item.getItemMeta();
-        NamespacedKey model = meta.getItemModel();
-        if (model == null || !model.getNamespace().equals("barely_default")
-                || !model.getKey().startsWith("fish_")) return false;
-        String id = model.getKey().substring("fish_".length());
         String modelSize = null;
-        for (String size : List.of("_small", "_medium", "_large", "_giant")) {
-            if (id.endsWith(size)) {
-                id = id.substring(0, id.length() - size.length());
-                modelSize = size.substring(1).toUpperCase(Locale.ROOT);
-                break;
+        FishSpecies definition = null;
+
+        NamespacedKey model = meta.getItemModel();
+        if (model != null && model.getNamespace().equals("barely_default")
+                && model.getKey().startsWith("fish_")) {
+            String id = model.getKey().substring("fish_".length());
+            for (String suffix : List.of("_small", "_medium", "_large", "_giant")) {
+                if (id.endsWith(suffix)) {
+                    id = id.substring(0, id.length() - suffix.length());
+                    modelSize = suffix.equals("_giant") ? "LARGE"
+                            : suffix.substring(1).toUpperCase(Locale.ROOT);
+                    break;
+                }
+            }
+            definition = species.get(id);
+        }
+
+        String displayCandidate = null;
+        if (definition == null) {
+            List<String> names = new ArrayList<>();
+            if (meta.hasDisplayName()) names.add(meta.getDisplayName());
+            if (meta.hasItemName()) names.add(meta.getItemName());
+            for (String rawName : names) {
+                String plain = ChatColor.stripColor(rawName);
+                if (plain == null) continue;
+                plain = plain.trim();
+                for (String size : List.of("SMALL", "MEDIUM", "LARGE", "GIANT")) {
+                    String prefix = size.substring(0, 1) + size.substring(1).toLowerCase(Locale.ROOT) + " ";
+                    if (plain.regionMatches(true, 0, prefix, 0, prefix.length())) {
+                        if (modelSize == null) modelSize = size.equals("GIANT") ? "LARGE" : size;
+                        plain = plain.substring(prefix.length()).trim();
+                        break;
+                    }
+                }
+                if (plain.toLowerCase(Locale.ROOT).endsWith(" fish")) {
+                    plain = plain.substring(0, plain.length() - 5).trim();
+                }
+                displayCandidate = plain;
+                String candidateId = plain.toLowerCase(Locale.ROOT).replace(' ', '_');
+                for (FishSpecies fish : species.values()) {
+                    if (fish.name().equalsIgnoreCase(plain) || fish.id().equals(candidateId)) {
+                        definition = fish;
+                        break;
+                    }
+                }
+                if (definition != null) break;
             }
         }
-        FishSpecies definition = species.get(id);
         if (definition == null) return false;
 
         PersistentDataContainer data = meta.getPersistentDataContainer();
-        if (!data.has(fishIdKey, PersistentDataType.STRING)) {
-            data.set(fishIdKey, PersistentDataType.STRING, UUID.randomUUID().toString());
+        String requestedSize = data.get(categoryKey, PersistentDataType.STRING);
+        if (requestedSize == null || !List.of("SMALL", "MEDIUM", "LARGE").contains(requestedSize.toUpperCase(Locale.ROOT))) {
+            requestedSize = modelSize == null ? "MEDIUM" : modelSize;
         }
-        data.set(speciesKey, PersistentDataType.STRING, definition.id());
-        data.set(rarityKey, PersistentDataType.STRING, definition.rarity());
-        data.set(weightKey, PersistentDataType.DOUBLE,
-                data.getOrDefault(weightKey, PersistentDataType.DOUBLE, definition.typicalWeight()));
-        data.set(lengthKey, PersistentDataType.DOUBLE, data.getOrDefault(lengthKey, PersistentDataType.DOUBLE,
-                typicalDimension(definition.minLength(), definition.maxLength(), definition)));
-        data.set(heightKey, PersistentDataType.DOUBLE, data.getOrDefault(heightKey, PersistentDataType.DOUBLE,
-                typicalDimension(definition.minHeight(), definition.maxHeight(), definition)));
-        data.set(widthKey, PersistentDataType.DOUBLE, data.getOrDefault(widthKey, PersistentDataType.DOUBLE,
-                typicalDimension(definition.minWidth(), definition.maxWidth(), definition)));
-        data.set(categoryKey, PersistentDataType.STRING,
-                data.getOrDefault(categoryKey, PersistentDataType.STRING,
-                        modelSize == null ? "MEDIUM" : modelSize));
-        data.set(caughtAtKey, PersistentDataType.LONG,
+        requestedSize = requestedSize.toUpperCase(Locale.ROOT);
+
+        FishSpecimen generated = generate(definition, requestedSize);
+        UUID specimenId = generated.id();
+        String existingId = data.get(fishIdKey, PersistentDataType.STRING);
+        if (existingId != null) {
+            try { specimenId = UUID.fromString(existingId); }
+            catch (IllegalArgumentException ignored) { /* Replace malformed legacy identity. */ }
+        }
+
+        FishSpecimen specimen = new FishSpecimen(specimenId, definition,
+                data.getOrDefault(weightKey, PersistentDataType.DOUBLE, generated.weight()),
+                data.getOrDefault(lengthKey, PersistentDataType.DOUBLE, generated.length()),
+                data.getOrDefault(heightKey, PersistentDataType.DOUBLE, generated.height()),
+                data.getOrDefault(widthKey, PersistentDataType.DOUBLE, generated.width()),
+                requestedSize,
                 data.getOrDefault(caughtAtKey, PersistentDataType.LONG, System.currentTimeMillis()));
-        item.setItemMeta(meta);
+        item.setItemMeta(createFishItem(specimen).getItemMeta());
         return true;
     }
 
@@ -726,6 +766,7 @@ public final class FishShopManager implements Listener {
     }
 
     public int getHandSellFishPrice(ItemStack item) {
+        normalizeFishMetadata(item);
         return isCustomFish(item) ? sellPrice(item) : 0;
     }
 
