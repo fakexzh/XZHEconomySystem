@@ -49,8 +49,8 @@ public final class PocketCoinManager implements Listener {
         long toBalance = Math.max(0L, Math.round(count(to)));
         long pocketLimit = Math.max(0L, Math.round(plugin.getPocketBalanceLimit()));
         long availableCapacity = Math.max(0L, pocketLimit - toBalance);
-        long transfer = Math.min(requestedAmount, Math.min(fromBalance, availableCapacity));
-        if (transfer <= 0L) return 0L;
+        long transfer = requestedAmount;
+        if (transfer <= 0L || transfer > fromBalance || transfer > availableCapacity) return 0L;
         long newFromBalance = fromBalance - transfer;
         long newToBalance = toBalance + transfer;
         if (!canStoreCoins(from, newFromBalance) || !canStoreCoins(to, newToBalance)) return 0L;
