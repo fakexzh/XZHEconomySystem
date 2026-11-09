@@ -86,8 +86,9 @@ public final class HudManager {
         Objective objective = board.getObjective("xzhhud");
         if (objective == null) {
             objective = board.registerNewObjective("xzhhud", Criteria.DUMMY,
-                    ChatColor.GOLD + "" + ChatColor.BOLD + "eco");
+                    ChatColor.WHITE + player.getName());
         }
+        objective.setDisplayName(ChatColor.WHITE + player.getName());
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         // Hide the vanilla red score numbers on the right of each sidebar line.
         objective.numberFormat(NumberFormat.blank());
@@ -99,16 +100,19 @@ public final class HudManager {
         long graceUntil = loanGraceTimes.getOrDefault(id, 0L);
         java.util.List<String> lines = new java.util.ArrayList<>(java.util.List.of(
                 ChatColor.GRAY + "Pocket",
-                ChatColor.YELLOW + formatMoney(balance),
+                ChatColor.WHITE + formatMoney(balance),
                 ChatColor.GRAY + "Bank " + (plugin.getBankManager() != null && plugin.getBankManager().isOpenNow()
                         ? ChatColor.YELLOW + "●" : ChatColor.RED + "●"),
-                ChatColor.GREEN + formatMoney(bankBalance),
+                ChatColor.WHITE + formatMoney(bankBalance),
                 ChatColor.DARK_GRAY + " ",
                 ChatColor.GRAY + "Loan",
-                (owed > 0 ? ChatColor.RED : ChatColor.GREEN) + formatMoney(owed),
-                (owed <= 0 ? ChatColor.RED : ChatColor.AQUA) + clip(owed <= 0 ? "NO LOAN" : remaining(dueAt, graceUntil), 38)
+                ChatColor.WHITE + formatMoney(owed)
         ));
+        if (owed > 0) {
+            lines.add(ChatColor.AQUA + clip(remaining(dueAt, graceUntil), 38));
+        }
         if (plugin.getConfig().getBoolean("hud.clock.enabled", true)) {
+            lines.add(ChatColor.DARK_GRAY + "────────");
             lines.add(ChatColor.GOLD + "⌚ " + ChatColor.WHITE + formatClock(player));
         }
         int score = lines.size();
@@ -191,8 +195,17 @@ public final class HudManager {
     }
 
     private String formatMoney(double amount) {
-        return String.format(java.util.Locale.US, "%.2f", Math.max(0, amount))
-                .replaceAll("\\.00$", "");
+        double value = Math.max(0, amount);
+        if (value >= 1_000_000_000_000.0) return compact(value / 1_000_000_000_000.0, "t");
+        if (value >= 1_000_000_000.0) return compact(value / 1_000_000_000.0, "b");
+        if (value >= 1_000_000.0) return compact(value / 1_000_000.0, "m");
+        if (value >= 10_000.0) return compact(value / 1_000.0, "k");
+        return String.format(java.util.Locale.US, "%.2f", value).replaceAll("\\.00$", "");
+    }
+
+    private String compact(double value, String suffix) {
+        return String.format(java.util.Locale.US, "%.1f", value)
+                .replaceAll("\\.0$", "") + suffix;
     }
 
     private String remaining(long dueAt, long graceUntil) {
