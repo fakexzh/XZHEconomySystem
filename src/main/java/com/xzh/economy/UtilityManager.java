@@ -482,11 +482,13 @@ public final class UtilityManager implements Listener {
     private int calculateBackCost(Location from, Location to) {
         World.Environment fromEnvironment = from.getWorld().getEnvironment();
         World.Environment toEnvironment = to.getWorld().getEnvironment();
-        if (fromEnvironment == World.Environment.THE_END || toEnvironment == World.Environment.THE_END) {
-            return Math.max(0, plugin.getConfig().getInt("utilities.back-end-cost", 666));
-        }
-        if (fromEnvironment == World.Environment.NETHER || toEnvironment == World.Environment.NETHER) {
-            return Math.max(0, plugin.getConfig().getInt("utilities.back-nether-cost", 333));
+        if (fromEnvironment != toEnvironment) {
+            if (fromEnvironment == World.Environment.THE_END || toEnvironment == World.Environment.THE_END) {
+                return Math.max(0, plugin.getConfig().getInt("utilities.back-end-cost", 666));
+            }
+            if (fromEnvironment == World.Environment.NETHER || toEnvironment == World.Environment.NETHER) {
+                return Math.max(0, plugin.getConfig().getInt("utilities.back-nether-cost", 333));
+            }
         }
         double dx = from.getX() - to.getX();
         double dy = from.getY() - to.getY();
@@ -501,8 +503,10 @@ public final class UtilityManager implements Listener {
     private String backRouteLabel(Location from, Location to) {
         World.Environment fromEnvironment = from.getWorld().getEnvironment();
         World.Environment toEnvironment = to.getWorld().getEnvironment();
-        if (fromEnvironment == World.Environment.THE_END || toEnvironment == World.Environment.THE_END) return "End travel";
-        if (fromEnvironment == World.Environment.NETHER || toEnvironment == World.Environment.NETHER) return "Nether travel";
+        if (fromEnvironment != toEnvironment) {
+            if (fromEnvironment == World.Environment.THE_END || toEnvironment == World.Environment.THE_END) return "End travel";
+            if (fromEnvironment == World.Environment.NETHER || toEnvironment == World.Environment.NETHER) return "Nether travel";
+        }
         double dx = from.getX() - to.getX(), dy = from.getY() - to.getY(), dz = from.getZ() - to.getZ();
         return String.format(Locale.US, "%,.0f blocks", Math.sqrt(dx * dx + dy * dy + dz * dz));
     }
