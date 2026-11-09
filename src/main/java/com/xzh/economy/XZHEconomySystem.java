@@ -134,6 +134,11 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             getConfig().set("utilities.tpa-nether-fixed-cost", 66); changed = true;
         }
         if (!getConfig().contains("utilities.back-cost")) { getConfig().set("utilities.back-cost", 30.0); changed = true; }
+        if (!getConfig().contains("utilities.back-distance-blocks-per-tier")) { getConfig().set("utilities.back-distance-blocks-per-tier", 1000); changed = true; }
+        if (!getConfig().contains("utilities.back-distance-cost-per-tier")) { getConfig().set("utilities.back-distance-cost-per-tier", 50); changed = true; }
+        if (!getConfig().contains("utilities.back-nether-cost")) { getConfig().set("utilities.back-nether-cost", 333); changed = true; }
+        if (!getConfig().contains("utilities.back-end-cost")) { getConfig().set("utilities.back-end-cost", 666); changed = true; }
+        if (!getConfig().contains("utilities.back-countdown-seconds")) { getConfig().set("utilities.back-countdown-seconds", 3); changed = true; }
         if (getConfig().contains("time-control")) { getConfig().set("time-control", null); changed = true; }
         if (!getConfig().contains("announcements.bank.enabled")) { getConfig().set("announcements.bank.enabled", true); changed = true; }
 
