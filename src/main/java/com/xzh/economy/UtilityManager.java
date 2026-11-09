@@ -205,8 +205,16 @@ public final class UtilityManager implements Listener {
                     requester.playSound(requester.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.9f, 0.8f);
                     return true;
                 }
-                // Acceptance uses the exact quote captured when the requester typed /tpa,
-                // regardless of movement by either player while the request was pending.
+                // Keep the quoted price stable if players move within the same dimension,
+                // but never let a pending request change into a different cross-dimension route.
+                TpaQuote liveQuote = tpaQuote(requester, player);
+                if (liveQuote == null || liveQuote.netherFixed() != storedQuote.netherFixed()
+                        || (storedQuote.netherFixed()
+                        && !liveQuote.distanceLabel().equals(storedQuote.distanceLabel()))) {
+                    msg(requester, "The teleport route changed while the request was pending. Send a new /tpa request.");
+                    msg(player, "Teleport request cancelled because the travel route changed.");
+                    return true;
+                }
                 TpaQuote current = storedQuote;
                 XZHEconomySystem economy = (XZHEconomySystem) plugin;
                 if (economy.getCombinedBalance(requesterId) + 1e-9 < current.cost()) {
