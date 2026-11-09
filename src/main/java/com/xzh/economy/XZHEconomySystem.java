@@ -122,8 +122,13 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             String path = "utilities.tpa-prices." + price[0];
             if (!getConfig().contains(path)) { getConfig().set(path, Integer.parseInt(price[1])); changed = true; }
         }
-        if (!getConfig().contains("utilities.tpa-nether-fixed-cost")) {
-            getConfig().set("utilities.tpa-nether-fixed-cost", 66); changed = true;
+        if (!getConfig().getBoolean("migrations.tpa-pricing-20261109", false)) {
+            getConfig().set("utilities.tpa-distance-cost-per-1000", 33);
+            getConfig().set("utilities.tpa-overworld-nether-fixed-cost", 200);
+            getConfig().set("utilities.tpa-overworld-end-fixed-cost", 333);
+            getConfig().set("utilities.tpa-nether-end-fixed-cost", 222);
+            getConfig().set("migrations.tpa-pricing-20261109", true);
+            changed = true;
         }
         if (!getConfig().contains("utilities.back-cost")) { getConfig().set("utilities.back-cost", 30.0); changed = true; }
         if (getConfig().contains("time-control")) { getConfig().set("time-control", null); changed = true; }
