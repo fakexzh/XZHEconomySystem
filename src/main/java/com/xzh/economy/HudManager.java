@@ -112,7 +112,7 @@ public final class HudManager {
             lines.add(ChatColor.AQUA + clip(remaining(dueAt, graceUntil), 38));
         }
         if (plugin.getConfig().getBoolean("hud.clock.enabled", true)) {
-            lines.add(ChatColor.DARK_GRAY + "────────");
+            lines.add(ChatColor.DARK_GRAY + "────");
             lines.add(ChatColor.GOLD + "⌚ " + ChatColor.WHITE + formatClock(player));
         }
         int score = lines.size();
