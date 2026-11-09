@@ -46,6 +46,15 @@ public final class UtilityManager implements Listener {
     private final Map<UUID, Long> rtpCooldown = new HashMap<>();
     private final Map<UUID, BukkitRunnable> homeCountdowns = new HashMap<>();
     private final Map<UUID, Location> homeCountdownStarts = new HashMap<>();
+    private final Map<UUID, PendingBack> pendingBacks = new HashMap<>();
+    private final Map<UUID, BackCountdown> backCountdowns = new HashMap<>();
+    private record PendingBack(Location destination, int cost, String token, long createdAt) {}
+    private static final class BackCountdown {
+        private final Location start;
+        private final PendingBack quote;
+        private BukkitRunnable task;
+        private BackCountdown(Location start, PendingBack quote) { this.start = start; this.quote = quote; }
+    }
 
     public UtilityManager(XZHEconomySystem plugin) {
         this.plugin = plugin;
@@ -231,20 +240,14 @@ public final class UtilityManager implements Listener {
                 return true;
             }
             case "back" -> {
-                Location loc = data.getLocation("back." + player.getUniqueId());
-                if (loc == null) { msg(player, "No saved death location."); return true; }
-                XZHEconomySystem economy = (XZHEconomySystem) plugin;
-                double fee = Math.max(0.0, plugin.getConfig().getDouble("utilities.back-cost", 30.0));
-                if (economy.getCombinedBalance(player.getUniqueId()) + 1e-9 < fee) {
-                    msg(player, "You need " + money(fee) + " coins to use /back. Sell eligible items to earn coins, then repay any overdue loan.");
-                    return true;
+                if (args.length == 0) { requestBack(player); return true; }
+                if (args.length == 2 && args[0].equalsIgnoreCase("accept")) {
+                    acceptBack(player, args[1]); return true;
                 }
-                if (!player.teleport(loc)) { msg(player, "Teleport failed; no fee was charged."); return true; }
-                if (!economy.spendAvailableFunds(player.getUniqueId(), fee)) {
-                    msg(player, "Teleport succeeded, but payment could not be collected. Please contact an admin.");
-                    return true;
+                if (args.length == 2 && args[0].equalsIgnoreCase("decline")) {
+                    declineBack(player, args[1]); return true;
                 }
-                msg(player, "Returned to your last death location for " + money(fee) + " coins."); return true;
+                msg(player, "Usage: /back"); return true;
             }
             case "msg" -> {
                 if (args.length < 2) { msg(player, "Usage: /msg <player> <message>"); return true; }
@@ -406,6 +409,186 @@ public final class UtilityManager implements Listener {
             }
             default -> { return false; }
         }
+    }
+
+    private void requestBack(Player player) {
+        UUID id = player.getUniqueId();
+        Location destination = data.getLocation("back." + id);
+        if (destination == null || destination.getWorld() == null) {
+            msg(player, "No saved death location.");
+            return;
+        }
+        int cost = calculateBackCost(player.getLocation(), destination);
+        XZHEconomySystem economy = (XZHEconomySystem) plugin;
+        if (economy.getCombinedBalance(id) + 1e-9 < cost) {
+            msg(player, "You need " + money(cost) + " coins to use /back. Your pocket + bank balance is too low.");
+            return;
+        }
+        String token = UUID.randomUUID().toString().substring(0, 8);
+        PendingBack pending = new PendingBack(destination.clone(), cost, token, System.currentTimeMillis());
+        pendingBacks.put(id, pending);
+
+        String route = backRouteLabel(player.getLocation(), destination);
+        net.md_5.bungee.api.chat.TextComponent details = new net.md_5.bungee.api.chat.TextComponent(
+                "§8[§6economy§8] §r§6Return to your last death location? §8| §b" + route
+                        + " §8| §eCost: §6✦ " + money(cost) + " coins ");
+        net.md_5.bungee.api.chat.TextComponent accept = new net.md_5.bungee.api.chat.TextComponent("§a[ ACCEPT ]");
+        accept.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/back accept " + token));
+        net.md_5.bungee.api.chat.TextComponent decline = new net.md_5.bungee.api.chat.TextComponent(" §c[ DECLINE ]");
+        decline.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/back decline " + token));
+        details.addExtra(accept);
+        details.addExtra(decline);
+        player.spigot().sendMessage(details);
+        player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.9f, 1.2f);
+    }
+
+    private void acceptBack(Player player, String token) {
+        UUID id = player.getUniqueId();
+        PendingBack pending = pendingBacks.get(id);
+        if (pending == null || !pending.token().equals(token)
+                || System.currentTimeMillis() - pending.createdAt() > 30_000L) {
+            pendingBacks.remove(id);
+            msg(player, "That /back confirmation has expired. Use /back again.");
+            return;
+        }
+        pendingBacks.remove(id);
+        if (pending.destination().getWorld() == null) {
+            msg(player, "Your saved death world is unavailable. No coins were charged.");
+            return;
+        }
+        XZHEconomySystem economy = (XZHEconomySystem) plugin;
+        if (economy.getCombinedBalance(id) + 1e-9 < pending.cost()) {
+            msg(player, "You no longer have enough pocket + bank coins for /back.");
+            return;
+        }
+        BackCountdown previous = backCountdowns.remove(id);
+        if (previous != null && previous.task != null) previous.task.cancel();
+        startBackCountdown(player, pending);
+    }
+
+    private void declineBack(Player player, String token) {
+        PendingBack pending = pendingBacks.get(player.getUniqueId());
+        if (pending == null || !pending.token().equals(token)) {
+            msg(player, "That /back confirmation has expired.");
+            return;
+        }
+        pendingBacks.remove(player.getUniqueId());
+        player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.8f, 0.8f);
+        msg(player, "Return cancelled. No coins were charged.");
+    }
+
+    private int calculateBackCost(Location from, Location to) {
+        World.Environment fromEnvironment = from.getWorld().getEnvironment();
+        World.Environment toEnvironment = to.getWorld().getEnvironment();
+        if (fromEnvironment == World.Environment.THE_END || toEnvironment == World.Environment.THE_END) {
+            return Math.max(0, plugin.getConfig().getInt("utilities.back-end-cost", 666));
+        }
+        if (fromEnvironment == World.Environment.NETHER || toEnvironment == World.Environment.NETHER) {
+            return Math.max(0, plugin.getConfig().getInt("utilities.back-nether-cost", 333));
+        }
+        double dx = from.getX() - to.getX();
+        double dy = from.getY() - to.getY();
+        double dz = from.getZ() - to.getZ();
+        double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        int interval = Math.max(1, plugin.getConfig().getInt("utilities.back-distance-blocks-per-tier", 1000));
+        int price = Math.max(0, plugin.getConfig().getInt("utilities.back-distance-cost-per-tier", 50));
+        long tiers = (long) Math.ceil(distance / interval);
+        return (int) Math.min(Integer.MAX_VALUE, tiers * price);
+    }
+
+    private String backRouteLabel(Location from, Location to) {
+        World.Environment fromEnvironment = from.getWorld().getEnvironment();
+        World.Environment toEnvironment = to.getWorld().getEnvironment();
+        if (fromEnvironment == World.Environment.THE_END || toEnvironment == World.Environment.THE_END) return "End travel";
+        if (fromEnvironment == World.Environment.NETHER || toEnvironment == World.Environment.NETHER) return "Nether travel";
+        double dx = from.getX() - to.getX(), dy = from.getY() - to.getY(), dz = from.getZ() - to.getZ();
+        return String.format(Locale.US, "%,.0f blocks", Math.sqrt(dx * dx + dy * dy + dz * dz));
+    }
+
+    private void startBackCountdown(Player player, PendingBack quote) {
+        UUID id = player.getUniqueId();
+        BackCountdown session = new BackCountdown(player.getLocation().clone(), quote);
+        backCountdowns.put(id, session);
+        msg(player, "Return accepted. Stay still for 3 seconds; movement cancels the teleport.");
+        session.task = new BukkitRunnable() {
+            private int seconds = Math.max(1, plugin.getConfig().getInt("utilities.back-countdown-seconds", 3));
+            @Override public void run() {
+                if (!player.isOnline()) { cancelBackCountdown(id, null); return; }
+                if (seconds > 0) {
+                    player.sendTitle("§e" + seconds, "§cMove to cancel", 0, 20, 0);
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.9f,
+                            1.0f + (3 - seconds) * 0.18f);
+                    seconds--;
+                    return;
+                }
+                finishBackCountdown(player, session);
+            }
+        };
+        session.task.runTaskTimer(plugin, 0L, 20L);
+    }
+
+    private void finishBackCountdown(Player player, BackCountdown session) {
+        UUID id = player.getUniqueId();
+        if (backCountdowns.get(id) != session) return;
+        backCountdowns.remove(id);
+        if (session.task != null) session.task.cancel();
+        player.resetTitle();
+        Location start = session.start;
+        if (player.getWorld() != start.getWorld() || player.getLocation().distanceSquared(start) > 0.0001) {
+            msg(player, "Return cancelled because you moved. No coins were charged.");
+            return;
+        }
+        Location destination = session.quote.destination();
+        if (destination.getWorld() == null) {
+            msg(player, "Your saved death world is unavailable. No coins were charged.");
+            return;
+        }
+        XZHEconomySystem economy = (XZHEconomySystem) plugin;
+        if (economy.getCombinedBalance(id) + 1e-9 < session.quote.cost()) {
+            msg(player, "Return cancelled because you no longer have enough coins.");
+            return;
+        }
+        if (!player.teleport(destination)) {
+            msg(player, "Teleport failed; no coins were charged.");
+            return;
+        }
+        if (!economy.spendAvailableFunds(id, session.quote.cost())) {
+            player.teleport(start);
+            msg(player, "Payment could not be collected, so your return was cancelled and you were moved back.");
+            return;
+        }
+        player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.9f, 1.2f);
+        msg(player, "Returned to your last death location for " + money(session.quote.cost()) + " coins.");
+    }
+
+    private void cancelBackCountdown(UUID id, String reason) {
+        BackCountdown session = backCountdowns.remove(id);
+        if (session == null) return;
+        if (session.task != null) session.task.cancel();
+        Player player = Bukkit.getPlayer(id);
+        if (player != null && player.isOnline()) {
+            player.resetTitle();
+            if (reason != null) msg(player, reason);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBackCountdownMove(PlayerMoveEvent event) {
+        BackCountdown session = backCountdowns.get(event.getPlayer().getUniqueId());
+        if (session == null || event.getTo() == null) return;
+        Location from = event.getFrom(), to = event.getTo();
+        if (from.getWorld() != to.getWorld() || from.distanceSquared(to) > 0.0001) {
+            cancelBackCountdown(event.getPlayer().getUniqueId(), "Return cancelled because you moved. No coins were charged.");
+        }
+    }
+
+    @EventHandler
+    public void onBackQuit(org.bukkit.event.player.PlayerQuitEvent event) {
+        UUID id = event.getPlayer().getUniqueId();
+        pendingBacks.remove(id);
+        cancelBackCountdown(id, null);
     }
 
     private void startHomeCountdown(Player player) {
