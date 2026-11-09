@@ -122,9 +122,10 @@ public final class UtilityManager implements Listener {
                 data.set("warps." + name, null); save(); msg(player, "Warp deleted."); return true;
             }
             case "tpa" -> {
-                if (args.length != 1) { msg(player, "Usage: /tpa <player>"); return true; }
-                Player target = Bukkit.getPlayerExact(args[0]);
-                if (target == null || target.equals(player)) { msg(player, "Choose another online player."); return true; }
+                if (args.length != 1) { msg(player, "Usage: /tpa @player"); return true; }
+                String targetName = args[0].startsWith("@") ? args[0].substring(1) : args[0];
+                Player target = targetName.isBlank() ? null : Bukkit.getPlayerExact(targetName);
+                if (target == null || target.equals(player)) { msg(player, "Choose another online player. Usage: /tpa @player"); return true; }
                 TpaQuote quote = tpaQuote(player, target);
                 if (quote == null) return true;
                 XZHEconomySystem economy = (XZHEconomySystem) plugin;
@@ -557,28 +558,43 @@ public final class UtilityManager implements Listener {
     }
 
     private TpaQuote tpaQuote(Player requester, Player target) {
-        if (requester.getWorld() != target.getWorld()) {
-            if (requester.getWorld().getEnvironment() == World.Environment.NETHER
-                    || target.getWorld().getEnvironment() == World.Environment.NETHER) {
-                return new TpaQuote(-1, plugin.getConfig().getInt("utilities.tpa-nether-fixed-cost", 66),
-                        true, "cross-dimension");
+        World.Environment from = requester.getWorld().getEnvironment();
+        World.Environment to = target.getWorld().getEnvironment();
+
+        if (from != to) {
+            int fixedCost;
+            String route;
+            if ((from == World.Environment.NORMAL && to == World.Environment.NETHER)
+                    || (from == World.Environment.NETHER && to == World.Environment.NORMAL)) {
+                fixedCost = plugin.getConfig().getInt("utilities.tpa-overworld-nether-fixed-cost", 200);
+                route = "Overworld ↔ Nether";
+            } else if ((from == World.Environment.NORMAL && to == World.Environment.THE_END)
+                    || (from == World.Environment.THE_END && to == World.Environment.NORMAL)) {
+                fixedCost = plugin.getConfig().getInt("utilities.tpa-overworld-end-fixed-cost", 333);
+                route = "Overworld ↔ End";
+            } else if ((from == World.Environment.NETHER && to == World.Environment.THE_END)
+                    || (from == World.Environment.THE_END && to == World.Environment.NETHER)) {
+                fixedCost = plugin.getConfig().getInt("utilities.tpa-nether-end-fixed-cost", 222);
+                route = "Nether ↔ End";
+            } else {
+                msg(requester, "Teleport requests between these world types are not supported.");
+                return null;
             }
-            msg(requester, "Teleport requests across different worlds are not supported (except Nether travel).");
-            return null;
+            return new TpaQuote(-1, Math.max(0, fixedCost), true, route + " (fixed)");
         }
-        int distance = (int) Math.round(Math.sqrt(requester.getLocation().distanceSquared(target.getLocation())));
-        if (requester.getWorld().getEnvironment() == World.Environment.NETHER) {
-            return new TpaQuote(distance, plugin.getConfig().getInt("utilities.tpa-nether-fixed-cost", 66),
-                    true, String.format(Locale.US, "%,d blocks", distance));
-        }
-        String root = "utilities.tpa-prices.";
-        int cost;
-        if (distance <= 250) cost = plugin.getConfig().getInt(root + "up-to-250", 10);
-        else if (distance <= 1000) cost = plugin.getConfig().getInt(root + "up-to-1000", 20);
-        else if (distance <= 3000) cost = plugin.getConfig().getInt(root + "up-to-3000", 30);
-        else if (distance <= 6000) cost = plugin.getConfig().getInt(root + "up-to-6000", 40);
-        else if (distance <= 10000) cost = plugin.getConfig().getInt(root + "up-to-10000", 50);
-        else cost = plugin.getConfig().getInt(root + "over-10000", 75);
+
+        // Compare coordinates directly so same-dimension worlds do not throw if a
+        // multi-world setup uses separate world instances for the same dimension.
+        Location fromLoc = requester.getLocation();
+        Location toLoc = target.getLocation();
+        double dx = fromLoc.getX() - toLoc.getX();
+        double dy = fromLoc.getY() - toLoc.getY();
+        double dz = fromLoc.getZ() - toLoc.getZ();
+        int distance = (int) Math.ceil(Math.sqrt(dx * dx + dy * dy + dz * dz));
+        int blocksPerCharge = 1000;
+        int coinsPerCharge = plugin.getConfig().getInt("utilities.tpa-distance-cost-per-1000", 33);
+        int chargeUnits = distance == 0 ? 0 : (distance + blocksPerCharge - 1) / blocksPerCharge;
+        int cost = Math.max(0, chargeUnits * Math.max(0, coinsPerCharge));
         return new TpaQuote(distance, cost, false, String.format(Locale.US, "%,d blocks", distance));
     }
 
