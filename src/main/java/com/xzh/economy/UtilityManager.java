@@ -418,6 +418,10 @@ public final class UtilityManager implements Listener {
             msg(player, "No saved death location.");
             return;
         }
+        if (!isSupportedBackRoute(player.getLocation(), destination)) {
+            msg(player, "A direct Nether-to-End return is not configured. No coins were charged.");
+            return;
+        }
         int cost = calculateBackCost(player.getLocation(), destination);
         XZHEconomySystem economy = (XZHEconomySystem) plugin;
         if (economy.getCombinedBalance(id) + 1e-9 < cost) {
@@ -477,6 +481,14 @@ public final class UtilityManager implements Listener {
         pendingBacks.remove(player.getUniqueId());
         player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.8f, 0.8f);
         msg(player, "Return cancelled. No coins were charged.");
+    }
+
+    private boolean isSupportedBackRoute(Location from, Location to) {
+        World.Environment a = from.getWorld().getEnvironment();
+        World.Environment b = to.getWorld().getEnvironment();
+        if (a == b) return true;
+        return (a == World.Environment.NORMAL && (b == World.Environment.NETHER || b == World.Environment.THE_END))
+                || (b == World.Environment.NORMAL && (a == World.Environment.NETHER || a == World.Environment.THE_END));
     }
 
     private int calculateBackCost(Location from, Location to) {
