@@ -701,7 +701,6 @@ public final class FishShopManager implements Listener {
             definition = species.get(id);
         }
 
-        String displayCandidate = null;
         if (definition == null) {
             List<String> names = new ArrayList<>();
             if (meta.hasDisplayName()) names.add(meta.getDisplayName());
@@ -721,7 +720,6 @@ public final class FishShopManager implements Listener {
                 if (plain.toLowerCase(Locale.ROOT).endsWith(" fish")) {
                     plain = plain.substring(0, plain.length() - 5).trim();
                 }
-                displayCandidate = plain;
                 String candidateId = plain.toLowerCase(Locale.ROOT).replace(' ', '_');
                 for (FishSpecies fish : species.values()) {
                     if (fish.name().equalsIgnoreCase(plain) || fish.id().equals(candidateId)) {
