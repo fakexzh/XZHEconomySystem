@@ -93,7 +93,7 @@ commands:
     permission: xzh.admin
   tpa:
     description: Request teleportation to another player.
-    usage: /tpa <player>
+    usage: /tpa @player
   tpasend:
     description: Confirm sending a prepared teleport request.
     usage: /tpasend
