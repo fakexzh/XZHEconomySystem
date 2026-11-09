@@ -41,6 +41,21 @@ public final class PocketCoinManager implements Listener {
         return total;
     }
 
+    /** Atomically transfers physical pocket coins only; bank balances are never accessed. */
+    public synchronized long transferCoins(Player from, Player to, long requestedAmount) {
+        if (from == null || to == null || from.equals(to) || requestedAmount <= 0
+                || !from.isOnline() || !to.isOnline()) return 0L;
+        long fromBalance = Math.max(0L, Math.round(count(from)));
+        long toBalance = Math.max(0L, Math.round(count(to)));
+        long pocketLimit = Math.max(0L, Math.round(plugin.getPocketBalanceLimit()));
+        long availableCapacity = Math.max(0L, pocketLimit - toBalance);
+        long transfer = Math.min(requestedAmount, Math.min(fromBalance, availableCapacity));
+        if (transfer <= 0L) return 0L;
+        setCoins(from, fromBalance - transfer);
+        setCoins(to, toBalance + transfer);
+        return transfer;
+    }
+
     public void setCoins(Player player, double requestedAmount) {
         long target = Math.min((long) plugin.getPocketBalanceLimit(), Math.max(0L, Math.round(requestedAmount)));
         PlayerInventory inventory = player.getInventory();
