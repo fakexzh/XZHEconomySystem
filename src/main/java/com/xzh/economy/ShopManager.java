@@ -287,15 +287,23 @@ public final class ShopManager implements Listener {
         add(inv, 4, Material.SPYGLASS, "Search Items", "shop-search", "search",
                 List.of(ChatColor.GRAY + "Search the shop by item name.", ChatColor.YELLOW + "Click, then type your search in chat."));
 
-        // Row 3: six primary destinations, centered as one group.
+        // Row 3: Fish Shop sits beside Market; the four existing destinations shift one slot right.
         add(inv, 19, Material.ENDER_CHEST, "Market", "market", "market");
-        add(inv, 21, Material.PANDA_SPAWN_EGG, "Pet Shop", "pets", "baby-pets",
+        ItemStack fishShopIcon = new ItemStack(Material.COD);
+        ItemMeta fishShopMeta = fishShopIcon.getItemMeta();
+        NamespacedKey volcanicBassModel = NamespacedKey.fromString("barely_default:fish_volcanic_bass");
+        if (volcanicBassModel != null) fishShopMeta.setItemModel(volcanicBassModel);
+        fishShopMeta.setDisplayName(ChatColor.YELLOW + "Fish Shop");
+        fishShopMeta.setLore(List.of(ChatColor.GRAY + "Buy and sell custom fish.", ChatColor.GRAY + "Track your 31-species collection."));
+        fishShopMeta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "fish-shop");
+        fishShopMeta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, "fish-shop");
+        fishShopIcon.setItemMeta(fishShopMeta);
+        inv.setItem(20, fishShopIcon);
+        add(inv, 22, Material.PANDA_SPAWN_EGG, "Pet Shop", "pets", "baby-pets",
                 List.of(ChatColor.GRAY + "Permanent baby pets with owner controls.", ChatColor.YELLOW + "Click to browse pets."));
-        add(inv, 22, Material.OAK_BOAT, "Travel Shop", "travel-shop", "travel");
-        add(inv, 23, Material.END_CRYSTAL, "Quest Shop", "quests", "quests");
-        add(inv, 24, Material.SCULK_SENSOR, "Death Inventory", "deathinventory", "deathinventory");
-        add(inv, 25, Material.COD, "Fish Shop", "fish-shop", "fish-shop",
-                List.of(ChatColor.GRAY + "Buy and sell custom fish.", ChatColor.GRAY + "Track your 203-species collection."));
+        add(inv, 23, Material.OAK_BOAT, "Travel Shop", "travel-shop", "travel");
+        add(inv, 24, Material.END_CRYSTAL, "Quest Shop", "quests", "quests");
+        add(inv, 25, Material.SCULK_SENSOR, "Death Inventory", "deathinventory", "deathinventory");
 
         // Row 5: bank and account utilities.
         ItemStack bankIcon = plugin.getPocketCoinManager().createCoin(100, 1);
