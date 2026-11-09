@@ -630,8 +630,9 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             suggestions.add("set"); suggestions.add("add");
         } else if (command.getName().equalsIgnoreCase("quest") && args.length == 1) {
             suggestions.add("cancel");
-        } else if ((command.getName().equalsIgnoreCase("tpa") && args.length == 1)
-                || (command.getName().equalsIgnoreCase("pay") && args.length == 1)
+        } else if (command.getName().equalsIgnoreCase("tpa") && args.length == 1) {
+            for (Player player : Bukkit.getOnlinePlayers()) suggestions.add("@" + player.getName());
+        } else if ((command.getName().equalsIgnoreCase("pay") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("sendmoney") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("askmoney") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("balance") && args.length == 1)
