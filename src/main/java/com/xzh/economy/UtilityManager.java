@@ -789,7 +789,12 @@ public final class UtilityManager implements Listener {
 
         // Same dimension: charge 33 coins for every started 1,000 blocks.
         // Round the measured distance up to a whole block, then apply ceil(distance / 1000) * 33.
-        double exactDistance = Math.sqrt(requester.getLocation().distanceSquared(target.getLocation()));
+        Location requesterLocation = requester.getLocation();
+        Location targetLocation = target.getLocation();
+        double dx = requesterLocation.getX() - targetLocation.getX();
+        double dy = requesterLocation.getY() - targetLocation.getY();
+        double dz = requesterLocation.getZ() - targetLocation.getZ();
+        double exactDistance = Math.sqrt(dx * dx + dy * dy + dz * dz);
         int distance = (int) Math.ceil(exactDistance);
         int cost = (int) Math.ceil(distance / 1000.0) * 33;
         return new TpaQuote(distance, cost, false, String.format(Locale.US, "%,d blocks", distance));
