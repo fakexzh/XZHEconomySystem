@@ -32,11 +32,22 @@ public final class TablistManager {
         for (Player viewer : Bukkit.getOnlinePlayers()) {
             int ping = Math.max(0, viewer.getPing());
             viewer.setPlayerListName("§f" + viewer.getName() + " §8| §e" + ping + "ms");
+            String biome = viewer.getLocation().getBlock().getBiome().getKey().getKey()
+                    .replace('_', ' ');
+            String[] words = biome.split(" ");
+            StringBuilder biomeName = new StringBuilder();
+            for (String word : words) {
+                if (word.isEmpty()) continue;
+                if (biomeName.length() > 0) biomeName.append(' ');
+                biomeName.append(Character.toUpperCase(word.charAt(0)))
+                        .append(word.substring(1));
+            }
+            String header = "\n§bBiome: §f" + biomeName;
             String communityChest = quests.getGlobalQuestTabText(viewer);
             String paidQuest = quests.getPaidQuestTabText(viewer);
             String footer = "\n" + communityChest;
             if (!paidQuest.isBlank()) footer += "\n\n" + paidQuest;
-            viewer.setPlayerListHeaderFooter("", footer);
+            viewer.setPlayerListHeaderFooter(header, footer);
         }
     }
 }
