@@ -51,9 +51,27 @@ public final class PocketCoinManager implements Listener {
         long availableCapacity = Math.max(0L, pocketLimit - toBalance);
         long transfer = Math.min(requestedAmount, Math.min(fromBalance, availableCapacity));
         if (transfer <= 0L) return 0L;
-        setCoins(from, fromBalance - transfer);
-        setCoins(to, toBalance + transfer);
+        long newFromBalance = fromBalance - transfer;
+        long newToBalance = toBalance + transfer;
+        if (!canStoreCoins(from, newFromBalance) || !canStoreCoins(to, newToBalance)) return 0L;
+        setCoins(from, newFromBalance);
+        setCoins(to, newToBalance);
         return transfer;
+    }
+
+    private boolean canStoreCoins(Player player, long value) {
+        int availableSlots = 0;
+        for (ItemStack item : player.getInventory().getStorageContents()) {
+            if (item == null || item.getType().isAir() || isCoin(item)) availableSlots++;
+        }
+        long remaining = Math.max(0L, value);
+        int requiredSlots = 0;
+        for (int denomination : DENOMINATIONS) {
+            long stacks = remaining / denomination;
+            remaining %= denomination;
+            requiredSlots += (int) ((stacks + 63L) / 64L);
+        }
+        return requiredSlots <= availableSlots;
     }
 
     public void setCoins(Player player, double requestedAmount) {
