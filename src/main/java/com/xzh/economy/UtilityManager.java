@@ -765,28 +765,33 @@ public final class UtilityManager implements Listener {
     }
 
     private TpaQuote tpaQuote(Player requester, Player target) {
-        if (requester.getWorld() != target.getWorld()) {
-            if (requester.getWorld().getEnvironment() == World.Environment.NETHER
-                    || target.getWorld().getEnvironment() == World.Environment.NETHER) {
-                return new TpaQuote(-1, plugin.getConfig().getInt("utilities.tpa-nether-fixed-cost", 66),
-                        true, "cross-dimension");
+        World.Environment from = requester.getWorld().getEnvironment();
+        World.Environment to = target.getWorld().getEnvironment();
+
+        // Cross-dimension TPA uses the agreed fixed fee, independent of coordinates.
+        if (from != to) {
+            int cost;
+            if ((from == World.Environment.NORMAL && to == World.Environment.NETHER)
+                    || (from == World.Environment.NETHER && to == World.Environment.NORMAL)) {
+                cost = 200;
+            } else if ((from == World.Environment.NORMAL && to == World.Environment.THE_END)
+                    || (from == World.Environment.THE_END && to == World.Environment.NORMAL)) {
+                cost = 333;
+            } else if ((from == World.Environment.NETHER && to == World.Environment.THE_END)
+                    || (from == World.Environment.THE_END && to == World.Environment.NETHER)) {
+                cost = 222;
+            } else {
+                msg(requester, "Teleport requests between these world dimensions are not supported.");
+                return null;
             }
-            msg(requester, "Teleport requests across different worlds are not supported (except Nether travel).");
-            return null;
+            return new TpaQuote(-1, cost, true, "cross-dimension");
         }
-        int distance = (int) Math.round(Math.sqrt(requester.getLocation().distanceSquared(target.getLocation())));
-        if (requester.getWorld().getEnvironment() == World.Environment.NETHER) {
-            return new TpaQuote(distance, plugin.getConfig().getInt("utilities.tpa-nether-fixed-cost", 66),
-                    true, String.format(Locale.US, "%,d blocks", distance));
-        }
-        String root = "utilities.tpa-prices.";
-        int cost;
-        if (distance <= 250) cost = plugin.getConfig().getInt(root + "up-to-250", 10);
-        else if (distance <= 1000) cost = plugin.getConfig().getInt(root + "up-to-1000", 20);
-        else if (distance <= 3000) cost = plugin.getConfig().getInt(root + "up-to-3000", 30);
-        else if (distance <= 6000) cost = plugin.getConfig().getInt(root + "up-to-6000", 40);
-        else if (distance <= 10000) cost = plugin.getConfig().getInt(root + "up-to-10000", 50);
-        else cost = plugin.getConfig().getInt(root + "over-10000", 75);
+
+        // Same dimension: charge 33 coins for every started 1,000 blocks.
+        // Round the measured distance up to a whole block, then apply ceil(distance / 1000) * 33.
+        double exactDistance = Math.sqrt(requester.getLocation().distanceSquared(target.getLocation()));
+        int distance = (int) Math.ceil(exactDistance);
+        int cost = (int) Math.ceil(distance / 1000.0) * 33;
         return new TpaQuote(distance, cost, false, String.format(Locale.US, "%,d blocks", distance));
     }
 
