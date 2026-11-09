@@ -718,7 +718,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 || (command.getName().equalsIgnoreCase("balance") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("eco") && args.length == 2 && sender.hasPermission("xzh.admin"))) {
             for (Player player : Bukkit.getOnlinePlayers()) {
-                suggestions.add(command.getName().equalsIgnoreCase("pet") ? "@" + player.getName() : player.getName());
+                suggestions.add(command.getName().equalsIgnoreCase("pet") || command.getName().equalsIgnoreCase("tpa") ? "@" + player.getName() : player.getName());
             }
         }
         String prefix = args.length == 0 ? "" : args[args.length - 1].toLowerCase(Locale.ROOT);
