@@ -48,8 +48,10 @@ public final class UtilityManager implements Listener {
     private final Map<UUID, BukkitRunnable> homeCountdowns = new HashMap<>();
     private final Map<UUID, Location> homeCountdownStarts = new HashMap<>();
     private final Map<UUID, BukkitRunnable> spawnCountdowns = new HashMap<>();
+    private final Map<UUID, PendingSpawn> pendingSpawns = new HashMap<>();
     private final Map<UUID, PendingBack> pendingBacks = new HashMap<>();
     private final Map<UUID, BackCountdown> backCountdowns = new HashMap<>();
+    private record PendingSpawn(Location destination, TpaQuote quote, String token, long createdAt) {}
     private record PendingBack(Location destination, int cost, String token, long createdAt) {}
     private static final class BackCountdown {
         private final Location start;
@@ -83,6 +85,18 @@ public final class UtilityManager implements Listener {
                 msg(player, "World spawn point saved."); return true;
             }
             case "spawn" -> {
+                if (args.length == 2 && args[0].equalsIgnoreCase("accept")) {
+                    acceptSpawn(player, args[1]);
+                    return true;
+                }
+                if (args.length == 2 && args[0].equalsIgnoreCase("reject")) {
+                    rejectSpawn(player, args[1]);
+                    return true;
+                }
+                if (args.length != 0) {
+                    msg(player, "Usage: /spawn");
+                    return true;
+                }
                 Location destination = data.getLocation("spawn");
                 if (destination == null) destination = player.getWorld().getSpawnLocation();
                 if (destination.getWorld() == null) {
@@ -93,10 +107,37 @@ public final class UtilityManager implements Listener {
                 if (quote == null) return true;
                 XZHEconomySystem economy = (XZHEconomySystem) plugin;
                 if (economy.getCombinedBalance(player.getUniqueId()) + 1e-9 < quote.cost()) {
-                    msg(player, "You need " + quote.cost() + " coins for /spawn. Your pocket + bank balance is too low.");
+                    msg(player, "You need " + money(quote.cost()) + " coins for /spawn. Your pocket + bank balance is too low.");
                     return true;
                 }
-                startSpawnCountdown(player, quote);
+
+                UUID id = player.getUniqueId();
+                pendingSpawns.remove(id);
+                String token = UUID.randomUUID().toString().substring(0, 8);
+                PendingSpawn pending = new PendingSpawn(destination.clone(), quote, token, System.currentTimeMillis());
+                pendingSpawns.put(id, pending);
+
+                net.md_5.bungee.api.chat.TextComponent details = new net.md_5.bungee.api.chat.TextComponent(
+                        "§8[§6economy§8] §r§6Teleport to spawn? §8| §bDistance: §f" + quote.distanceLabel()
+                                + " §8| §eCost: §6✦ " + money(quote.cost()) + " coins ");
+                net.md_5.bungee.api.chat.TextComponent accept = new net.md_5.bungee.api.chat.TextComponent("§a[ ACCEPT ]");
+                accept.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                        net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/spawn accept " + token));
+                net.md_5.bungee.api.chat.TextComponent reject = new net.md_5.bungee.api.chat.TextComponent(" §c[ REJECT ]");
+                reject.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                        net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/spawn reject " + token));
+                details.addExtra(accept);
+                details.addExtra(reject);
+                player.spigot().sendMessage(details);
+                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.9f, 1.2f);
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    PendingSpawn current = pendingSpawns.get(id);
+                    if (current != null && current.token().equals(token)) {
+                        pendingSpawns.remove(id);
+                        Player online = Bukkit.getPlayer(id);
+                        if (online != null) msg(online, "Spawn confirmation expired. Use /spawn again.");
+                    }
+                }, 600L);
                 return true;
             }
             case "home" -> {
@@ -630,13 +671,45 @@ public final class UtilityManager implements Listener {
         cancelBackCountdown(id, null);
     }
 
-    private void startSpawnCountdown(Player player, TpaQuote initialQuote) {
+    private void acceptSpawn(Player player, String token) {
+        UUID id = player.getUniqueId();
+        PendingSpawn pending = pendingSpawns.get(id);
+        if (pending == null || !pending.token().equals(token)
+                || System.currentTimeMillis() - pending.createdAt() > 30_000L) {
+            pendingSpawns.remove(id);
+            msg(player, "That spawn confirmation has expired. Use /spawn again.");
+            return;
+        }
+        pendingSpawns.remove(id);
+        if (pending.destination().getWorld() == null) {
+            msg(player, "The server spawn location is unavailable. No coins were charged.");
+            return;
+        }
+        XZHEconomySystem economy = (XZHEconomySystem) plugin;
+        if (economy.getCombinedBalance(id) + 1e-9 < pending.quote().cost()) {
+            msg(player, "You no longer have enough pocket + bank coins for /spawn. No coins were charged.");
+            return;
+        }
+        startSpawnCountdown(player, pending.destination(), pending.quote());
+    }
+
+    private void rejectSpawn(Player player, String token) {
+        PendingSpawn pending = pendingSpawns.get(player.getUniqueId());
+        if (pending == null || !pending.token().equals(token)) {
+            msg(player, "That spawn confirmation has expired.");
+            return;
+        }
+        pendingSpawns.remove(player.getUniqueId());
+        player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.8f, 0.8f);
+        msg(player, "Spawn teleport rejected. No coins were charged.");
+    }
+
+    private void startSpawnCountdown(Player player, Location destination, TpaQuote initialQuote) {
         UUID id = player.getUniqueId();
         BukkitRunnable previous = spawnCountdowns.remove(id);
         if (previous != null) previous.cancel();
 
-        Location destination = data.getLocation("spawn");
-        if (destination == null) destination = player.getWorld().getSpawnLocation();
+        destination = destination.clone();
         if (destination.getWorld() == null) {
             msg(player, "The server spawn location is unavailable.");
             return;
@@ -648,6 +721,7 @@ public final class UtilityManager implements Listener {
             return;
         }
 
+        final Location confirmedDestination = destination;
         player.sendTitle("§6SPAWN", "§e3", 0, 20, 0);
         player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.8f, 1.0f);
         BukkitRunnable task = new BukkitRunnable() {
@@ -666,24 +740,13 @@ public final class UtilityManager implements Listener {
                     return;
                 }
 
-                Location liveDestination = data.getLocation("spawn");
-                if (liveDestination == null) liveDestination = player.getWorld().getSpawnLocation();
-                if (liveDestination.getWorld() == null) {
+                if (confirmedDestination.getWorld() == null) {
                     msg(player, "The server spawn location is unavailable. No fee was charged.");
                     spawnCountdowns.remove(id);
                     cancel();
                     return;
                 }
-
-                TpaQuote liveQuote = quoteTravel(player, liveDestination,
-                        "Teleporting to spawn between these world types is not supported.");
-                if (liveQuote == null) {
-                    msg(player, "Spawn teleport cancelled. No fee was charged.");
-                    spawnCountdowns.remove(id);
-                    cancel();
-                    return;
-                }
-                if (economy.getCombinedBalance(id) + 1e-9 < liveQuote.cost()) {
+                if (economy.getCombinedBalance(id) + 1e-9 < initialQuote.cost()) {
                     msg(player, "Spawn teleport cancelled: you no longer have enough pocket + bank coins.");
                     spawnCountdowns.remove(id);
                     cancel();
@@ -692,13 +755,13 @@ public final class UtilityManager implements Listener {
 
                 // Remove the pending marker before teleporting; Bukkit fires a PlayerMoveEvent for teleports.
                 spawnCountdowns.remove(id);
-                boolean teleported = player.teleport(liveDestination);
+                boolean teleported = player.teleport(confirmedDestination);
                 if (!teleported) {
                     msg(player, "Spawn teleport failed; no fee was charged.");
-                } else if (!economy.spendAvailableFunds(id, liveQuote.cost())) {
+                } else if (!economy.spendAvailableFunds(id, initialQuote.cost())) {
                     msg(player, "Spawn teleport succeeded, but payment could not be collected. Please contact an admin.");
                 } else {
-                    msg(player, "Teleported to spawn for " + liveQuote.cost() + " coins.");
+                    msg(player, "Teleported to spawn for " + money(initialQuote.cost()) + " coins.");
                     player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.9f, 1.2f);
                 }
                 spawnCountdowns.remove(id);
@@ -729,6 +792,7 @@ public final class UtilityManager implements Listener {
     @EventHandler
     public void onSpawnCountdownQuit(PlayerQuitEvent event) {
         UUID id = event.getPlayer().getUniqueId();
+        pendingSpawns.remove(id);
         BukkitRunnable task = spawnCountdowns.remove(id);
         if (task != null) task.cancel();
     }
