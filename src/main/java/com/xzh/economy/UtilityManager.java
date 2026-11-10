@@ -18,6 +18,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.inventory.ItemStack;
@@ -46,6 +47,7 @@ public final class UtilityManager implements Listener {
     private final Map<UUID, Long> rtpCooldown = new HashMap<>();
     private final Map<UUID, BukkitRunnable> homeCountdowns = new HashMap<>();
     private final Map<UUID, Location> homeCountdownStarts = new HashMap<>();
+    private final Map<UUID, BukkitRunnable> spawnCountdowns = new HashMap<>();
     private final Map<UUID, PendingBack> pendingBacks = new HashMap<>();
     private final Map<UUID, BackCountdown> backCountdowns = new HashMap<>();
     private record PendingBack(Location destination, int cost, String token, long createdAt) {}
@@ -81,9 +83,21 @@ public final class UtilityManager implements Listener {
                 msg(player, "World spawn point saved."); return true;
             }
             case "spawn" -> {
-                Location loc = data.getLocation("spawn");
-                if (loc == null) loc = player.getWorld().getSpawnLocation();
-                player.teleport(loc); msg(player, "Teleported to spawn."); return true;
+                Location destination = data.getLocation("spawn");
+                if (destination == null) destination = player.getWorld().getSpawnLocation();
+                if (destination.getWorld() == null) {
+                    msg(player, "The server spawn location is unavailable.");
+                    return true;
+                }
+                TpaQuote quote = quoteTravel(player, destination, "Teleporting to spawn between these world types is not supported.");
+                if (quote == null) return true;
+                XZHEconomySystem economy = (XZHEconomySystem) plugin;
+                if (economy.getCombinedBalance(player.getUniqueId()) + 1e-9 < quote.cost()) {
+                    msg(player, "You need " + quote.cost() + " coins for /spawn. Your pocket + bank balance is too low.");
+                    return true;
+                }
+                startSpawnCountdown(player, quote);
+                return true;
             }
             case "home" -> {
                 if (args.length != 0) {
@@ -616,6 +630,109 @@ public final class UtilityManager implements Listener {
         cancelBackCountdown(id, null);
     }
 
+    private void startSpawnCountdown(Player player, TpaQuote initialQuote) {
+        UUID id = player.getUniqueId();
+        BukkitRunnable previous = spawnCountdowns.remove(id);
+        if (previous != null) previous.cancel();
+
+        Location destination = data.getLocation("spawn");
+        if (destination == null) destination = player.getWorld().getSpawnLocation();
+        if (destination.getWorld() == null) {
+            msg(player, "The server spawn location is unavailable.");
+            return;
+        }
+
+        XZHEconomySystem economy = (XZHEconomySystem) plugin;
+        if (economy.getCombinedBalance(id) + 1e-9 < initialQuote.cost()) {
+            msg(player, "You no longer have enough pocket + bank coins for /spawn.");
+            return;
+        }
+
+        player.sendTitle("§6SPAWN", "§e3", 0, 20, 0);
+        player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.8f, 1.0f);
+        BukkitRunnable task = new BukkitRunnable() {
+            private int seconds = 2;
+
+            @Override public void run() {
+                if (!player.isOnline()) {
+                    spawnCountdowns.remove(id);
+                    cancel();
+                    return;
+                }
+                if (seconds > 0) {
+                    player.sendTitle("§6SPAWN", "§e" + seconds, 0, 20, 0);
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.8f, 1.0f);
+                    seconds--;
+                    return;
+                }
+
+                Location liveDestination = data.getLocation("spawn");
+                if (liveDestination == null) liveDestination = player.getWorld().getSpawnLocation();
+                if (liveDestination.getWorld() == null) {
+                    msg(player, "The server spawn location is unavailable. No fee was charged.");
+                    spawnCountdowns.remove(id);
+                    cancel();
+                    return;
+                }
+
+                TpaQuote liveQuote = quoteTravel(player, liveDestination,
+                        "Teleporting to spawn between these world types is not supported.");
+                if (liveQuote == null) {
+                    msg(player, "Spawn teleport cancelled. No fee was charged.");
+                    spawnCountdowns.remove(id);
+                    cancel();
+                    return;
+                }
+                if (economy.getCombinedBalance(id) + 1e-9 < liveQuote.cost()) {
+                    msg(player, "Spawn teleport cancelled: you no longer have enough pocket + bank coins.");
+                    spawnCountdowns.remove(id);
+                    cancel();
+                    return;
+                }
+
+                // Remove the pending marker before teleporting; Bukkit fires a PlayerMoveEvent for teleports.
+                spawnCountdowns.remove(id);
+                boolean teleported = player.teleport(liveDestination);
+                if (!teleported) {
+                    msg(player, "Spawn teleport failed; no fee was charged.");
+                } else if (!economy.spendAvailableFunds(id, liveQuote.cost())) {
+                    msg(player, "Spawn teleport succeeded, but payment could not be collected. Please contact an admin.");
+                } else {
+                    msg(player, "Teleported to spawn for " + liveQuote.cost() + " coins.");
+                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.9f, 1.2f);
+                }
+                spawnCountdowns.remove(id);
+                cancel();
+            }
+        };
+        spawnCountdowns.put(id, task);
+        task.runTaskTimer(plugin, 20L, 20L);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onSpawnCountdownMove(PlayerMoveEvent event) {
+        UUID id = event.getPlayer().getUniqueId();
+        if (!spawnCountdowns.containsKey(id) || event.getTo() == null) return;
+        Location from = event.getFrom();
+        Location to = event.getTo();
+        if (from.getWorld().equals(to.getWorld())
+                && Double.compare(from.getX(), to.getX()) == 0
+                && Double.compare(from.getY(), to.getY()) == 0
+                && Double.compare(from.getZ(), to.getZ()) == 0) return;
+
+        BukkitRunnable task = spawnCountdowns.remove(id);
+        if (task != null) task.cancel();
+        event.getPlayer().sendTitle("§cSPAWN", "§cCancelled", 0, 20, 5);
+        msg(event.getPlayer(), "Spawn teleport cancelled because you moved.");
+    }
+
+    @EventHandler
+    public void onSpawnCountdownQuit(PlayerQuitEvent event) {
+        UUID id = event.getPlayer().getUniqueId();
+        BukkitRunnable task = spawnCountdowns.remove(id);
+        if (task != null) task.cancel();
+    }
+
     private void startHomeCountdown(Player player) {
         UUID id = player.getUniqueId();
         BukkitRunnable previous = homeCountdowns.remove(id);
@@ -765,10 +882,19 @@ public final class UtilityManager implements Listener {
     }
 
     private TpaQuote tpaQuote(Player requester, Player target) {
-        World.Environment from = requester.getWorld().getEnvironment();
-        World.Environment to = target.getWorld().getEnvironment();
+        return quoteTravel(requester, target.getLocation(),
+                "Teleport requests between these world types are not supported.");
+    }
 
-        // Cross-dimension TPA uses the agreed fixed fee, independent of coordinates.
+    private TpaQuote quoteTravel(Player requester, Location destination, String unsupportedMessage) {
+        if (destination == null || destination.getWorld() == null) {
+            msg(requester, "Teleport destination is unavailable.");
+            return null;
+        }
+        World.Environment from = requester.getWorld().getEnvironment();
+        World.Environment to = destination.getWorld().getEnvironment();
+
+        // Preserve the exact travel pricing already used by /tpa in Build #1132.
         if (from != to) {
             int cost;
             if ((from == World.Environment.NORMAL && to == World.Environment.NETHER)
@@ -781,26 +907,23 @@ public final class UtilityManager implements Listener {
                     || (from == World.Environment.THE_END && to == World.Environment.NETHER)) {
                 cost = 222;
             } else {
-                msg(requester, "Teleport requests between these world dimensions are not supported.");
+                msg(requester, unsupportedMessage);
                 return null;
             }
             return new TpaQuote(-1, cost, true, "cross-dimension");
         }
 
-        // Same dimension: charge 33 coins for every started 1,000 blocks.
-        // Round the measured distance up to a whole block, then apply ceil(distance / 1000) * 33.
         Location requesterLocation = requester.getLocation();
-        Location targetLocation = target.getLocation();
-        double dx = requesterLocation.getX() - targetLocation.getX();
-        double dy = requesterLocation.getY() - targetLocation.getY();
-        double dz = requesterLocation.getZ() - targetLocation.getZ();
+        double dx = requesterLocation.getX() - destination.getX();
+        double dy = requesterLocation.getY() - destination.getY();
+        double dz = requesterLocation.getZ() - destination.getZ();
         double exactDistance = Math.sqrt(dx * dx + dy * dy + dz * dz);
         int distance = (int) Math.ceil(exactDistance);
         int cost = (int) Math.ceil(distance / 1000.0) * 33;
         return new TpaQuote(distance, cost, false, String.format(Locale.US, "%,d blocks", distance));
     }
 
-    private boolean sameQuote(TpaQuote first, TpaQuote second) {
+        private boolean sameQuote    private boolean sameQuote(TpaQuote first, TpaQuote second) {
         return first.distance() == second.distance() && first.cost() == second.cost()
                 && first.netherFixed() == second.netherFixed();
     }
