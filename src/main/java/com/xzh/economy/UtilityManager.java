@@ -923,7 +923,7 @@ public final class UtilityManager implements Listener {
         return new TpaQuote(distance, cost, false, String.format(Locale.US, "%,d blocks", distance));
     }
 
-        private boolean sameQuote    private boolean sameQuote(TpaQuote first, TpaQuote second) {
+    private boolean sameQuote(TpaQuote first, TpaQuote second) {
         return first.distance() == second.distance() && first.cost() == second.cost()
                 && first.netherFixed() == second.netherFixed();
     }
