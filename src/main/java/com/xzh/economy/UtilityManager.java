@@ -491,6 +491,8 @@ public final class UtilityManager implements Listener {
                     return;
                 }
 
+                // Remove the pending marker before teleporting; Bukkit fires a PlayerMoveEvent for teleports.
+                spawnCountdowns.remove(id);
                 boolean teleported = player.teleport(liveDestination);
                 if (!teleported) {
                     msg(player, "Spawn teleport failed; no fee was charged.");
