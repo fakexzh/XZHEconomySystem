@@ -84,7 +84,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
-        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quest", "quests", "deathinventory", "shopadmin", "pet", "unpet", "spawn", "setspawn", "home", "warp", "setwarp", "delwarp", "tpa", "tpasend", "tpacancel", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit", "gmc", "gms", "gma", "gmsp", "day", "night", "gamemode", "heal", "feed", "fly", "weather", "helpxzh")) {
+        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quest", "quests", "deathinventory", "shopadmin", "pet", "unpet", "spawn", "setspawn", "home", "sethome", "delhome", "homes", "warp", "setwarp", "delwarp", "tpa", "tpasend", "tpacancel", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit", "gmc", "gms", "gma", "gmsp", "day", "night", "gamemode", "heal", "feed", "fly", "weather", "helpxzh")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
@@ -761,7 +761,9 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> suggestions = new ArrayList<>();
-        if (command.getName().equalsIgnoreCase("eco") && args.length == 1 && sender.hasPermission("xzh.admin")) {
+        if (command.getName().equalsIgnoreCase("home") && args.length == 1 && sender instanceof Player player) {
+            suggestions.addAll(utilityManager.homeTabCompletions(player, args[0]));
+        } else if (command.getName().equalsIgnoreCase("eco") && args.length == 1 && sender.hasPermission("xzh.admin")) {
             suggestions.add("set"); suggestions.add("add");
         } else if (command.getName().equalsIgnoreCase("quest") && args.length == 1) {
             suggestions.add("cancel");
