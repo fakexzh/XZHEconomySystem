@@ -22,6 +22,11 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.NamespacedKey;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.event.inventory.InventoryClickEvent;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,11 +52,14 @@ public final class UtilityManager implements Listener {
     private final Map<UUID, Long> rtpCooldown = new HashMap<>();
     private final Map<UUID, BukkitRunnable> homeCountdowns = new HashMap<>();
     private final Map<UUID, Location> homeCountdownStarts = new HashMap<>();
+    private final Map<UUID, PendingHome> pendingHomes = new HashMap<>();
+    private final NamespacedKey homeActionKey;
     private final Map<UUID, BukkitRunnable> spawnCountdowns = new HashMap<>();
     private final Map<UUID, PendingSpawn> pendingSpawns = new HashMap<>();
     private final Map<UUID, PendingBack> pendingBacks = new HashMap<>();
     private final Map<UUID, BackCountdown> backCountdowns = new HashMap<>();
     private record PendingSpawn(Location destination, TpaQuote quote, String token, long createdAt) {}
+    private record PendingHome(String name, Location destination, TpaQuote quote, String token, long createdAt) {}
     private record PendingBack(Location destination, int cost, String token, long createdAt) {}
     private static final class BackCountdown {
         private final Location start;
@@ -62,9 +70,13 @@ public final class UtilityManager implements Listener {
 
     public UtilityManager(XZHEconomySystem plugin) {
         this.plugin = plugin;
+        this.homeActionKey = new NamespacedKey(plugin, "home_action");
         file = new File(plugin.getDataFolder(), "locations.yml");
         data = YamlConfiguration.loadConfiguration(file);
-        if (data.contains("homes")) { data.set("homes", null); save(); }
+        boolean migratedHomes = false;
+        if (data.contains("homes")) { data.set("homes", null); migratedHomes = true; }
+        if (data.contains("bedhomes")) { data.set("bedhomes", null); migratedHomes = true; }
+        if (migratedHomes) save();
         for (World world : Bukkit.getWorlds()) {
             world.setGameRule(org.bukkit.GameRule.DO_DAYLIGHT_CYCLE, true);
         }
@@ -141,28 +153,67 @@ public final class UtilityManager implements Listener {
                 return true;
             }
             case "home" -> {
-                if (args.length != 0) {
-                    msg(player, "Only /home is available. Place a bed to set your home.");
+                if (args.length == 2 && args[0].equalsIgnoreCase("accept")) {
+                    acceptHome(player, args[1]);
                     return true;
                 }
-                String path = "bedhomes." + player.getUniqueId();
-                Location storedBed = data.getLocation(path);
-                if (storedBed == null) {
-                    msg(player, "You don't have a home yet. Place a bed to set one.");
+                if (args.length == 2 && args[0].equalsIgnoreCase("reject")) {
+                    rejectHome(player, args[1]);
                     return true;
                 }
-                if (storedBed.getWorld() == null || !storedBed.getBlock().getType().name().endsWith("_BED")) {
-                    data.set(path, null);
-                    save();
-                    msg(player, "Your bed home no longer exists. Place a new bed to set a home.");
+                if (args.length > 1) {
+                    msg(player, "Usage: /home [name]");
                     return true;
                 }
-                Location bed = bedHome(player.getUniqueId());
+                String name = args.length == 1 ? args[0].toLowerCase(Locale.ROOT) : firstHomeName(player.getUniqueId());
+                if (name != null) {
+                    Location destination = data.getLocation(homePath(player.getUniqueId(), name));
+                    if (destination == null || destination.getWorld() == null) {
+                        msg(player, "That saved home is unavailable. Check /homes.");
+                        return true;
+                    }
+                    requestHomeConfirmation(player, name, destination);
+                    return true;
+                }
+                Location bed = bedHome(player);
                 if (bed == null) {
-                    msg(player, "Your bed home has no safe landing spot nearby. Clear space beside your bed and try again.");
+                    msg(player, "You have no named homes or active vanilla bed spawn. Use /sethome <name> or set your bed spawn.");
                     return true;
                 }
-                startHomeCountdown(player);
+                requestHomeConfirmation(player, "Bed", bed);
+                return true;
+            }
+            case "sethome" -> {
+                String name = named(args);
+                if (name == null) { msg(player, "Usage: /sethome <name> (letters, numbers, _ or -, max 24 characters)"); return true; }
+                UUID id = player.getUniqueId();
+                List<String> names = homeNames(id);
+                if (!names.contains(name) && names.size() >= 2) {
+                    msg(player, "You already have 2 named homes. Use /delhome <name> before adding another.");
+                    return true;
+                }
+                data.set(homePath(id, name), player.getLocation().clone());
+                if (!names.contains(name)) names.add(name);
+                data.set(homeOrderPath(id), names);
+                save();
+                msg(player, "Home '" + name + "' saved. " + names.size() + "/2 homes used.");
+                return true;
+            }
+            case "delhome" -> {
+                String name = named(args);
+                if (name == null) { msg(player, "Usage: /delhome <name>"); return true; }
+                UUID id = player.getUniqueId();
+                List<String> names = homeNames(id);
+                if (!names.remove(name)) { msg(player, "You don't have a home named '" + name + "'."); return true; }
+                data.set(homePath(id, name), null);
+                data.set(homeOrderPath(id), names);
+                save();
+                msg(player, "Home '" + name + "' deleted.");
+                return true;
+            }
+            case "homes" -> {
+                if (args.length != 0) { msg(player, "Usage: /homes"); return true; }
+                openHomes(player);
                 return true;
             }
             case "setwarp" -> {
@@ -793,19 +844,90 @@ public final class UtilityManager implements Listener {
     public void onSpawnCountdownQuit(PlayerQuitEvent event) {
         UUID id = event.getPlayer().getUniqueId();
         pendingSpawns.remove(id);
+        pendingHomes.remove(id);
+        BukkitRunnable homeTask = homeCountdowns.remove(id);
+        homeCountdownStarts.remove(id);
+        if (homeTask != null) homeTask.cancel();
         BukkitRunnable task = spawnCountdowns.remove(id);
         if (task != null) task.cancel();
     }
 
-    private void startHomeCountdown(Player player) {
+    private void requestHomeConfirmation(Player player, String name, Location destination) {
+        TpaQuote quote = quoteTravel(player, destination, "Teleporting to this home between these world types is not supported.");
+        if (quote == null) return;
+        XZHEconomySystem economy = (XZHEconomySystem) plugin;
+        if (economy.getCombinedBalance(player.getUniqueId()) + 1e-9 < quote.cost()) {
+            msg(player, "You need " + money(quote.cost()) + " coins for this home teleport. Your pocket + bank balance is too low.");
+            return;
+        }
+        UUID id = player.getUniqueId();
+        String token = UUID.randomUUID().toString().substring(0, 8);
+        PendingHome pending = new PendingHome(name, destination.clone(), quote, token, System.currentTimeMillis());
+        pendingHomes.put(id, pending);
+        net.md_5.bungee.api.chat.TextComponent details = new net.md_5.bungee.api.chat.TextComponent(
+                "§8[§6home§8] §r§6Teleport to §e" + name + " §8| §bDistance: §f" + quote.distanceLabel()
+                        + " §8| §eCost: §6✦ " + money(quote.cost()) + " coins ");
+        net.md_5.bungee.api.chat.TextComponent accept = new net.md_5.bungee.api.chat.TextComponent("§a[ ACCEPT ]");
+        accept.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/home accept " + token));
+        net.md_5.bungee.api.chat.TextComponent reject = new net.md_5.bungee.api.chat.TextComponent(" §c[ REJECT ]");
+        reject.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/home reject " + token));
+        details.addExtra(accept);
+        details.addExtra(reject);
+        player.spigot().sendMessage(details);
+        player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.9f, 1.2f);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            PendingHome current = pendingHomes.get(id);
+            if (current != null && current.token().equals(token)) {
+                pendingHomes.remove(id);
+                Player online = Bukkit.getPlayer(id);
+                if (online != null) msg(online, "Home confirmation expired. Use /home again.");
+            }
+        }, 600L);
+    }
+
+    private void acceptHome(Player player, String token) {
+        UUID id = player.getUniqueId();
+        PendingHome pending = pendingHomes.get(id);
+        if (pending == null || !pending.token().equals(token)
+                || System.currentTimeMillis() - pending.createdAt() > 30_000L) {
+            pendingHomes.remove(id);
+            msg(player, "That home confirmation has expired. Use /home again.");
+            return;
+        }
+        pendingHomes.remove(id);
+        if (pending.destination().getWorld() == null) {
+            msg(player, "That home world is unavailable. No coins were charged.");
+            return;
+        }
+        XZHEconomySystem economy = (XZHEconomySystem) plugin;
+        if (economy.getCombinedBalance(id) + 1e-9 < pending.quote().cost()) {
+            msg(player, "You no longer have enough pocket + bank coins. No coins were charged.");
+            return;
+        }
+        startHomeCountdown(player, pending);
+    }
+
+    private void rejectHome(Player player, String token) {
+        PendingHome pending = pendingHomes.get(player.getUniqueId());
+        if (pending == null || !pending.token().equals(token)) {
+            msg(player, "That home confirmation has expired.");
+            return;
+        }
+        pendingHomes.remove(player.getUniqueId());
+        player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.8f, 0.8f);
+        msg(player, "Home teleport rejected. No coins were charged.");
+    }
+
+    private void startHomeCountdown(Player player, PendingHome pending) {
         UUID id = player.getUniqueId();
         BukkitRunnable previous = homeCountdowns.remove(id);
         if (previous != null) previous.cancel();
         Location start = player.getLocation().clone();
         homeCountdownStarts.put(id, start);
-        msg(player, "Home teleport in §e4 seconds§f. Don't move.");
         BukkitRunnable task = new BukkitRunnable() {
-            private int seconds = 4;
+            private int seconds = 3;
             @Override public void run() {
                 if (!player.isOnline()) {
                     homeCountdowns.remove(id);
@@ -813,25 +935,36 @@ public final class UtilityManager implements Listener {
                     cancel();
                     return;
                 }
-                if (seconds > 1) {
+                if (seconds > 0) {
+                    player.spigot().sendMessage(net.md_5.bungee.api.ChatMessageType.ACTION_BAR,
+                            new net.md_5.bungee.api.chat.TextComponent("§6Home teleport in §e" + seconds + "s §8• §7Move to cancel"));
                     seconds--;
-                    plugin.tellPublic(player, "§bHOME §8» §fTeleporting in §e" + seconds + "§f...");
                     return;
-                }
-                Location destination = bedHome(id);
-                if (destination == null) {
-                    msg(player, "Your bed home is no longer available. Place a bed to set a new home.");
-                } else {
-                    player.teleport(destination);
-                    msg(player, "Teleported to your bed home.");
                 }
                 homeCountdowns.remove(id);
                 homeCountdownStarts.remove(id);
+                Location destination = pending.destination();
+                XZHEconomySystem economy = (XZHEconomySystem) plugin;
+                if (destination.getWorld() == null) {
+                    msg(player, "Home teleport cancelled: destination world is unavailable. No coins were charged.");
+                } else if (economy.getCombinedBalance(id) + 1e-9 < pending.quote().cost()) {
+                    msg(player, "Home teleport cancelled: you no longer have enough coins. No coins were charged.");
+                } else if (!player.teleport(destination)) {
+                    msg(player, "Home teleport failed. No coins were charged.");
+                } else if (!economy.spendAvailableFunds(id, pending.quote().cost())) {
+                    player.teleport(start);
+                    msg(player, "Payment failed; you were returned to your starting location. No coins were charged.");
+                } else {
+                    player.spigot().sendMessage(net.md_5.bungee.api.ChatMessageType.ACTION_BAR,
+                            new net.md_5.bungee.api.chat.TextComponent("§aTeleported to " + pending.name()));
+                    msg(player, "Teleported to '" + pending.name() + "' for " + money(pending.quote().cost()) + " coins.");
+                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.9f, 1.2f);
+                }
                 cancel();
             }
         };
         homeCountdowns.put(id, task);
-        task.runTaskTimer(plugin, 20L, 20L);
+        task.runTaskTimer(plugin, 0L, 20L);
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -859,73 +992,17 @@ public final class UtilityManager implements Listener {
         int namespace = root.indexOf(':');
         if (namespace >= 0) root = root.substring(namespace + 1);
 
-        if (root.equals("home")) {
+        if (root.equals("home") || root.equals("sethome") || root.equals("delhome") || root.equals("homes")) {
             event.setCancelled(true);
-            if (parts.length == 1) {
-                handle(event.getPlayer(), "home", new String[0]);
-            } else {
-                msg(event.getPlayer(), "Only /home is available. Place a bed to set your home.");
-            }
-            return;
-        }
-        if (root.equals("sethome") || root.equals("delhome") || root.equals("homes")
-                || root.equals("deletehome") || root.equals("removehome")) {
-            event.setCancelled(true);
-            msg(event.getPlayer(), "That command has been removed. Place a bed and use /home.");
+            String[] args = java.util.Arrays.copyOfRange(parts, 1, parts.length);
+            handle(event.getPlayer(), root, args);
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onBedPlace(BlockPlaceEvent event) {
-        if (!event.getBlockPlaced().getType().name().endsWith("_BED")) return;
-        Player player = event.getPlayer();
-        String path = "bedhomes." + player.getUniqueId();
-        // Store the bed block; /home resolves a safe position beside it.
-        data.set(path, event.getBlockPlaced().getLocation());
-        save();
-        msg(player, "Your bed is now your home.");
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    public void onBedBreak(BlockBreakEvent event) {
-        if (!event.getBlock().getType().name().endsWith("_BED")) return;
-        var homes = data.getConfigurationSection("bedhomes");
-        if (homes == null) return;
-        boolean changed = false;
-        for (String owner : homes.getKeys(false)) {
-            Location bed = data.getLocation("bedhomes." + owner);
-            if (bed == null || bed.getWorld() == null || !bed.getWorld().equals(event.getBlock().getWorld())) continue;
-            if (isSameBed(bed, event.getBlock())) {
-                data.set("bedhomes." + owner, null);
-                changed = true;
-                if (owner.equals(event.getPlayer().getUniqueId().toString())) {
-                    msg(event.getPlayer(), "Your bed home was cleared because the bed was broken.");
-                }
-                Player ownerPlayer = null;
-                try { ownerPlayer = Bukkit.getPlayer(UUID.fromString(owner)); } catch (IllegalArgumentException ignored) { }
-                if (ownerPlayer != null && !ownerPlayer.equals(event.getPlayer())) {
-                    msg(ownerPlayer, "Your bed home was cleared because the bed was broken.");
-                }
-            }
-        }
-        if (changed) save();
-    }
-
-    private boolean isSameBed(Location savedLocation, Block brokenBlock) {
-        Block savedBlock = savedLocation.getBlock();
-        if (savedBlock.equals(brokenBlock)) return true;
-        if (!(savedBlock.getBlockData() instanceof org.bukkit.block.data.type.Bed savedBed)
-                || !(brokenBlock.getBlockData() instanceof org.bukkit.block.data.type.Bed brokenBed)) return false;
-        if (savedBed.getPart() == brokenBed.getPart() || savedBed.getFacing() != brokenBed.getFacing()) return false;
-        org.bukkit.block.BlockFace otherHalfDirection = savedBed.getPart() == org.bukkit.block.data.type.Bed.Part.FOOT
-                ? savedBed.getFacing() : savedBed.getFacing().getOppositeFace();
-        return savedBlock.getRelative(otherHalfDirection).equals(brokenBlock);
-    }
-
-    private Location bedHome(UUID id) {
-        Location bed = data.getLocation("bedhomes." + id);
+    private Location bedHome(Player player) {
+        Location bed = player.getBedSpawnLocation();
         if (bed == null || bed.getWorld() == null) return null;
-        // Bed may be represented by either half; find a nearby safe standing block.
+        // Use Bukkit's vanilla respawn point; do not maintain or override a plugin bed-home record.
         for (int radius = 1; radius <= 2; radius++) {
             for (int dx = -radius; dx <= radius; dx++) for (int dz = -radius; dz <= radius; dz++) {
                 Location candidate = new Location(bed.getWorld(), bed.getBlockX() + dx + 0.5,
@@ -1004,6 +1081,78 @@ public final class UtilityManager implements Listener {
                 net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/tpacancel"));
         requester.spigot().sendMessage(line);
         requester.spigot().sendMessage(send, decline);
+    }
+
+    private String homePath(UUID id, String name) { return "named-homes." + id + "." + name; }
+    private String homeOrderPath(UUID id) { return "named-home-order." + id; }
+
+    private List<String> homeNames(UUID id) {
+        List<String> result = new java.util.ArrayList<>();
+        for (String name : data.getStringList(homeOrderPath(id))) {
+            String normalized = name.toLowerCase(Locale.ROOT);
+            if (data.getLocation(homePath(id, normalized)) != null && !result.contains(normalized)) result.add(normalized);
+        }
+        return result;
+    }
+
+    private String firstHomeName(UUID id) {
+        List<String> names = homeNames(id);
+        return names.isEmpty() ? null : names.get(0);
+    }
+
+    public List<String> homeTabCompletions(Player player, String prefix) {
+        String filter = prefix == null ? "" : prefix.toLowerCase(Locale.ROOT);
+        return homeNames(player.getUniqueId()).stream().filter(name -> name.startsWith(filter)).toList();
+    }
+
+    private void openHomes(Player player) {
+        Inventory inventory = Bukkit.createInventory(null, 27, "§8Your Homes");
+        List<String> names = homeNames(player.getUniqueId());
+        int[] slots = {11, 15};
+        for (int i = 0; i < names.size(); i++) {
+            String name = names.get(i);
+            Location location = data.getLocation(homePath(player.getUniqueId(), name));
+            ItemStack icon = new ItemStack(Material.RED_BED);
+            ItemMeta meta = icon.getItemMeta();
+            meta.setDisplayName("§e" + name);
+            List<String> lore = new java.util.ArrayList<>();
+            lore.add("§7Click to request teleport");
+            if (location != null && location.getWorld() != null) {
+                lore.add("§8" + location.getWorld().getName());
+                lore.add("§8" + location.getBlockX() + ", " + location.getBlockY() + ", " + location.getBlockZ());
+            }
+            meta.setLore(lore);
+            meta.getPersistentDataContainer().set(homeActionKey, PersistentDataType.STRING, name);
+            icon.setItemMeta(meta);
+            inventory.setItem(slots[i], icon);
+        }
+        if (names.isEmpty()) {
+            ItemStack info = new ItemStack(Material.PAPER);
+            ItemMeta meta = info.getItemMeta();
+            meta.setDisplayName("§7No named homes saved");
+            meta.setLore(List.of("§8Use /sethome <name>", "§8Your vanilla bed is the /home fallback."));
+            info.setItemMeta(meta);
+            inventory.setItem(13, info);
+        }
+        player.openInventory(inventory);
+    }
+
+    @EventHandler
+    public void onHomesInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!ChatColor.stripColor(event.getView().getTitle()).equals("Your Homes")) return;
+        event.setCancelled(true);
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || !clicked.hasItemMeta()) return;
+        String name = clicked.getItemMeta().getPersistentDataContainer().get(homeActionKey, PersistentDataType.STRING);
+        if (name == null) return;
+        player.closeInventory();
+        Location destination = data.getLocation(homePath(player.getUniqueId(), name));
+        if (destination == null || destination.getWorld() == null) {
+            msg(player, "That saved home is unavailable.");
+            return;
+        }
+        requestHomeConfirmation(player, name, destination);
     }
 
     private String money(double amount) {
