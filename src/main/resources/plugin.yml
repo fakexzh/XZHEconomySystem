@@ -78,8 +78,17 @@ commands:
     usage: /setspawn
     permission: xzh.admin
   home:
-    description: Teleport to your bed home.
-    usage: /home
+    description: Teleport to your first saved home or vanilla bed fallback.
+    usage: /home [name]
+  sethome:
+    description: Save a named home (maximum 2).
+    usage: /sethome <name>
+  delhome:
+    description: Delete one of your named homes.
+    usage: /delhome <name>
+  homes:
+    description: Open your saved homes menu.
+    usage: /homes
   warp:
     description: Teleport to a named warp.
     usage: /warp <name>
