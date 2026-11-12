@@ -973,8 +973,10 @@ public final class UtilityManager implements Listener {
         if (!homeCountdowns.containsKey(id) || event.getTo() == null) return;
         Location from = event.getFrom();
         Location to = event.getTo();
-        if (from.getBlockX() == to.getBlockX() && from.getBlockY() == to.getBlockY()
-                && from.getBlockZ() == to.getBlockZ()) return;
+        if (from.getWorld() == to.getWorld()
+                && Double.compare(from.getX(), to.getX()) == 0
+                && Double.compare(from.getY(), to.getY()) == 0
+                && Double.compare(from.getZ(), to.getZ()) == 0) return;
         BukkitRunnable task = homeCountdowns.remove(id);
         homeCountdownStarts.remove(id);
         if (task != null) task.cancel();
