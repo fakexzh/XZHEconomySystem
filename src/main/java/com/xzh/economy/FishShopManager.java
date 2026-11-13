@@ -20,6 +20,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
 import java.io.IOException;
@@ -63,6 +64,7 @@ public final class FishShopManager implements Listener {
     private final Map<String, FishSpecies> species = new HashMap<>();
     private final Map<UUID, FishSpecimen> pendingBuys = new HashMap<>();
     private final Map<UUID, List<String>> pendingSellAll = new HashMap<>();
+    private final Map<UUID, BukkitTask> pendingInventoryRefreshes = new HashMap<>();
     private final File collectionFile;
 
     private record FishSpecies(String id, String name, String rarity, String model,
@@ -610,7 +612,7 @@ public final class FishShopManager implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        Bukkit.getScheduler().runTask(plugin, () -> refreshInventoryFishInfo(event.getPlayer()));
+        scheduleInventoryFishRefresh(event.getPlayer());
     }
 
     @EventHandler
@@ -623,7 +625,7 @@ public final class FishShopManager implements Listener {
         if (event.getEntity() instanceof Player player) {
             ItemStack pickedUp = event.getItem().getItemStack();
             if (normalizeFishMetadata(pickedUp)) event.getItem().setItemStack(pickedUp);
-            Bukkit.getScheduler().runTask(plugin, () -> refreshInventoryFishInfo(player));
+            scheduleInventoryFishRefresh(player);
         }
     }
 
@@ -631,15 +633,26 @@ public final class FishShopManager implements Listener {
     public void onFishingCatch(PlayerFishEvent event) {
         if (event.getState() == PlayerFishEvent.State.CAUGHT_FISH) {
             Player player = event.getPlayer();
-            Bukkit.getScheduler().runTask(plugin, () -> refreshInventoryFishInfo(player));
+            scheduleInventoryFishRefresh(player);
         }
     }
 
     @EventHandler
     public void onPlayerInventoryClick(InventoryClickEvent event) {
         if (event.getWhoClicked() instanceof Player player) {
-            Bukkit.getScheduler().runTask(plugin, () -> refreshInventoryFishInfo(player));
+            scheduleInventoryFishRefresh(player);
         }
+    }
+
+    private void scheduleInventoryFishRefresh(Player player) {
+        UUID id = player.getUniqueId();
+        BukkitTask previous = pendingInventoryRefreshes.remove(id);
+        if (previous != null) previous.cancel();
+        BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            pendingInventoryRefreshes.remove(id);
+            refreshInventoryFishInfo(player);
+        }, 2L);
+        pendingInventoryRefreshes.put(id, task);
     }
 
     private void refreshInventoryFishInfo(Player player) {
@@ -838,5 +851,7 @@ public final class FishShopManager implements Listener {
         UUID id = event.getPlayer().getUniqueId();
         pendingBuys.remove(id);
         pendingSellAll.remove(id);
+        BukkitTask refresh = pendingInventoryRefreshes.remove(id);
+        if (refresh != null) refresh.cancel();
     }
 }
