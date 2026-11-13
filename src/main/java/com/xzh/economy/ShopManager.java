@@ -299,11 +299,9 @@ public final class ShopManager implements Listener {
         fishShopMeta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, "fish-shop");
         fishShopIcon.setItemMeta(fishShopMeta);
         inv.setItem(20, fishShopIcon);
-        add(inv, 22, Material.PANDA_SPAWN_EGG, "Pet Shop", "pets", "baby-pets",
-                List.of(ChatColor.GRAY + "Permanent baby pets with owner controls.", ChatColor.YELLOW + "Click to browse pets."));
-        add(inv, 23, Material.OAK_BOAT, "Travel Shop", "travel-shop", "travel");
-        add(inv, 24, Material.END_CRYSTAL, "Quest Shop", "quests", "quests");
-        add(inv, 25, Material.SCULK_SENSOR, "Death Inventory", "deathinventory", "deathinventory");
+        add(inv, 22, Material.OAK_BOAT, "Travel Shop", "travel-shop", "travel");
+        add(inv, 23, Material.END_CRYSTAL, "Quest Shop", "quests", "quests");
+        add(inv, 24, Material.SCULK_SENSOR, "Death Inventory", "deathinventory", "deathinventory");
 
         // Row 5: bank and account utilities.
         ItemStack bankIcon = plugin.getPocketCoinManager().createCoin(100, 1);
@@ -855,7 +853,6 @@ public final class ShopManager implements Listener {
             case "market" -> openMarket(player);
             case "fish-shop" -> plugin.getFishShopManager().openMain(player);
             case "travel-shop" -> plugin.getBoatManager().open(player);
-            case "pets" -> plugin.getPetManager().openShop(player);
             case "shop-search", "search-again" -> promptShopSearch(player);
             case "search-page" -> {
                 String[] bits = value.split("\\|", 2);
