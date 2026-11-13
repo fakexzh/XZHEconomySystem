@@ -130,6 +130,16 @@ public final class FishShopManager implements Listener {
                     || fish.getString("habitat.rod", "").isBlank()
                     || fish.getString("habitat.time", "").isBlank()) return false;
         }
+        // Force the existing server-side fish.yml to migrate from Nether lava to
+        // normal Overworld water while retaining the Netherite Fishing Rod gate.
+        for (String id : List.of("netherwrasse", "volcanic_bass")) {
+            ConfigurationSection fish = root.getConfigurationSection(id);
+            if (fish == null
+                    || !fish.getString("habitat.description", "").equalsIgnoreCase("Overworld water")
+                    || !fish.getString("habitat.rod", "").equalsIgnoreCase("Netherite Fishing Rod")) {
+                return false;
+            }
+        }
         return true;
     }
 
