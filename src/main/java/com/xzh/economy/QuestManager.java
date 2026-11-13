@@ -370,6 +370,7 @@ public final class QuestManager implements Listener {
     private final XZHEconomySystem plugin;
     private final File file;
     private final YamlConfiguration data;
+    private boolean dirty;
     private final NamespacedKey actionKey;
     private final NamespacedKey valueKey;
     private final Random random = new Random();
@@ -1005,6 +1006,7 @@ public final class QuestManager implements Listener {
         actionKey = new NamespacedKey(plugin, "quest_action");
         valueKey = new NamespacedKey(plugin, "quest_value");
         Bukkit.getPluginManager().registerEvents(this, plugin);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::flushIfDirty, 100L, 100L);
         resetEventIfNeeded();
         Bukkit.getScheduler().runTaskTimer(plugin, this::resetEventIfNeeded, 20L, 20L);
         Bukkit.getScheduler().runTaskTimer(plugin, this::refreshOpenCommunityChests, 20L, 20L);
@@ -2437,6 +2439,20 @@ public final class QuestManager implements Listener {
     }
 
     private void save() {
-        try { data.save(file); } catch (IOException e) { plugin.getLogger().severe("Could not save quests.yml: " + e.getMessage()); }
+        dirty = true;
+    }
+
+    public void shutdown() {
+        flushIfDirty();
+    }
+
+    private void flushIfDirty() {
+        if (!dirty) return;
+        try {
+            data.save(file);
+            dirty = false;
+        } catch (IOException e) {
+            plugin.getLogger().severe("Could not save quests.yml: " + e.getMessage());
+        }
     }
 }
