@@ -12,14 +12,12 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
-import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.configuration.file.YamlConfiguration;
 import java.io.File;
 import java.io.IOException;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -29,8 +27,6 @@ import org.bukkit.util.RayTraceResult;
 import java.util.*;
 
 public final class PetManager implements Listener {
-    private static final String MENU_TITLE = ChatColor.DARK_GREEN + "Baby Pets";
-    private static final String CONFIRM_TITLE = ChatColor.DARK_GREEN + "Confirm Pet Purchase";
     private final XZHEconomySystem plugin;
     private final NamespacedKey ownerKey;
     private final NamespacedKey petKey;
@@ -43,10 +39,8 @@ public final class PetManager implements Listener {
     private final YamlConfiguration activePets;
     private final Map<UUID, UUID> following = new HashMap<>();
     private long petTick = 0L;
-    private final Map<String, PetOption> options = new LinkedHashMap<>();
     private final int followTask;
 
-    private record PetOption(String id, String display, EntityType type, String variant, int price, Material icon) {}
 
     public PetManager(XZHEconomySystem plugin) {
         this.plugin = plugin;
@@ -59,145 +53,8 @@ public final class PetManager implements Listener {
         customNameKey = new NamespacedKey(plugin, "pet_custom_name");
         activePetsFile = new File(plugin.getDataFolder(), "active-pets.yml");
         activePets = YamlConfiguration.loadConfiguration(activePetsFile);
-        add("panda-normal", "Panda - Normal", EntityType.PANDA, "NORMAL", 3000, Material.PANDA_SPAWN_EGG);
-        add("panda-lazy", "Panda - Lazy", EntityType.PANDA, "LAZY", 4000, Material.PANDA_SPAWN_EGG);
-        add("panda-worried", "Panda - Worried", EntityType.PANDA, "WORRIED", 4000, Material.PANDA_SPAWN_EGG);
-        add("panda-playful", "Panda - Playful", EntityType.PANDA, "PLAYFUL", 4000, Material.PANDA_SPAWN_EGG);
-        add("panda-brown", "Panda - Brown", EntityType.PANDA, "BROWN", 6000, Material.PANDA_SPAWN_EGG);
-        add("panda-weak", "Panda - Weak", EntityType.PANDA, "WEAK", 6000, Material.PANDA_SPAWN_EGG);
-        add("panda-aggressive", "Panda - Aggressive", EntityType.PANDA, "AGGRESSIVE", 6000, Material.PANDA_SPAWN_EGG);
-        add("pig-pink", "Pig - Pink", EntityType.PIG, "TEMPERATE", 1500, Material.PIG_SPAWN_EGG);
-        add("chicken-temperate", "Chicken - Temperate", EntityType.CHICKEN, "TEMPERATE", 1200, Material.CHICKEN_SPAWN_EGG);
-        add("chicken-warm", "Chicken - Warm", EntityType.CHICKEN, "WARM", 2000, Material.CHICKEN_SPAWN_EGG);
-        add("chicken-cold", "Chicken - Cold", EntityType.CHICKEN, "COLD", 2500, Material.CHICKEN_SPAWN_EGG);
-        add("goat-normal", "Goat - Normal", EntityType.GOAT, "NORMAL", 2000, Material.GOAT_SPAWN_EGG);
-        add("goat-screaming", "Goat - Screaming", EntityType.GOAT, "SCREAMING", 3500, Material.GOAT_SPAWN_EGG);
         Bukkit.getPluginManager().registerEvents(this, plugin);
         followTask = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, this::tickPets, 1L, 1L);
-    }
-
-    private void add(String id, String display, EntityType type, String variant, int price, Material icon) {
-        options.put(id, new PetOption(id, display, type, variant, price, icon));
-    }
-
-    public void openShop(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 54, MENU_TITLE);
-        int slot = 0;
-        for (PetOption option : options.values()) {
-            ItemStack item = new ItemStack(option.icon());
-            ItemMeta meta = item.getItemMeta();
-            meta.setDisplayName(ChatColor.YELLOW + option.display());
-            List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.WHITE + "Price: " + ChatColor.GOLD + String.valueOf(option.price()) + " coins");
-            lore.add(ChatColor.GRAY + "Permanent baby pet - one-time purchase");
-            lore.add(ChatColor.GRAY + "Right-click your pet to sit / stand");
-            lore.add(ChatColor.GREEN + "Click to purchase");
-            meta.setLore(lore);
-            meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "pet_shop_option"), PersistentDataType.STRING, option.id());
-            item.setItemMeta(meta);
-            inv.setItem(slot++, item);
-        }
-        ItemStack back = new ItemStack(Material.ARROW);
-        ItemMeta backMeta = back.getItemMeta();
-        backMeta.setDisplayName(ChatColor.WHITE + "Back to Shop");
-        back.setItemMeta(backMeta);
-        inv.setItem(49, back);
-        player.openInventory(inv);
-    }
-
-    @EventHandler
-    public void onPetShopClick(InventoryClickEvent event) {
-        if (!MENU_TITLE.equals(event.getView().getTitle())) return;
-        event.setCancelled(true);
-        if (!(event.getWhoClicked() instanceof Player player)) return;
-        ItemStack clicked = event.getCurrentItem();
-        if (clicked == null || !clicked.hasItemMeta()) return;
-        String id = clicked.getItemMeta().getPersistentDataContainer()
-                .get(new NamespacedKey(plugin, "pet_shop_option"), PersistentDataType.STRING);
-        if (id == null) {
-            if (clicked.getType() == Material.ARROW) plugin.getShopManager().openMain(player);
-            return;
-        }
-        PetOption option = options.get(id);
-        if (option == null) return;
-        openConfirmation(player, option);
-    }
-
-    private void openConfirmation(Player player, PetOption option) {
-        Inventory inv = Bukkit.createInventory(null, 27, CONFIRM_TITLE);
-        ItemStack yes = new ItemStack(Material.LIME_CONCRETE);
-        ItemMeta ym = yes.getItemMeta();
-        ym.setDisplayName(ChatColor.GREEN + "Confirm purchase");
-        ym.setLore(List.of(ChatColor.GRAY + option.display(), ChatColor.GOLD.toString() + option.price() + " coins"));
-        ym.getPersistentDataContainer().set(new NamespacedKey(plugin, "pet_confirm"), PersistentDataType.STRING, option.id());
-        yes.setItemMeta(ym); inv.setItem(11, yes);
-        ItemStack no = new ItemStack(Material.RED_CONCRETE);
-        ItemMeta nm = no.getItemMeta(); nm.setDisplayName(ChatColor.RED + "Cancel"); no.setItemMeta(nm); inv.setItem(15, no);
-        player.openInventory(inv);
-    }
-
-    private void purchase(Player player, PetOption option) {
-        if (plugin.getLoanManager().isShopPurchaseRestricted(player.getUniqueId())) {
-            plugin.tellShop(player, "Your loan is overdue. Shop purchases are locked until you repay it.");
-            return;
-        }
-        if (plugin.getCombinedBalance(player.getUniqueId()) < option.price()) {
-            plugin.tellShop(player, "Not enough coins. This pet costs " + option.price() + " coins.");
-            return;
-        }
-        Location spawn = player.getLocation().clone().add(player.getLocation().getDirection().setY(0).normalize().multiply(1.5));
-        spawn.setY(player.getLocation().getY());
-        Entity entity = player.getWorld().spawnEntity(spawn, option.type());
-        if (!(entity instanceof Animals animal) || !(entity instanceof Mob mob)) {
-            entity.remove();
-            plugin.tellShop(player, "This pet could not be spawned. Your coins were not charged.");
-            return;
-        }
-        try {
-            applyVariant(entity, option.variant());
-            if (animal instanceof Ageable ageable) {
-                ageable.setAge(-24000);
-                ageable.setAgeLock(true);
-            }
-            PersistentDataContainer pdc = entity.getPersistentDataContainer();
-            pdc.set(petKey, PersistentDataType.BYTE, (byte) 1);
-            pdc.set(ownerKey, PersistentDataType.STRING, player.getUniqueId().toString());
-            pdc.set(variantKey, PersistentDataType.STRING, option.variant());
-            pdc.set(sittingKey, PersistentDataType.BYTE, (byte) 0);
-            pdc.set(identityKey, PersistentDataType.STRING, UUID.randomUUID().toString());
-            pdc.set(displayNameKey, PersistentDataType.STRING, "@" + player.getName() + "'s pet");
-            pdc.set(customNameKey, PersistentDataType.BYTE, (byte) 0);
-            entity.setCustomName(ChatColor.LIGHT_PURPLE + "@" + player.getName() + "'s pet");
-            entity.setCustomNameVisible(true);
-            mob.setCanPickupItems(false);
-            mob.setAware(true);
-        } catch (RuntimeException ex) {
-            entity.remove();
-            plugin.getLogger().warning("Could not initialize purchased pet " + option.id() + ": " + ex.getMessage());
-            plugin.tellShop(player, "Pet creation failed. Your coins were not charged.");
-            return;
-        }
-        if (!plugin.spendAvailableFunds(player.getUniqueId(), option.price())) {
-            entity.remove();
-            plugin.tellShop(player, "Purchase cancelled because your balance changed. No coins were charged.");
-            return;
-        }
-        plugin.getShopManager().recordExternalPurchase(player, option.display(), option.price());
-        plugin.tellShop(player, "You purchased " + option.display() + " for " + option.price() + " coins. Your pet is now yours permanently.");
-        player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.7f, 1.2f);
-        player.closeInventory();
-    }
-
-    @EventHandler
-    public void onPetConfirmationClick(InventoryClickEvent event) {
-        if (!CONFIRM_TITLE.equals(event.getView().getTitle())) return;
-        event.setCancelled(true);
-        if (!(event.getWhoClicked() instanceof Player player)) return;
-        ItemStack clicked = event.getCurrentItem();
-        if (clicked == null || !clicked.hasItemMeta()) return;
-        String id = clicked.getItemMeta().getPersistentDataContainer().get(new NamespacedKey(plugin, "pet_confirm"), PersistentDataType.STRING);
-        if (id == null) { if (clicked.getType() == Material.RED_CONCRETE) { player.closeInventory(); openShop(player); } return; }
-        PetOption option = options.get(id); if (option != null) purchase(player, option);
     }
 
     private void applyVariant(Entity entity, String variant) {
