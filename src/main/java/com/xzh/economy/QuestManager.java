@@ -377,6 +377,7 @@ public final class QuestManager implements Listener {
     private final Map<String, Double> communityTravelRemainders = new HashMap<>();
     // Prevent block-break quests from being farmed by placing and repeatedly breaking the same blocks.
     private final Set<String> playerPlacedBlocks = new HashSet<>();
+    private boolean placedBlockTrackingDirty;
 
     private final List<Pack> packs = buildPacks();
 
@@ -986,6 +987,7 @@ public final class QuestManager implements Listener {
         file = new File(plugin.getDataFolder(), "quests.yml");
         data = YamlConfiguration.loadConfiguration(file);
         playerPlacedBlocks.addAll(data.getStringList("anti-exploit.placed-blocks"));
+        Bukkit.getScheduler().runTaskTimer(plugin, this::flushPlacedBlockTracking, 20L * 300L, 20L * 300L);
         // Remove active quests from the retired system so old easy objectives cannot persist.
         boolean migratedOldQuests = false;
         for (String root : new ArrayList<>(data.getKeys(false))) {
@@ -1010,7 +1012,7 @@ public final class QuestManager implements Listener {
         Bukkit.getScheduler().runTaskTimer(plugin, this::refreshSecretQuestIfDue, 20L * 60L, 20L * 60L);
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) updateHud(player);
-        }, 20L, 20L);
+        }, 40L, 40L);
         // Shared global reminder and progress broadcast every 30 minutes while the event is active.
         Bukkit.getScheduler().runTaskTimer(plugin, this::broadcastGlobalProgress, 20L * 60L * 30L, 20L * 60L * 30L);
         if (!data.contains("single-shop.next-refresh")) {
@@ -1508,13 +1510,27 @@ public final class QuestManager implements Listener {
                 || type == Material.SPONGE || type == Material.SEA_LANTERN
                 || type == Material.AMETHYST_CLUSTER || type == Material.GILDED_BLACKSTONE) {
             playerPlacedBlocks.add(blockKey(event.getBlockPlaced().getLocation()));
+            if (playerPlacedBlocks.size() > 50000) {
+                java.util.Iterator<String> oldest = playerPlacedBlocks.iterator();
+                if (oldest.hasNext()) oldest.remove();
+            }
             savePlacedBlockTracking();
         }
     }
 
     private void savePlacedBlockTracking() {
+        placedBlockTrackingDirty = true;
+    }
+
+    public void shutdown() {
+        flushPlacedBlockTracking();
+    }
+
+    private void flushPlacedBlockTracking() {
+        if (!placedBlockTrackingDirty) return;
         data.set("anti-exploit.placed-blocks", new ArrayList<>(playerPlacedBlocks));
         save();
+        placedBlockTrackingDirty = false;
     }
 
     private String blockKey(Location location) {
@@ -1609,6 +1625,8 @@ public final class QuestManager implements Listener {
             return;
         }
         if (event.isCancelled() || event.getTo() == null) return;
+        if (event.getFrom().getWorld() == event.getTo().getWorld()
+                && event.getFrom().distanceSquared(event.getTo()) < 0.25) return;
         // Boats and other Bukkit vehicles are tracked by VehicleMoveEvent to avoid double-counting.
         if (player.isInsideVehicle() && player.getVehicle() instanceof Vehicle) return;
         recordTravelMovement(player, event.getFrom(), event.getTo());
@@ -1637,7 +1655,7 @@ public final class QuestManager implements Listener {
         }
         if (player.getGameMode() == org.bukkit.GameMode.CREATIVE || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
         double step = from.distance(to);
-        if (step <= 0 || step > 32) { if (step > 32) clearTravelRemainders(id); return; }
+        if (step < 0.5 || step > 32) { if (step > 32) clearTravelRemainders(id); return; }
         Biome fromBiome = from.getBlock().getBiome(), toBiome = to.getBlock().getBiome();
         if (fromBiome != toBiome) incrementTarget(player, "visit-biome:" + toBiome.name(), 1);
         recordCommunityTravel(player, to, step, fromBiome, toBiome);
