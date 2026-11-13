@@ -27,6 +27,8 @@ import java.util.UUID;
 public final class HudManager {
     private final XZHEconomySystem plugin;
     private final Map<UUID, BossBar> questBars = new HashMap<>();
+    private final Map<UUID, String> questBarTitles = new HashMap<>();
+    private final Map<UUID, Double> questBarProgress = new HashMap<>();
     private final Map<UUID, Double> loanAmounts = new HashMap<>();
     private final Map<UUID, Long> loanDueTimes = new HashMap<>();
     private final Map<UUID, Long> loanGraceTimes = new HashMap<>();
@@ -51,6 +53,8 @@ public final class HudManager {
     public void shutdown() {
         for (BossBar bar : questBars.values()) bar.removeAll();
         questBars.clear();
+        questBarTitles.clear();
+        questBarProgress.clear();
         ScoreboardManager manager = Bukkit.getScoreboardManager();
         if (manager != null) {
             for (Player player : Bukkit.getOnlinePlayers()) player.setScoreboard(manager.getMainScoreboard());
@@ -67,6 +71,8 @@ public final class HudManager {
         UUID id = player.getUniqueId();
         BossBar bar = questBars.remove(id);
         if (bar != null) bar.removePlayer(player);
+        questBarTitles.remove(id);
+        questBarProgress.remove(id);
         scoreboards.remove(id);
         sidebarLines.remove(id);
     }
@@ -172,16 +178,29 @@ public final class HudManager {
         }
         BossBar bar = questBars.computeIfAbsent(player.getUniqueId(), id ->
                 Bukkit.createBossBar("", BarColor.GREEN, BarStyle.SOLID));
-        bar.setTitle(ChatColor.GOLD + clip(questName, 64) + ChatColor.WHITE + " | "
+        String title = ChatColor.GOLD + clip(questName, 64) + ChatColor.WHITE + " | "
                 + clip(objectiveText == null ? "" : objectiveText, 80)
-                + ChatColor.YELLOW + " (" + Math.round(clamp(progress) * 100) + "%)");
-        bar.setProgress(clamp(progress));
+                + ChatColor.YELLOW + " (" + Math.round(clamp(progress) * 100) + "%)";
+        double normalizedProgress = clamp(progress);
+        UUID id = player.getUniqueId();
+        if (!title.equals(questBarTitles.get(id))) {
+            bar.setTitle(title);
+            questBarTitles.put(id, title);
+        }
+        Double previousProgress = questBarProgress.get(id);
+        if (previousProgress == null || Math.abs(previousProgress - normalizedProgress) > 0.0001) {
+            bar.setProgress(normalizedProgress);
+            questBarProgress.put(id, normalizedProgress);
+        }
         bar.setVisible(true);
         if (!bar.getPlayers().contains(player)) bar.addPlayer(player);
     }
 
     public void hideActiveQuest(Player player) {
-        BossBar bar = questBars.remove(player.getUniqueId());
+        UUID id = player.getUniqueId();
+        BossBar bar = questBars.remove(id);
+        questBarTitles.remove(id);
+        questBarProgress.remove(id);
         if (bar != null) {
             bar.removePlayer(player);
             bar.setVisible(false);

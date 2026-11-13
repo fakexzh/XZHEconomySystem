@@ -1172,4 +1172,28 @@ public final class UtilityManager implements Listener {
         try { data.save(file); }
         catch (IOException e) { plugin.getLogger().severe("Could not save locations.yml: " + e.getMessage()); }
     }
+
+    @EventHandler
+    public void cleanupPendingStateOnQuit(PlayerQuitEvent event) {
+        UUID id = event.getPlayer().getUniqueId();
+        requestsByTarget.remove(id);
+        requestsByTarget.values().removeIf(id::equals);
+        requestExpiry.remove(id);
+        quoteByTarget.remove(id);
+        preparedByRequester.remove(id);
+        replies.remove(id);
+        replies.values().removeIf(id::equals);
+        afk.remove(id);
+        rtpCooldown.remove(id);
+        pendingHomes.remove(id);
+        pendingSpawns.remove(id);
+        pendingBacks.remove(id);
+        homeCountdownStarts.remove(id);
+        BukkitRunnable home = homeCountdowns.remove(id);
+        if (home != null) home.cancel();
+        BukkitRunnable spawn = spawnCountdowns.remove(id);
+        if (spawn != null) spawn.cancel();
+        BackCountdown back = backCountdowns.remove(id);
+        if (back != null && back.task != null) back.task.cancel();
+    }
 }
