@@ -1526,6 +1526,7 @@ public final class QuestManager implements Listener {
 
     public void shutdown() {
         flushPlacedBlockTracking();
+        flushIfDirty();
     }
 
     private void flushPlacedBlockTracking() {
@@ -2440,10 +2441,6 @@ public final class QuestManager implements Listener {
 
     private void save() {
         dirty = true;
-    }
-
-    public void shutdown() {
-        flushIfDirty();
     }
 
     private void flushIfDirty() {
