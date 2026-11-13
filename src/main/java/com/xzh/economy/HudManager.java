@@ -44,7 +44,7 @@ public final class HudManager {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 updateSidebar(player);
             }
-        }, 1L, 20L);
+        }, 20L, 100L);
         for (Player player : Bukkit.getOnlinePlayers()) updateSidebar(player);
     }
 
@@ -92,7 +92,6 @@ public final class HudManager {
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         // Hide the vanilla red score numbers on the right of each sidebar line.
         objective.numberFormat(NumberFormat.blank());
-        for (String oldLine : sidebarLines.getOrDefault(id, java.util.List.of())) board.resetScores(oldLine);
         double balance = plugin.getBalance(id);
         double bankBalance = plugin.getBankManager() == null ? 0.0 : plugin.getBankManager().getBalance(id);
         double owed = loanAmounts.getOrDefault(id, 0.0);
@@ -115,10 +114,18 @@ public final class HudManager {
             lines.add(ChatColor.DARK_GRAY + "────");
             lines.add(ChatColor.GOLD + "⌚ " + ChatColor.WHITE + formatClock(player));
         }
-        int score = lines.size();
-        for (String line : lines) objective.getScore(line).setScore(score--);
-        sidebarLines.put(id, lines);
-        if (player.getScoreboard() != board) player.setScoreboard(board);
+        java.util.List<String> previousLines = sidebarLines.get(id);
+        if (!lines.equals(previousLines) || player.getScoreboard() != board) {
+            if (previousLines != null) {
+                for (String oldLine : previousLines) {
+                    if (!lines.contains(oldLine)) board.resetScores(oldLine);
+                }
+            }
+            int score = lines.size();
+            for (String line : lines) objective.getScore(line).setScore(score--);
+            sidebarLines.put(id, lines);
+            if (player.getScoreboard() != board) player.setScoreboard(board);
+        }
     }
 
     /** Backward-compatible loan HUD update; assumes the standard 12-hour grace period. */
