@@ -299,10 +299,10 @@ fish:
       width: { minimum: 2.0, maximum: 35.0 }
     value: { base-price: 0.0 }
     habitat:
-      description: "Lava in the Nether"
+      description: "Overworld water"
       rod: "Netherite Fishing Rod"
       time: "Any time"
-      biomes: [NETHER]
+      biomes: [RIVER, OCEAN, WARM_OCEAN, COLD_OCEAN]
       water-depth: { minimum: 0, maximum: 64 }
   olive_flounder:
     display-name: "Olive Flounder"
@@ -475,10 +475,10 @@ fish:
       width: { minimum: 1.0, maximum: 29.0 }
     value: { base-price: 0.0 }
     habitat:
-      description: "Lava in the Nether"
+      description: "Overworld water"
       rod: "Netherite Fishing Rod"
       time: "Any time"
-      biomes: [NETHER]
+      biomes: [RIVER, OCEAN, WARM_OCEAN, COLD_OCEAN]
       water-depth: { minimum: 0, maximum: 64 }
   laviathan_fry:
     display-name: "Laviathan Fry"
