@@ -28,6 +28,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     private HudManager hudManager;
     private BankManager bankManager;
     private ShopManager shopManager;
+    private FishShopManager fishShopManager;
     private LoanManager loanManager;
     private QuestManager questManager;
     private DeathRecoveryManager deathRecoveryManager;
@@ -38,6 +39,8 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     private MoneyRequestManager moneyRequestManager;
     private BoatManager boatManager;
     private VillagerTradeManager villagerTradeManager;
+    private PetManager petManager;
+    private FortuneBookManager fortuneBookManager;
 
     @Override
     public void onEnable() {
@@ -58,8 +61,11 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         walletStatus = YamlConfiguration.loadConfiguration(walletStatusFile);
         pocketCoinManager = new PocketCoinManager(this);
         bankManager = new BankManager(this);
+        fortuneBookManager = new FortuneBookManager(this);
         hudManager = new HudManager(this);
         hudManager.start();
+        petManager = new PetManager(this);
+        fishShopManager = new FishShopManager(this);
         shopManager = new ShopManager(this);
         boatManager = new BoatManager(this);
         bookShopManager = new BookShopManager(this);
@@ -78,7 +84,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
-        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quest", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "warp", "setwarp", "delwarp", "tpa", "tpasend", "tpacancel", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit", "gmc", "gms", "gma", "gmsp", "day", "night", "gamemode", "heal", "feed", "fly", "weather", "helpxzh")) {
+        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quest", "quests", "deathinventory", "shopadmin", "pet", "unpet", "spawn", "setspawn", "home", "sethome", "delhome", "homes", "warp", "setwarp", "delwarp", "tpa", "tpasend", "tpacancel", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit", "gmc", "gms", "gma", "gmsp", "day", "night", "gamemode", "heal", "feed", "fly", "weather", "helpxzh")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
@@ -91,7 +97,9 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     @Override
     public void onDisable() {
         if (hudManager != null) hudManager.shutdown();
+        if (petManager != null) petManager.shutdown();
         if (villagerTradeManager != null) villagerTradeManager.shutdown();
+        if (fortuneBookManager != null) fortuneBookManager.shutdown();
         saveBalances();
     }
 
@@ -126,8 +134,67 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             getConfig().set("utilities.tpa-nether-fixed-cost", 66); changed = true;
         }
         if (!getConfig().contains("utilities.back-cost")) { getConfig().set("utilities.back-cost", 30.0); changed = true; }
+        if (!getConfig().contains("utilities.back-distance-blocks-per-tier")) { getConfig().set("utilities.back-distance-blocks-per-tier", 1000); changed = true; }
+        if (!getConfig().contains("utilities.back-distance-cost-per-tier")) { getConfig().set("utilities.back-distance-cost-per-tier", 50); changed = true; }
+        if (!getConfig().contains("utilities.back-nether-cost")) { getConfig().set("utilities.back-nether-cost", 333); changed = true; }
+        if (!getConfig().contains("utilities.back-end-cost")) { getConfig().set("utilities.back-end-cost", 666); changed = true; }
+        if (!getConfig().contains("utilities.back-countdown-seconds")) { getConfig().set("utilities.back-countdown-seconds", 3); changed = true; }
         if (getConfig().contains("time-control")) { getConfig().set("time-control", null); changed = true; }
         if (!getConfig().contains("announcements.bank.enabled")) { getConfig().set("announcements.bank.enabled", true); changed = true; }
+
+        // Restore the six vanilla fish in the Food Shop for existing servers.
+        // Only fill missing settings so any owner-defined prices or stock caps remain authoritative.
+        if (!getConfig().getBoolean("migrations.vanilla-fish-food-shop-20261108", false)) {
+            String[][] vanillaFishPrices = {
+                {"cod", "5", "3"}, {"salmon", "6", "3.5"},
+                {"tropical_fish", "5", "1"}, {"pufferfish", "5", "1"},
+                {"cooked_cod", "10", "4.5"}, {"cooked_salmon", "12", "5.5"}
+            };
+            for (String[] fish : vanillaFishPrices) {
+                String base = "shop.prices." + fish[0];
+                if (!getConfig().contains(base + ".buy")) {
+                    getConfig().set(base + ".buy", Double.parseDouble(fish[1]));
+                    changed = true;
+                }
+                if (!getConfig().contains(base + ".sell")) {
+                    getConfig().set(base + ".sell", Double.parseDouble(fish[2]));
+                    changed = true;
+                }
+                String buyStock = "shop.stock-limits." + fish[0];
+                if (!getConfig().contains(buyStock)) {
+                    getConfig().set(buyStock, 1000);
+                    changed = true;
+                }
+                String sellStock = "shop.sell-stock-limits." + fish[0];
+                if (!getConfig().contains(sellStock)) {
+                    getConfig().set(sellStock, 256);
+                    changed = true;
+                }
+            }
+            if (!getConfig().contains("shop.sell-stock-restock-hours")) {
+                getConfig().set("shop.sell-stock-restock-hours", 6);
+                changed = true;
+            }
+            getConfig().set("migrations.vanilla-fish-food-shop-20261108", true);
+            changed = true;
+            getLogger().info("Restored vanilla fish to the Food Shop.");
+        }
+
+        // Existing servers keep config.yml when a JAR is replaced. One-time fish-market
+        // migration activates the approved 31-fish prices in those existing config files.
+        // The migration marker ensures later owner edits are never overwritten on restart.
+        if (!getConfig().getBoolean("migrations.fish-market-pricing-20261106", false)) {
+            getConfig().set("fish-market.prices-configured", true);
+            getConfig().set("fish-market.sell-multiplier", 0.35);
+            getConfig().set("fish-market.prices.common", 143);
+            getConfig().set("fish-market.prices.uncommon", 286);
+            getConfig().set("fish-market.prices.rare", 857);
+            getConfig().set("fish-market.prices.legendary", 2854);
+            getConfig().set("fish-market.prices.mythical", 8569);
+            getConfig().set("migrations.fish-market-pricing-20261106", true);
+            changed = true;
+            getLogger().info("Enabled approved 31-fish market prices for existing server configurations.");
+        }
 
         // One-time migration is necessary because Bukkit does not overwrite an existing config.yml.
         // Apply the explicitly approved 2026-10-22 shop and enchantment-book prices to existing servers.
@@ -199,6 +266,13 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             getConfig().set("migrations.shop-villager-rebalance-20261026", true);
             changed = true;
         }
+        // Move existing servers to the newly approved 20/80 Fortune Book odds.
+        // A new one-time marker updates servers already migrated to 30/70 while preserving later owner edits.
+        if (!getConfig().getBoolean("migrations.fortune-book-odds-20261101-v2", false)) {
+            getConfig().set("fortune-books.apple.win-chance", 0.2);
+            getConfig().set("migrations.fortune-book-odds-20261101-v2", true);
+            changed = true;
+        }
         if (changed) {
             saveConfig();
             getLogger().info("Migrated legacy config defaults for revised XZH economy rules.");
@@ -206,44 +280,67 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     }
 
     public BankManager getBankManager() { return bankManager; }
+    public FortuneBookManager getFortuneBookManager() { return fortuneBookManager; }
     public LoanManager getLoanManager() { return loanManager; }
     public ShopManager getShopManager() { return shopManager; }
+    public FishShopManager getFishShopManager() { return fishShopManager; }
+    public PetManager getPetManager() { return petManager; }
     public BookShopManager getBookShopManager() { return bookShopManager; }
     public QuestManager getQuestManager() { return questManager; }
     public DeathRecoveryManager getDeathRecoveryManager() { return deathRecoveryManager; }
 
     public void tellPublic(CommandSender sender, String message) { tell(sender, message); }
 
+    /** Sends all shop-related player notices with the dedicated shop prefix. */
+    public void tellShop(CommandSender sender, String message) {
+        sender.sendMessage("§8[§5shop§8] §r" + colorMessage(message, "§d", "§f", "§e"));
+    }
+
+    /** Sends quest, achievement-pack, and Community Chest notices consistently. */
+    public void tellQuest(CommandSender sender, String message) {
+        sender.sendMessage("§8[§dquest§8] §r" + colorMessage(message, "§b", "§f", "§6"));
+    }
+
+    /** Sends bank and bank-loan notices with the dedicated bank prefix. */
+    public void tellBank(CommandSender sender, String message) {
+        sender.sendMessage("§8[§6bank§8] §r" + colorMessage(message, "§a", "§f", "§6"));
+    }
+
+    /** Sends Fortune Book notices with the dedicated fortune prefix. */
+    public void tellFortune(CommandSender sender, String message) {
+        sender.sendMessage("§8[§5fortune§8] §r" + colorMessage(message, "§d", "§f", "§5"));
+    }
+
     /** Announces only configured high-value, rare, or progression purchases. */
-    public void announceSpecialPurchase(Player player, org.bukkit.Material material, int quantity, double total) {
+    public void announceSpecialPurchase(Player player, String displayName, org.bukkit.Material material, int quantity, double total) {
         if (!getConfig().getBoolean("announcements.shop.enabled", true)) return;
-        String item = material.name().toLowerCase(Locale.ROOT).replace('_', ' ');
+        String item = displayName == null || displayName.isBlank() ? material.name().toLowerCase(Locale.ROOT).replace('_', ' ') : displayName;
         boolean expensive = total >= getConfig().getDouble("announcements.shop.minimum-purchase-total", 1000.0);
         boolean rare = getConfig().getStringList("announcements.shop.rare-items").stream()
                 .anyMatch(name -> name.equalsIgnoreCase(material.name()));
         boolean progression = getConfig().getStringList("announcements.shop.progression-items").stream()
                 .anyMatch(name -> name.equalsIgnoreCase(material.name()));
         if (!expensive && !rare && !progression) return;
-        String prefix = "§8[§6XZH SHOP§8] §r";
+        String prefix = "§8[§5shop§8] §r";
         if (progression) {
-            Bukkit.broadcastMessage(prefix + "§e" + player.getName() + " §funlocked a progression item: §b"
-                    + item + " §7(" + money(total) + " coins).");
+            Bukkit.broadcastMessage(prefix + "§a" + player.getName() + " §funlocked a progression item: §f"
+                    + item + " §7(§e" + money(total) + " coins§7).");
         } else {
-            Bukkit.broadcastMessage(prefix + "§e" + player.getName() + " §fpurchased §b" + quantity + " × "
-                    + item + " §ffor §6" + money(total) + " coins§f.");
+            Bukkit.broadcastMessage(prefix + "§a" + player.getName() + " §fbought §f" + quantity + " × "
+                    + item + " §ffor §e" + money(total) + " coins§f.");
         }
     }
 
     public void announceLoanBorrow(Player player, int principal, double repayment, int days) {
         if (!getConfig().getBoolean("announcements.loan.borrowing", true)) return;
-        Bukkit.broadcastMessage("§8[§bXZH BANK§8] §e" + player.getName() + " §fborrowed §6"
+        Bukkit.broadcastMessage("§8[§6bank§8] §e" + player.getName() + " §fborrowed §6"
                 + money(principal) + " coins§f. Repayment: §c" + money(repayment)
                 + " coins §fover §b" + days + " days§f.");
     }
 
     public void announceLoanRepaid(String playerName, double amount, boolean automatic) {
         if (!getConfig().getBoolean("announcements.loan.full-repayment", true)) return;
-        Bukkit.broadcastMessage("§8[§bXZH BANK§8] §e" + playerName + " §ffully repaid their loan of §6"
+        Bukkit.broadcastMessage("§8[§6bank§8] §e" + playerName + " §ffully repaid their loan of §6"
                 + money(amount) + " coins§f" + (automatic ? " §7(automatic repayment)." : "."));
     }
 
@@ -363,7 +460,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         if (overflow > 0 && bankManager != null) {
             bankManager.setBalance(uuid, bankManager.getBalance(uuid) + overflow);
             Player recipient = Bukkit.getPlayer(uuid);
-            if (recipient != null) tell(recipient, "Your pocket wallet reached its limit; " + money(overflow) + " excess coins were secured in the bank.");
+            if (recipient != null) tellBank(recipient, "Your pocket wallet reached its limit; " + money(overflow) + " excess coins were secured in the bank.");
         }
         saveBalances();
         saveWalletStatus();
@@ -401,8 +498,45 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
         return getConfig().getString("currency-name", "coins");
     }
 
+    private String colorMessage(String message) {
+        return colorMessage(message, "§a", "§f", "§e");
+    }
+
+    /** Applies category-specific semantic colors: action, explanatory text, and currency. */
+    private String colorMessage(String message, String successColor, String neutralColor, String currencyColor) {
+        String colored = org.bukkit.ChatColor.translateAlternateColorCodes('&', message == null ? "" : message);
+        String leadingColor = "";
+        if (colored.length() >= 2 && colored.charAt(0) == '§') {
+            leadingColor = colored.substring(0, 2);
+            colored = colored.substring(2);
+        }
+        String lower = colored.trim().toLowerCase(Locale.ROOT);
+
+        boolean error = lower.startsWith("no ") || lower.startsWith("not ") || lower.startsWith("invalid")
+                || lower.startsWith("unable") || lower.startsWith("cannot") || lower.startsWith("could not")
+                || lower.startsWith("failed") || lower.startsWith("your loan is overdue")
+                || lower.startsWith("you already") || lower.startsWith("you have reached")
+                || lower.startsWith("you do not") || lower.startsWith("that player")
+                || lower.startsWith("choose another") || lower.startsWith("enter a valid")
+                || lower.startsWith("purchase cancelled") || lower.startsWith("transfer failed")
+                || lower.startsWith("repayment failed");
+        if (error) return "§c" + colored;
+
+        String result = colored;
+        String successPattern = "(?i)^(Purchased|Bought|Sold|Deposited|Withdrew|Transferred|Received|Completed|Approved|Set|Cleared|Recovered|Started|Unlocked|Fully repaid|Partial loan repayment|Returned)";
+        java.util.regex.Matcher action = java.util.regex.Pattern.compile(successPattern).matcher(result);
+        if (action.find()) {
+            result = successColor + action.group(1) + neutralColor + result.substring(action.end());
+        } else {
+            result = (leadingColor.isEmpty() ? neutralColor : leadingColor) + result;
+        }
+
+        // Each feature supplies its own currency accent while preserving explicit inline colors.
+        return result.replaceAll("(?i)(?<![§0-9a-fk-or])([0-9][0-9,]*(?:\\.[0-9]+)?)\\s+(coins?|coin)", currencyColor + "$1 $2" + neutralColor);
+    }
+
     private void tell(CommandSender sender, String message) {
-        sender.sendMessage("§8[§6XZH§8] §r" + message);
+        sender.sendMessage("§8[§6economy§8] §r" + colorMessage(message));
     }
 
     @Override
@@ -453,29 +587,29 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 return true;
             }
             case "quest", "quests" -> {
-                if (!(sender instanceof Player player)) { tell(sender, "Only players can use quests."); return true; }
+                if (!(sender instanceof Player player)) { tellQuest(sender, "Only players can use quests."); return true; }
                 if (args.length == 1 && args[0].equalsIgnoreCase("cancel")) {
                     questManager.cancelActiveQuest(player);
                     return true;
                 }
-                if (args.length != 0) { tell(sender, "Usage: /quest cancel or /quests"); return true; }
+                if (args.length != 0) { tellQuest(sender, "Usage: /quest cancel or /quests"); return true; }
                 questManager.open(player);
                 return true;
             }
             case "bank" -> {
-                if (!(sender instanceof Player player)) { tell(sender, "Only players can open the bank."); return true; }
+                if (!(sender instanceof Player player)) { tellBank(sender, "Only players can open the bank."); return true; }
                 bankManager.open(player);
                 return true;
             }
             case "loan" -> {
-                if (!(sender instanceof Player player)) { tell(sender, "Only players can use loans."); return true; }
+                if (!(sender instanceof Player player)) { tellBank(sender, "Only players can use loans."); return true; }
                 if (args.length == 1 && args[0].equalsIgnoreCase("repay")) return loanManager.repay(player);
-                if (args.length > 0) { tell(sender, "Usage: /loan [repay]"); return true; }
+                if (args.length > 0) { tellBank(sender, "Usage: /loan [repay]"); return true; }
                 bankManager.open(player);
                 return true;
             }
             case "books" -> {
-                if (!(sender instanceof Player player)) { tell(sender, "Only players can open the book shop."); return true; }
+                if (!(sender instanceof Player player)) { tellShop(sender, "Only players can open the book shop."); return true; }
                 bookShopManager.open(player);
                 return true;
             }
@@ -485,27 +619,31 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 return true;
             }
             case "shopadmin" -> {
-                if (!sender.hasPermission("xzh.admin")) { tell(sender, "No permission."); return true; }
+                if (!sender.hasPermission("xzh.admin")) { tellShop(sender, "No permission."); return true; }
                 if (args.length == 1 && args[0].equalsIgnoreCase("restock")) {
                     shopManager.restockAll();
-                    tell(sender, "Global shop stock has been restocked to configured limits.");
+                    tellShop(sender, "Global shop stock has been restocked to configured limits.");
                     return true;
                 }
                 if (args.length == 3 && args[0].equalsIgnoreCase("stock")) {
                     org.bukkit.Material material;
                     int amount;
                     try { material = org.bukkit.Material.valueOf(args[1].toUpperCase(Locale.ROOT)); amount = Integer.parseInt(args[2]); }
-                    catch (IllegalArgumentException ex) { tell(sender, "Usage: /shopadmin stock <MATERIAL> <amount>"); return true; }
-                    if (amount < 0 || amount > 1000000) { tell(sender, "Stock must be between 0 and 1000000."); return true; }
+                    catch (IllegalArgumentException ex) { tellShop(sender, "Usage: /shopadmin stock <MATERIAL> <amount>"); return true; }
+                    if (amount < 0 || amount > 1000000) { tellShop(sender, "Stock must be between 0 and 1000000."); return true; }
                     shopManager.setStock(material, amount);
-                    tell(sender, "Global stock for " + material.name() + " set to " + amount + ".");
+                    tellShop(sender, "Global stock for " + material.name() + " set to " + amount + ".");
                     return true;
                 }
-                tell(sender, "Usage: /shopadmin <restock|stock <MATERIAL> <amount>>");
+                tellShop(sender, "Usage: /shopadmin <restock|stock <MATERIAL> <amount>>");
                 return true;
             }
+            case "pet", "unpet" -> {
+                if (!(sender instanceof Player player)) { tell(sender, "Only players can control pets."); return true; }
+                return petManager != null && petManager.handleCommand(player, command.getName(), args);
+            }
             case "shop" -> {
-                if (!(sender instanceof Player player)) { tell(sender, "Only players can open the shop."); return true; }
+                if (!(sender instanceof Player player)) { tellShop(sender, "Only players can open the shop."); return true; }
                 if (shopManager != null) shopManager.openMain(player);
                 return true;
             }
@@ -515,8 +653,10 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
                 tell(sender, "§f/pay <player> <amount> §7- send coins");
                 tell(sender, "§f/sendmoney <player> <amount> §7- request a confirmed transfer to them");
                 tell(sender, "§f/askmoney <player> <amount> §7- ask them for a confirmed payment");
-                tell(sender, "§f/shop §7- open XZH SHOP");
-                tell(sender, "§f/bank §7- open XZH BANK, deposits, withdrawals and loans");
+                tell(sender, "§f/shop §7- open Shop");
+                tell(sender, "§f/pet [all|transfer <player>] §7- call active pet, bring all pets, or transfer active pet");
+                tell(sender, "§f/unpet §7- stop your targeted pet from following");
+                tell(sender, "§f/bank §7- open Bank, deposits, withdrawals and loans");
                 if (sender.hasPermission("xzh.admin")) tell(sender, "§f/shopadmin <restock|stock> §7- manage global shop stock");
                 tell(sender, "§f/loan repay §7- repay an active loan (also available in /bank)");
                 tell(sender, "§f/quests §7- buy quest packs and track progress");
@@ -621,20 +761,29 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> suggestions = new ArrayList<>();
-        if (command.getName().equalsIgnoreCase("eco") && args.length == 1 && sender.hasPermission("xzh.admin")) {
+        if (command.getName().equalsIgnoreCase("home") && args.length == 1 && sender instanceof Player player) {
+            suggestions.addAll(utilityManager.homeTabCompletions(player, args[0]));
+        } else if (command.getName().equalsIgnoreCase("eco") && args.length == 1 && sender.hasPermission("xzh.admin")) {
             suggestions.add("set"); suggestions.add("add");
         } else if (command.getName().equalsIgnoreCase("quest") && args.length == 1) {
             suggestions.add("cancel");
-        } else if ((command.getName().equalsIgnoreCase("tpa") && args.length == 1)
+        } else if (command.getName().equalsIgnoreCase("pet") && args.length == 1) {
+            suggestions.add("all"); suggestions.add("transfer");
+        } else if ((command.getName().equalsIgnoreCase("pet") && args.length == 2 && args[0].equalsIgnoreCase("transfer"))
+                || (command.getName().equalsIgnoreCase("tpa") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("pay") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("sendmoney") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("askmoney") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("balance") && args.length == 1)
                 || (command.getName().equalsIgnoreCase("eco") && args.length == 2 && sender.hasPermission("xzh.admin"))) {
-            for (Player player : Bukkit.getOnlinePlayers()) suggestions.add(player.getName());
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                suggestions.add(command.getName().equalsIgnoreCase("pet") ? "@" + player.getName() : player.getName());
+            }
         }
         String prefix = args.length == 0 ? "" : args[args.length - 1].toLowerCase(Locale.ROOT);
-        suggestions.removeIf(s -> !s.toLowerCase(Locale.ROOT).startsWith(prefix));
+        if (command.getName().equalsIgnoreCase("pet") && args.length == 2 && prefix.startsWith("@")) prefix = prefix.substring(1);
+        final String filterPrefix = prefix;
+        suggestions.removeIf(s -> !(s.startsWith("@") ? s.substring(1) : s).toLowerCase(Locale.ROOT).startsWith(filterPrefix));
         return suggestions;
     }
 

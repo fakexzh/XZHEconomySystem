@@ -95,7 +95,7 @@ public final class MoneyRequestManager implements Listener {
     private void openPrompt(Player recipient, Player requester, Pending pending) {
         String actionText = pending.kind() == Kind.SEND ? "wants to send you" : "asks you to send";
         net.md_5.bungee.api.chat.TextComponent prompt = new net.md_5.bungee.api.chat.TextComponent(
-                "§6[XZH] §e" + requester.getName() + " " + actionText + " " + pending.amount() + " coins. ");
+                "§8[§6economy§8] §r§6[MONEY] §e" + requester.getName() + " " + actionText + " " + pending.amount() + " coins. ");
         net.md_5.bungee.api.chat.TextComponent accept = new net.md_5.bungee.api.chat.TextComponent("§a[ACCEPT]");
         accept.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
                 net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/moneyresponse accept"));
@@ -111,7 +111,7 @@ public final class MoneyRequestManager implements Listener {
     private void add(Inventory inv, int slot, Material material, String name, String action) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(name);
+        meta.setDisplayName(name.contains("§") ? name : ChatColor.YELLOW + name);
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         item.setItemMeta(meta);
         inv.setItem(slot, item);
@@ -160,7 +160,7 @@ public final class MoneyRequestManager implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player recipient)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (!"XZH Transfer Request".equals(title) && !"XZH Money Request".equals(title)) return;
+        if (!"Transfer Request".equals(title) && !"Money Request".equals(title)) return;
         event.setCancelled(true);
         ItemStack item = event.getCurrentItem();
         if (item == null || !item.hasItemMeta()) return;

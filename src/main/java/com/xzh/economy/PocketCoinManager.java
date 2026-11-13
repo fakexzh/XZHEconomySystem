@@ -41,6 +41,39 @@ public final class PocketCoinManager implements Listener {
         return total;
     }
 
+    /** Atomically transfers physical pocket coins only; bank balances are never accessed. */
+    public synchronized long transferCoins(Player from, Player to, long requestedAmount) {
+        if (from == null || to == null || from.equals(to) || requestedAmount <= 0
+                || !from.isOnline() || !to.isOnline()) return 0L;
+        long fromBalance = Math.max(0L, Math.round(count(from)));
+        long toBalance = Math.max(0L, Math.round(count(to)));
+        long pocketLimit = Math.max(0L, Math.round(plugin.getPocketBalanceLimit()));
+        long availableCapacity = Math.max(0L, pocketLimit - toBalance);
+        long transfer = requestedAmount;
+        if (transfer <= 0L || transfer > fromBalance || transfer > availableCapacity) return 0L;
+        long newFromBalance = fromBalance - transfer;
+        long newToBalance = toBalance + transfer;
+        if (!canStoreCoins(from, newFromBalance) || !canStoreCoins(to, newToBalance)) return 0L;
+        setCoins(from, newFromBalance);
+        setCoins(to, newToBalance);
+        return transfer;
+    }
+
+    private boolean canStoreCoins(Player player, long value) {
+        int availableSlots = 0;
+        for (ItemStack item : player.getInventory().getStorageContents()) {
+            if (item == null || item.getType().isAir() || isCoin(item)) availableSlots++;
+        }
+        long remaining = Math.max(0L, value);
+        int requiredSlots = 0;
+        for (int denomination : DENOMINATIONS) {
+            long stacks = remaining / denomination;
+            remaining %= denomination;
+            requiredSlots += (int) ((stacks + 63L) / 64L);
+        }
+        return requiredSlots <= availableSlots;
+    }
+
     public void setCoins(Player player, double requestedAmount) {
         long target = Math.min((long) plugin.getPocketBalanceLimit(), Math.max(0L, Math.round(requestedAmount)));
         PlayerInventory inventory = player.getInventory();
@@ -88,13 +121,13 @@ public final class PocketCoinManager implements Listener {
         // distinguish official currency from ordinary gold nuggets.
         ItemStack item = new ItemStack(Material.GOLD_NUGGET, amount);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.GOLD + "XZH Coin " + ChatColor.YELLOW + "(" + denomination + ")");
+        meta.setDisplayName(ChatColor.GOLD + "Coin " + ChatColor.YELLOW + "(" + denomination + ")");
         // Minecraft 26.3 reads custom model data through the component's float list.
         // Set that component explicitly so the resource-pack range_dispatch sees the denomination.
         var customModelData = meta.getCustomModelDataComponent();
         customModelData.setFloats(List.of((float) denomination));
         meta.setCustomModelDataComponent(customModelData);
-        meta.setLore(List.of(ChatColor.GRAY + "Official XZH pocket currency",
+        meta.setLore(List.of(ChatColor.GRAY + "Pocket currency",
                 ChatColor.GRAY + "Value: " + denomination + " coin" + (denomination == 1 ? "" : "s"),
                 ChatColor.DARK_GRAY + "Dropped on death; bank deposits are safe."));
         meta.getPersistentDataContainer().set(denominationKey, PersistentDataType.INTEGER, denomination);

@@ -43,7 +43,7 @@ public final class AdminManager implements Listener {
 
     public void open(Player player) {
         if (!player.hasPermission("xzh.admin")) {
-            player.sendMessage(ChatColor.RED + "No permission.");
+            plugin.tellPublic(player, ChatColor.RED + "No permission.");
             return;
         }
         Inventory inv = Bukkit.createInventory(null, 54, ChatColor.DARK_RED + "XZH Admin");
@@ -87,15 +87,15 @@ public final class AdminManager implements Listener {
             case "stock" -> prompt(player, "stock-material", "Type a material name in chat (for example ELYTRA).");
             case "price" -> prompt(player, "price-material", "Type a material name in chat to configure its buy or sell price.");
             case "book-cooldown" -> prompt(player, "book-cooldown-player", "Type the player's exact name to reset book cooldowns.");
-            case "reload" -> { plugin.reloadConfig(); player.sendMessage(ChatColor.GREEN + "config.yml reloaded."); player.closeInventory(); }
+            case "reload" -> { plugin.reloadConfig(); plugin.tellPublic(player, ChatColor.GREEN + "config.yml reloaded."); player.closeInventory(); }
             case "clear-loan" -> prompt(player, "clear-loan-player", "Type the player's exact name to clear their loan (or cancel).");
             case "clear-recovery" -> prompt(player, "clear-recovery-player", "Type the player's exact name to discard their death recovery (or cancel).");
             case "clear-quest" -> prompt(player, "clear-quest-player", "Type the player's exact name to clear their active quest (or cancel).");
             case "quest-stock" -> prompt(player, "quest-stock-pack", "Type a quest pack id: beginner, miner, hunter, explorer, nether, or end.");
-            case "reset-event" -> { plugin.getQuestManager().adminResetEvent(); player.sendMessage(ChatColor.GREEN + "Global event progress and stock reset."); player.closeInventory(); }
+            case "reset-event" -> { plugin.getQuestManager().adminResetEvent(); plugin.tellQuest(player, "Community Chest progress and stock reset."); player.closeInventory(); }
             case "restock" -> {
                 plugin.getShopManager().restockAll();
-                player.sendMessage(ChatColor.GREEN + "Global shop stock restocked.");
+                plugin.tellShop(player, "Global shop stock restocked.");
                 player.closeInventory();
             }
             case "transactions" -> { showTransactions(player); player.closeInventory(); }
@@ -128,154 +128,162 @@ public final class AdminManager implements Listener {
         if (!player.hasPermission("xzh.admin")) { prompts.remove(player.getUniqueId()); return; }
         if (input.equalsIgnoreCase("cancel")) {
             prompts.remove(player.getUniqueId());
-            player.sendMessage(ChatColor.YELLOW + "Admin action cancelled.");
+            if (prompt.startsWith("stock-") || prompt.startsWith("price-")) plugin.tellShop(player, "Admin action cancelled.");
+            else if (prompt.startsWith("quest-stock-")) plugin.tellQuest(player, "Admin action cancelled.");
+            else if (prompt.startsWith("clear-loan-")) plugin.tellBank(player, "Admin action cancelled.");
+            else if (prompt.startsWith("clear-quest-")) plugin.tellQuest(player, "Admin action cancelled.");
+            else plugin.tellPublic(player, ChatColor.YELLOW + "Admin action cancelled.");
             return;
         }
         if (prompt.equals("balance-player")) {
             if (!input.matches("[A-Za-z0-9_]{1,16}")) {
-                player.sendMessage(ChatColor.RED + "Invalid player name. Type a Minecraft username or 'cancel'.");
+                plugin.tellPublic(player, ChatColor.RED + "Invalid player name. Type a Minecraft username or 'cancel'.");
                 return;
             }
             prompts.put(player.getUniqueId(), "balance-amount:" + input);
-            player.sendMessage(ChatColor.YELLOW + "Type the new balance amount for " + input + " (or 'cancel').");
+            plugin.tellPublic(player, ChatColor.YELLOW + "Type the new balance amount for " + input + " (or 'cancel').");
             return;
         }
         if (prompt.startsWith("balance-amount:")) {
             String name = prompt.substring("balance-amount:".length());
             double amount;
             try { amount = Double.parseDouble(input); }
-            catch (NumberFormatException ex) { player.sendMessage(ChatColor.RED + "Enter a valid amount or 'cancel'."); return; }
+            catch (NumberFormatException ex) { plugin.tellPublic(player, ChatColor.RED + "Enter a valid amount or 'cancel'."); return; }
             if (!Double.isFinite(amount) || amount < 0 || amount > 1.0E12) {
-                player.sendMessage(ChatColor.RED + "Amount must be between 0 and 1000000000000."); return;
+                plugin.tellPublic(player, ChatColor.RED + "Amount must be between 0 and 1000000000000."); return;
             }
             OfflinePlayer target = Bukkit.getOfflinePlayer(name);
             plugin.setBalance(target.getUniqueId(), amount);
             prompts.remove(player.getUniqueId());
-            player.sendMessage(ChatColor.GREEN + "Set " + name + "'s balance to " + amount + " coins.");
+            plugin.tellPublic(player, ChatColor.GREEN + "Set " + name + "'s balance to " + amount + " coins.");
             return;
         }
         if (prompt.equals("clear-loan-player")) {
-            if (!input.matches("[A-Za-z0-9_]{1,16}")) { player.sendMessage(ChatColor.RED + "Invalid player name. Try again or type cancel."); return; }
+            if (!input.matches("[A-Za-z0-9_]{1,16}")) { plugin.tellBank(player, "Invalid player name. Try again or type cancel."); return; }
             OfflinePlayer target = Bukkit.getOfflinePlayer(input);
             plugin.getLoanManager().adminClearLoan(target.getUniqueId());
             prompts.remove(player.getUniqueId());
-            player.sendMessage(ChatColor.GREEN + "Cleared active loan for " + input + ".");
+            plugin.tellBank(player, "Cleared active loan for " + input + ".");
             return;
         }
         if (prompt.equals("clear-recovery-player")) {
-            if (!input.matches("[A-Za-z0-9_]{1,16}")) { player.sendMessage(ChatColor.RED + "Invalid player name. Try again or type cancel."); return; }
+            if (!input.matches("[A-Za-z0-9_]{1,16}")) { plugin.tellPublic(player, ChatColor.RED + "Invalid player name. Try again or type cancel."); return; }
             OfflinePlayer target = Bukkit.getOfflinePlayer(input);
             plugin.getDeathRecoveryManager().adminClearRecovery(target.getUniqueId());
             prompts.remove(player.getUniqueId());
-            player.sendMessage(ChatColor.GREEN + "Cleared death recovery for " + input + ".");
+            plugin.tellPublic(player, ChatColor.GREEN + "Cleared death recovery for " + input + ".");
             return;
         }
         if (prompt.equals("clear-quest-player")) {
-            if (!input.matches("[A-Za-z0-9_]{1,16}")) { player.sendMessage(ChatColor.RED + "Invalid player name. Try again or type cancel."); return; }
+            if (!input.matches("[A-Za-z0-9_]{1,16}")) { plugin.tellQuest(player, "Invalid player name. Try again or type cancel."); return; }
             OfflinePlayer target = Bukkit.getOfflinePlayer(input);
             plugin.getQuestManager().adminClearQuest(target.getUniqueId());
             prompts.remove(player.getUniqueId());
-            player.sendMessage(ChatColor.GREEN + "Cleared active quest for " + input + ".");
+            plugin.tellQuest(player, "Cleared active quest for " + input + ".");
             return;
         }
         if (prompt.equals("quest-stock-pack")) {
             String pack = input.toLowerCase(Locale.ROOT);
             if (!List.of("beginner", "miner", "hunter", "explorer", "nether", "end").contains(pack)) {
-                player.sendMessage(ChatColor.RED + "Unknown pack. Use beginner, miner, hunter, explorer, nether, or end (or cancel).");
+                plugin.tellQuest(player, "Unknown pack. Use beginner, miner, hunter, explorer, nether, or end (or cancel).");
                 return;
             }
             prompts.put(player.getUniqueId(), "quest-stock-amount:" + pack);
-            player.sendMessage(ChatColor.YELLOW + "Type the new global stock for " + pack + " (0–1000000), or cancel.");
+            plugin.tellQuest(player, "Type the new global stock for " + pack + " (0–1000000), or cancel.");
             return;
         }
         if (prompt.startsWith("quest-stock-amount:")) {
             String pack = prompt.substring("quest-stock-amount:".length());
             int amount;
             try { amount = Integer.parseInt(input); }
-            catch (NumberFormatException ex) { player.sendMessage(ChatColor.RED + "Enter a whole number or cancel."); return; }
-            if (amount < 0 || amount > 1_000_000) { player.sendMessage(ChatColor.RED + "Stock must be between 0 and 1000000."); return; }
-            if (!plugin.getQuestManager().setPackStock(pack, amount)) { player.sendMessage(ChatColor.RED + "Could not update that quest pack."); return; }
+            catch (NumberFormatException ex) { plugin.tellQuest(player, "Enter a whole number or cancel."); return; }
+            if (amount < 0 || amount > 1_000_000) { plugin.tellQuest(player, "Stock must be between 0 and 1000000."); return; }
+            if (!plugin.getQuestManager().setPackStock(pack, amount)) { plugin.tellQuest(player, "Could not update that quest pack."); return; }
             prompts.remove(player.getUniqueId());
-            player.sendMessage(ChatColor.GREEN + "Global stock for " + pack + " set to " + amount + ".");
+            plugin.tellQuest(player, "Global stock for " + pack + " set to " + amount + ".");
             return;
         }
         if (prompt.equals("book-cooldown-player")) {
-            if (!input.matches("[A-Za-z0-9_]{1,16}")) { player.sendMessage(ChatColor.RED + "Invalid player name. Try again or type cancel."); return; }
+            if (!input.matches("[A-Za-z0-9_]{1,16}")) { plugin.tellPublic(player, ChatColor.RED + "Invalid player name. Try again or type cancel."); return; }
             OfflinePlayer target = Bukkit.getOfflinePlayer(input);
             plugin.getBookShopManager().clearCooldowns(target.getUniqueId());
             prompts.remove(player.getUniqueId());
-            player.sendMessage(ChatColor.GREEN + "Cleared enchantment book cooldowns for " + input + ".");
+            plugin.tellPublic(player, ChatColor.GREEN + "Cleared enchantment book cooldowns for " + input + ".");
             return;
         }
         if (prompt.equals("price-material")) {
             Material material;
             try { material = Material.valueOf(input.toUpperCase(Locale.ROOT)); }
-            catch (IllegalArgumentException ex) { player.sendMessage(ChatColor.RED + "Unknown material. Try again or type cancel."); return; }
+            catch (IllegalArgumentException ex) { plugin.tellShop(player, "Unknown material. Try again or type cancel."); return; }
             prompts.put(player.getUniqueId(), "price-kind:" + material.name());
-            player.sendMessage(ChatColor.YELLOW + "Type buy or sell for " + material.name() + ", or cancel.");
+            plugin.tellShop(player, "Type buy or sell for " + material.name() + ", or cancel.");
             return;
         }
         if (prompt.startsWith("price-kind:")) {
             String material = prompt.substring("price-kind:".length());
             if (!input.equalsIgnoreCase("buy") && !input.equalsIgnoreCase("sell")) {
-                player.sendMessage(ChatColor.RED + "Type buy or sell, or cancel."); return;
+                plugin.tellShop(player, "Type buy or sell, or cancel."); return;
             }
             prompts.put(player.getUniqueId(), "price-amount:" + material + ":" + input.toLowerCase(Locale.ROOT));
-            player.sendMessage(ChatColor.YELLOW + "Type the new " + input.toLowerCase(Locale.ROOT) + " price for " + material + " (0–1000000), or cancel.");
+            plugin.tellShop(player, "Type the new " + input.toLowerCase(Locale.ROOT) + " price for " + material + " (0–1000000), or cancel.");
             return;
         }
         if (prompt.startsWith("price-amount:")) {
             String[] parts = prompt.split(":");
             double amount;
             try { amount = Double.parseDouble(input); }
-            catch (NumberFormatException ex) { player.sendMessage(ChatColor.RED + "Enter a valid price or cancel."); return; }
-            if (!Double.isFinite(amount) || amount < 0 || amount > 1_000_000) { player.sendMessage(ChatColor.RED + "Price must be between 0 and 1000000."); return; }
+            catch (NumberFormatException ex) { plugin.tellShop(player, "Enter a valid price or cancel."); return; }
+            if (!Double.isFinite(amount) || amount < 0 || amount > 1_000_000) { plugin.tellShop(player, "Price must be between 0 and 1000000."); return; }
             Material material = Material.valueOf(parts[1]);
             plugin.getShopManager().setPrice(material, parts[2], amount);
             prompts.remove(player.getUniqueId());
-            player.sendMessage(ChatColor.GREEN + "Set " + parts[2] + " price for " + material.name() + " to " + amount + " coins.");
+            plugin.tellShop(player, "Set " + parts[2] + " price for " + material.name() + " to " + amount + " coins.");
             return;
         }
         if (prompt.equals("stock-material")) {
             Material material;
             try { material = Material.valueOf(input.toUpperCase(Locale.ROOT)); }
-            catch (IllegalArgumentException ex) { player.sendMessage(ChatColor.RED + "Unknown material. Try again or type 'cancel'."); return; }
+            catch (IllegalArgumentException ex) { plugin.tellShop(player, "Unknown material. Try again or type 'cancel'."); return; }
             prompts.put(player.getUniqueId(), "stock-amount:" + material.name());
-            player.sendMessage(ChatColor.YELLOW + "Type the current stock amount for " + material.name() + " (0–1000000), or 'cancel'.");
+            plugin.tellShop(player, "Type the current stock amount for " + material.name() + " (0–1000000), or 'cancel'.");
             return;
         }
         if (prompt.startsWith("stock-amount:")) {
             String name = prompt.substring("stock-amount:".length());
             int amount;
             try { amount = Integer.parseInt(input); }
-            catch (NumberFormatException ex) { player.sendMessage(ChatColor.RED + "Enter a whole number or 'cancel'."); return; }
+            catch (NumberFormatException ex) { plugin.tellShop(player, "Enter a whole number or 'cancel'."); return; }
             if (amount < 0 || amount > 1_000_000) {
-                player.sendMessage(ChatColor.RED + "Stock must be between 0 and 1000000."); return;
+                plugin.tellShop(player, "Stock must be between 0 and 1000000."); return;
             }
             plugin.getShopManager().setStock(Material.valueOf(name), amount);
             prompts.remove(player.getUniqueId());
-            player.sendMessage(ChatColor.GREEN + "Global stock for " + name + " set to " + amount + ".");
+            plugin.tellShop(player, "Global stock for " + name + " set to " + amount + ".");
         }
     }
 
     private void prompt(Player player, String state, String text) {
         prompts.put(player.getUniqueId(), state);
         player.closeInventory();
-        player.sendMessage(ChatColor.YELLOW + text + " Type 'cancel' to stop.");
+        if (state.startsWith("stock-") || state.startsWith("price-")) plugin.tellShop(player, text + " Type 'cancel' to stop.");
+        else if (state.startsWith("quest-stock-")) plugin.tellQuest(player, text + " Type 'cancel' to stop.");
+        else if (state.startsWith("clear-loan-")) plugin.tellBank(player, text + " Type 'cancel' to stop.");
+        else if (state.startsWith("clear-quest-")) plugin.tellQuest(player, text + " Type 'cancel' to stop.");
+        else plugin.tellPublic(player, ChatColor.YELLOW + text + " Type 'cancel' to stop.");
     }
 
     private void showTransactions(Player player) {
         try {
             if (!transactionsFile.exists()) {
-                player.sendMessage(ChatColor.GRAY + "No transaction log entries yet.");
+                plugin.tellPublic(player, ChatColor.GRAY + "No transaction log entries yet.");
                 return;
             }
             List<String> lines = Files.readAllLines(transactionsFile.toPath());
-            player.sendMessage(ChatColor.GOLD + "Recent balance changes:");
+            plugin.tellPublic(player, ChatColor.GOLD + "Recent balance changes:");
             int start = Math.max(0, lines.size() - 10);
-            for (int i = start; i < lines.size(); i++) player.sendMessage(ChatColor.GRAY + lines.get(i));
+            for (int i = start; i < lines.size(); i++) plugin.tellPublic(player, ChatColor.GRAY + lines.get(i));
         } catch (IOException ex) {
-            player.sendMessage(ChatColor.RED + "Could not read transaction log.");
+            plugin.tellPublic(player, ChatColor.RED + "Could not read transaction log.");
         }
     }
 
@@ -288,15 +296,15 @@ public final class AdminManager implements Listener {
             double owed = loans.getDouble(key + ".amount", 0);
             if (owed > 0) { count++; total += owed; }
         }
-        player.sendMessage(ChatColor.GOLD + "Loan overview: " + count + " active loans; total owed " + String.format(Locale.US, "%.2f", total) + " coins.");
+        plugin.tellBank(player, "Loan overview: " + count + " active loans; total owed " + String.format(Locale.US, "%.2f", total) + " coins.");
     }
 
     private void questOverview(Player player) {
         YamlConfiguration quests = YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "quests.yml"));
-        player.sendMessage(ChatColor.GOLD + "Global event: " + quests.getInt("event.progress", 0) + "/"
+        plugin.tellQuest(player, "Community Chest: " + quests.getInt("event.progress", 0) + "/"
                 + quests.getInt("event.goal", 500) + " ores; reward claims remaining: "
                 + quests.getInt("event.claims-remaining", 25) + ".");
-        player.sendMessage(ChatColor.GRAY + "Pack stock — Beginner: " + quests.getInt("stock.beginner", 0)
+        plugin.tellQuest(player, "Pack stock — Beginner: " + quests.getInt("stock.beginner", 0)
                 + ", Miner: " + quests.getInt("stock.miner", 0) + ", Hunter: " + quests.getInt("stock.hunter", 0)
                 + ", Explorer: " + quests.getInt("stock.explorer", 0) + ", Nether: " + quests.getInt("stock.nether", 0)
                 + ", End: " + quests.getInt("stock.end", 0) + ".");
@@ -312,15 +320,15 @@ public final class AdminManager implements Listener {
             boolean hasXp = recovery.getInt(key + ".total-xp", 0) > 0;
             if (!recovery.getBoolean(key + ".recovered", false) && now < recovery.getLong(key + ".expires-at", 0) && (hasItems || hasXp)) active++;
         }
-        player.sendMessage(ChatColor.GOLD + "Active death recovery snapshots: " + active + ".");
+        plugin.tellPublic(player, ChatColor.GOLD + "Active death recovery snapshots: " + active + ".");
     }
 
     private void diagnostics(Player player) {
-        player.sendMessage(ChatColor.GOLD + "XZHEconomySystem diagnostics");
-        player.sendMessage(ChatColor.GRAY + "Online players: " + Bukkit.getOnlinePlayers().size());
+        plugin.tellPublic(player, ChatColor.GOLD + "Economy diagnostics");
+        plugin.tellPublic(player, ChatColor.GRAY + "Online players: " + Bukkit.getOnlinePlayers().size());
         for (String name : List.of("balances.yml", "loans.yml", "quests.yml", "shop-stock.yml", "death-recovery.yml", "locations.yml", "transactions.log")) {
             File f = new File(plugin.getDataFolder(), name);
-            player.sendMessage((f.exists() ? ChatColor.GREEN : ChatColor.RED) + name + ": " + (f.exists() ? f.length() + " bytes" : "not created yet"));
+            plugin.tellPublic(player, (f.exists() ? ChatColor.GREEN : ChatColor.RED) + name + ": " + (f.exists() ? f.length() + " bytes" : "not created yet"));
         }
     }
 

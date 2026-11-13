@@ -16,6 +16,14 @@ bank:
   open-hour: 9
   close-hour: 20
 
+# Fortune Books. Each book has its own per-player rebuy cooldown.
+fortune-books:
+  apple:
+    price: 222
+    reward: 1222
+    win-chance: 0.2
+    cooldown-hours: 3
+
 # Global announcements: only noteworthy shop purchases; borrowing and full loan repayments.
 announcements:
   shop:
@@ -85,10 +93,13 @@ shop:
     melon_slice: 512
     cod: 256
     salmon: 256
+    tropical_fish: 256
+    pufferfish: 256
     cooked_cod: 256
     cooked_salmon: 256
     egg: 256
-    milk_bucket: 256
+    milk_bucket: 20
+    bone_meal: 128
     potion: 256
     splash_potion: 256
     lingering_potion: 256
@@ -147,6 +158,12 @@ shop:
     cooked_salmon:
       buy: 12
       sell: 5.5
+    tropical_fish:
+      buy: 5
+      sell: 1
+    pufferfish:
+      buy: 5
+      sell: 1
   stock-limits:
     coal: 2000
     iron_ingot: 1000
@@ -167,6 +184,13 @@ shop:
     diamond_block: 10
     tnt: 128
     firework_rocket: 256
+    milk_bucket: 20
+    cod: 1000
+    salmon: 1000
+    tropical_fish: 1000
+    pufferfish: 1000
+    cooked_cod: 1000
+    cooked_salmon: 1000
     bread: 1000
     cooked_beef: 1000
     iron_pickaxe: 100
@@ -257,6 +281,18 @@ shop:
     netherite_upgrade_smithing_template: 10
     elytra: 3
 
+# XZH curated fish market and collection library.
+# Keep all transactions disabled until the server owner configures prices.
+fish-market:
+  prices-configured: true
+  sell-multiplier: 0.35
+  prices:
+    common: 143
+    uncommon: 286
+    rare: 857
+    legendary: 2854
+    mythical: 8569
+
 # Quest pack stock resets to these values each server-local day.
 quests:
   pack-stock:
@@ -291,7 +327,12 @@ utilities:
     up-to-6000: 40
     up-to-10000: 50
     over-10000: 75
-  back-cost: 30
+  back-cost: 30 # legacy value; /back now uses distance and dimension pricing
+  back-distance-blocks-per-tier: 1000
+  back-distance-cost-per-tier: 50
+  back-nether-cost: 333
+  back-end-cost: 666
+  back-countdown-seconds: 3
 
 # Enchantment book shop rules.
 book-shop:

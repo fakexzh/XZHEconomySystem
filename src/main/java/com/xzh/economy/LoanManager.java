@@ -53,7 +53,7 @@ public final class LoanManager implements Listener {
     }
 
     public void open(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "XZH BANK: Loans");
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "Bank: Loans");
         UUID id = player.getUniqueId();
         double owed = getOwed(id);
         if (owed > 0) {
@@ -78,7 +78,7 @@ public final class LoanManager implements Listener {
     }
 
     private void openTerms(Player player, int amount) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "XZH BANK: Choose loan term");
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "Bank: Choose loan term");
         int[] slots = {10, 12, 14, 16};
         for (int i = 0; i < TERMS.length; i++) {
             int days = TERMS[i];
@@ -96,13 +96,13 @@ public final class LoanManager implements Listener {
 
     private void openConfirm(Player player, int amount, int days) {
         double total = Math.ceil(amount * (1 + rateFor(days) * days));
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "XZH BANK: Confirm loan");
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Bank: Confirm loan");
         add(inv, 13, Material.GOLD_INGOT, ChatColor.YELLOW + "Borrow " + amount + " coins",
                 "info", amount, days, List.of(
                 ChatColor.WHITE + "Term: " + days + " days",
                 ChatColor.WHITE + "Total repayment: " + ChatColor.RED + money(total),
                 ChatColor.GRAY + "12-hour grace period after due time."));
-        add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "XZH BANK: Confirm loan", "confirm", amount, days, List.of());
+        add(inv, 11, Material.LIME_CONCRETE, ChatColor.GREEN + "Bank: Confirm loan", "confirm", amount, days, List.of());
         add(inv, 15, Material.RED_CONCRETE, ChatColor.RED + "Cancel", "cancel", 0, 0, List.of());
         player.openInventory(inv);
     }
@@ -111,17 +111,17 @@ public final class LoanManager implements Listener {
         UUID id = player.getUniqueId();
         double owed = getOwed(id);
         if (owed <= 0) {
-            plugin.tellPublic(player, "You do not have an active loan.");
+            plugin.tellBank(player, "You do not have an active loan.");
             return true;
         }
         double balance = plugin.getCombinedBalance(id);
         double payment = Math.min(balance, owed);
         if (payment <= 0.0) {
-            plugin.tellPublic(player, "You have no available pocket or bank funds to repay this loan yet.");
+            plugin.tellBank(player, "You have no available pocket or bank funds to repay this loan yet.");
             return true;
         }
         if (!plugin.spendAvailableFunds(id, payment)) {
-            plugin.tellPublic(player, "Repayment failed because your available funds changed. Please try again.");
+            plugin.tellBank(player, "Repayment failed because your available funds changed. Please try again.");
             return true;
         }
         double remaining = Math.max(0.0, Math.round((owed - payment) * 100.0) / 100.0);
@@ -129,13 +129,13 @@ public final class LoanManager implements Listener {
             data.set(id.toString(), null);
             save();
             plugin.getHudManager().setLoan(id, 0, 0);
-            plugin.tellPublic(player, "Loan fully repaid: " + money(payment) + " coins.");
+            plugin.tellBank(player, "Loan fully repaid: " + money(payment) + " coins.");
             plugin.announceLoanRepaid(player.getName(), payment, false);
         } else {
             data.set(id + ".amount", remaining);
             save();
             plugin.getHudManager().setLoan(id, remaining, getDue(id), data.getLong(id + ".grace-until", getDue(id)));
-            plugin.tellPublic(player, "Partial loan repayment: " + money(payment) + " coins. Remaining debt: " + money(remaining) + " coins. Shop purchases stay locked if your loan is overdue.");
+            plugin.tellBank(player, "Partial loan repayment: " + money(payment) + " coins. Remaining debt: " + money(remaining) + " coins. Shop purchases stay locked if your loan is overdue.");
         }
         return true;
     }
@@ -143,7 +143,7 @@ public final class LoanManager implements Listener {
     private void grant(Player player, int amount, int days) {
         UUID id = player.getUniqueId();
         if (getOwed(id) > 0) {
-            plugin.tellPublic(player, "You already have an active loan.");
+            plugin.tellBank(player, "You already have an active loan.");
             return;
         }
         double principal = amount;
@@ -158,7 +158,7 @@ public final class LoanManager implements Listener {
         save();
         plugin.setBalance(id, plugin.getBalance(id) + principal);
         plugin.getHudManager().setLoan(id, total, dueAt, dueAt + 12L * 60L * 60L * 1000L);
-        plugin.tellPublic(player, "Loan approved: +" + amount + " coins. Repay " + money(total) + " within " + days + " days.");
+        plugin.tellBank(player, "Loan approved: +" + amount + " coins. Repay " + money(total) + " within " + days + " days.");
         plugin.announceLoanBorrow(player, amount, total, days);
     }
 
@@ -189,7 +189,7 @@ public final class LoanManager implements Listener {
                         data.set(key, null);
                         save();
                         plugin.getHudManager().setLoan(id, 0, 0);
-                        if (player != null) plugin.tellPublic(player, "Your overdue loan was automatically repaid: " + money(collected) + " coins.");
+                        if (player != null) plugin.tellBank(player, "Your overdue loan was automatically repaid: " + money(collected) + " coins.");
                         String name = player != null ? player.getName() : (Bukkit.getOfflinePlayer(id).getName() != null ? Bukkit.getOfflinePlayer(id).getName() : id.toString());
                         plugin.announceLoanRepaid(name, collected, true);
                         continue;
@@ -197,11 +197,11 @@ public final class LoanManager implements Listener {
                     data.set(key + ".amount", remaining);
                     plugin.getHudManager().setLoan(id, remaining, due, grace);
                     if (player != null) {
-                        plugin.tellPublic(player, "Your loan is overdue. " + money(collected) + " coins were collected from pocket first, then bank. Remaining debt: " + money(remaining) + ". Shop purchases are locked until full repayment.");
+                        plugin.tellBank(player, "Your loan is overdue. " + money(collected) + " coins were collected from pocket first, then bank. Remaining debt: " + money(remaining) + ". Shop purchases are locked until full repayment.");
                     }
                 } else {
                     Player player = Bukkit.getPlayer(id);
-                    if (player != null) plugin.tellPublic(player, "Your loan is overdue and you have no available funds to collect. Shop purchases are locked until full repayment.");
+                    if (player != null) plugin.tellBank(player, "Your loan is overdue and you have no available funds to collect. Shop purchases are locked until full repayment.");
                 }
                 save();
             }
@@ -234,7 +234,7 @@ public final class LoanManager implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (title == null || !(title.equals("XZH BANK: Loans") || title.equals("XZH BANK: Choose loan term") || title.equals("XZH BANK: Confirm loan"))) return;
+        if (title == null || !(title.equals("Bank: Loans") || title.equals("Bank: Choose loan term") || title.equals("Bank: Confirm loan"))) return;
         event.setCancelled(true);
         ItemStack item = event.getCurrentItem();
         if (item == null || !item.hasItemMeta()) return;
@@ -260,8 +260,8 @@ public final class LoanManager implements Listener {
                      int amount, int term, List<String> lore) {
         ItemStack stack = new ItemStack(material);
         ItemMeta meta = stack.getItemMeta();
-        meta.setDisplayName(name);
-        meta.setLore(lore);
+        meta.setDisplayName(name.contains("§") ? name : ChatColor.YELLOW + name);
+        meta.setLore(lore.stream().map(line -> line.contains("§") ? line : ChatColor.GRAY + line).toList());
         meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
         meta.getPersistentDataContainer().set(amountKey, PersistentDataType.INTEGER, amount);
         meta.getPersistentDataContainer().set(termKey, PersistentDataType.INTEGER, term);
