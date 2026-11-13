@@ -14,6 +14,7 @@ import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -830,5 +831,12 @@ public final class FishShopManager implements Listener {
         meta.getPersistentDataContainer().set(valueKey, PersistentDataType.STRING, value);
         item.setItemMeta(meta);
         inv.setItem(slot, item);
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        UUID id = event.getPlayer().getUniqueId();
+        pendingBuys.remove(id);
+        pendingSellAll.remove(id);
     }
 }
