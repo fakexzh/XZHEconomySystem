@@ -53,6 +53,7 @@ public final class ShopManager implements Listener {
     private final YamlConfiguration stockData;
     private final File playerSellStockFile;
     private final YamlConfiguration playerSellStockData;
+    private boolean playerSellStockDirty;
     private final File historyFile;
     private final YamlConfiguration historyData;
     private final Map<java.util.UUID, Boolean> pendingShopSearch = new java.util.concurrent.ConcurrentHashMap<>();
@@ -273,6 +274,7 @@ public final class ShopManager implements Listener {
         initializeStock();
         Bukkit.getPluginManager().registerEvents(this, plugin);
         Bukkit.getScheduler().runTaskTimer(plugin, this::restockIfDue, 20L * 60L, 20L * 60L);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::flushPlayerSellStock, 100L, 100L);
     }
 
     /** Opens the same multi-slot Sell Hand workflow for Fish Shop specimens. */
@@ -1377,8 +1379,21 @@ public final class ShopManager implements Listener {
     }
 
     private void savePlayerSellStock() {
-        try { playerSellStockData.save(playerSellStockFile); }
-        catch (IOException e) { plugin.getLogger().severe("Could not save player-sell-stock.yml: " + e.getMessage()); }
+        playerSellStockDirty = true;
+    }
+
+    public void shutdown() {
+        flushPlayerSellStock();
+    }
+
+    private void flushPlayerSellStock() {
+        if (!playerSellStockDirty) return;
+        try {
+            playerSellStockData.save(playerSellStockFile);
+            playerSellStockDirty = false;
+        } catch (IOException e) {
+            plugin.getLogger().severe("Could not save player-sell-stock.yml: " + e.getMessage());
+        }
     }
 
     public void setStock(Material material, int amount) {
