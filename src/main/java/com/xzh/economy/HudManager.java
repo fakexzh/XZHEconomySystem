@@ -53,6 +53,8 @@ public final class HudManager {
     public void shutdown() {
         for (BossBar bar : questBars.values()) bar.removeAll();
         questBars.clear();
+        questBarTitles.clear();
+        questBarProgress.clear();
         ScoreboardManager manager = Bukkit.getScoreboardManager();
         if (manager != null) {
             for (Player player : Bukkit.getOnlinePlayers()) player.setScoreboard(manager.getMainScoreboard());
