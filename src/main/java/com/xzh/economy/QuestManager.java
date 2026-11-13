@@ -1512,7 +1512,7 @@ public final class QuestManager implements Listener {
             playerPlacedBlocks.add(blockKey(event.getBlockPlaced().getLocation()));
             if (playerPlacedBlocks.size() > 50000) {
                 java.util.Iterator<String> oldest = playerPlacedBlocks.iterator();
-                if (oldest.hasNext()) oldest.remove();
+                if (oldest.hasNext()) { oldest.next(); oldest.remove(); }
             }
             savePlacedBlockTracking();
         }
