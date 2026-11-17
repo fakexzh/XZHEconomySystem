@@ -8,6 +8,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -201,5 +202,12 @@ public final class MoneyRequestManager implements Listener {
         plugin.setBalance(payee.getUniqueId(), plugin.getBalance(payee.getUniqueId()) + amount);
         plugin.tellPublic(payer, "Transferred " + amount + " coins to " + payee.getName() + ".");
         plugin.tellPublic(payee, "Received " + amount + " coins from " + payer.getName() + ".");
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        UUID id = event.getPlayer().getUniqueId();
+        pendingByRecipient.entrySet().removeIf(entry -> entry.getKey().equals(id)
+                || entry.getValue().requester().equals(id) || entry.getValue().target().equals(id));
     }
 }

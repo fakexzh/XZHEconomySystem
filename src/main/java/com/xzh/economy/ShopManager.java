@@ -53,6 +53,7 @@ public final class ShopManager implements Listener {
     private final YamlConfiguration stockData;
     private final File playerSellStockFile;
     private final YamlConfiguration playerSellStockData;
+    private boolean playerSellStockDirty;
     private final File historyFile;
     private final YamlConfiguration historyData;
     private final Map<java.util.UUID, Boolean> pendingShopSearch = new java.util.concurrent.ConcurrentHashMap<>();
@@ -273,11 +274,7 @@ public final class ShopManager implements Listener {
         initializeStock();
         Bukkit.getPluginManager().registerEvents(this, plugin);
         Bukkit.getScheduler().runTaskTimer(plugin, this::restockIfDue, 20L * 60L, 20L * 60L);
-    }
-
-    /** Opens the same multi-slot Sell Hand workflow for Fish Shop specimens. */
-    public void openFishHandSell(Player player) {
-        openHandSell(player);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::flushPlayerSellStock, 100L, 100L);
     }
 
     public void openMain(Player player) {
@@ -287,21 +284,11 @@ public final class ShopManager implements Listener {
         add(inv, 4, Material.SPYGLASS, "Search Items", "shop-search", "search",
                 List.of(ChatColor.GRAY + "Search the shop by item name.", ChatColor.YELLOW + "Click, then type your search in chat."));
 
-        // Row 3: Fish Shop sits beside Market; the four existing destinations shift one slot right.
+        // Row 3: main shop destinations.
         add(inv, 19, Material.ENDER_CHEST, "Market", "market", "market");
-        ItemStack fishShopIcon = new ItemStack(Material.COD);
-        ItemMeta fishShopMeta = fishShopIcon.getItemMeta();
-        NamespacedKey volcanicBassModel = NamespacedKey.fromString("barely_default:fish_volcanic_bass");
-        if (volcanicBassModel != null) fishShopMeta.setItemModel(volcanicBassModel);
-        fishShopMeta.setDisplayName(ChatColor.YELLOW + "Fish Shop");
-        fishShopMeta.setLore(List.of(ChatColor.GRAY + "Buy and sell custom fish.", ChatColor.GRAY + "Track your 31-species collection."));
-        fishShopMeta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "fish-shop");
-        fishShopMeta.getPersistentDataContainer().set(materialKey, PersistentDataType.STRING, "fish-shop");
-        fishShopIcon.setItemMeta(fishShopMeta);
-        inv.setItem(20, fishShopIcon);
-        add(inv, 22, Material.OAK_BOAT, "Travel Shop", "travel-shop", "travel");
-        add(inv, 23, Material.END_CRYSTAL, "Quest Shop", "quests", "quests");
-        add(inv, 24, Material.SCULK_SENSOR, "Death Inventory", "deathinventory", "deathinventory");
+        add(inv, 21, Material.OAK_BOAT, "Travel Shop", "travel-shop", "travel");
+        add(inv, 22, Material.END_CRYSTAL, "Quest Shop", "quests", "quests");
+        add(inv, 23, Material.SCULK_SENSOR, "Death Inventory", "deathinventory", "deathinventory");
 
         // Row 5: bank and account utilities.
         ItemStack bankIcon = plugin.getPocketCoinManager().createCoin(100, 1);
@@ -851,7 +838,6 @@ public final class ShopManager implements Listener {
         switch (action) {
             case "category" -> openCategory(player, value);
             case "market" -> openMarket(player);
-            case "fish-shop" -> plugin.getFishShopManager().openMain(player);
             case "travel-shop" -> plugin.getBoatManager().open(player);
             case "shop-search", "search-again" -> promptShopSearch(player);
             case "search-page" -> {
@@ -1188,7 +1174,7 @@ public final class ShopManager implements Listener {
             double unitPrice = handSellUnitPrice(stack);
             if (unitPrice <= 0.0) continue;
             int allowed = stack.getAmount();
-            if (isFarmableSellItem(material) && !plugin.getFishShopManager().isHandSellFish(stack)) {
+            if (isFarmableSellItem(material)) {
                 int alreadyReserved = reservedStock.getOrDefault(material, 0);
                 int available = Math.max(0, getSellStock(player, material) - alreadyReserved);
                 allowed = Math.min(allowed, available);
@@ -1202,9 +1188,6 @@ public final class ShopManager implements Listener {
 
     private double handSellUnitPrice(ItemStack stack) {
         if (stack == null || stack.getType().isAir()) return 0.0;
-        if (plugin.getFishShopManager().isHandSellFish(stack)) {
-            return plugin.getFishShopManager().getHandSellFishPrice(stack);
-        }
         Product p = productForStack(stack);
         if (p != null) return sellPrice(p);
         double configured = plugin.getConfig().getDouble(
@@ -1231,7 +1214,7 @@ public final class ShopManager implements Listener {
             ItemStack stack = inv.getItem(entry.getKey());
             if (stack == null) continue;
             int sold = entry.getValue();
-            if (isFarmableSellItem(stack.getType()) && !plugin.getFishShopManager().isHandSellFish(stack)) {
+            if (isFarmableSellItem(stack.getType())) {
                 consumeSellStock(player, stack.getType(), sold);
             }
             int remaining = stack.getAmount() - sold;
@@ -1377,8 +1360,21 @@ public final class ShopManager implements Listener {
     }
 
     private void savePlayerSellStock() {
-        try { playerSellStockData.save(playerSellStockFile); }
-        catch (IOException e) { plugin.getLogger().severe("Could not save player-sell-stock.yml: " + e.getMessage()); }
+        playerSellStockDirty = true;
+    }
+
+    public void shutdown() {
+        flushPlayerSellStock();
+    }
+
+    private void flushPlayerSellStock() {
+        if (!playerSellStockDirty) return;
+        try {
+            playerSellStockData.save(playerSellStockFile);
+            playerSellStockDirty = false;
+        } catch (IOException e) {
+            plugin.getLogger().severe("Could not save player-sell-stock.yml: " + e.getMessage());
+        }
     }
 
     public void setStock(Material material, int amount) {
