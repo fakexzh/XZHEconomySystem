@@ -80,7 +80,7 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { hudManager.onQuit(event.getPlayer()); }
         }, this);
-        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quest", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "sethome", "delhome", "homes", "warp", "setwarp", "delwarp", "tpa", "tpasend", "tpacancel", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit", "gmc", "gms", "gma", "gmsp", "day", "night", "gamemode", "heal", "feed", "fly", "weather", "helpxzh")) {
+        for (String name : List.of("xzh", "balance", "pay", "sendmoney", "askmoney", "eco", "shop", "bank", "loan", "quest", "quests", "deathinventory", "shopadmin", "spawn", "setspawn", "home", "sethome", "delhome", "homes", "warp", "setwarp", "delwarp", "tpa", "tpasend", "tpacancel", "tpaccept", "tpdeny", "back", "msg", "reply", "ignore", "afk", "near", "list", "top", "rtp", "xzhadmin", "books", "kit", "helpxzh")) {
             if (getCommand(name) != null) {
                 getCommand(name).setExecutor(this);
                 getCommand(name).setTabCompleter(this);
@@ -521,45 +521,6 @@ public final class XZHEconomySystem extends JavaPlugin implements CommandExecuto
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         switch (command.getName().toLowerCase(Locale.ROOT)) {
-            case "gmc", "gms", "gma", "gmsp", "gamemode", "day", "night", "heal", "feed", "fly", "weather" -> {
-                if (!sender.hasPermission("xzh.admin")) { tell(sender, "No permission."); return true; }
-                if (!(sender instanceof Player player)) { tell(sender, "This command can only be used by a player."); return true; }
-                String adminCommand = command.getName().toLowerCase(Locale.ROOT);
-                if (adminCommand.equals("gamemode")) {
-                    if (args.length != 1) { tell(sender, "Usage: /gamemode <survival|creative|adventure|spectator>"); return true; }
-                    switch (args[0].toLowerCase(Locale.ROOT)) {
-                        case "s", "survival", "0" -> player.setGameMode(org.bukkit.GameMode.SURVIVAL);
-                        case "c", "creative", "1" -> player.setGameMode(org.bukkit.GameMode.CREATIVE);
-                        case "a", "adventure", "2" -> player.setGameMode(org.bukkit.GameMode.ADVENTURE);
-                        case "sp", "spectator", "3" -> player.setGameMode(org.bukkit.GameMode.SPECTATOR);
-                        default -> { tell(sender, "Unknown gamemode."); return true; }
-                    }
-                    tell(sender, "Gamemode set to " + player.getGameMode().name().toLowerCase(Locale.ROOT) + ".");
-                    return true;
-                }
-                switch (adminCommand) {
-                    case "gmc" -> { player.setGameMode(org.bukkit.GameMode.CREATIVE); tell(sender, "Gamemode set to Creative."); }
-                    case "gms" -> { player.setGameMode(org.bukkit.GameMode.SURVIVAL); tell(sender, "Gamemode set to Survival."); }
-                    case "gma" -> { player.setGameMode(org.bukkit.GameMode.ADVENTURE); tell(sender, "Gamemode set to Adventure."); }
-                    case "gmsp" -> { player.setGameMode(org.bukkit.GameMode.SPECTATOR); tell(sender, "Gamemode set to Spectator."); }
-                    case "day" -> { player.getWorld().setTime(1000L); tell(sender, "World time set to day."); }
-                    case "night" -> { player.getWorld().setTime(13000L); tell(sender, "World time set to night."); }
-                    case "heal" -> { player.setHealth(player.getMaxHealth()); player.setFireTicks(0); tell(sender, "Health restored."); }
-                    case "feed" -> { player.setFoodLevel(20); player.setSaturation(20f); tell(sender, "Hunger restored."); }
-                    case "fly" -> { boolean enable = !player.getAllowFlight(); player.setAllowFlight(enable); if (!enable) player.setFlying(false); tell(sender, "Flight " + (enable ? "enabled" : "disabled") + "."); }
-                    case "weather" -> {
-                        if (args.length != 1) { tell(sender, "Usage: /weather <clear|rain|thunder>"); return true; }
-                        switch (args[0].toLowerCase(Locale.ROOT)) {
-                            case "clear" -> { player.getWorld().setStorm(false); player.getWorld().setThundering(false); }
-                            case "rain" -> { player.getWorld().setStorm(true); player.getWorld().setThundering(false); }
-                            case "thunder" -> { player.getWorld().setStorm(true); player.getWorld().setThundering(true); }
-                            default -> { tell(sender, "Unknown weather. Use clear, rain, or thunder."); return true; }
-                        }
-                        tell(sender, "Weather updated.");
-                    }
-                }
-                return true;
-            }
             case "deathinventory" -> {
                 if (!(sender instanceof Player player)) { tell(sender, "Only players can recover a death inventory."); return true; }
                 deathRecoveryManager.open(player);
