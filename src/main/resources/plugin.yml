@@ -139,51 +139,6 @@ commands:
   rtp:
     description: Teleport to a random safe location.
     usage: /rtp
-  gmc:
-    description: Set your gamemode to Creative.
-    usage: /gmc
-    permission: xzh.admin
-  gms:
-    description: Set your gamemode to Survival.
-    usage: /gms
-    permission: xzh.admin
-  gma:
-    description: Set your gamemode to Adventure.
-    usage: /gma
-    permission: xzh.admin
-  gmsp:
-    description: Set your gamemode to Spectator.
-    usage: /gmsp
-    permission: xzh.admin
-  day:
-    description: Set your current world to daytime.
-    usage: /day
-    permission: xzh.admin
-  gamemode:
-    description: Change your gamemode (admin only).
-    usage: /gamemode <survival|creative|adventure|spectator>
-    aliases: [gm]
-    permission: xzh.admin
-  heal:
-    description: Restore health and clear fire (admin only).
-    usage: /heal
-    permission: xzh.admin
-  feed:
-    description: Restore hunger (admin only).
-    usage: /feed
-    permission: xzh.admin
-  fly:
-    description: Toggle flight (admin only).
-    usage: /fly
-    permission: xzh.admin
-  weather:
-    description: Change world weather (admin only).
-    usage: /weather <clear|rain|thunder>
-    permission: xzh.admin
-  night:
-    description: Set your current world to nighttime.
-    usage: /night
-    permission: xzh.admin
 permissions:
   xzh.kit.starter:
     description: Allows claiming the starter kit.
